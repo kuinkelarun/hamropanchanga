@@ -1,0 +1,32 @@
+Git Branching Workflow
+Step 1: Make sure you’re on the main branch
+    git checkout main
+    git pull origin main
+
+Step 2: Create a new branch for your feature
+    git checkout -b feature/login
+        - ‘-b’ creates a new branch and switches to it.
+        - You are now inside ‘feature/login’.
+
+Step 3: Do your changes in the new branch
+    Make edits, then stage and commit: 
+        git add . 
+        git commit -m “Add login feature initial implementation”
+    Push the branch: 
+        git push -u origin feature/login
+
+Step 4: Keep main safe
+    Your ‘main’ branch has the stable code. Your feature work stays isolated in the new branch.
+
+Step 5: Merge when ready
+    Switch back to main: 
+        git checkout main 
+        git pull origin main
+    
+    Merge feature branch: 
+        git merge feature/login
+
+    Push updated main: 
+        git push origin main
+        
+Optional: Create a Pull Request on GitHub for cleaner history and review.
