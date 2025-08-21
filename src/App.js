@@ -232,26 +232,42 @@ const AddCustomerForm = ({ onSuccess, onCancel }) => {
 };
 
 // --- New Helper Function to get relation based on parent's generation ---
-const getRelationFromParent = (parentRelation, newMemberGender) => {
+const getRelationFromParent = (parentRelation, newMemberGender, parentGeneration) => {
     // Direct descendants of 'Self' or 'Spouse' are always 'Son' or 'Daughter'
     if (parentRelation === 'Self' || parentRelation === 'Spouse') {
-        return newMemberGender; // 'Son' or 'Daughter'
+        return newMemberGender === 'Son' ? 'Son' : 'Daughter';
     }
 
-    const relationMap = {
-        'Great Great Great Grandfather': newMemberGender === 'Son' ? 'Great Great Grandfather' : 'Great Great Grandmother',
-        'Great Great Grandfather': newMemberGender === 'Son' ? 'Great Grandfather' : 'Great Grandmother',
-        'Great Grandfather': newMemberGender === 'Son' ? 'Grandfather' : 'Grandmother',
-        'Grandfather': newMemberGender === 'Son' ? 'Father' : 'Mother',
+    // Handle children of direct ancestors up to generation 1 (parents)
+    const directRelationMap = {
         'Father': newMemberGender === 'Son' ? 'Brother' : 'Sister',
         'Mother': newMemberGender === 'Son' ? 'Brother' : 'Sister',
         'Brother': newMemberGender === 'Son' ? 'Nephew' : 'Niece',
         'Sister': newMemberGender === 'Son' ? 'Nephew' : 'Niece',
-        'Son': newMemberGender === 'Son' ? 'Grandson' : 'Granddaughter',
-        'Daughter': newMemberGender === 'Son' ? 'Grandson' : 'Granddaughter',
+        'Uncle': newMemberGender === 'Son' ? 'Cousin' : 'Cousin',
+        'Aunt': newMemberGender === 'Son' ? 'Cousin' : 'Cousin',
     };
 
-    return relationMap[parentRelation] || newMemberGender; // Fallback to 'Son' or 'Daughter'
+    if (directRelationMap[parentRelation]) {
+        return directRelationMap[parentRelation];
+    }
+    
+    const newMemberGeneration = parentGeneration - 1;
+
+    // For generations above 1 (grandparents and up), use a progressive naming scheme
+    if (newMemberGeneration >= 1) {
+        const extendedPrefixMap = {
+            1: '', // Child of grandparent is Uncle/Aunt
+            2: 'Grand-', // Child of great-grandparent is Granduncle/Grandaunt
+            3: 'Great-Grand-',
+            4: 'Great-Great-Grand-',
+        };
+        const prefix = extendedPrefixMap[newMemberGeneration] || '';
+        const suffix = newMemberGender === 'Son' ? 'uncle' : 'aunt';
+        return `${prefix}${suffix}`;
+    }
+
+    return newMemberGender === 'Son' ? 'Son' : 'Daughter'; // Fallback
 };
 
 // Component to view customer details
@@ -263,22 +279,19 @@ const CustomerDetail = ({ customer, onBack }) => {
         setIsAddingMember(false);
         const familyMembers = customer.familyMembers || {};
         const newMemberId = crypto.randomUUID();
-        
+
         let newRelation = memberData.relation;
         let isDirectAncestor = true;
 
         if (memberData.parentIds.length > 0) {
             const parent = familyMembers[memberData.parentIds[0]];
             const selfMember = Object.values(familyMembers).find(m => m.relation === 'Self');
-            
-            // Determine if the new member is a direct ancestor
-            isDirectAncestor = parent.relation === 'Self' || 
-                               parent.relation === 'Spouse' ||
-                               parent.generation > selfMember.generation ||
-                               (parent.generation === selfMember.generation && (parent.relation === 'Father' || parent.relation === 'Mother'));
+
+            const sideLineRelations = ['Brother', 'Sister', 'Uncle', 'Aunt', 'Nephew', 'Niece', 'Cousin', 'Granduncle', 'Grandaunt', 'Great-Granduncle', 'Great-Grandaunt'];
+            isDirectAncestor = !sideLineRelations.includes(parent.relation) && (parent.relation === 'Self' || parent.relation === 'Spouse' || parent.generation >= selfMember.generation);
 
             // Use the new helper function to get the correct relation
-            newRelation = getRelationFromParent(parent.relation, memberData.relation);
+            newRelation = getRelationFromParent(parent.relation, memberData.relation, parent.generation);
         }
 
         const newMember = {
@@ -290,7 +303,7 @@ const CustomerDetail = ({ customer, onBack }) => {
             generation: calculateGeneration(newRelation, memberData.parentIds, familyMembers),
             isDirectAncestor: isDirectAncestor
         };
-        
+
         const updatedFamilyMembers = {
             ...familyMembers,
             [newMemberId]: newMember
@@ -315,8 +328,6 @@ const CustomerDetail = ({ customer, onBack }) => {
         }
     };
 
-    // This line correctly converts the familyMembers object into an array
-    // for components like the AddEventForm dropdown that need to map over it.
     const familyMembersArray = Object.values(customer.familyMembers || {});
 
     return (
@@ -324,7 +335,8 @@ const CustomerDetail = ({ customer, onBack }) => {
             <div className="flex items-center space-x-4 mb-6">
                 <button onClick={onBack}
                     className="bg-gray-200 hover:bg-gray-300 text-gray-700 p-2 rounded-full transition-transform transform hover:scale-105">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6"
+                        fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                     </svg>
                 </button>
@@ -429,7 +441,7 @@ const FamilyTreeChart = ({ familyMembers }) => {
                             {membersByGeneration[generation].map(member => (
                                 <div
                                     key={member.id}
-                                    className={`p-3 rounded-xl shadow-md border-2 border-gray-200 hover:shadow-lg transition-all cursor-pointer min-w-32 text-center 
+                                    className={`p-3 rounded-xl shadow-md border-2 border-gray-200 hover:shadow-lg transition-all cursor-pointer min-w-32 text-center
                                         ${member.isDirectAncestor ? 'bg-white' : 'bg-gray-100'}`}
                                 >
                                     <div className="font-semibold text-gray-800 text-sm">{member.name}</div>
@@ -468,7 +480,7 @@ const AddFamilyMemberForm = ({ onAdd, familyMembers }) => {
     const [relation, setRelation] = useState('');
     const [name, setName] = useState('');
     const [selectedParentIds, setSelectedParentIds] = useState([]);
-    
+
     const directRelations = [
         'Father', 'Mother', 'Spouse', 'Brother', 'Sister', 'Uncle', 'Aunt',
         'Grandfather', 'Grandmother',
@@ -484,244 +496,239 @@ const AddFamilyMemberForm = ({ onAdd, familyMembers }) => {
     const handleSubmit = (e) => {
         e.preventDefault();
         if (!name.trim() || !relation) return;
-        
-        onAdd({ 
-            name, 
-            relation, 
-            parentIds: selectedParentIds 
+
+        onAdd({
+            name,
+            relation,
+            parentIds: selectedParentIds
         });
-        
+
         setRelationshipType('');
         setRelation('');
         setName('');
         setSelectedParentIds([]);
     };
 
-  // The JSX for the form remains the same
-  return (
-    <div className="bg-white p-4 rounded-xl shadow-inner mb-4 space-y-3">
-      <div>
-        <label className="block text-gray-700 font-semibold mb-1 text-sm">
-          How do you want to add this person?
-        </label>
-        <select
-          value={relationshipType}
-          onChange={(e) => {
-            setRelationshipType(e.target.value);
-            setRelation('');
-            setSelectedParentIds([]);
-          }}
-          className="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-green-500"
-          required
-        >
-          <option value="" disabled>Choose relationship type...</option>
-          <option value="direct">Add as direct relation (Father, Spouse, etc.)</option>
-          <option value="child_of">Add as child of existing member</option>
-        </select>
-      </div>
+    return (
+        <div className="bg-white p-4 rounded-xl shadow-inner mb-4 space-y-3">
+            <div>
+                <label className="block text-gray-700 font-semibold mb-1 text-sm">
+                    How do you want to add this person?
+                </label>
+                <select
+                    value={relationshipType}
+                    onChange={(e) => {
+                        setRelationshipType(e.target.value);
+                        setRelation('');
+                        setSelectedParentIds([]);
+                    }}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-green-500"
+                    required
+                >
+                    <option value="" disabled>Choose relationship type...</option>
+                    <option value="direct">Add as direct relation (Father, Spouse, etc.)</option>
+                    <option value="child_of">Add as child of existing member</option>
+                </select>
+            </div>
 
-      {relationshipType === 'direct' && (
-        <div>
-          <label htmlFor="relation" className="block text-gray-700 font-semibold mb-1 text-sm">
-            Select Relation
-          </label>
-          <select
-            id="relation"
-            value={relation}
-            onChange={(e) => {
-              setRelation(e.target.value);
-              setSelectedParentIds([]);
-            }}
-            className="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-green-500"
-            required
-          >
-            <option value="" disabled>Select relation...</option>
-            {directRelations.map(rel => (
-              <option key={rel} value={rel}>{rel}</option>
-            ))}
-          </select>
-        </div>
-      )}
+            {relationshipType === 'direct' && (
+                <div>
+                    <label htmlFor="relation" className="block text-gray-700 font-semibold mb-1 text-sm">
+                        Select Relation
+                    </label>
+                    <select
+                        id="relation"
+                        value={relation}
+                        onChange={(e) => {
+                            setRelation(e.target.value);
+                            setSelectedParentIds([]);
+                        }}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-green-500"
+                        required
+                    >
+                        <option value="" disabled>Select relation...</option>
+                        {directRelations.map(rel => (
+                            <option key={rel} value={rel}>{rel}</option>
+                        ))}
+                    </select>
+                </div>
+            )}
 
-      {relationshipType === 'child_of' && (
-        <div>
-          <label htmlFor="child-relation" className="block text-gray-700 font-semibold mb-1 text-sm">
-            This person is a...
-          </label>
-          <select
-            id="child-relation"
-            value={relation}
-            onChange={(e) => setRelation(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-green-500"
-            required
-          >
-            <option value="" disabled>Select gender...</option>
-            {childRelations.map(rel => (
-              <option key={rel} value={rel}>{rel}</option>
-            ))}
-          </select>
-        </div>
-      )}
-      
-      <div>
-        <input
-          type="text"
-          placeholder="Name"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          className="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-green-500"
-          required
-        />
-      </div>
+            {relationshipType === 'child_of' && (
+                <div>
+                    <label htmlFor="child-relation" className="block text-gray-700 font-semibold mb-1 text-sm">
+                        This person is a...
+                    </label>
+                    <select
+                        id="child-relation"
+                        value={relation}
+                        onChange={(e) => setRelation(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-green-500"
+                        required
+                    >
+                        <option value="" disabled>Select gender...</option>
+                        {childRelations.map(rel => (
+                            <option key={rel} value={rel}>{rel}</option>
+                        ))}
+                    </select>
+                </div>
+            )}
 
-      {relationshipType === 'child_of' && potentialParents.length > 0 && (
-        <div>
-          <label className="block text-gray-700 font-semibold mb-1 text-sm">
-            Select Parent(s)
-          </label>
-          <div className="space-y-2 max-h-32 overflow-y-auto">
-            {potentialParents.map(parent => (
-              <label key={parent.id} className="flex items-center space-x-2">
+            <div>
                 <input
-                  type="checkbox"
-                  checked={selectedParentIds.includes(parent.id)}
-                  onChange={(e) => {
-                    if (e.target.checked) {
-                      setSelectedParentIds([...selectedParentIds, parent.id]);
-                    } else {
-                      setSelectedParentIds(selectedParentIds.filter(id => id !== parent.id));
-                    }
-                  }}
-                  className="rounded"
+                    type="text"
+                    placeholder="Name"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-green-500"
+                    required
                 />
-                <span className="text-sm">{parent.name} ({parent.relation})</span>
-              </label>
-            ))}
-          </div>
+            </div>
+
+            {relationshipType === 'child_of' && potentialParents.length > 0 && (
+                <div>
+                    <label className="block text-gray-700 font-semibold mb-1 text-sm">
+                        Select Parent(s)
+                    </label>
+                    <div className="space-y-2 max-h-32 overflow-y-auto">
+                        {potentialParents.map(parent => (
+                            <label key={parent.id} className="flex items-center space-x-2">
+                                <input
+                                    type="checkbox"
+                                    checked={selectedParentIds.includes(parent.id)}
+                                    onChange={(e) => {
+                                        if (e.target.checked) {
+                                            setSelectedParentIds([...selectedParentIds, parent.id]);
+                                        } else {
+                                            setSelectedParentIds(selectedParentIds.filter(id => id !== parent.id));
+                                        }
+                                    }}
+                                    className="rounded"
+                                />
+                                <span className="text-sm">{parent.name} ({parent.relation})</span>
+                            </label>
+                        ))}
+                    </div>
+                </div>
+            )}
+
+            <button
+                onClick={handleSubmit}
+                className="w-full bg-green-500 hover:bg-green-600 text-white font-semibold py-2 rounded-xl transition"
+            >
+                Add Member
+            </button>
         </div>
-      )}
-
-      <button
-        onClick={handleSubmit}
-        className="w-full bg-green-500 hover:bg-green-600 text-white font-semibold py-2 rounded-xl transition"
-      >
-        Add Member
-      </button>
-    </div>
-  );
+    );
 };
-
 
 // Component to list upcoming events
 const EventList = ({ events }) => {
-  const upcomingEvents = events
-    .map(event => ({
-      ...event,
-      date: new Date(event.date)
-    }))
-    .filter(event => event.date >= new Date())
-    .sort((a, b) => a.date - b.date);
-
-  return (
-    <div className="space-y-3">
-      {upcomingEvents.length === 0 ? (
-        <div className="text-center py-4 text-gray-400 text-sm">
-          No upcoming events.
+    const upcomingEvents = events
+        .map(event => ({
+            ...event,
+            date: new Date(event.date)
+        }))
+        .filter(event => event.date >= new Date())
+        .sort((a, b) => a.date - b.date);
+    return (
+        <div className="space-y-3">
+            {upcomingEvents.length === 0 ? (
+                <div className="text-center py-4 text-gray-400 text-sm">
+                    No upcoming events.
+                </div>
+            ) : (
+                <ul className="space-y-2">
+                    {upcomingEvents.map((event, index) => (
+                        <li key={index} className="bg-white p-3 rounded-xl shadow-sm flex justify-between items-center">
+                            <div className="flex-1">
+                                <div className="text-gray-800 font-medium">{event.name}</div>
+                                <div className="text-sm text-gray-500">{event.date.toDateString()}</div>
+                                {event.personName && (
+                                    <div className="text-xs text-gray-400 mt-1">For: {event.personName} ({event.personRelation})</div>
+                                )}
+                            </div>
+                        </li>
+                    ))}
+                </ul>
+            )}
         </div>
-      ) : (
-        <ul className="space-y-2">
-          {upcomingEvents.map((event, index) => (
-            <li key={index} className="bg-white p-3 rounded-xl shadow-sm flex justify-between items-center">
-              <div className="flex-1">
-                <div className="text-gray-800 font-medium">{event.name}</div>
-                <div className="text-sm text-gray-500">{event.date.toDateString()}</div>
-                {event.personName && (
-                  <div className="text-xs text-gray-400 mt-1">For: {event.personName} ({event.personRelation})</div>
-                )}
-              </div>
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
-  );
+    );
 };
+
 
 // Component to add a new event
 const AddEventForm = ({ onAdd, familyMembers }) => {
-  const [name, setName] = useState('');
-  const [date, setDate] = useState('');
-  const [selectedPersonId, setSelectedPersonId] = useState(familyMembers[0]?.id || '');
-  
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    if (!name.trim() || !date || !selectedPersonId) return;
+    const [name, setName] = useState('');
+    const [date, setDate] = useState('');
+    const [selectedPersonId, setSelectedPersonId] = useState(familyMembers[0]?.id || '');
+    const handleSubmit = (e) => {
+        e.preventDefault();
+        if (!name.trim() || !date || !selectedPersonId) return;
+        const selectedPerson = familyMembers.find(member => member.id === selectedPersonId);
 
-    const selectedPerson = familyMembers.find(member => member.id === selectedPersonId);
-    
-    const eventData = {
-      id: crypto.randomUUID(),
-      name,
-      date,
-      personId: selectedPerson.id,
-      personName: selectedPerson.name,
-      personRelation: selectedPerson.relation
+        const eventData = {
+            id: crypto.randomUUID(),
+            name,
+            date,
+            personId: selectedPerson.id,
+            personName: selectedPerson.name,
+            personRelation: selectedPerson.relation
+        };
+        onAdd(eventData);
+        setName('');
+        setDate('');
     };
-    
-    onAdd(eventData);
-    setName('');
-    setDate('');
-  };
 
-  return (
-    <div className="bg-white p-4 rounded-xl shadow-inner mb-4 space-y-3">
-      <div>
-        <label htmlFor="event-person" className="block text-gray-700 font-semibold mb-1 text-sm">
-          Event for
-        </label>
-        <select
-          id="event-person"
-          value={selectedPersonId}
-          onChange={(e) => setSelectedPersonId(e.target.value)}
-          className="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-green-500"
-          required
-        >
-          {familyMembers.length === 0 ? (
-            <option value="" disabled>No family members to select</option>
-          ) : (
-            familyMembers.map(member => (
-              <option key={member.id} value={member.id}>
-                {member.name} ({member.relation})
-              </option>
-            ))
-          )}
-        </select>
-      </div>
-      <div>
-        <input
-          type="text"
-          placeholder="Event Name (e.g., Birthday)"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          className="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-green-500"
-          required
-        />
-      </div>
-      <div>
-        <input
-          type="date"
-          value={date}
-          onChange={(e) => setDate(e.target.value)}
-          className="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-green-500"
-          required
-        />
-      </div>
-      <button
-        onClick={handleSubmit}
-        className="w-full bg-green-500 hover:bg-green-600 text-white font-semibold py-2 rounded-xl transition"
-      >
-        Add Event
-      </button>
-    </div>
-  );
+    return (
+        <div className="bg-white p-4 rounded-xl shadow-inner mb-4 space-y-3">
+            <div>
+                <label htmlFor="event-person" className="block text-gray-700 font-semibold mb-1 text-sm">
+                    Event for
+                </label>
+                <select
+                    id="event-person"
+                    value={selectedPersonId}
+                    onChange={(e) => setSelectedPersonId(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-green-500"
+                    required
+                >
+                    {familyMembers.length === 0 ? (
+                        <option value="" disabled>No family members to select</option>
+                    ) : (
+                        familyMembers.map(member => (
+                            <option key={member.id} value={member.id}>
+                                {member.name} ({member.relation})
+                            </option>
+                        ))
+                    )}
+                </select>
+            </div>
+            <div>
+                <input
+                    type="text"
+                    placeholder="Event Name (e.g., Birthday)"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-green-500"
+                    required
+                />
+            </div>
+            <div>
+                <input
+                    type="date"
+                    value={date}
+                    onChange={(e) => setDate(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-green-500"
+                    required
+                />
+            </div>
+            <button
+                onClick={handleSubmit}
+                className="w-full bg-green-500 hover:bg-green-600 text-white font-semibold py-2 rounded-xl transition"
+            >
+                Add Event
+            </button>
+        </div>
+    );
 };
