@@ -4,20 +4,11 @@ import { auth } from './firebase';
 import Login from './Login'; // Import the Login component
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import { db } from './firebase';
-import { doc, updateDoc, addDoc } from 'firebase/firestore';
+import { doc, updateDoc, addDoc, getDoc } from 'firebase/firestore';
 
-
-// Main App component
-// export default function App() {
-//   const [user, setUser] = useState(null); // State to hold the logged-in user
-//   const [customers, setCustomers] = useState([]);
-//   const [customers, setCustomers] = useState([]);
-//   const [selectedCustomer, setSelectedCustomer] = useState(null);
-//   const [view, setView] = useState('list'); // 'list', 'details', 'add'
-//   const [isLoading, setIsLoading] = useState(false);
-//   const [error, setError] = useState(null);
 
 // Main App Component
+// Main App component
 export default function App() {
     // STATE MANAGEMENT
     const [user, setUser] = useState(null);
@@ -25,48 +16,66 @@ export default function App() {
     const [selectedCustomer, setSelectedCustomer] = useState(null);
     const [view, setView] = useState('list');
     const [isLoading, setIsLoading] = useState(true); // Start loading until auth is checked
+    const [isAdmin, setIsAdmin] = useState(false); // New state for admin role
+    const [error, setError] = useState(null);
+
 
     // --- HOOKS ---
 
     // Listen for authentication state changes
     useEffect(() => {
-        const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-            setUser(currentUser);
-            if (!currentUser) {
-                setCustomers([]); // Clear data on logout
+        const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+            if (currentUser) {
+                setUser(currentUser);
+                const userDocRef = doc(db, 'users', currentUser.uid);
+                const userDocSnap = await getDoc(userDocRef);
+
+                if (userDocSnap.exists()) {
+                    setIsAdmin(userDocSnap.data().role === 'admin');
+                } else {
+                    setIsAdmin(false);
+                }
+            } else {
+                setUser(null);
+                setIsAdmin(false);
             }
-            setIsLoading(false); // Auth check is complete
+            setIsLoading(false);
         });
-        return () => unsubscribe(); // Cleanup subscription
+        return () => unsubscribe();
     }, []);
 
-    // Fetch data from Firestore when user logs in
+    // Fetch data from Firestore
     useEffect(() => {
-        if (user) {
-            setIsLoading(true);
-            const customersCollection = collection(db, 'customers');
-            const q = query(customersCollection, where("userId", "==", user.uid));
-
-            const unsubscribe = onSnapshot(q, (querySnapshot) => {
-                const customersData = [];
-                querySnapshot.forEach((doc) => {
-                    customersData.push({ ...doc.data(), id: doc.id });
-                });
-                setCustomers(customersData);
-                setIsLoading(false);
-            });
-
-            return () => unsubscribe(); // Cleanup listener
+        if (!user) {
+            setCustomers([]);
+            return;
         }
-    }, [user]); // Re-run when user object changes
 
-    // --- HANDLER FUNCTIONS ---
+        setIsLoading(true);
+        let q;
+        if (isAdmin) {
+            q = collection(db, 'customers');
+        } else {
+            q = query(collection(db, 'customers'), where('userId', '==', user.uid));
+        }
 
-    const handleSignOut = () => {
-        signOut(auth);
-        setView('list');
-        setSelectedCustomer(null);
-    };
+        const unsubscribe = onSnapshot(q, (snapshot) => {
+            const customersData = snapshot.docs.map(doc => ({
+                id: doc.id,
+                ...doc.data()
+            }));
+            setCustomers(customersData);
+            setIsLoading(false);
+        }, (error) => {
+            console.error("Error fetching customers: ", error);
+            setError("Failed to load data.");
+            setIsLoading(false);
+        });
+        return () => unsubscribe();
+    }, [user, isAdmin]);
+
+
+    // --- HANDLERS ---
 
     const handleSelectCustomer = (customer) => {
         setSelectedCustomer(customer);
@@ -78,27 +87,33 @@ export default function App() {
         setView('list');
     };
 
-    const handleAddCustomerView = () => {
+    const handleAddCustomer = () => {
         setView('add');
     };
 
-    const handleAddNewCustomer = async (customerData) => {
-        if (!user) return;
-        try {
-            await addDoc(collection(db, 'customers'), {
-                ...customerData,
-                userId: user.uid // Link customer to the current user
-            });
-            setView('list');
-        } catch (error) {
-            console.error("Error adding document: ", error);
-        }
+    const handleAddCustomerSuccess = (newCustomer) => {
+        setCustomers(prev => [...prev, newCustomer]);
+        setView('list');
     };
     
-    // --- RENDER LOGIC ---
+    // This is the crucial new handler
+    const handleUpdateCustomer = (updatedCustomer) => {
+        setCustomers(prev => prev.map(c => c.id === updatedCustomer.id ? updatedCustomer : c));
+        setSelectedCustomer(updatedCustomer);
+    };
+
+    const handleSignOut = () => {
+        signOut(auth).catch((error) => {
+            console.error("Sign out error: ", error);
+        });
+    };
+
+    // --- RENDER ---
 
     if (isLoading) {
-        return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
+        return <div className="min-h-screen flex items-center justify-center bg-gray-100">
+            <div className="text-gray-500 text-lg">Loading...</div>
+        </div>;
     }
 
     if (!user) {
@@ -106,74 +121,76 @@ export default function App() {
     }
 
     return (
-        <div className="min-h-screen bg-gray-100 p-4 font-sans">
-            <div className="max-w-6xl mx-auto bg-white p-6 rounded-2xl shadow-lg">
-                <div className="flex justify-between items-center mb-6">
-                    <h1 className="text-4xl font-extrabold text-gray-900">
-                        Family & Events Manager
-                    </h1>
-                    <button onClick={handleSignOut} className="text-sm text-blue-600 hover:underline">
-                        Sign Out ({user.email})
+        <div className="min-h-screen bg-gray-100 p-8">
+            <header className="flex justify-between items-center mb-6">
+                <h1 className="text-4xl font-extrabold text-gray-900">Customer Management</h1>
+                <div className="flex items-center space-x-4">
+                    <span className="text-gray-700">Logged in as: {user.email}</span>
+                    <button onClick={handleSignOut}
+                        className="bg-red-500 hover:bg-red-600 text-white font-semibold py-2 px-4 rounded-xl shadow-md transition-transform transform hover:scale-105">
+                        Sign Out
                     </button>
                 </div>
+            </header>
 
-                {view === 'list' && (
-                    <CustomerList
-                        customers={customers}
-                        onSelect={handleSelectCustomer}
-                        onAdd={handleAddCustomerView}
-                    />
-                )}
-                {view === 'details' && selectedCustomer && (
-                    <CustomerDetail
-                        customer={selectedCustomer}
-                        onBack={handleBackToList}
-                    />
-                )}
-                {view === 'add' && (
-                    <AddCustomerForm
-                        onSuccess={handleAddNewCustomer}
-                        onCancel={handleBackToList}
-                    />
-                )}
-            </div>
+            {error && <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-xl mb-4" role="alert">{error}</div>}
+
+            {view === 'list' && (
+                <CustomerList
+                    customers={customers}
+                    onSelectCustomer={handleSelectCustomer}
+                    onAddCustomer={handleAddCustomer}
+                />
+            )}
+
+            {view === 'details' && selectedCustomer && (
+                <CustomerDetail
+                    customer={selectedCustomer}
+                    onBack={handleBackToList}
+                    onUpdate={handleUpdateCustomer}
+                />
+            )}
+
+            {view === 'add' && (
+                <AddCustomerForm
+                    onAddSuccess={handleAddCustomerSuccess}
+                    onCancel={handleBackToList}
+                />
+            )}
         </div>
     );
 }
 
-// Component to display the list of customers
-const CustomerList = ({ customers, onSelect, onAdd }) => {
+// CustomerList.js (Example corrected component)
+const CustomerList = ({ customers, onSelectCustomer, onAddCustomer }) => {
     return (
-        <div>
-            <div className="flex justify-between items-center mb-6">
-                <h2 className="text-2xl font-bold text-gray-800">Customers</h2>
+        <div className="space-y-6">
+            <div className="flex justify-between items-center mb-4">
+                <h2 className="text-2xl font-bold text-gray-800">Your Customers</h2>
                 <button
-                    onClick={onAdd}
+                    onClick={onAddCustomer} // This now correctly uses the onAddCustomer prop
                     className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-xl shadow-md transition-transform transform hover:scale-105"
                 >
                     Add New Customer
                 </button>
             </div>
             {customers.length === 0 ? (
-                <div className="text-center py-10 text-gray-500">
-                    No customers found. Click "Add New Customer" to get started!
+                <div className="bg-white p-6 rounded-2xl shadow-md text-center text-gray-500">
+                    No customers found. Click "Add New Customer" to get started.
                 </div>
             ) : (
-                <ul className="space-y-4">
-                    {customers.map(customer => (
-                        <li
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {customers.map((customer) => (
+                        <div
                             key={customer.id}
-                            className="p-4 bg-gray-50 rounded-xl shadow-sm hover:bg-gray-100 transition cursor-pointer flex justify-between items-center"
-                            onClick={() => onSelect(customer)}
+                            className="bg-white p-6 rounded-2xl shadow-md border border-gray-200 cursor-pointer hover:shadow-lg transition-shadow"
+                            onClick={() => onSelectCustomer(customer)} // This is the corrected prop name
                         >
-                            <div>
-                                <span className="text-lg font-medium text-gray-700">{customer.name}</span>
-                                <div className="text-sm text-gray-500">{customer.contactInfo}</div>
-                            </div>
-                            <span className="text-sm text-gray-400">View Details &raquo;</span>
-                        </li>
+                            <h3 className="text-xl font-semibold text-gray-800">{customer.name}</h3>
+                            <p className="text-gray-500">ID: {customer.id}</p>
+                        </div>
                     ))}
-                </ul>
+                </div>
             )}
         </div>
     );
@@ -271,47 +288,54 @@ const getRelationFromParent = (parentRelation, newMemberGender, parentGeneration
 };
 
 // Component to view customer details
-const CustomerDetail = ({ customer, onBack }) => {
+const CustomerDetail = ({ customer, onBack, onUpdate }) => {
     const [isAddingMember, setIsAddingMember] = useState(false);
     const [isAddingEvent, setIsAddingEvent] = useState(false);
 
     const handleAddFamilyMember = async (memberData) => {
         setIsAddingMember(false);
-        const familyMembers = customer.familyMembers || {};
-        const newMemberId = crypto.randomUUID();
-
-        let newRelation = memberData.relation;
-        let isDirectAncestor = true;
-
-        if (memberData.parentIds.length > 0) {
-            const parent = familyMembers[memberData.parentIds[0]];
-            const selfMember = Object.values(familyMembers).find(m => m.relation === 'Self');
-
-            const sideLineRelations = ['Brother', 'Sister', 'Uncle', 'Aunt', 'Nephew', 'Niece', 'Cousin', 'Granduncle', 'Grandaunt', 'Great-Granduncle', 'Great-Grandaunt'];
-            isDirectAncestor = !sideLineRelations.includes(parent.relation) && (parent.relation === 'Self' || parent.relation === 'Spouse' || parent.generation >= selfMember.generation);
-
-            // Use the new helper function to get the correct relation
-            newRelation = getRelationFromParent(parent.relation, memberData.relation, parent.generation);
-        }
-
-        const newMember = {
-            id: newMemberId,
-            name: memberData.name,
-            relation: newRelation, // Use the new, correct relation
-            parentIds: memberData.parentIds || [],
-            spouseIds: [],
-            generation: calculateGeneration(newRelation, memberData.parentIds, familyMembers),
-            isDirectAncestor: isDirectAncestor
-        };
-
-        const updatedFamilyMembers = {
-            ...familyMembers,
-            [newMemberId]: newMember
-        };
-
         try {
+            const familyMembers = customer.familyMembers || {};
+            const newMemberId = crypto.randomUUID();
+
+            let newRelation = memberData.relation;
+            let isDirectAncestor = true;
+
+            if (memberData.parentIds.length > 0) {
+                const parent = familyMembers[memberData.parentIds[0]];
+                if (parent) {
+                    const sideLineRelations = ['Brother', 'Sister', 'Uncle', 'Aunt', 'Nephew', 'Niece', 'Cousin', 'Granduncle', 'Grandaunt', 'Great-Granduncle', 'Great-Grandaunt'];
+                    isDirectAncestor = !sideLineRelations.includes(parent.relation) && (parent.relation === 'Self' || parent.relation === 'Spouse');
+                    newRelation = getRelationFromParent(parent.relation, memberData.relation, parent.generation);
+                }
+            }
+
+            const newMember = {
+                id: newMemberId,
+                name: memberData.name,
+                relation: newRelation,
+                parentIds: memberData.parentIds || [],
+                spouseIds: [],
+                generation: calculateGeneration(newRelation, memberData.parentIds, familyMembers),
+                isDirectAncestor: isDirectAncestor
+            };
+
+            const updatedFamilyMembers = {
+                ...familyMembers,
+                [newMemberId]: newMember
+            };
+
+            // --- 1. Update the database first ---
             const customerDocRef = doc(db, 'customers', customer.id);
             await updateDoc(customerDocRef, { familyMembers: updatedFamilyMembers });
+
+            // --- 2. Then, update the UI state ---
+            const updatedCustomer = {
+                ...customer,
+                familyMembers: updatedFamilyMembers
+            };
+            onUpdate(updatedCustomer);
+
         } catch (error) {
             console.error("Error adding family member:", error);
         }
@@ -319,10 +343,16 @@ const CustomerDetail = ({ customer, onBack }) => {
 
     const handleAddEvent = async (eventData) => {
         setIsAddingEvent(false);
-        const updatedEvents = [...(customer.events || []), eventData];
         try {
+            const updatedEvents = [...customer.events, eventData];
+            const updatedCustomer = {
+                ...customer,
+                events: updatedEvents
+            };
+            // Call the onUpdate prop with the new data
             const customerDocRef = doc(db, 'customers', customer.id);
             await updateDoc(customerDocRef, { events: updatedEvents });
+            onUpdate(updatedCustomer);
         } catch (error) {
             console.error("Error adding event:", error);
         }
