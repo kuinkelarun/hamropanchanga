@@ -132,7 +132,7 @@ export default function App() {
     return (
         <div className="min-h-screen bg-gray-100 p-8">
             <header className="flex justify-between items-center mb-6">
-                <h1 className="text-4xl font-extrabold text-gray-900">Customer Management</h1>
+                <h1 className="text-4xl font-extrabold text-gray-900">Family Tree</h1>
                 <div className="flex items-center space-x-4">
                     <span className="text-gray-700">Logged in as: {user.email}</span>
                     <button onClick={handleSignOut}
@@ -175,7 +175,7 @@ const CustomerList = ({ customers, onSelectCustomer, onAddCustomer }) => {
     return (
         <div className="space-y-6">
             <div className="flex justify-between items-center mb-4">
-                <h2 className="text-2xl font-bold text-gray-800">Your Customers</h2>
+                <h2 className="text-2xl font-bold text-gray-800">Your Branches</h2>
                 <button
                     onClick={onAddCustomer} // This now correctly uses the onAddCustomer prop
                     className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-xl shadow-md transition-transform transform hover:scale-105"
@@ -185,7 +185,7 @@ const CustomerList = ({ customers, onSelectCustomer, onAddCustomer }) => {
             </div>
             {customers.length === 0 ? (
                 <div className="bg-white p-6 rounded-2xl shadow-md text-center text-gray-500">
-                    No customers found. Click "Add New Customer" to get started.
+                    No branches found. Click "Add New Branch" to get started.
                 </div>
             ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -236,10 +236,10 @@ const AddCustomerForm = ({ onAddSuccess, onCancel }) => {
 
     return (
         <div>
-            <h2 className="text-2xl font-bold text-gray-800 mb-4">Add New Customer</h2>
+            <h2 className="text-2xl font-bold text-gray-800 mb-4">Add New Branch</h2>
             <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
-                    <label htmlFor="name" className="block text-gray-700 font-semibold mb-1">Customer Name</label>
+                    <label htmlFor="name" className="block text-gray-700 font-semibold mb-1">Full Name</label>
                     <input id="name" type="text" value={name} onChange={(e) => setName(e.target.value)}
                         className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500" required />
                 </div>
