@@ -6,8 +6,6 @@ import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import { db } from './firebase';
 import { doc, updateDoc, addDoc, getDoc } from 'firebase/firestore';
 
-
-// Main App Component
 // Main App component
 export default function App() {
     // STATE MANAGEMENT
@@ -91,9 +89,20 @@ export default function App() {
         setView('add');
     };
 
-    const handleAddCustomerSuccess = (newCustomer) => {
-        setCustomers(prev => [...prev, newCustomer]);
-        setView('list');
+    // In App.js
+    const handleAddCustomerSuccess = async (newCustomerData) => {
+        try {
+            // Add the new customer to Firestore
+            const customerCollectionRef = collection(db, 'customers');
+            const docRef = await addDoc(customerCollectionRef, { ...newCustomerData, userId: user.uid });
+
+            // Update local state with the newly created customer document
+            // setCustomers(prev => [...prev, { ...newCustomerData, id: docRef.id }]);
+            setView('list');
+        } catch (error) {
+            console.error("Error adding customer:", error);
+            setError("Failed to add new customer.");
+        }
     };
     
     // This is the crucial new handler
@@ -197,7 +206,7 @@ const CustomerList = ({ customers, onSelectCustomer, onAddCustomer }) => {
 };
 
 // Component to add a new customer
-const AddCustomerForm = ({ onSuccess, onCancel }) => {
+const AddCustomerForm = ({ onAddSuccess, onCancel }) => {
     const [name, setName] = useState('');
     const [contactInfo, setContactInfo] = useState('');
 
@@ -222,7 +231,7 @@ const AddCustomerForm = ({ onSuccess, onCancel }) => {
             },
             events: []
         };
-        onSuccess(newCustomerData);
+        onAddSuccess(newCustomerData);
     };
 
     return (
