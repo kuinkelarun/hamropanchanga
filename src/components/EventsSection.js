@@ -4,7 +4,7 @@ import './EventsSection.css';
 const EventsSection = ({ events }) => {
     return (
         <div className="events-container">
-            <h2 className="section-title">Upcoming Events</h2>
+            {/* <h2 className="section-title">Upcoming Events</h2> */}
             <div className="event-cards-grid">
                 {events.length === 0 ? (
                     <p className="text-gray-500">No upcoming events.</p>
@@ -17,10 +17,10 @@ const EventsSection = ({ events }) => {
                     ))
                 )}
             </div>
-            {/* Floating Action Button */}
+            {/* Floating Action Button
             <button className="floating-add-button">
                 + Add Event
-            </button>
+            </button> */}
         </div>
     );
 };

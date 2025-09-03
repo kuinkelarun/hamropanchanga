@@ -34,7 +34,7 @@ const LandingPage = ({ user, customers, onSelectCustomer, onAddCustomer, events 
                 />
             </div>
 
-            {/* Events/Updates Section */}
+            Events/Updates Section
             <div className="events-section">
                 <h2 className="section-title">Upcoming Events</h2>
                 <EventsSection events={events} />
