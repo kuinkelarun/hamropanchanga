@@ -7,17 +7,81 @@ import FamilyTreeChart from './FamilyTreeChart';
 import AddEventForm from './AddEventForm';
 import EventList from './EventList';
 
-// Helper functions (assuming these are defined elsewhere or you will add them)
-const getRelationFromParent = (parentRelation, childRelation, parentGeneration) => {
-    // Your logic for getting the relation
-    return childRelation;
+
+// --- Helper Function to get relation based on parent's generation ---
+const getRelationFromParent = (parentRelation, newMemberGender, parentGeneration) => {
+    // Direct descendants of 'Self' or 'Spouse' are always 'Son' or 'Daughter'
+    if (parentRelation === 'Self' || parentRelation === 'Spouse') {
+        return newMemberGender === 'Son' ? 'Son' : 'Daughter';
+    }
+
+    // Handle children of direct ancestors up to generation 1 (parents)
+    const directRelationMap = {
+        'Father': newMemberGender === 'Son' ? 'Brother' : 'Sister',
+        'Mother': newMemberGender === 'Son' ? 'Brother' : 'Sister',
+        'Brother': newMemberGender === 'Son' ? 'Nephew' : 'Niece',
+        'Sister': newMemberGender === 'Son' ? 'Nephew' : 'Niece',
+        'Uncle': newMemberGender === 'Son' ? 'Cousin' : 'Cousin',
+        'Aunt': newMemberGender === 'Son' ? 'Cousin' : 'Cousin',
+    };
+
+    if (directRelationMap[parentRelation]) {
+        return directRelationMap[parentRelation];
+    }
+    
+    const newMemberGeneration = parentGeneration - 1;
+
+    // For generations above 1 (grandparents and up), use a progressive naming scheme
+    if (newMemberGeneration >= 1) {
+        const extendedPrefixMap = {
+            1: '', // Child of grandparent is Uncle/Aunt
+            2: 'Grand-', // Child of great-grandparent is Granduncle/Grandaunt
+            3: 'Great-Grand-',
+            4: 'Great-Great-Grand-',
+        };
+        const prefix = extendedPrefixMap[newMemberGeneration] || '';
+        const suffix = newMemberGender === 'Son' ? 'uncle' : 'aunt';
+        return `${prefix}${suffix}`;
+    }
+
+    return newMemberGender === 'Son' ? 'Son' : 'Daughter'; // Fallback
 };
 
+// Helper function to calculate generation (no change needed here)
 const calculateGeneration = (relation, parentIds, familyMembers) => {
-    // Your logic for calculating generation
-    return 0;
+    if (relation === 'Self') return 0;
+    
+    if (parentIds && parentIds.length > 0) {
+        const parent = familyMembers[parentIds[0]];
+        if (parent) {
+            return parent.generation - 1;
+        }
+    }
+    
+    const generationMap = {
+        'Great Great Great Grandmother': 5,
+        'Great Great Great Grandfather': 5,
+        'Great Great Grandmother': 4,
+        'Great Great Grandfather': 4,
+        'Great Grandmother': 3,
+        'Great Grandfather': 3,
+        'Grandmother': 2,
+        'Grandfather': 2,
+        'Mother': 1,
+        'Father': 1,
+        'Uncle': 1,
+        'Aunt': 1,
+        'Self': 0,
+        'Spouse': 0,
+        'Brother': 0,
+        'Sister': 0,
+        'Son': -1,
+        'Daughter': -1,
+        'Grandson': -2,
+        'Granddaughter': -2
+    };
+    return generationMap[relation] ?? 0;
 };
-
 
 // Component to view customer details
 const CustomerDetail = ({ customer, onBack, onUpdate }) => {
