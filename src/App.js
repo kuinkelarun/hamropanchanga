@@ -300,6 +300,8 @@ const getRelationFromParent = (parentRelation, newMemberGender, parentGeneration
 const CustomerDetail = ({ customer, onBack, onUpdate }) => {
     const [isAddingMember, setIsAddingMember] = useState(false);
     const [isAddingEvent, setIsAddingEvent] = useState(false);
+    const [eventFilter, setEventFilter] = useState('upcoming');
+    const [editingEvent, setEditingEvent] = useState(null);
 
     const handleAddFamilyMember = async (memberData) => {
         setIsAddingMember(false);
@@ -309,7 +311,6 @@ const CustomerDetail = ({ customer, onBack, onUpdate }) => {
 
             let newRelation = memberData.relation;
             let isDirectAncestor = true;
-
             if (memberData.parentIds.length > 0) {
                 const parent = familyMembers[memberData.parentIds[0]];
                 if (parent) {
@@ -328,17 +329,13 @@ const CustomerDetail = ({ customer, onBack, onUpdate }) => {
                 generation: calculateGeneration(newRelation, memberData.parentIds, familyMembers),
                 isDirectAncestor: isDirectAncestor
             };
-
             const updatedFamilyMembers = {
                 ...familyMembers,
                 [newMemberId]: newMember
             };
-
-            // --- 1. Update the database first ---
             const customerDocRef = doc(db, 'customers', customer.id);
             await updateDoc(customerDocRef, { familyMembers: updatedFamilyMembers });
 
-            // --- 2. Then, update the UI state ---
             const updatedCustomer = {
                 ...customer,
                 familyMembers: updatedFamilyMembers
@@ -353,12 +350,22 @@ const CustomerDetail = ({ customer, onBack, onUpdate }) => {
     const handleAddEvent = async (eventData) => {
         setIsAddingEvent(false);
         try {
-            const updatedEvents = [...customer.events, eventData];
+            const person = Object.values(customer.familyMembers).find(
+                (member) => member.id === eventData.personId
+            );
+            const newEvent = {
+                ...eventData,
+                personName: person ? person.name : 'Unknown',
+                personRelation: person ? person.relation : 'N/A',
+                id: crypto.randomUUID(),
+                dateHistory: [eventData.date] // Initialize dateHistory with the first date
+            };
+
+            const updatedEvents = [...customer.events, newEvent];
             const updatedCustomer = {
                 ...customer,
                 events: updatedEvents
             };
-            // Call the onUpdate prop with the new data
             const customerDocRef = doc(db, 'customers', customer.id);
             await updateDoc(customerDocRef, { events: updatedEvents });
             onUpdate(updatedCustomer);
@@ -367,15 +374,31 @@ const CustomerDetail = ({ customer, onBack, onUpdate }) => {
         }
     };
 
-    const familyMembersArray = Object.values(customer.familyMembers || {});
+    const handleEditEvent = (event) => {
+        setEditingEvent(event);
+        setIsAddingEvent(false);
+    };
 
+    const handleUpdateEvent = async (updatedEventData) => {
+        try {
+            const updatedEvents = customer.events.map(event =>
+                event.id === updatedEventData.id ? updatedEventData : event
+            );
+            const customerDocRef = doc(db, 'customers', customer.id);
+            await updateDoc(customerDocRef, { events: updatedEvents });
+            onUpdate({ ...customer, events: updatedEvents });
+            setEditingEvent(null);
+        } catch (error) {
+            console.error("Error updating event:", error);
+        }
+    };
+
+    const familyMembersArray = Object.values(customer.familyMembers || {});
     return (
-        <div className="space-y-6">
+        <div className="min-h-screen bg-gray-100 p-8">
             <div className="flex items-center space-x-4 mb-6">
-                <button onClick={onBack}
-                    className="bg-gray-200 hover:bg-gray-300 text-gray-700 p-2 rounded-full transition-transform transform hover:scale-105">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6"
-                        fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <button onClick={onBack} className="bg-gray-200 hover:bg-gray-300 text-gray-700 p-2 rounded-full transition-transform transform hover:scale-105">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                     </svg>
                 </button>
@@ -385,8 +408,7 @@ const CustomerDetail = ({ customer, onBack, onUpdate }) => {
                 <div className="bg-gray-50 p-6 rounded-2xl shadow-md">
                     <div className="flex justify-between items-center mb-4">
                         <h3 className="text-xl font-bold text-gray-800">Family Tree</h3>
-                        <button onClick={() => setIsAddingMember(prev => !prev)}
-                            className="bg-green-600 hover:bg-green-700 text-white font-semibold py-1 px-3 rounded-xl shadow-md transition-transform transform hover:scale-105 text-sm">
+                        <button onClick={() => setIsAddingMember(prev => !prev)} className="bg-green-600 hover:bg-green-700 text-white font-semibold py-1 px-3 rounded-xl shadow-md transition-transform transform hover:scale-105 text-sm">
                             {isAddingMember ? 'Cancel' : 'Add Member'}
                         </button>
                     </div>
@@ -396,13 +418,27 @@ const CustomerDetail = ({ customer, onBack, onUpdate }) => {
                 <div className="bg-gray-50 p-6 rounded-2xl shadow-md">
                     <div className="flex justify-between items-center mb-4">
                         <h3 className="text-xl font-bold text-gray-800">Events</h3>
-                        <button onClick={() => setIsAddingEvent(prev => !prev)}
-                            className="bg-green-600 hover:bg-green-700 text-white font-semibold py-1 px-3 rounded-xl shadow-md transition-transform transform hover:scale-105 text-sm">
-                            {isAddingEvent ? 'Cancel' : 'Add Event'}
-                        </button>
+                        <div className="flex items-center space-x-2">
+                            <select
+                                value={eventFilter}
+                                onChange={(e) => setEventFilter(e.target.value)}
+                                className="border rounded-xl p-1 text-sm"
+                            >
+                                <option value="upcoming">Upcoming</option>
+                                <option value="all">All Events</option>
+                                <option value="past">Past Events</option>
+                                <option value="next-week">Next 7 Days</option>
+                                <option value="next-month">Next 30 Days</option>
+                                <option value="next-90-days">Next 90 Days</option>
+                            </select>
+                            <button onClick={() => { setIsAddingEvent(prev => !prev); setEditingEvent(null); }} className="bg-green-600 hover:bg-green-700 text-white font-semibold py-1 px-3 rounded-xl shadow-md transition-transform transform hover:scale-105 text-sm">
+                                {isAddingEvent ? 'Cancel' : 'Add Event'}
+                            </button>
+                        </div>
                     </div>
                     {isAddingEvent && <AddEventForm onAdd={handleAddEvent} familyMembers={familyMembersArray} />}
-                    <EventList events={customer.events || []} />
+                    {editingEvent && <EditEventForm event={editingEvent} onUpdate={handleUpdateEvent} onCancel={() => setEditingEvent(null)} familyMembers={familyMembersArray} />}
+                    {!isAddingEvent && !editingEvent && <EventList events={customer.events || []} eventFilter={eventFilter} onEdit={handleEditEvent} />}
                 </div>
             </div>
         </div>
@@ -661,113 +697,489 @@ const AddFamilyMemberForm = ({ onAdd, familyMembers }) => {
     );
 };
 
-// Component to list upcoming events
-const EventList = ({ events }) => {
-    const upcomingEvents = events
-        .map(event => ({
-            ...event,
-            date: new Date(event.date)
-        }))
-        .filter(event => event.date >= new Date())
-        .sort((a, b) => a.date - b.date);
+// Component to list and filter events
+// const EventList = ({ events, eventFilter }) => {
+//     // Helper dates for filtering
+//     const today = new Date();
+//     today.setHours(0, 0, 0, 0);
+
+//     const nextWeek = new Date(today);
+//     nextWeek.setDate(today.getDate() + 7);
+
+//     const nextMonth = new Date(today);
+//     nextMonth.setMonth(today.getMonth() + 1);
+
+//     const nextYear = new Date(today);
+//     nextYear.setFullYear(today.getFullYear() + 1);
+    
+//     // Filter and sort events based on the selected filter
+//     const filteredEvents = events
+//         .map(event => ({
+//             ...event,
+//             date: new Date(event.date)
+//         }))
+//         .filter(event => {
+//             switch (eventFilter) {
+//                 case 'all':
+//                     return true;
+//                 case 'past':
+//                     return event.date < today;
+//                 case 'next-week':
+//                     return event.date >= today && event.date <= nextWeek;
+//                 case 'next-month':
+//                     return event.date >= today && event.date <= nextMonth;
+//                 case 'next-year':
+//                     return event.date >= today && event.date <= nextYear;
+//                 case 'upcoming':
+//                 default:
+//                     return event.date >= today;
+//             }
+//         })
+//         .sort((a, b) => a.date - b.date);
+
+//     return (
+//         <div className="space-y-3">
+//             {filteredEvents.length === 0 ? (
+//                 <div className="text-center py-4 text-gray-400 text-sm">
+//                     No events found for this filter.
+//                 </div>
+//             ) : (
+//                 <ul className="space-y-2">
+//                     {filteredEvents.map((event, index) => (
+//                         <li key={index} className="bg-white p-3 rounded-xl shadow-sm flex justify-between items-center">
+//                             <div className="flex-1">
+//                                 <div className="text-gray-800 font-medium">{event.name}</div>
+//                                 <div className="text-sm text-gray-500">{event.date.toDateString()}</div>
+//                                 {event.personName && (
+//                                     <div className="text-xs text-gray-400 mt-1">For: {event.personName} ({event.personRelation})</div>
+//                                 )}
+//                             </div>
+//                         </li>
+//                     ))}
+//                 </ul>
+//             )}
+//         </div>
+//     );
+// };
+
+
+// Component to list all events
+const EventList = ({ events, eventFilter, onEdit }) => {
+    // Helper function to calculate the next occurrence of a repeating event
+    const getNextOccurrence = (originalDate, repetition) => {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        let nextDate = new Date(originalDate);
+
+        if (repetition === 'monthly') {
+            while (nextDate < today) {
+                nextDate.setMonth(nextDate.getMonth() + 1);
+            }
+        } else if (repetition === 'yearly') {
+            while (nextDate < today) {
+                nextDate.setFullYear(nextDate.getFullYear() + 1);
+            }
+        }
+        return nextDate;
+    };
+
+    // Helper dates for filtering
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const nextWeek = new Date(today);
+    nextWeek.setDate(today.getDate() + 7);
+
+    const nextMonth = new Date(today);
+    nextMonth.setMonth(today.getMonth() + 1);
+    
+    // New date variable for the filter
+    const next90Days = new Date(today);
+    next90Days.setDate(today.getDate() + 90);
+
+    // Filter and sort events based on the selected filter
+    const sortedAndFilteredEvents = events
+        .map(event => {
+            const originalDate = new Date(event.date);
+            const displayDate = (event.repetition && event.repetition !== 'none') ?
+                getNextOccurrence(originalDate, event.repetition) :
+                originalDate;
+            return { ...event, originalDate, displayDate };
+        })
+        .filter(event => {
+            switch (eventFilter) {
+                case 'all':
+                    return true;
+                case 'past':
+                    return event.originalDate < today;
+                case 'next-week':
+                    return event.displayDate >= today && event.displayDate <= nextWeek;
+                case 'next-month':
+                    return event.displayDate >= today && event.displayDate <= nextMonth;
+                case 'next-90-days': // New filter case
+                    return event.displayDate >= today && event.displayDate <= next90Days;
+                case 'upcoming':
+                default:
+                    return event.displayDate >= today;
+            }
+        })
+        .sort((a, b) => a.displayDate - b.displayDate);
+
+    const shouldGroup = ['upcoming', 'all', 'next-90-days'].includes(eventFilter);
+    const groupedEvents = {};
+    if (shouldGroup) {
+        sortedAndFilteredEvents.forEach(event => {
+            const monthYear = event.displayDate.toLocaleString('default', { month: 'long', year: 'numeric' });
+            if (!groupedEvents[monthYear]) {
+                groupedEvents[monthYear] = [];
+            }
+            groupedEvents[monthYear].push(event);
+        });
+    }
+
     return (
         <div className="space-y-3">
-            {upcomingEvents.length === 0 ? (
+            {sortedAndFilteredEvents.length === 0 ? (
                 <div className="text-center py-4 text-gray-400 text-sm">
-                    No upcoming events.
+                    No events found for this filter.
                 </div>
             ) : (
-                <ul className="space-y-2">
-                    {upcomingEvents.map((event, index) => (
-                        <li key={index} className="bg-white p-3 rounded-xl shadow-sm flex justify-between items-center">
-                            <div className="flex-1">
-                                <div className="text-gray-800 font-medium">{event.name}</div>
-                                <div className="text-sm text-gray-500">{event.date.toDateString()}</div>
-                                {event.personName && (
-                                    <div className="text-xs text-gray-400 mt-1">For: {event.personName} ({event.personRelation})</div>
-                                )}
-                            </div>
-                        </li>
-                    ))}
-                </ul>
+                shouldGroup ? (
+                    Object.keys(groupedEvents).map(monthYear => (
+                        <div key={monthYear}>
+                            <h5 className="text-lg font-bold text-gray-700 mb-2 mt-4">{monthYear}</h5>
+                            <ul className="space-y-2">
+                                {groupedEvents[monthYear].map((event, index) => (
+                                    <li key={index} className="bg-white p-3 rounded-xl shadow-sm flex justify-between items-center">
+                                        <div className="flex-1">
+                                            <div className="text-gray-800 font-medium">{event.name}</div>
+                                            <div className="text-sm text-gray-500">
+                                                {event.displayDate.toDateString()}
+                                                {event.repetition && event.repetition !== 'none' && (
+                                                    <span className="text-xs text-gray-400 ml-2">({event.repetition} repeating)</span>
+                                                )}
+                                            </div>
+                                            {event.personName && (
+                                                <div className="text-xs text-gray-400 mt-1">For: {event.personName} ({event.personRelation})</div>
+                                            )}
+                                        </div>
+                                        <div className="relative">
+                                            <button onClick={() => onEdit(event)} className="p-1">
+                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
+                                                    <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
+                                                </svg>
+                                            </button>
+                                        </div>
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+                    ))
+                ) : (
+                    <ul className="space-y-2">
+                        {sortedAndFilteredEvents.map((event, index) => (
+                            <li key={index} className="bg-white p-3 rounded-xl shadow-sm flex justify-between items-center">
+                                <div className="flex-1">
+                                    <div className="text-gray-800 font-medium">{event.name}</div>
+                                    <div className="text-sm text-gray-500">
+                                        {event.displayDate.toDateString()}
+                                        {event.repetition && event.repetition !== 'none' && (
+                                            <span className="text-xs text-gray-400 ml-2">({event.repetition} repeating)</span>
+                                        )}
+                                    </div>
+                                    {event.personName && (
+                                        <div className="text-xs text-gray-400 mt-1">For: {event.personName} ({event.personRelation})</div>
+                                    )}
+                                </div>
+                                <div className="relative">
+                                    <button onClick={() => onEdit(event)} className="p-1">
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
+                                            <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
+                                        </svg>
+                                    </button>
+                                </div>
+                            </li>
+                        ))}
+                    </ul>
+                )
             )}
         </div>
     );
 };
 
+// // Component to add a new event
+
+// const AddEventForm = ({ onAdd, familyMembers }) => {
+//     const [name, setName] = useState('');
+//     const [date, setDate] = useState('');
+//     const [selectedPersonId, setSelectedPersonId] = useState('');
+
+//     const handleSubmit = (e) => {
+//         e.preventDefault();
+//         if (!name.trim() || !date || !selectedPersonId) return;
+
+//         onAdd({ name, date, personId: selectedPersonId });
+//         setName('');
+//         setDate('');
+//         setSelectedPersonId('');
+//     };
+
+//     return (
+//         <div className="bg-white p-4 rounded-xl shadow-inner mb-4 space-y-3">
+//             <h4 className="text-lg font-bold text-gray-800">Add New Event</h4>
+//             <form onSubmit={handleSubmit} className="space-y-3">
+//                 <div>
+//                     <label htmlFor="event-person" className="block text-gray-700 font-semibold mb-1 text-sm">
+//                         Associated Person
+//                     </label>
+//                     <select
+//                         id="event-person"
+//                         value={selectedPersonId}
+//                         onChange={(e) => setSelectedPersonId(e.target.value)}
+//                         className="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-green-500"
+//                         required
+//                     >
+//                         <option value="" disabled>Select a person...</option>
+//                         {familyMembers.map(member => (
+//                             <option key={member.id} value={member.id}>
+//                                 {member.name} ({member.relation})
+//                             </option>
+//                         ))}
+//                     </select>
+//                 </div>
+//                 <div>
+//                     <label htmlFor="event-name" className="block text-gray-700 font-semibold mb-1 text-sm">
+//                         Event Name
+//                     </label>
+//                     <input
+//                         id="event-name"
+//                         type="text"
+//                         placeholder="Event Name (e.g., Birthday)"
+//                         value={name}
+//                         onChange={(e) => setName(e.target.value)}
+//                         className="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-green-500"
+//                         required
+//                     />
+//                 </div>
+//                 <div>
+//                     <label htmlFor="event-date" className="block text-gray-700 font-semibold mb-1 text-sm">
+//                         Date
+//                     </label>
+//                     <input
+//                         id="event-date"
+//                         type="date"
+//                         value={date}
+//                         onChange={(e) => setDate(e.target.value)}
+//                         className="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-green-500"
+//                         required
+//                     />
+//                 </div>
+//                 <div className="flex justify-end">
+//                     <button type="submit" className="px-4 py-2 rounded-xl text-white font-semibold transition bg-green-600 hover:bg-green-700 text-sm">
+//                         Add Event
+//                     </button>
+//                 </div>
+//             </form>
+//         </div>
+//     );
+// };
 
 // Component to add a new event
 const AddEventForm = ({ onAdd, familyMembers }) => {
     const [name, setName] = useState('');
     const [date, setDate] = useState('');
-    const [selectedPersonId, setSelectedPersonId] = useState(familyMembers[0]?.id || '');
+    const [selectedPersonId, setSelectedPersonId] = useState('');
+    const [repetition, setRepetition] = useState('none'); // New state for repetition
+
     const handleSubmit = (e) => {
         e.preventDefault();
         if (!name.trim() || !date || !selectedPersonId) return;
-        const selectedPerson = familyMembers.find(member => member.id === selectedPersonId);
 
-        const eventData = {
-            id: crypto.randomUUID(),
-            name,
-            date,
-            personId: selectedPerson.id,
-            personName: selectedPerson.name,
-            personRelation: selectedPerson.relation
-        };
-        onAdd(eventData);
+        onAdd({ name, date, personId: selectedPersonId, repetition }); // Pass repetition value
         setName('');
         setDate('');
+        setSelectedPersonId('');
+        setRepetition('none');
     };
 
     return (
         <div className="bg-white p-4 rounded-xl shadow-inner mb-4 space-y-3">
-            <div>
-                <label htmlFor="event-person" className="block text-gray-700 font-semibold mb-1 text-sm">
-                    Event for
-                </label>
-                <select
-                    id="event-person"
-                    value={selectedPersonId}
-                    onChange={(e) => setSelectedPersonId(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-green-500"
-                    required
-                >
-                    {familyMembers.length === 0 ? (
-                        <option value="" disabled>No family members to select</option>
-                    ) : (
-                        familyMembers.map(member => (
+            <h4 className="text-lg font-bold text-gray-800">Add New Event</h4>
+            <form onSubmit={handleSubmit} className="space-y-3">
+                <div>
+                    <label htmlFor="event-person" className="block text-gray-700 font-semibold mb-1 text-sm">
+                        Associated Person
+                    </label>
+                    <select
+                        id="event-person"
+                        value={selectedPersonId}
+                        onChange={(e) => setSelectedPersonId(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-green-500"
+                        required
+                    >
+                        <option value="" disabled>Select a person...</option>
+                        {familyMembers.map(member => (
                             <option key={member.id} value={member.id}>
                                 {member.name} ({member.relation})
                             </option>
-                        ))
-                    )}
-                </select>
-            </div>
-            <div>
-                <input
-                    type="text"
-                    placeholder="Event Name (e.g., Birthday)"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-green-500"
-                    required
-                />
-            </div>
-            <div>
-                <input
-                    type="date"
-                    value={date}
-                    onChange={(e) => setDate(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-green-500"
-                    required
-                />
-            </div>
-            <button
-                onClick={handleSubmit}
-                className="w-full bg-green-500 hover:bg-green-600 text-white font-semibold py-2 rounded-xl transition"
-            >
-                Add Event
-            </button>
+                        ))}
+                    </select>
+                </div>
+                <div>
+                    <label htmlFor="event-name" className="block text-gray-700 font-semibold mb-1 text-sm">
+                        Event Name
+                    </label>
+                    <input
+                        id="event-name"
+                        type="text"
+                        placeholder="Event Name (e.g., Birthday)"
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-green-500"
+                        required
+                    />
+                </div>
+                <div>
+                    <label htmlFor="event-date" className="block text-gray-700 font-semibold mb-1 text-sm">
+                        Date
+                    </label>
+                    <input
+                        id="event-date"
+                        type="date"
+                        value={date}
+                        onChange={(e) => setDate(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-green-500"
+                        required
+                    />
+                </div>
+                <div>
+                    <label htmlFor="event-repetition" className="block text-gray-700 font-semibold mb-1 text-sm">
+                        Repeats
+                    </label>
+                    <select
+                        id="event-repetition"
+                        value={repetition}
+                        onChange={(e) => setRepetition(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-green-500"
+                    >
+                        <option value="none">Does not repeat</option>
+                        <option value="monthly">Monthly</option>
+                        <option value="yearly">Yearly</option>
+                    </select>
+                </div>
+                <div className="flex justify-end">
+                    <button type="submit" className="px-4 py-2 rounded-xl text-white font-semibold transition bg-green-600 hover:bg-green-700 text-sm">
+                        Add Event
+                    </button>
+                </div>
+            </form>
+        </div>
+    );
+};
+
+// Component to edit an existing event
+const EditEventForm = ({ event, onUpdate, onCancel, familyMembers }) => {
+    const [name, setName] = useState(event.name);
+    const [date, setDate] = useState(event.date); // Use the current, most recent date
+    const [selectedPersonId, setSelectedPersonId] = useState(event.personId);
+    const [repetition, setRepetition] = useState(event.repetition || 'none');
+
+    const handleSubmit = (e) => {
+        e.preventDefault();
+        if (!name.trim() || !date || !selectedPersonId) return;
+
+        // Find the associated person to get their name and relation
+        const person = familyMembers.find(member => member.id === selectedPersonId);
+
+        // Create the updated event object, adding the new date to the history array
+        const updatedEvent = {
+            ...event,
+            name,
+            date, // This is the new, current date
+            personId: selectedPersonId,
+            personName: person ? person.name : 'Unknown',
+            personRelation: person ? person.relation : 'N/A',
+            repetition,
+            dateHistory: [...event.dateHistory, date] // Append the new date to the history array
+        };
+
+        onUpdate(updatedEvent);
+    };
+
+    return (
+        <div className="bg-white p-4 rounded-xl shadow-inner mb-4 space-y-3">
+            <h4 className="text-lg font-bold text-gray-800">Edit Event</h4>
+            <form onSubmit={handleSubmit} className="space-y-3">
+                <div>
+                    <label htmlFor="edit-event-person" className="block text-gray-700 font-semibold mb-1 text-sm">
+                        Associated Person
+                    </label>
+                    <select
+                        id="edit-event-person"
+                        value={selectedPersonId}
+                        onChange={(e) => setSelectedPersonId(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-green-500"
+                        required
+                    >
+                        <option value="" disabled>Select a person...</option>
+                        {familyMembers.map(member => (
+                            <option key={member.id} value={member.id}>
+                                {member.name} ({member.relation})
+                            </option>
+                        ))}
+                    </select>
+                </div>
+                <div>
+                    <label htmlFor="edit-event-name" className="block text-gray-700 font-semibold mb-1 text-sm">
+                        Event Name
+                    </label>
+                    <input
+                        id="edit-event-name"
+                        type="text"
+                        placeholder="Event Name (e.g., Birthday)"
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-green-500"
+                        required
+                    />
+                </div>
+                <div>
+                    <label htmlFor="edit-event-date" className="block text-gray-700 font-semibold mb-1 text-sm">
+                        Date
+                    </label>
+                    <input
+                        id="edit-event-date"
+                        type="date"
+                        value={date}
+                        onChange={(e) => setDate(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-green-500"
+                        required
+                    />
+                </div>
+                <div>
+                    <label htmlFor="edit-event-repetition" className="block text-gray-700 font-semibold mb-1 text-sm">
+                        Repeats
+                    </label>
+                    <select
+                        id="edit-event-repetition"
+                        value={repetition}
+                        onChange={(e) => setRepetition(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-green-500"
+                    >
+                        <option value="none">Does not repeat</option>
+                        <option value="monthly">Monthly</option>
+                        <option value="yearly">Yearly</option>
+                    </select>
+                </div>
+                <div className="flex justify-end space-x-2">
+                    <button type="button" onClick={onCancel} className="px-4 py-2 rounded-xl text-gray-700 font-semibold transition bg-gray-200 hover:bg-gray-300 text-sm">
+                        Cancel
+                    </button>
+                    <button type="submit" className="px-4 py-2 rounded-xl text-white font-semibold transition bg-green-600 hover:bg-green-700 text-sm">
+                        Update Event
+                    </button>
+                </div>
+            </form>
         </div>
     );
 };
