@@ -61,15 +61,45 @@ This section has moved here: [https://facebook.github.io/create-react-app/docs/m
 
 This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
 
+
 ### Deployment
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
+    This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
 
-### `npm run build` fails to minify
+    ### `npm run build` fails to minify
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+    This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+
 
 Deploy!
-This is the final command. It will upload the contents of your build folder to Firebase's global servers.
+    This is the final command. It will upload the contents of your build folder to Firebase's global servers.
 
-$ firebase deploy
+    $ firebase deploy
+
+
+
+Favor the development branch's changes (-X theirs)
+    This command will perform the merge and, in the event of a conflict, will automatically accept the changes from the source branch (development). 
+
+    # First, update your local main branch
+    git checkout main
+    git pull origin main
+
+    # Merge the development branch, favoring its changes in conflicts
+    git merge -X theirs development
+
+    # Push the final merge commit
+    git push origin main
+
+Favor the main branch's changes (-X ours)
+    This command does the opposite—it automatically accepts the changes from the target branch (main) in the case of a conflict. 
+    sh
+    # First, update your local main branch
+    git checkout main
+    git pull origin main
+
+    # Merge the development branch, favoring the main branch's changes
+    git merge -X ours development
+
+    # Push the final merge commit
+    git push origin main    
