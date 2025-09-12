@@ -4,7 +4,7 @@ import LandingPageEventsSection from './LandingPageEventsSection'; // Make sure 
 import './LandingPage.css';
 import heroAnimation from './hero-animation.mp4';
 
-const LandingPage = ({ user, customers, onSelectCustomer, onAddCustomer, events, familyMembers }) => {
+const LandingPage = ({ user, customers, onSelectCustomer, onAddCustomer, events, familyMembers, onDoubleClickEvent }) => {
     return (
         <div className="landing-container">
             {/* Hero Section */}
@@ -43,7 +43,11 @@ const LandingPage = ({ user, customers, onSelectCustomer, onAddCustomer, events,
             {/* Events/Updates Section */}
             <div className="events-section">
                 <h2 className="section-title">Upcoming Events</h2>
-                <LandingPageEventsSection events={events} familyMembers={familyMembers} />
+                <LandingPageEventsSection 
+                    events={events} 
+                    familyMembers={familyMembers} 
+                    onDoubleClickEvent={onDoubleClickEvent} 
+                />
             </div>
         </div>
     );

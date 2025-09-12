@@ -8,7 +8,7 @@
 // import CustomerList from './components/CustomerList';
 // import CustomerDetail from './components/CustomerDetail';
 // import AddCustomerForm from './components/AddCustomerForm';
-// import LandingPage from './components/LandingPage'; // Import the new component
+// import LandingPage from './components/LandingPage';
 
 // export default function App() {
 //     // STATE MANAGEMENT
@@ -116,6 +116,10 @@
 //         return <Login />;
 //     }
 
+//     // Combine all events and family members from all customers
+//     const allEvents = customers.flatMap(customer => customer.events || []);
+//     const allFamilyMembers = customers.flatMap(customer => Object.values(customer.familyMembers || {}));
+
 //     return (
 //         <div className="min-h-screen bg-gray-100 p-8">
 //             <header className="flex justify-between items-center mb-6">
@@ -137,7 +141,8 @@
 //                     customers={customers}
 //                     onSelectCustomer={handleSelectCustomer}
 //                     onAddCustomer={handleAddCustomer}
-//                     events={customers.flatMap(c => c.events || [])}
+//                     events={allEvents} // Pass the combined list of events
+//                     familyMembers={allFamilyMembers} // Pass the combined list of family members
 //                 />
 //             )}
 
@@ -159,7 +164,6 @@
 //     );
 // }
 
-// App.js
 import { useState, useEffect } from 'react';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { auth } from './firebase';
@@ -277,6 +281,18 @@ export default function App() {
         return <Login />;
     }
 
+    const handleDoubleClickEvent = (event) => {
+    // Find the customer who owns this event's personId
+    const customer = customers.find(c => {
+        if (!c.familyMembers) return false;
+        return Object.values(c.familyMembers).some(member => member.id === event.personId);
+    });
+
+    if (customer) {
+        handleSelectCustomer(customer);
+    }
+    };
+
     // Combine all events and family members from all customers
     const allEvents = customers.flatMap(customer => customer.events || []);
     const allFamilyMembers = customers.flatMap(customer => Object.values(customer.familyMembers || {}));
@@ -304,6 +320,7 @@ export default function App() {
                     onAddCustomer={handleAddCustomer}
                     events={allEvents} // Pass the combined list of events
                     familyMembers={allFamilyMembers} // Pass the combined list of family members
+                    onDoubleClickEvent={handleDoubleClickEvent} // Pass the new handler here
                 />
             )}
 
