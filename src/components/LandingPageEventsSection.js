@@ -93,14 +93,17 @@ const LandingPageEventsSection = ({ events, familyMembers, onDoubleClickEvent })
                     Object.keys(groupedEvents).map(monthYear => (
                         <div key={monthYear}>
                             <h5 className="text-lg font-bold text-gray-700 mb-2 mt-4">{monthYear}</h5>
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                            {/* <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"> */}
+                            <div className="event-cards-grid">
                                 {groupedEvents[monthYear].map((event, index) => (
                                     <div 
                                         key={index} 
-                                        className="bg-white p-4 rounded-xl shadow-md space-y-2 border border-transparent hover:shadow-lg hover:border-indigo-400 hover:border-2 transition-all duration-300 cursor-pointer"
+                                        // className="bg-white p-4 rounded-xl shadow-md space-y-2 border border-transparent hover:shadow-lg hover:border-indigo-400 hover:border-2 transition-all duration-300 cursor-pointer"
+                                        className="event-card"
                                         onDoubleClick={() => onDoubleClickEvent(event)} // Add this event handler
                                     >
-                                        <div className="text-gray-800 font-bold">{event.name}</div>
+                                        {/* <div className="text-gray-800 font-bold">{event.name}</div> */}
+                                        <div className="event-name">{event.name}</div>
                                         <div className="text-sm text-gray-500">
                                             {event.displayDate.toDateString()}
                                             {event.repetition && event.repetition !== 'none' && (

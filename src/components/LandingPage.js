@@ -2,7 +2,7 @@ import React from 'react';
 import CustomerList from './CustomerList';
 import LandingPageEventsSection from './LandingPageEventsSection'; // Make sure this import exists
 import './LandingPage.css';
-import heroAnimation from './hero-animation.mp4';
+import heroAnimation from './hero-animation.png';
 
 const LandingPage = ({ user, customers, onSelectCustomer, onAddCustomer, events, familyMembers, onDoubleClickEvent }) => {
     return (
@@ -17,16 +17,17 @@ const LandingPage = ({ user, customers, onSelectCustomer, onAddCustomer, events,
                     </button>
                 </div>
                 <div className="hero-illustration">
-                    <video
+                    <img
                         src={heroAnimation}
-                        autoPlay
-                        loop
-                        muted
-                        playsInline
-                        className="hero-video"
-                    >
-                        Your browser does not support the video tag.
-                    </video>
+                        alt="Family tree illustration"
+                        // autoPlay
+                        // loop
+                        // muted
+                        // playsInline
+                        className="hero-image"
+                    />
+                        {/* Your browser does not support the video tag.
+                    </img> */}
                 </div>
             </div>
 
