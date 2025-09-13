@@ -5,16 +5,18 @@
 .event-cards-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-    gap: 1.5rem;
+    gap: 1rem;
 }
 
 .event-card {
     background-color: rgb(227, 217, 226);
     border-left: 5px solid #667eea;
-    padding: 1.5rem;
+    padding: 1rem;
     border-radius: 0.5rem;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
     transition: all 0.3s ease;
+    min-height: 100px;
+    overflow: hidden; 
 }
 
 .event-card:hover {
@@ -26,9 +28,13 @@
     font-weight: bold;
     color: #684c4c;
     margin-bottom: 0.5rem;
+    /* Truncate the text if it's too long */
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .event-date {
-    color: #666;
+    color: #231818;
     font-size: 0.9rem;
 }

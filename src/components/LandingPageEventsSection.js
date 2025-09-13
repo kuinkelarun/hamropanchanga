@@ -82,7 +82,21 @@ const LandingPageEventsSection = ({ events, familyMembers, onDoubleClickEvent })
 
     return (
         <div className="events-section">
-            {/* ... (event filter dropdown and heading remain the same) ... */}
+            <div className="flex items-center justify-between mb-4">
+                <div>  </div>
+                <select
+                    value={eventFilter}
+                    onChange={(e) => setEventFilter(e.target.value)}
+                    className="border rounded-xl p-1 text-sm"
+                >
+                    <option value="upcoming">Upcoming</option>
+                    <option value="all">All Events</option>
+                    <option value="past">Past Events</option>
+                    <option value="next-week">Next 7 Days</option>
+                    <option value="next-month">Next 30 Days</option>
+                    <option value="next-90-days">Next 90 Days</option>
+                </select>
+            </div>
             
             {sortedAndFilteredEvents.length === 0 ? (
                 <div className="text-center py-4 text-gray-400 text-sm">
@@ -93,16 +107,13 @@ const LandingPageEventsSection = ({ events, familyMembers, onDoubleClickEvent })
                     Object.keys(groupedEvents).map(monthYear => (
                         <div key={monthYear}>
                             <h5 className="text-lg font-bold text-gray-700 mb-2 mt-4">{monthYear}</h5>
-                            {/* <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"> */}
                             <div className="event-cards-grid">
                                 {groupedEvents[monthYear].map((event, index) => (
                                     <div 
                                         key={index} 
-                                        // className="bg-white p-4 rounded-xl shadow-md space-y-2 border border-transparent hover:shadow-lg hover:border-indigo-400 hover:border-2 transition-all duration-300 cursor-pointer"
                                         className="event-card"
-                                        onDoubleClick={() => onDoubleClickEvent(event)} // Add this event handler
+                                        onDoubleClick={() => onDoubleClickEvent(event)}
                                     >
-                                        {/* <div className="text-gray-800 font-bold">{event.name}</div> */}
                                         <div className="event-name">{event.name}</div>
                                         <div className="text-sm text-gray-500">
                                             {event.displayDate.toDateString()}
@@ -119,14 +130,14 @@ const LandingPageEventsSection = ({ events, familyMembers, onDoubleClickEvent })
                         </div>
                     ))
                 ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div className="event-cards-grid">
                         {sortedAndFilteredEvents.map((event, index) => (
                             <div 
                                 key={index} 
-                                className="bg-white p-4 rounded-xl shadow-md space-y-2 border border-transparent hover:shadow-lg hover:border-indigo-400 hover:border-2 transition-all duration-300 cursor-pointer"
-                                onDoubleClick={() => onDoubleClickEvent(event)} // Add this event handler
+                                className="event-card"
+                                onDoubleClick={() => onDoubleClickEvent(event)}
                             >
-                                <div className="text-gray-800 font-bold">{event.name}</div>
+                                <div className="event-name">{event.name}</div>
                                 <div className="text-sm text-gray-500">
                                     {event.displayDate.toDateString()}
                                     {event.repetition && event.repetition !== 'none' && (
@@ -144,5 +155,6 @@ const LandingPageEventsSection = ({ events, familyMembers, onDoubleClickEvent })
         </div>
     );
 };
+
 
 export default LandingPageEventsSection;
