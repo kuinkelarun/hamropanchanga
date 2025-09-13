@@ -704,10 +704,18 @@ const EventList = ({ events, eventFilter, onEdit }) => {
         const today = new Date();
         today.setHours(0, 0, 0, 0);
         let nextDate = new Date(originalDate);
+        const originalDay = nextDate.getDate();
 
         if (repetition === 'monthly') {
             while (nextDate < today) {
-                nextDate.setMonth(nextDate.getMonth() + 1);
+                const currentMonth = nextDate.getMonth();
+                nextDate.setMonth(currentMonth + 1);
+                // Check if the new month has the original day. If not, set to the last day of the new month.
+                if (nextDate.getMonth() !== (currentMonth + 1) % 12) {
+                    nextDate.setDate(0);
+                } else {
+                    nextDate.setDate(originalDay);
+                }
             }
         } else if (repetition === 'yearly') {
             while (nextDate < today) {
@@ -716,21 +724,17 @@ const EventList = ({ events, eventFilter, onEdit }) => {
         }
         return nextDate;
     };
-
     // Helper dates for filtering
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-
     const nextWeek = new Date(today);
     nextWeek.setDate(today.getDate() + 7);
 
     const nextMonth = new Date(today);
     nextMonth.setMonth(today.getMonth() + 1);
-    
     // New date variable for the filter
     const next90Days = new Date(today);
     next90Days.setDate(today.getDate() + 90);
-
     // Filter and sort events based on the selected filter
     const sortedAndFilteredEvents = events
         .map(event => {
@@ -738,6 +742,7 @@ const EventList = ({ events, eventFilter, onEdit }) => {
             const displayDate = (event.repetition && event.repetition !== 'none') ?
                 getNextOccurrence(originalDate, event.repetition) :
                 originalDate;
+
             return { ...event, originalDate, displayDate };
         })
         .filter(event => {
@@ -749,6 +754,7 @@ const EventList = ({ events, eventFilter, onEdit }) => {
                 case 'next-week':
                     return event.displayDate >= today && event.displayDate <= nextWeek;
                 case 'next-month':
+
                     return event.displayDate >= today && event.displayDate <= nextMonth;
                 case 'next-90-days': // New filter case
                     return event.displayDate >= today && event.displayDate <= next90Days;
@@ -758,7 +764,6 @@ const EventList = ({ events, eventFilter, onEdit }) => {
             }
         })
         .sort((a, b) => a.displayDate - b.displayDate);
-
     const shouldGroup = ['upcoming', 'all', 'next-90-days'].includes(eventFilter);
     const groupedEvents = {};
     if (shouldGroup) {
@@ -777,6 +782,7 @@ const EventList = ({ events, eventFilter, onEdit }) => {
                 <div className="text-center py-4 text-gray-400 text-sm">
                     No events found for this filter.
                 </div>
+
             ) : (
                 shouldGroup ? (
                     Object.keys(groupedEvents).map(monthYear => (
@@ -784,9 +790,11 @@ const EventList = ({ events, eventFilter, onEdit }) => {
                             <h5 className="text-lg font-bold text-gray-700 mb-2 mt-4">{monthYear}</h5>
                             <ul className="space-y-2">
                                 {groupedEvents[monthYear].map((event, index) => (
+
                                     <li key={index} className="bg-white p-3 rounded-xl shadow-sm flex justify-between items-center">
                                         <div className="flex-1">
                                             <div className="text-gray-800 font-medium">{event.name}</div>
+
                                             <div className="text-sm text-gray-500">
                                                 {event.displayDate.toDateString()}
                                                 {event.repetition && event.repetition !== 'none' && (
