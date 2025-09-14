@@ -83,7 +83,7 @@ const LandingPageEventsSection = ({ events, familyMembers, onDoubleClickEvent })
     return (
         <div className="events-section">
             <div className="flex items-center justify-between mb-4">
-                <div>  </div>
+                <h2 className="section-title">Events & Reminders</h2>
                 <select
                     value={eventFilter}
                     onChange={(e) => setEventFilter(e.target.value)}

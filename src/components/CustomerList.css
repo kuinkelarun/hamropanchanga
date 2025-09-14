@@ -3,13 +3,24 @@
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: 1.5rem;
 }
-
+/* 
 .branch-card {
   background-color: white;
   border-radius: 1rem;
   padding: 1.5rem;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   transition: all 0.3s ease;
+} */
+
+.branch-card {
+    background-color: rgb(227, 217, 226);
+    border-left: 5px solid #667eea;
+    padding: 1.5rem;
+    border-radius: 1rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+    min-height: 100px;
+    overflow: hidden; 
 }
 
 .branch-card:hover {

@@ -75,8 +75,6 @@
     display: block;
 }
 
-
-/* General Section Styling (remains similar) */
 .branches-section, .events-section {
     margin-bottom: 2rem;
 }
@@ -87,4 +85,3 @@
     color: #0a3278;
     margin-bottom: 1.5rem;
 }
-

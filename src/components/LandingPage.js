@@ -2,7 +2,7 @@ import React from 'react';
 import CustomerList from './CustomerList';
 import LandingPageEventsSection from './LandingPageEventsSection'; // Make sure this import exists
 import './LandingPage.css';
-import heroAnimation from './hero-animation.png';
+import heroAnimation from './hero-image.png';
 
 const LandingPage = ({ user, customers, onSelectCustomer, onAddCustomer, events, familyMembers, onDoubleClickEvent }) => {
     return (
@@ -24,7 +24,7 @@ const LandingPage = ({ user, customers, onSelectCustomer, onAddCustomer, events,
                         // loop
                         // muted
                         // playsInline
-                        className="hero-image"
+                        className="hero-images"
                     />
                         {/* Your browser does not support the video tag.
                     </img> */}
@@ -33,7 +33,7 @@ const LandingPage = ({ user, customers, onSelectCustomer, onAddCustomer, events,
 
             {/* Branches Cards Section */}
             <div className="branches-section">
-                <h2 className="section-title">Your Branches</h2>
+                {/* <h2 className="section-title">Your Branches</h2> */}
                 <CustomerList
                     customers={customers}
                     onSelectCustomer={onSelectCustomer}
@@ -43,7 +43,7 @@ const LandingPage = ({ user, customers, onSelectCustomer, onAddCustomer, events,
 
             {/* Events/Updates Section */}
             <div className="events-section">
-                <h2 className="section-title">Upcoming Events</h2>
+                {/* <h2 className="section-title">Upcoming Events</h2> */}
                 <LandingPageEventsSection 
                     events={events} 
                     familyMembers={familyMembers} 
