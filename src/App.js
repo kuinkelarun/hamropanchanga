@@ -134,7 +134,8 @@ export default function App() {
     return (
         <div className="min-h-screen bg-gray-100 p-8">
             <header className="flex justify-between items-center mb-6">
-                <h1 className="text-4xl font-extrabold text-gray-900">Family Tree Management</h1>
+                {/* <h1 className="text-4xl font-extrabold text-gray-900">Family Tree Management</h1> */}
+                <div> </div>
                 <div className="flex items-center space-x-4">
                     <span className="text-gray-700">Logged in as: {user.email}</span>
                     <button onClick={handleSignOut}

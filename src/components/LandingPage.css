@@ -1,44 +1,74 @@
+/* Updated Hero Section Styling */
+.hero-section {
+    position: relative; /* Establishes a positioning context for children */
+    display: flex; /* Use flexbox to position content horizontally */
+    align-items: center; /* Vertically aligns items in the center */
+    justify-content: space-between; /* Pushes content to the edges */
+    height: 40vh; /* Set a specific height for the banner */
+    color: white;
+    padding: 2rem 4rem;
+    border-radius: 20px;
+    box-shadow: 0 10px 15px rgba(0, 0, 0, 0.1);
+    margin-bottom: 2rem;
+    overflow: hidden; /* Ensures image and content don't exceed the rounded corners */
+}
 
+/* Add a semi-transparent overlay for better text readability */
+.hero-section::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(90, 51, 86, 0.4); /* Dark overlay */
+    border-radius: 20px;
+    z-index: 1; /* Puts the overlay between the image and the content */
+}
+
+.hero-content {
+    position: relative;
+    z-index: 2; /* Brings the content to the front, on top of the image and overlay */
+    max-width: 50%; /* Constrain text content to one side */
+}
+
+/* Updated Illustration Styling */
+.hero-illustration {
+    position: absolute; /* Positions the image container relative to the hero section */
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 0; /* Pushes the image to the back */
+}
+
+.hero-images {
+    width: 100%;
+    height: 100%;
+    object-fit: cover; /* Ensures the image fills the container without distortion */
+}
+
+/* The rest of your CSS remains unchanged */
 .landing-container {
-    background-color: #f7fafc; /* light gray background */
-    color: #2d3748; /* dark gray text */
+    background-color: #f7fafc;
+    color: #2d3748;
     min-height: 100vh;
     padding: 2rem;
 }
 
-/* Updated Hero Section Styling */
-.hero-section {
-    display: flex; /* Use flexbox for a side-by-side layout */
-    align-items: center;
-    justify-content: space-between;
-    background: linear-gradient(135deg, #4e6e9b 0%, #4b1f46 100%);
-    color: rgb(242, 238, 245);
-    padding: 2rem 4rem;
-    border-radius: 20px;
-    box-shadow: 0 10px 15px rgba(196, 177, 190, 0.1);
-    margin-bottom: 2rem;
-    flex-wrap: wrap; /* Allows wrapping on smaller screens */
-}
-
-
-/* New media query for mobile devices */
 @media (max-width: 768px) {
     .hero-section {
-        /* On screens smaller than 768px, stack the content */
         flex-direction: column;
-        height: auto; /* Allow the height to expand as content stacks */
-        padding: 2rem; /* Adjust padding for smaller screens */
+        height: auto;
+        padding: 2rem;
     }
 }
 
-.hero-content {
-    max-width: 50%; /* Constrain text content to one side */
-}
-
 .app-name {
-    font-size: 3rem;
+    font-size: 2.75rem;
     font-weight: 800;
     margin-bottom: 0.5rem;
+
 }
 
 .tagline {
@@ -46,12 +76,13 @@
     font-weight: 300;
     opacity: 0.9;
     margin-bottom: 1.5rem;
+    color: rgb(255, 255, 255);
 }
 
 .cta-button {
-    background-color: #f6ad55; /* A warm orange for the button */
+    background-color: #f6ad55;
     color: white;
-    padding: 0.75rem 1.5rem;
+    padding: 0.5rem 1.25rem;
     border-radius: 9999px;
     font-weight: 600;
     transition: background-color 0.3s ease;
@@ -59,20 +90,6 @@
 
 .cta-button:hover {
     background-color: #ed8936;
-}
-
-/* Updated Illustration Styling */
-.hero-illustration {
-    width: 45%; /* Give the illustration a defined width */
-    height: auto;
-    border-radius: 12px;
-    overflow: hidden; /* Ensures the video respects the rounded corners */
-}
-
-.hero-images {
-    width: 100%; /* Make the video fill its container */
-    height: auto;
-    display: block;
 }
 
 .branches-section, .events-section {

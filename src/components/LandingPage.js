@@ -26,8 +26,7 @@ const LandingPage = ({ user, customers, onSelectCustomer, onAddCustomer, events,
                         // playsInline
                         className="hero-images"
                     />
-                        {/* Your browser does not support the video tag.
-                    </img> */}
+
                 </div>
             </div>
 
