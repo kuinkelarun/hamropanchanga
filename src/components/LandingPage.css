@@ -29,7 +29,7 @@
 .hero-content {
     position: relative;
     z-index: 2; /* Brings the content to the front, on top of the image and overlay */
-    max-width: 50%; /* Constrain text content to one side */
+    max-width: 80%; /* Constrain text content to one side */
 }
 
 /* Updated Illustration Styling */
@@ -73,7 +73,7 @@
 
 .tagline {
     font-size: 1.25rem;
-    font-weight: 300;
+    font-weight: 400;
     opacity: 0.9;
     margin-bottom: 1.5rem;
     color: rgb(255, 255, 255);
