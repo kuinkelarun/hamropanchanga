@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import EventMenu from './EventMenu';
 
 // Component to list all events
@@ -75,6 +75,16 @@ const EventList = ({ events, eventFilter, onEdit, onDelete }) => {
         });
     }
 
+    const [openMenuId, setOpenMenuId] = useState(null);
+
+    const handleToggle = (id) => {
+        setOpenMenuId(prev => (prev === id ? null : id));
+    };
+
+    const handleClose = (id) => {
+        setOpenMenuId(prev => (prev === id ? null : prev));
+    };
+
     return (
         <div className="space-y-3">
             {sortedAndFilteredEvents.length === 0 ? (
@@ -87,8 +97,10 @@ const EventList = ({ events, eventFilter, onEdit, onDelete }) => {
                         <div key={monthYear}>
                             <h5 className="text-lg font-bold text-gray-700 mb-2 mt-4">{monthYear}</h5>
                             <ul className="space-y-2">
-                                {groupedEvents[monthYear].map((event, index) => (
-                                    <li key={index} className="bg-white p-3 rounded-xl shadow-sm flex justify-between items-center">
+                                {groupedEvents[monthYear].map((event, index) => {
+                                    const id = event.id ?? index;
+                                    return (
+                                        <li key={id} className="bg-white p-3 rounded-xl shadow-sm flex justify-between items-center">
                                         <div className="flex-1">
                                             <div className="text-gray-800 font-medium">{event.name}</div>
                                             <div className="text-sm text-gray-500">
@@ -101,17 +113,27 @@ const EventList = ({ events, eventFilter, onEdit, onDelete }) => {
                                                 <div className="text-xs text-gray-400 mt-1">For: {event.personName} ({event.personRelation})</div>
                                             )}
                                         </div>
-                                        <EventMenu event={event} onEdit={onEdit} onDeleteRequest={(ev) => onDelete && onDelete(ev)} />
+                                        <EventMenu
+                                            event={event}
+                                            isOpen={openMenuId === id}
+                                            onToggle={handleToggle}
+                                            onClose={handleClose}
+                                            onEdit={onEdit}
+                                            onDeleteRequest={(ev) => onDelete && onDelete(ev)}
+                                        />
                                     </li>
-                                ))}
+                                );
+                                })}
                             </ul>
                         </div>
                     ))
                 ) : (
                     <ul className="space-y-2">
-                        {sortedAndFilteredEvents.map((event, index) => (
-                            <li key={index} className="bg-white p-3 rounded-xl shadow-sm flex justify-between items-center">
-                                <div className="flex-1">
+                        {sortedAndFilteredEvents.map((event, index) => {
+                            const id = event.id ?? index;
+                            return (
+                                <li key={id} className="bg-white p-3 rounded-xl shadow-sm flex justify-between items-center">
+                                    <div className="flex-1">
                                     <div className="text-gray-800 font-medium">{event.name}</div>
                                     <div className="text-sm text-gray-500">
                                         {event.displayDate.toDateString()}
@@ -122,10 +144,18 @@ const EventList = ({ events, eventFilter, onEdit, onDelete }) => {
                                     {event.personName && (
                                         <div className="text-xs text-gray-400 mt-1">For: {event.personName} ({event.personRelation})</div>
                                     )}
-                                </div>
-                                <EventMenu event={event} onEdit={onEdit} onDeleteRequest={(ev) => onDelete && onDelete(ev)} />
-                            </li>
-                        ))}
+                                    </div>
+                                    <EventMenu
+                                        event={event}
+                                        isOpen={openMenuId === id}
+                                        onToggle={handleToggle}
+                                        onClose={handleClose}
+                                        onEdit={onEdit}
+                                        onDeleteRequest={(ev) => onDelete && onDelete(ev)}
+                                    />
+                                </li>
+                            );
+                        })}
                     </ul>
                 )
             )}

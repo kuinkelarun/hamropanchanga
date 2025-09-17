@@ -1,7 +1,19 @@
 // CustomerList.js (No changes needed, this code is from your file)
+import React, { useState } from 'react';
 import EventMenu from './EventMenu';
 
 const CustomerList = ({ customers, onSelectCustomer, onAddCustomer, onEditCustomer, onDeleteCustomer }) => {
+    const [openMenuId, setOpenMenuId] = useState(null);
+
+    const handleToggle = (id) => {
+        setOpenMenuId(prev => (prev === id ? null : id));
+    };
+
+    const handleClose = (id) => {
+        // Only clear if the closing id matches the currently open one (defensive)
+        setOpenMenuId(prev => (prev === id ? null : prev));
+    };
+
     return (
         <div className="space-y-6">
             <div className="flex justify-between items-center mb-4">
@@ -23,7 +35,14 @@ const CustomerList = ({ customers, onSelectCustomer, onAddCustomer, onEditCustom
                     {customers.map((customer) => (
                         <div key={customer.id} className="relative bg-white p-6 rounded-2xl shadow-md border border-gray-200 cursor-pointer hover:shadow-lg transition-shadow">
                             <div className="absolute right-3 top-3 z-10">
-                                <EventMenu event={customer} onEdit={() => onEditCustomer && onEditCustomer(customer)} onDeleteRequest={() => onDeleteCustomer && onDeleteCustomer(customer)} />
+                                <EventMenu
+                                    event={customer}
+                                    isOpen={openMenuId === customer.id}
+                                    onToggle={handleToggle}
+                                    onClose={handleClose}
+                                    onEdit={() => onEditCustomer && onEditCustomer(customer)}
+                                    onDeleteRequest={() => onDeleteCustomer && onDeleteCustomer(customer)}
+                                />
                             </div>
                             <div onClick={() => onSelectCustomer(customer)}>
                                 <h3 className="text-xl font-semibold text-gray-800">{customer.name}</h3>

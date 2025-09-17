@@ -452,25 +452,28 @@ const CustomerDetail = ({ customer: propCustomer, onBack, onUpdate }) => {
                 <div className="bg-gray-50 p-6 rounded-2xl shadow-md">
                     <div className="flex justify-between items-center mb-4">
                         <h3 className="text-xl font-bold text-gray-800">Events</h3>
-                        <div className="flex items-center space-x-2">
-                            <select
-                                value={eventFilter}
-                                onChange={(e) => setEventFilter(e.target.value)}
-                                className="border rounded-xl p-1 text-sm"
-                            >
-                                <option value="upcoming">Upcoming</option>
-                                <option value="all">All Events</option>
-                                <option value="past">Past Events</option>
-                                <option value="next-week">Next 7 Days</option>
-                                <option value="next-month">Next 30 Days</option>
-                                <option value="next-90-days">Next 90 Days</option>
-                            </select>
-                            <button onClick={() => { setIsAddingEvent(prev => !prev); setEditingEvent(null); }} className="bg-green-600 hover:bg-green-700 text-white font-semibold py-1 px-3 rounded-xl shadow-md transition-transform transform hover:scale-105 text-sm">
-                                {isAddingEvent ? 'Cancel' : 'Add Event'}
-                            </button>
-                        </div>
+                        {/* When adding or editing an event, hide the filter and top toggle; the form shows Add/Cancel */}
+                        {!isAddingEvent && !editingEvent && (
+                            <div className="flex items-center space-x-2">
+                                <select
+                                    value={eventFilter}
+                                    onChange={(e) => setEventFilter(e.target.value)}
+                                    className="border rounded-xl p-1 text-sm"
+                                >
+                                    <option value="upcoming">Upcoming</option>
+                                    <option value="all">All Events</option>
+                                    <option value="past">Past Events</option>
+                                    <option value="next-week">Next 7 Days</option>
+                                    <option value="next-month">Next 30 Days</option>
+                                    <option value="next-90-days">Next 90 Days</option>
+                                </select>
+                                <button onClick={() => { setIsAddingEvent(prev => !prev); setEditingEvent(null); }} className="bg-green-600 hover:bg-green-700 text-white font-semibold py-1 px-3 rounded-xl shadow-md transition-transform transform hover:scale-105 text-sm">
+                                    Add Event
+                                </button>
+                            </div>
+                        )}
                     </div>
-                    {isAddingEvent && <AddEventForm onAdd={handleAddEvent} familyMembers={familyMembersArray} />}
+                    {isAddingEvent && <AddEventForm onAdd={handleAddEvent} onCancel={() => setIsAddingEvent(false)} familyMembers={familyMembersArray} />}
                     {editingEvent && <EditEventForm event={editingEvent} onUpdate={handleUpdateEvent} onCancel={() => setEditingEvent(null)} familyMembers={familyMembersArray} />}
                     {!isAddingEvent && !editingEvent && <EventList events={customer.events || []} eventFilter={eventFilter} onEdit={handleEditEvent} onDelete={handleDeleteRequest} />}
                 </div>

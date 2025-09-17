@@ -77,7 +77,7 @@ import { useState } from 'react';
 
 
 // Component to add a new event
-const AddEventForm = ({ onAdd, familyMembers }) => {
+const AddEventForm = ({ onAdd, familyMembers, onCancel }) => {
     const [name, setName] = useState('');
     const [date, setDate] = useState('');
     const [selectedPersonId, setSelectedPersonId] = useState('');
@@ -159,7 +159,10 @@ const AddEventForm = ({ onAdd, familyMembers }) => {
                         <option value="yearly">Yearly</option>
                     </select>
                 </div>
-                <div className="flex justify-end">
+                <div className="flex justify-end space-x-2">
+                    <button type="button" onClick={onCancel} className="px-4 py-2 rounded-xl text-gray-700 font-semibold transition bg-gray-200 hover:bg-gray-300 text-sm">
+                        Cancel
+                    </button>
                     <button type="submit" className="px-4 py-2 rounded-xl text-white font-semibold transition bg-green-600 hover:bg-green-700 text-sm">
                         Add Event
                     </button>
