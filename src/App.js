@@ -4,10 +4,11 @@ import { auth } from './firebase';
 import Login from './Login';
 import { collection, query, where, onSnapshot, getDoc, addDoc, updateDoc, doc } from 'firebase/firestore';
 import { db } from './firebase';
-import CustomerList from './components/CustomerList';
+// CustomerList is rendered inside LandingPage; App does not use it directly here
 import CustomerDetail from './components/CustomerDetail';
 import AddCustomerForm from './components/AddCustomerForm';
 import LandingPage from './components/LandingPage';
+import { deleteDoc } from 'firebase/firestore';
 
 export default function App() {
     // STATE MANAGEMENT
@@ -85,6 +86,24 @@ export default function App() {
         setView('add');
     };
 
+    // Open customer details (legacy behavior)
+    const handleEditCustomer = (customer) => {
+        // Prefer editing the basic customer fields on the AddCustomerForm page
+        setSelectedCustomer(customer);
+        setView('add');
+    };
+
+    const handleDeleteCustomer = async (customer) => {
+        const ok = window.confirm(`Delete customer "${customer.name}"? This will remove all their data.`);
+        if (!ok) return;
+        try {
+            await deleteDoc(doc(db, 'customers', customer.id));
+        } catch (error) {
+            console.error('Error deleting customer', error);
+            setError('Failed to delete customer.');
+        }
+    };
+
     const handleAddCustomerSuccess = async (newCustomerData) => {
         try {
             const customerCollectionRef = collection(db, 'customers');
@@ -96,7 +115,41 @@ export default function App() {
         }
     };
 
-    const handleUpdateCustomer = () => {};
+    const handleUpdateCustomer = async (updatedData) => {
+        if (!selectedCustomer || !selectedCustomer.id) {
+            setError('No customer selected for update.');
+            return;
+        }
+        try {
+            const customerDocRef = doc(db, 'customers', selectedCustomer.id);
+
+            // If the update contains events or familyMembers, it's coming from the CustomerDetail
+            // and we should stay on the customer's detail view.
+            const isDetailUpdate = updatedData && (updatedData.events || updatedData.familyMembers);
+
+            if (isDetailUpdate) {
+                // Only update the nested collections provided to avoid overwriting other fields.
+                const fieldsToUpdate = {};
+                if (updatedData.events) fieldsToUpdate.events = updatedData.events;
+                if (updatedData.familyMembers) fieldsToUpdate.familyMembers = updatedData.familyMembers;
+                // Apply partial update and keep selected customer
+                await updateDoc(customerDocRef, fieldsToUpdate);
+                // Update selected customer in state so detail page shows fresh data
+                setSelectedCustomer(prev => ({ ...prev, ...fieldsToUpdate }));
+                return;
+            }
+
+            // Otherwise treat as a top-level edit (name/contact/location) and return to the list after saving
+            await updateDoc(customerDocRef, { ...updatedData });
+            setSelectedCustomer(null);
+            setView('list');
+        } catch (error) {
+            console.error('Error updating customer', error);
+            setError('Failed to update customer.');
+        }
+    };
+
+    
 
     const handleSignOut = () => {
         signOut(auth).catch((error) => {
@@ -156,6 +209,8 @@ export default function App() {
                     events={allEvents} // Pass the combined list of events
                     familyMembers={allFamilyMembers} // Pass the combined list of family members
                     onDoubleClickEvent={handleDoubleClickEvent} // Pass the new handler here
+                    onEditCustomer={handleEditCustomer}
+                    onDeleteCustomer={handleDeleteCustomer}
                 />
             )}
 
@@ -169,7 +224,9 @@ export default function App() {
 
             {view === 'add' && (
                 <AddCustomerForm
+                    initialData={selectedCustomer}
                     onAddSuccess={handleAddCustomerSuccess}
+                    onUpdateSuccess={handleUpdateCustomer}
                     onCancel={handleBackToList}
                 />
             )}

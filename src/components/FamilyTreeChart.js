@@ -1,5 +1,8 @@
+import React from 'react';
+import EventMenu from './EventMenu';
+
 // --- Family Tree Chart Component ---
-const FamilyTreeChart = ({ familyMembers }) => {
+const FamilyTreeChart = ({ familyMembers, onEdit, onDeleteRequest }) => {
     if (!familyMembers || Object.keys(familyMembers).length === 0) {
         return (
             <div className="text-center py-8 text-gray-400">
@@ -33,11 +36,14 @@ const FamilyTreeChart = ({ familyMembers }) => {
                             {membersByGeneration[generation].map(member => (
                                 <div
                                     key={member.id}
-                                    className={`p-3 rounded-xl shadow-md border-2 border-gray-200 hover:shadow-lg transition-all cursor-pointer min-w-32 text-center
+                                    className={`relative pr-10 pl-3 py-3 rounded-xl shadow-md border-2 border-gray-200 hover:shadow-lg transition-all cursor-pointer min-w-32 text-center max-w-xs break-words flex flex-col items-center justify-center
                                         ${member.isDirectAncestor ? 'bg-white' : 'bg-gray-100'}`}
                                 >
-                                    <div className="font-semibold text-gray-800 text-sm">{member.name}</div>
-                                    <div className="text-xs text-gray-500">({member.relation})</div>
+                                    <div className="absolute right-2 top-2 z-20">
+                                        <EventMenu event={member} onEdit={onEdit} onDeleteRequest={(m) => onDeleteRequest && onDeleteRequest(m)} showDelete={member.relation === 'Self' ? false : true} />
+                                    </div>
+                                    <div className="font-semibold text-gray-800 text-sm truncate w-full px-2">{member.name}</div>
+                                    <div className="text-xs text-gray-500 truncate w-full px-2">({member.relation})</div>
                                 </div>
                             ))}
                         </div>

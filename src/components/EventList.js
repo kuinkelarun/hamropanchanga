@@ -1,7 +1,8 @@
 import React from 'react';
+import EventMenu from './EventMenu';
 
 // Component to list all events
-const EventList = ({ events, eventFilter, onEdit }) => {
+const EventList = ({ events, eventFilter, onEdit, onDelete }) => {
     // Helper function to calculate the next occurrence of a repeating event
     const getNextOccurrence = (originalDate, repetition) => {
         const today = new Date();
@@ -100,13 +101,7 @@ const EventList = ({ events, eventFilter, onEdit }) => {
                                                 <div className="text-xs text-gray-400 mt-1">For: {event.personName} ({event.personRelation})</div>
                                             )}
                                         </div>
-                                        <div className="relative">
-                                            <button onClick={() => onEdit(event)} className="p-1">
-                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
-                                                    <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
-                                                </svg>
-                                            </button>
-                                        </div>
+                                        <EventMenu event={event} onEdit={onEdit} onDeleteRequest={(ev) => onDelete && onDelete(ev)} />
                                     </li>
                                 ))}
                             </ul>
@@ -128,13 +123,7 @@ const EventList = ({ events, eventFilter, onEdit }) => {
                                         <div className="text-xs text-gray-400 mt-1">For: {event.personName} ({event.personRelation})</div>
                                     )}
                                 </div>
-                                <div className="relative">
-                                    <button onClick={() => onEdit(event)} className="p-1">
-                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
-                                            <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
-                                        </svg>
-                                    </button>
-                                </div>
+                                <EventMenu event={event} onEdit={onEdit} onDeleteRequest={(ev) => onDelete && onDelete(ev)} />
                             </li>
                         ))}
                     </ul>

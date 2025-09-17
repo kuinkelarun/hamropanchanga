@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { doc, updateDoc } from 'firebase/firestore'; // Import Firestore functions
+import { useState, useEffect } from 'react';
+import { doc, updateDoc, onSnapshot } from 'firebase/firestore'; // Import Firestore functions
 import { db } from '../firebase'; // Import your Firebase db instance
 import AddFamilyMemberForm from './AddFamilyMemberForm'; // Import other components
 import EditFamilyMemberForm from './EditFamilyMemberForm';
@@ -7,6 +7,8 @@ import FamilyTreeChart from './FamilyTreeChart';
 import AddEventForm from './AddEventForm';
 import EventList from './EventList';
 import EditEventForm from './EditEventForm';
+import ConfirmModal from './ConfirmModal';
+import Toast from './Toast';
 
 
 // --- Helper Function to get relation based on parent's generation ---
@@ -216,11 +218,40 @@ const calculateGeneration = (relation, parentIds, familyMembers) => {
 
 
 // Component to view customer details
-const CustomerDetail = ({ customer, onBack, onUpdate }) => {
+const CustomerDetail = ({ customer: propCustomer, onBack, onUpdate }) => {
     const [isAddingMember, setIsAddingMember] = useState(false);
     const [isAddingEvent, setIsAddingEvent] = useState(false);
     const [eventFilter, setEventFilter] = useState('upcoming');
     const [editingEvent, setEditingEvent] = useState(null);
+    const [deleteRequestEvent, setDeleteRequestEvent] = useState(null);
+    const [toasts, setToasts] = useState([]);
+    const [editingMember, setEditingMember] = useState(null);
+    const [deleteRequestMember, setDeleteRequestMember] = useState(null);
+
+    // Local doc-level state to keep this view in sync with Firestore in real-time.
+    const [localCustomer, setLocalCustomer] = useState(propCustomer);
+
+    const customerId = propCustomer ? propCustomer.id : null;
+
+    useEffect(() => {
+        // If propCustomer changes, reset local state and (re)subscribe to its doc.
+        setLocalCustomer(propCustomer);
+        if (!customerId) return;
+
+        const customerDocRef = doc(db, 'customers', customerId);
+        const unsubscribe = onSnapshot(customerDocRef, (snap) => {
+            if (snap.exists()) {
+                setLocalCustomer({ id: snap.id, ...snap.data() });
+            }
+        }, (err) => {
+            console.error('Error listening to customer doc:', err);
+        });
+
+        return () => unsubscribe();
+    }, [customerId, propCustomer]);
+
+    // Use localCustomer for all rendering and updates when available
+    const customer = localCustomer || propCustomer;
 
     const handleAddFamilyMember = async (memberData) => {
         setIsAddingMember(false);
@@ -266,6 +297,53 @@ const CustomerDetail = ({ customer, onBack, onUpdate }) => {
         }
     };
 
+    const handleEditFamilyMember = (member) => {
+        setIsAddingMember(false);
+        setEditingMember(member);
+    };
+
+    const handleUpdateFamilyMember = async (updatedMember) => {
+        setEditingMember(null);
+        try {
+            const updatedFamilyMembers = {
+                ...customer.familyMembers,
+                [updatedMember.id]: updatedMember
+            };
+
+            const customerDocRef = doc(db, 'customers', customer.id);
+            await updateDoc(customerDocRef, { familyMembers: updatedFamilyMembers });
+            onUpdate({ ...customer, familyMembers: updatedFamilyMembers });
+            const id = crypto.randomUUID();
+            setToasts(prev => [...prev, { id, type: 'success', message: 'Member updated' }]);
+        } catch (error) {
+            console.error("Error updating family member:", error);
+            const id = crypto.randomUUID();
+            setToasts(prev => [...prev, { id, type: 'error', message: 'Failed to update member' }]);
+        }
+    };
+
+    const handleDeleteMemberRequest = (member) => {
+        setDeleteRequestMember(member);
+    };
+
+    const handleDeleteMember = async (memberId) => {
+        try {
+            const updatedFamilyMembers = { ...customer.familyMembers };
+            delete updatedFamilyMembers[memberId];
+            const customerDocRef = doc(db, 'customers', customer.id);
+            await updateDoc(customerDocRef, { familyMembers: updatedFamilyMembers });
+            onUpdate({ ...customer, familyMembers: updatedFamilyMembers });
+            const id = crypto.randomUUID();
+            setToasts(prev => [...prev, { id, type: 'success', message: 'Member deleted' }]);
+        } catch (error) {
+            console.error('Error deleting member', error);
+            const id = crypto.randomUUID();
+            setToasts(prev => [...prev, { id, type: 'error', message: 'Failed to delete member' }]);
+        } finally {
+            setDeleteRequestMember(null);
+        }
+    };
+
     const handleAddEvent = async (eventData) => {
         setIsAddingEvent(false);
         try {
@@ -297,6 +375,35 @@ const CustomerDetail = ({ customer, onBack, onUpdate }) => {
         setEditingEvent(event);
         setIsAddingEvent(false);
     };
+
+    // Request a delete (opens confirm modal)
+    const handleDeleteRequest = (event) => {
+        setDeleteRequestEvent(event);
+    };
+
+    // Delete an event by id (after confirmation)
+    const handleDeleteEvent = async (eventId) => {
+        try {
+            const updatedEvents = (customer.events || []).filter(ev => ev.id !== eventId);
+            const customerDocRef = doc(db, 'customers', customer.id);
+            await updateDoc(customerDocRef, { events: updatedEvents });
+            onUpdate({ ...customer, events: updatedEvents });
+            if (editingEvent && editingEvent.id === eventId) {
+                setEditingEvent(null);
+            }
+            // show success toast
+            const id = crypto.randomUUID();
+            setToasts(prev => [...prev, { id, type: 'success', message: 'Event deleted' }]);
+        } catch (error) {
+            console.error("Error deleting event:", error);
+            const id = crypto.randomUUID();
+            setToasts(prev => [...prev, { id, type: 'error', message: 'Failed to delete event' }]);
+        } finally {
+            setDeleteRequestEvent(null);
+        }
+    };
+
+    const removeToast = (id) => setToasts(prev => prev.filter(t => t.id !== id));
 
     const handleUpdateEvent = async (updatedEventData) => {
         try {
@@ -332,7 +439,15 @@ const CustomerDetail = ({ customer, onBack, onUpdate }) => {
                         </button>
                     </div>
                     {isAddingMember && <AddFamilyMemberForm onAdd={handleAddFamilyMember} familyMembers={customer.familyMembers || {}} />}
-                    <FamilyTreeChart familyMembers={customer.familyMembers || {}} />
+                    {editingMember && (
+                        <EditFamilyMemberForm 
+                            member={editingMember}
+                            familyMembers={customer.familyMembers || {}}
+                            onUpdate={handleUpdateFamilyMember}
+                            onCancel={() => setEditingMember(null)}
+                        />
+                    )}
+                    <FamilyTreeChart familyMembers={customer.familyMembers || {}} onEdit={handleEditFamilyMember} onDeleteRequest={handleDeleteMemberRequest} />
                 </div>
                 <div className="bg-gray-50 p-6 rounded-2xl shadow-md">
                     <div className="flex justify-between items-center mb-4">
@@ -357,9 +472,31 @@ const CustomerDetail = ({ customer, onBack, onUpdate }) => {
                     </div>
                     {isAddingEvent && <AddEventForm onAdd={handleAddEvent} familyMembers={familyMembersArray} />}
                     {editingEvent && <EditEventForm event={editingEvent} onUpdate={handleUpdateEvent} onCancel={() => setEditingEvent(null)} familyMembers={familyMembersArray} />}
-                    {!isAddingEvent && !editingEvent && <EventList events={customer.events || []} eventFilter={eventFilter} onEdit={handleEditEvent} />}
+                    {!isAddingEvent && !editingEvent && <EventList events={customer.events || []} eventFilter={eventFilter} onEdit={handleEditEvent} onDelete={handleDeleteRequest} />}
                 </div>
             </div>
+            {/* Confirm modal for delete */}
+            <ConfirmModal
+                open={!!deleteRequestEvent}
+                title="Delete event"
+                message={deleteRequestEvent ? `Delete "${deleteRequestEvent.name}"? This action cannot be undone.` : ''}
+                onCancel={() => setDeleteRequestEvent(null)}
+                onConfirm={() => handleDeleteEvent(deleteRequestEvent.id)}
+            />
+
+            {/* Confirm modal for deleting a family member */}
+            <ConfirmModal
+                open={!!deleteRequestMember}
+                title="Delete member"
+                message={deleteRequestMember ? `Delete "${deleteRequestMember.name}"? This will remove them from the family tree.` : ''}
+                onCancel={() => setDeleteRequestMember(null)}
+                onConfirm={() => handleDeleteMember(deleteRequestMember.id)}
+            />
+
+            {/* Toasts */}
+            {toasts.map(t => (
+                <Toast key={t.id} id={t.id} type={t.type} message={t.message} onClose={removeToast} />
+            ))}
         </div>
     );
 };
