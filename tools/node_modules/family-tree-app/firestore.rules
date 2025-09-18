@@ -1,0 +1,44 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper functions — declared before use to avoid compilation issues
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Admin if auth token has admin claim OR there exists an adminList document for their uid
+    function isAdmin() {
+      return isAuthenticated() && (
+        request.auth.token.admin == true ||
+        exists(/databases/$(database)/documents/adminList/$(request.auth.uid))
+      );
+    }
+
+    // Owner check for documents that store a `userId` field
+    function isOwnerOfUserId(userId) {
+      return isAuthenticated() && userId == request.auth.uid;
+    }
+
+    match /customers/{customerId} {
+      // Admins can read/write any customer. Owners (userId === auth.uid) can read/write their own.
+      allow read, write: if isAdmin() || (
+        // create uses request.resource, reads/updates use resource
+        (request.resource != null && isOwnerOfUserId(request.resource.data.userId)) ||
+        (resource != null && isOwnerOfUserId(resource.data.userId))
+      );
+    }
+
+    match /users/{userId} {
+      allow read, write: if isAuthenticated() && (request.auth.uid == userId || isAdmin());
+    }
+
+    // adminList controls which users are considered admins (bootstrap via console)
+    match /adminList/{adminId} {
+      // Allow a user to read their own admin doc, or allow admins to read any
+      allow read: if isAuthenticated() && (request.auth.uid == adminId || isAdmin());
+      // Only admins can create/update/delete adminList entries
+      allow create, update, delete: if isAdmin();
+    }
+  }
+}

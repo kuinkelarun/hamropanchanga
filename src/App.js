@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { onAuthStateChanged, signOut } from 'firebase/auth';
+import { onAuthStateChanged, signOut, getIdTokenResult } from 'firebase/auth';
 import { auth } from './firebase';
 import Login from './Login';
 import { collection, query, where, onSnapshot, getDoc, addDoc, updateDoc, doc } from 'firebase/firestore';
@@ -25,12 +25,33 @@ export default function App() {
         const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
             if (currentUser) {
                 setUser(currentUser);
-                const userDocRef = doc(db, 'users', currentUser.uid);
-                const userDocSnap = await getDoc(userDocRef);
 
-                if (userDocSnap.exists()) {
-                    setIsAdmin(userDocSnap.data().role === 'admin');
-                } else {
+                // Check adminList collection in Firestore for admin status (no-cost server-side APIs required)
+                try {
+                    // First check adminList/{uid} doc existence (admin bootstrap: create this doc via Firestore console for initial admin)
+                    const adminDocRef = doc(db, 'adminList', currentUser.uid);
+                    const adminDocSnap = await getDoc(adminDocRef);
+                    if (adminDocSnap.exists()) {
+                        setIsAdmin(true);
+                    } else {
+                        // Optional: also check token claims if you used custom claims previously
+                        try {
+                            const idTokenResult = await getIdTokenResult(currentUser);
+                            const tokenAdmin = !!(idTokenResult && idTokenResult.claims && idTokenResult.claims.admin);
+                            if (tokenAdmin) {
+                                setIsAdmin(true);
+                            }
+                        } catch (tErr) {
+                            // ignore token errors and fallback to users doc
+                        }
+
+                        // Final fallback: check users/{uid}.role if present (useful for auditing or legacy data)
+                        const userDocRef = doc(db, 'users', currentUser.uid);
+                        const userDocSnap = await getDoc(userDocRef);
+                        setIsAdmin(userDocSnap.exists() && userDocSnap.data().role === 'admin');
+                    }
+                } catch (err) {
+                    console.error('Error checking admin status:', err);
                     setIsAdmin(false);
                 }
             } else {

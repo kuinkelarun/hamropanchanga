@@ -1,3 +1,5 @@
+1: 
+
 Git Branching Workflow
 Step 1: Make sure you’re on the main branch
     git checkout main
@@ -30,3 +32,42 @@ Step 5: Merge when ready
         git push origin main
         
 Optional: Create a Pull Request on GitHub for cleaner history and review.
+
+
+
+
+2:
+After creating new branch, do the folowing steps:
+
+Step 1: Right now your branch only exists locally. To set it up to track a branch on your remote (GitHub Enterprise), run:
+    This creates feature/design on the remote and sets it as the upstream for your local branch.
+    
+    git push -u origin feature/design
+
+Step 2: Get the latest changes from the remote (main branch, others, etc.)
+    Before you start heavy work, sync your repo:
+
+    git fetch origin
+    git pull origin main
+
+    Then, if needed, merge/rebase main into your feature branch:
+
+    git merge origin/main
+    # or
+    git rebase origin/main
+
+Step 3: Make changes
+
+    Edit/add/remove files in your project. 
+    Stage changes:
+
+    git add .
+
+    git commit -m "Implement design updates"
+
+Step 4: Push changes to remote branch
+
+    Since you already set upstream in step 1:
+
+    git push
+

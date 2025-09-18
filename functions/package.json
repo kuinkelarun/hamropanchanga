@@ -1,0 +1,12 @@
+{
+  "name": "family-tree-functions",
+  "description": "Cloud Functions for Family Tree app",
+  "private": true,
+  "engines": {
+    "node": "18"
+  },
+  "dependencies": {
+    "firebase-admin": "^11.0.0",
+    "firebase-functions": "^4.0.0"
+  }
+}
