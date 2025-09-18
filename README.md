@@ -68,3 +68,15 @@ This section has moved here: [https://facebook.github.io/create-react-app/docs/d
 ### `npm run build` fails to minify
 
 This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+
+
+Force overwrite development with login branch example:
+
+    # Switch to development
+    git checkout development
+
+    # Force development to match login
+    git reset --hard login
+
+    # Push changes (overwrite remote too)
+    git push origin development --force
