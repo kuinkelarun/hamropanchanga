@@ -1,0 +1,8 @@
+{
+  "name": "family-tree-tools",
+  "private": true,
+  "dependencies": {
+    "firebase-admin": "^11.10.0",
+    "minimist": "^1.2.8"
+  }
+}
