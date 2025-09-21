@@ -80,7 +80,37 @@
     box-shadow:none; 
     cursor:default; 
 }
-.nt-day-tile.today { border:2px solid #3b82f6; }
+.nt-day-tile.today { border:4px solid #3f72c9; }
+
+/* Active/Selected tile styling */
+.nt-day-tile.active {
+    background: linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%);
+    border: 3px solid #4f46e5;
+    box-shadow: 0 8px 25px rgba(79, 70, 229, 0.25), 
+                0 0 0 4px rgba(79, 70, 229, 0.1);
+    transform: translateY(-2px);
+    transition: all 0.2s ease;
+}
+
+/* Active tile with today modifier */
+.nt-day-tile.active.today {
+    border: 3px solid #4f46e5;
+    background: linear-gradient(135deg, #ddd6fe 0%, #c4b5fd 100%);
+    box-shadow: 0 8px 25px rgba(79, 70, 229, 0.3), 
+                0 0 0 4px rgba(79, 70, 229, 0.15),
+                0 0 0 6px #3f72c9;
+}
+
+/* Enhanced styling for active tile content */
+.nt-day-tile.active .nt-nepali-date {
+    color: #312e81;
+    font-weight: 800;
+}
+
+.nt-day-tile.active .nt-english-date {
+    color: #4338ca;
+    font-weight: 600;
+}
 .nt-nepali-date { 
     position:absolute; 
     top:8px; 
@@ -174,28 +204,34 @@
 }
 
 .nc-modal-header { 
-    display:flex; 
-    justify-content:space-between; 
-    align-items:center; 
-    margin-bottom:12px; 
+    display: flex; 
+    justify-content: center; 
+    align-items: center; 
+    margin-bottom: 12px; 
+    position: relative;
 }
 
 .nc-modal-title {
-    font-weight:700;
-    font-size:18px;
-    color:#0f172a;
-    margin:0;
+    font-weight: 700;
+    font-size: 18px;
+    color: #0f172a;
+    margin: 0;
+    text-align: center;
 }
 
 .nc-modal-header > button[aria-label="Close"] {
-    background:transparent;
-    border:0;
-    font-size:18px;
-    line-height:1;
-    color:#6b7280;
-    cursor:pointer;
-    padding:6px;
-    border-radius:6px;
+    background: transparent;
+    border: 0;
+    font-size: 18px;
+    line-height: 1;
+    color: #6b7280;
+    cursor: pointer;
+    padding: 6px;
+    border-radius: 6px;
+    position: absolute;
+    right: 0;
+    top: 50%;
+    transform: translateY(-50%);
 }
 
 .nc-modal-header > button[aria-label="Close"]:hover { 
@@ -284,6 +320,24 @@
     width:100%;
 }
 
+/* Specific time input styling for better reliability */
+.nc-input-time {
+    font-family: monospace; /* Better for time display */
+    letter-spacing: 0.5px;
+    min-width: 120px;
+    cursor: pointer;
+}
+
+.nc-input-time:focus {
+    outline: none;
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.nc-input-time:invalid {
+    border-color: #ef4444;
+}
+
 .nc-select { 
     appearance: none; 
     -webkit-appearance:none; 
@@ -292,6 +346,162 @@
     background-position:right 12px center; 
     background-size:12px; 
     padding-right:30px; 
+}
+
+/* Enhanced select for tithi dropdown with scrollable options */
+/* Basic styling handled via inline styles for better browser compatibility */
+
+/* Custom Dropdown Styles */
+.nc-custom-dropdown {
+    position: relative;
+    width: 100%;
+}
+
+.nc-dropdown-trigger {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 14px;
+    color: #0f172a;
+    user-select: none;
+}
+
+.nc-dropdown-trigger:hover {
+    border-color: #d1d5db;
+}
+
+.nc-dropdown-trigger:focus {
+    outline: none;
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.nc-placeholder {
+    color: #9ca3af;
+}
+
+.nc-dropdown-arrow {
+    font-size: 12px;
+    color: #6b7280;
+    transition: transform 0.2s ease;
+}
+
+.nc-dropdown-trigger:hover .nc-dropdown-arrow {
+    color: #374151;
+}
+
+.nc-dropdown-menu {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    z-index: 1000;
+    max-height: 240px; /* Allows for exactly 6 items (40px each) */
+    overflow-y: auto;
+    margin-top: 4px;
+}
+
+.nc-dropdown-option {
+    padding: 10px 12px;
+    font-size: 14px;
+    color: #0f172a;
+    cursor: pointer;
+    border-bottom: 1px solid #f3f4f6;
+    min-height: 40px;
+    display: flex;
+    align-items: center;
+}
+
+.nc-dropdown-option:last-child {
+    border-bottom: none;
+}
+
+.nc-dropdown-option:hover {
+    background-color: #f3f4f6;
+}
+
+.nc-dropdown-option.selected {
+    background-color: #2563eb;
+    color: white;
+    font-weight: 500;
+}
+
+.nc-dropdown-option.selected:hover {
+    background-color: #1d4ed8;
+}
+
+/* Custom scrollbar for the dropdown */
+.nc-dropdown-menu::-webkit-scrollbar {
+    width: 6px;
+}
+
+.nc-dropdown-menu::-webkit-scrollbar-track {
+    background: #f1f5f9;
+    border-radius: 3px;
+}
+
+.nc-dropdown-menu::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 3px;
+}
+
+.nc-dropdown-menu::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+}
+
+/* Style options for better visibility and interaction */
+.nc-select-tithi option {
+    padding: 8px 12px;
+    font-size: 14px;
+    color: #0f172a;
+    background-color: white;
+    line-height: 1.4;
+    min-height: 36px; /* Ensure consistent option height */
+}
+
+.nc-select-tithi option:hover {
+    background-color: #f3f4f6;
+}
+
+.nc-select-tithi option:checked,
+.nc-select-tithi option:selected {
+    background-color: #2563eb;
+    color: white;
+    font-weight: 500;
+}
+
+/* Focus enhancement */
+.nc-select-tithi:focus {
+    outline: none;
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+/* Browser-specific dropdown height limitations */
+/* For Chrome/Safari - this creates a scrollable dropdown */
+@media screen and (-webkit-min-device-pixel-ratio: 0) {
+    .nc-select-tithi {
+        /* Webkit browsers automatically scroll when options exceed viewport */
+        max-height: 200px; /* Limits the dropdown height */
+    }
+}
+
+/* For Firefox */
+@-moz-document url-prefix() {
+    .nc-select-tithi {
+        /* Firefox naturally limits dropdown height and adds scrolling */
+        scrollbar-width: thin;
+        scrollbar-color: #cbd5e1 #f1f5f9;
+    }
 }
 
 .nc-validation { 
@@ -317,6 +527,28 @@
     flex:1;
     font-weight:600;
     font-size:15px;
+    transition: all 0.2s ease;
+}
+
+.nc-add-btn:disabled {
+    background:#9ca3af;
+    cursor:not-allowed;
+    opacity:0.7;
+}
+
+.nc-refresh-btn {
+    background:#6b7280;
+    color:#fff;
+    padding:8px 12px;
+    border-radius:6px;
+    border:0;
+    cursor:pointer;
+    font-size:14px;
+    transition: all 0.2s ease;
+}
+
+.nc-refresh-btn:hover {
+    background:#4b5563;
 }
 
 .nc-cancel-btn {
