@@ -33,6 +33,13 @@ service cloud.firestore {
       allow read, write: if isAuthenticated() && (request.auth.uid == userId || isAdmin());
     }
 
+    // Tithis collection - allow authenticated users to read/write their own tithis
+    match /tithis/{tithiId} {
+      // For now, allow all authenticated users to read/write all tithis
+      // You can modify this later to be user-specific if needed
+      allow read, write: if isAuthenticated();
+    }
+
     // adminList controls which users are considered admins (bootstrap via console)
     match /adminList/{adminId} {
       // Allow a user to read their own admin doc, or allow admins to read any
