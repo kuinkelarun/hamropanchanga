@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import './NepaliDatePicker.css'; // Import styles for Nepali date picker
+import CalendarToggle from './CalendarToggle';
 
 // Nepali Calendar utilities
 const nepaliMonths = [
@@ -263,6 +264,7 @@ const AddEventForm = ({ onAdd, familyMembers, onCancel }) => {
     const [selectedPersonId, setSelectedPersonId] = useState('');
     const [repetition, setRepetition] = useState('none');
     const [showNepaliCalendar, setShowNepaliCalendar] = useState(false);
+    const [isNepaliCalendar, setIsNepaliCalendar] = useState(true); // Default to Nepali
 
     const handleSubmit = (e) => {
         e.preventDefault();
@@ -330,26 +332,49 @@ const AddEventForm = ({ onAdd, familyMembers, onCancel }) => {
                             required
                         />
                     </div>
+                    
+                    {/* Calendar Toggle */}
+                    <div className="mb-3">
+                        <CalendarToggle 
+                            isNepali={isNepaliCalendar}
+                            onToggle={() => setIsNepaliCalendar(!isNepaliCalendar)}
+                            label="Date Input"
+                        />
+                    </div>
+                    
                     <div>
                         <label htmlFor="event-date" className="block text-gray-700 font-semibold mb-1 text-sm">
-                            Date (Nepali Calendar)
+                            Date ({isNepaliCalendar ? 'Nepali Calendar' : 'Gregorian Calendar'})
                         </label>
                         <div className="relative">
-                            <input
-                                id="event-date"
-                                type="text"
-                                placeholder="Click to select date from Nepali Calendar"
-                                value={getDisplayDate()}
-                                onClick={() => setShowNepaliCalendar(true)}
-                                readOnly
-                                className="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-green-500 cursor-pointer bg-white"
-                                required
-                            />
-                            <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                                <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                </svg>
-                            </div>
+                            {isNepaliCalendar ? (
+                                <input
+                                    id="event-date"
+                                    type="text"
+                                    placeholder="Click to select date from Nepali Calendar"
+                                    value={getDisplayDate()}
+                                    onClick={() => setShowNepaliCalendar(true)}
+                                    readOnly
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-green-500 cursor-pointer bg-white"
+                                    required
+                                />
+                            ) : (
+                                <input
+                                    id="event-date"
+                                    type="date"
+                                    value={date}
+                                    onChange={(e) => setDate(e.target.value)}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-green-500"
+                                    required
+                                />
+                            )}
+                            {isNepaliCalendar && (
+                                <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                                    <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                    </svg>
+                                </div>
+                            )}
                         </div>
                     </div>
                     <div>
@@ -379,7 +404,7 @@ const AddEventForm = ({ onAdd, familyMembers, onCancel }) => {
             </div>
 
             {/* Nepali Calendar Modal */}
-            {showNepaliCalendar && (
+            {showNepaliCalendar && isNepaliCalendar && (
                 <NepaliDatePicker
                     selectedDate={date}
                     onDateSelect={handleDateSelect}

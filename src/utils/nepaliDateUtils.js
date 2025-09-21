@@ -115,6 +115,7 @@ export function formatNepaliDate(adDate) {
 }
 
 export function formatEnglishDate(adDate) {
+  const dayOfWeek = adDate.getDay();
   return {
     short: adDate.toLocaleDateString('en-US', { 
       month: 'short', 
@@ -124,6 +125,28 @@ export function formatEnglishDate(adDate) {
       year: 'numeric',
       month: 'long', 
       day: 'numeric' 
+    }),
+    withDayShort: `${englishWeekdays[dayOfWeek]}, ${adDate.toLocaleDateString('en-US', { 
+      month: 'short', 
+      day: 'numeric' 
+    })}`,
+    withDayFull: `${englishWeekdays[dayOfWeek]}, ${adDate.toLocaleDateString('en-US', { 
+      month: 'long', 
+      day: 'numeric',
+      year: 'numeric'
+    })}`
+  };
+}
+
+export function formatGregorianMonthYear(adDate) {
+  return {
+    full: adDate.toLocaleDateString('en-US', { 
+      year: 'numeric',
+      month: 'long'
+    }),
+    short: adDate.toLocaleDateString('en-US', { 
+      year: 'numeric',
+      month: 'short'
     })
   };
 }

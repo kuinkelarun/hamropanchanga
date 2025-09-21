@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import EventMenu from './EventMenu';
-import { formatNepaliDate, formatEnglishDate, formatNepaliMonthYear } from '../utils/nepaliDateUtils';
+import CalendarToggle from './CalendarToggle';
+import { formatNepaliDate, formatEnglishDate, formatNepaliMonthYear, formatGregorianMonthYear } from '../utils/nepaliDateUtils';
 
 // Component to list all events
 const EventList = ({ events, eventFilter, onEdit, onDelete }) => {
+    const [isNepaliCalendar, setIsNepaliCalendar] = useState(true); // Default to Nepali
     // Helper function to calculate the next occurrence of a repeating event
     const getNextOccurrence = (originalDate, repetition) => {
         const today = new Date();
@@ -68,11 +70,13 @@ const EventList = ({ events, eventFilter, onEdit, onDelete }) => {
     const groupedEvents = {};
     if (shouldGroup) {
         sortedAndFilteredEvents.forEach(event => {
-            const nepaliMonthYear = formatNepaliMonthYear(event.displayDate).english;
-            if (!groupedEvents[nepaliMonthYear]) {
-                groupedEvents[nepaliMonthYear] = [];
+            const monthYear = isNepaliCalendar 
+                ? formatNepaliMonthYear(event.displayDate).english
+                : formatGregorianMonthYear(event.displayDate).full;
+            if (!groupedEvents[monthYear]) {
+                groupedEvents[monthYear] = [];
             }
-            groupedEvents[nepaliMonthYear].push(event);
+            groupedEvents[monthYear].push(event);
         });
     }
 
@@ -88,17 +92,26 @@ const EventList = ({ events, eventFilter, onEdit, onDelete }) => {
 
     return (
         <div className="space-y-3">
+            {/* Calendar Toggle */}
+            <div className="flex justify-end mb-4">
+                <CalendarToggle 
+                    isNepali={isNepaliCalendar}
+                    onToggle={() => setIsNepaliCalendar(!isNepaliCalendar)}
+                    label="Display"
+                />
+            </div>
+            
             {sortedAndFilteredEvents.length === 0 ? (
                 <div className="text-center py-4 text-gray-400 text-sm">
                     No events found for this filter.
                 </div>
             ) : (
                 shouldGroup ? (
-                    Object.keys(groupedEvents).map(nepaliMonthYear => (
-                        <div key={nepaliMonthYear}>
-                            <h5 className="text-lg font-bold text-gray-700 mb-2 mt-4">{nepaliMonthYear}</h5>
+                    Object.keys(groupedEvents).map(monthYear => (
+                        <div key={monthYear}>
+                            <h5 className="text-lg font-bold text-gray-700 mb-2 mt-4">{monthYear}</h5>
                             <ul className="space-y-2">
-                                {groupedEvents[nepaliMonthYear].map((event, index) => {
+                                {groupedEvents[monthYear].map((event, index) => {
                                     const id = event.id ?? index;
                                     return (
                                         <li key={id} className="bg-white p-3 rounded-xl shadow-sm flex justify-between items-center">
@@ -111,10 +124,16 @@ const EventList = ({ events, eventFilter, onEdit, onDelete }) => {
                                             </div>
                                             <div className="text-sm text-gray-600">
                                                 <div className="font-medium text-gray-700">
-                                                    {formatNepaliDate(event.displayDate).withDayShortNepali}
+                                                    {isNepaliCalendar 
+                                                        ? formatNepaliDate(event.displayDate).withDayShortNepali
+                                                        : formatEnglishDate(event.displayDate).withDayShort
+                                                    }
                                                 </div>
                                                 <div className="text-xs text-gray-500 mt-0.5">
-                                                    {formatEnglishDate(event.displayDate).short}
+                                                    {isNepaliCalendar 
+                                                        ? formatEnglishDate(event.displayDate).short
+                                                        : formatNepaliDate(event.displayDate).shortNepali
+                                                    }
                                                 </div>
                                             </div>
                                             {event.personName && (
@@ -150,10 +169,16 @@ const EventList = ({ events, eventFilter, onEdit, onDelete }) => {
                                     </div>
                                     <div className="text-sm text-gray-600">
                                         <div className="font-medium text-gray-700">
-                                            {formatNepaliDate(event.displayDate).withDayShortNepali}
+                                            {isNepaliCalendar 
+                                                ? formatNepaliDate(event.displayDate).withDayShortNepali
+                                                : formatEnglishDate(event.displayDate).withDayShort
+                                            }
                                         </div>
                                         <div className="text-xs text-gray-500 mt-0.5">
-                                            {formatEnglishDate(event.displayDate).short}
+                                            {isNepaliCalendar 
+                                                ? formatEnglishDate(event.displayDate).short
+                                                : formatNepaliDate(event.displayDate).shortNepali
+                                            }
                                         </div>
                                     </div>
                                     {event.personName && (
