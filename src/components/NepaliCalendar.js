@@ -218,6 +218,23 @@ export default function NepaliCalendar() {
 
   function dateKeyFromAd(ad){ return `${ad.year}-${ad.month+1}-${ad.day}`; }
 
+  // Robust lookup for tithis: try common dateKey formats (no padding and zero-padded)
+  function findTithisForAdDate(adYear, adMonthZeroBased, adDay) {
+    const y = adYear;
+    const m = adMonthZeroBased + 1;
+    const d = adDay;
+    const keysToTry = [
+      `${y}-${m}-${d}`,
+      `${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`,
+      `${y}-${String(m).padStart(2,'0')}-${d}`,
+      `${y}-${m}-${String(d).padStart(2,'0')}`
+    ];
+    for (const k of keysToTry) {
+      if (tithisByDate[k]) return tithisByDate[k];
+    }
+    return tithisByDate[`${y}-${m}-${d}`] || [];
+  }
+
   // Manual refresh function to force reload tithis data
   const refreshTithis = async () => {
     console.log('Manual refresh triggered...');
@@ -520,35 +537,54 @@ export default function NepaliCalendar() {
   function renderDayTiles(){
     const tiles = [];
 
-    // --- 1. Previous Month's Days ---
-    const prevMonth = currentBsMonth === 1 ? 12 : currentBsMonth - 1;
-    const prevYear = currentBsMonth === 1 ? currentBsYear - 1 : currentBsYear;
-    const daysInPrevMonth = bsCalendarData[prevYear]?.daysInMonths[prevMonth - 1] ?? 30;
+    // --- 1. Previous Month's Days (show actual days and tithis using AD keys) ---
+    if (firstDayOfBsMonthAd) {
+      const firstAd = new Date(firstDayOfBsMonthAd.year, firstDayOfBsMonthAd.month, firstDayOfBsMonthAd.day);
+      for (let i = startDayOfWeek; i > 0; i--) {
+        const adDate = new Date(firstAd);
+        adDate.setDate(firstAd.getDate() - i);
 
-    for (let i = 0; i < startDayOfWeek; i++) {
-      const day = daysInPrevMonth - startDayOfWeek + i + 1;
-      const ad = convertBsToAd(prevYear, prevMonth, day);
-      const dateKey = ad ? dateKeyFromAd(ad) : `prev-${i}`;
+        // Convert AD -> BS to display BS day number
+        const bsDate = convertAdToBs(adDate.getFullYear(), adDate.getMonth(), adDate.getDate());
+        const displayDay = bsDate ? bsDate.day : adDate.getDate();
 
-      tiles.push(
-        <div
-          key={dateKey}
-          className="nt-day-tile other-month"
-          aria-hidden="true"
-        >
-          <div className="nt-nepali-date">{toNepaliNumber(day)}</div>
-          {ad && <div className="nt-english-date">{ad.day}</div>}
-        </div>
-      );
+  const dateKey = dateKeyFromAd({ year: adDate.getFullYear(), month: adDate.getMonth(), day: adDate.getDate() });
+  const tithis = findTithisForAdDate(adDate.getFullYear(), adDate.getMonth(), adDate.getDate()) || [];
+
+        tiles.push(
+          <div
+            key={`${dateKey}-prev`}
+            className="nt-day-tile other-month"
+            onClick={() => { handlePrev(); /* navigate to prev month for context */ openDetailsModalForDate(adDate.getFullYear(), adDate.getMonth(), adDate.getDate()); }}
+            tabIndex={0}
+            onKeyDown={(e)=> { if (e.key === 'Enter') { handlePrev(); openDetailsModalForDate(adDate.getFullYear(), adDate.getMonth(), adDate.getDate()); } }}
+            data-date={dateKey}
+          >
+            <div className="nt-nepali-date">{toNepaliNumber(displayDay)}</div>
+            <div className="nt-english-date">{adDate.getDate()}</div>
+            <div className="nt-summary" aria-hidden>
+              {tithis.length > 0 && (
+                <div className="nt-summary-item tithi">
+                  {tithis
+                    .sort((a,b)=> a.startTime.localeCompare(b.startTime))
+                    .map(t => t.name)
+                    .join(' / ')
+                  }
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      }
     }
 
     // --- 2. Current Month's Days ---
     for (let day=1; day<=nepaliMonthDays; day++){
-      const ad = convertBsToAd(currentBsYear, currentBsMonth, day);
-      const dateKey = dateKeyFromAd(ad);
+  const ad = convertBsToAd(currentBsYear, currentBsMonth, day);
+  const dateKey = dateKeyFromAd(ad);
       const isToday = todayBs.year === currentBsYear && todayBs.month === currentBsMonth && todayBs.day === day;
       const isActive = activeDate === dateKey;
-      const tithis = tithisByDate[dateKey] || [];
+  const tithis = findTithisForAdDate(ad.year, ad.month, ad.day) || [];
       
       // Debug: Log tile rendering with dateKey and tithis
       if (day <= 5 || tithis.length > 0) { // Only log first few days and days with tithis
@@ -602,17 +638,33 @@ export default function NepaliCalendar() {
     const nextYear = currentBsMonth === 12 ? currentBsYear + 1 : currentBsYear;
 
     for (let i = 1; i <= remainingTiles; i++) {
-      const ad = convertBsToAd(nextYear, nextMonth, i);
-      const dateKey = ad ? dateKeyFromAd(ad) : `next-${i}`;
+      const adDate = convertBsToAd(nextYear, nextMonth, i);
+      const ad = adDate; // {year, month, day}
+      const dateKey = ad ? `${ad.year}-${ad.month+1}-${ad.day}` : `next-${i}`;
+      const tithis = ad ? findTithisForAdDate(ad.year, ad.month, ad.day) || [] : [];
 
       tiles.push(
         <div
-          key={dateKey}
+          key={`${dateKey}-next`}
           className="nt-day-tile other-month"
-          aria-hidden="true"
+          onClick={() => { handleNext(); openDetailsModalForDate(ad.year, ad.month, ad.day); }}
+          tabIndex={0}
+          onKeyDown={(e)=> { if (e.key === 'Enter') { handleNext(); openDetailsModalForDate(ad.year, ad.month, ad.day); } }}
+          data-date={dateKey}
         >
           <div className="nt-nepali-date">{toNepaliNumber(i)}</div>
           {ad && <div className="nt-english-date">{ad.day}</div>}
+          <div className="nt-summary" aria-hidden>
+            {tithis.length > 0 && (
+              <div className="nt-summary-item tithi">
+                {tithis
+                  .sort((a,b)=> a.startTime.localeCompare(b.startTime))
+                  .map(t => t.name)
+                  .join(' / ')
+                }
+              </div>
+            )}
+          </div>
         </div>
       );
     }
@@ -621,8 +673,27 @@ export default function NepaliCalendar() {
   }
 
   const modalTithis = useMemo(() => {
-    return tithisByDate[activeDate] || [];
+    if (!activeDate) return [];
+    const parts = activeDate.split('-').map(p=>+p);
+    const adYear = parts[0];
+    const adMonthZeroBased = parts[1]-1;
+    const adDay = parts[2];
+    return findTithisForAdDate(adYear, adMonthZeroBased, adDay) || [];
   }, [tithisByDate, activeDate]);
+
+  // Expose manual debug helpers to window during development so they're usable and not flagged as unused
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      window.refreshTithis = refreshTithis;
+      window.debugFirestore = debugFirestore;
+    }
+    return () => {
+      if (typeof window !== 'undefined') {
+        try { delete window.refreshTithis; } catch (e) { window.refreshTithis = undefined; }
+        try { delete window.debugFirestore; } catch (e) { window.debugFirestore = undefined; }
+      }
+    };
+  }, [refreshTithis, debugFirestore]);
   
   // Debug: Log when tithisByDate state changes
   useEffect(() => {
