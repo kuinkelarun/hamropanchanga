@@ -3,6 +3,7 @@ import CustomerList from './CustomerList';
 import LandingPageEventsSection from './LandingPageEventsSection'; // Make sure this import exists
 import './LandingPage.css';
 import heroAnimation from './hero-image.png';
+import NepaliCalendar from './NepaliCalendar';
 
 const LandingPage = ({ user, customers, onSelectCustomer, onAddCustomer, events, familyMembers, onDoubleClickEvent, onEditCustomer, onDeleteCustomer }) => {
     return (
@@ -28,6 +29,11 @@ const LandingPage = ({ user, customers, onSelectCustomer, onAddCustomer, events,
                     />
 
                 </div>
+            </div>
+
+            {/* Nepali Calendar - inserted above branches */}
+            <div className="calendar-wrapper">
+                <NepaliCalendar />
             </div>
 
             {/* Branches Cards Section */}
