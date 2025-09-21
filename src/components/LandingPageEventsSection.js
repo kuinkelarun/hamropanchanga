@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 import './LandingPageEventsSection.css';
-import CalendarToggle from './CalendarToggle';
+import { useSettings } from '../contexts/SettingsContext';
 import { formatNepaliDate, formatEnglishDate, formatNepaliMonthYear, formatGregorianMonthYear } from '../utils/nepaliDateUtils';
 
 const LandingPageEventsSection = ({ events, familyMembers, onDoubleClickEvent }) => {
     const [eventFilter, setEventFilter] = useState('upcoming');
-    const [isNepaliCalendar, setIsNepaliCalendar] = useState(true); // Default to Nepali
+    const { isNepaliCalendar } = useSettings(); // Use global settings
 
     // Helper function to calculate the next occurrence of a repeating event
     const getNextOccurrence = (originalDate, repetition) => {
@@ -89,25 +89,18 @@ const LandingPageEventsSection = ({ events, familyMembers, onDoubleClickEvent })
         <div className="events-section">
             <div className="flex items-center justify-between mb-4">
                 <h2 className="section-title">Events & Reminders</h2>
-                <div className="flex items-center space-x-4">
-                    <CalendarToggle 
-                        isNepali={isNepaliCalendar}
-                        onToggle={() => setIsNepaliCalendar(!isNepaliCalendar)}
-                        label="Display"
-                    />
-                    <select
-                        value={eventFilter}
-                        onChange={(e) => setEventFilter(e.target.value)}
-                        className="border rounded-xl p-1 text-sm"
-                    >
-                        <option value="upcoming">Upcoming</option>
-                        <option value="all">All Events</option>
-                        <option value="past">Past Events</option>
-                        <option value="next-week">Next 7 Days</option>
-                        <option value="next-month">Next 30 Days</option>
-                        <option value="next-90-days">Next 90 Days</option>
-                    </select>
-                </div>
+                <select
+                    value={eventFilter}
+                    onChange={(e) => setEventFilter(e.target.value)}
+                    className="border rounded-xl p-1 text-sm"
+                >
+                    <option value="upcoming">Upcoming</option>
+                    <option value="all">All Events</option>
+                    <option value="past">Past Events</option>
+                    <option value="next-week">Next 7 Days</option>
+                    <option value="next-month">Next 30 Days</option>
+                    <option value="next-90-days">Next 90 Days</option>
+                </select>
             </div>
             
             {sortedAndFilteredEvents.length === 0 ? (
