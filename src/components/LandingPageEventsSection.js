@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import './LandingPageEventsSection.css';
+import { formatNepaliDate, formatEnglishDate, formatNepaliMonthYear } from '../utils/nepaliDateUtils';
 
 const LandingPageEventsSection = ({ events, familyMembers, onDoubleClickEvent }) => {
     const [eventFilter, setEventFilter] = useState('upcoming');
@@ -72,11 +73,11 @@ const LandingPageEventsSection = ({ events, familyMembers, onDoubleClickEvent })
 
     if (shouldGroup) {
         sortedAndFilteredEvents.forEach(event => {
-            const monthYear = event.displayDate.toLocaleString('default', { month: 'long', year: 'numeric' });
-            if (!groupedEvents[monthYear]) {
-                groupedEvents[monthYear] = [];
+            const nepaliMonthYear = formatNepaliMonthYear(event.displayDate).english;
+            if (!groupedEvents[nepaliMonthYear]) {
+                groupedEvents[nepaliMonthYear] = [];
             }
-            groupedEvents[monthYear].push(event);
+            groupedEvents[nepaliMonthYear].push(event);
         });
     }
 
@@ -104,22 +105,29 @@ const LandingPageEventsSection = ({ events, familyMembers, onDoubleClickEvent })
                 </div>
             ) : (
                 shouldGroup ? (
-                    Object.keys(groupedEvents).map(monthYear => (
-                        <div key={monthYear}>
-                            <h5 className="text-lg font-bold text-gray-700 mb-2 mt-4">{monthYear}</h5>
+                    Object.keys(groupedEvents).map(nepaliMonthYear => (
+                        <div key={nepaliMonthYear}>
+                            <h5 className="text-lg font-bold text-gray-700 mb-2 mt-4">{nepaliMonthYear}</h5>
                             <div className="event-cards-grid">
-                                {groupedEvents[monthYear].map((event, index) => (
+                                {groupedEvents[nepaliMonthYear].map((event, index) => (
                                     <div 
                                         key={index} 
                                         className="event-card"
                                         onDoubleClick={() => onDoubleClickEvent(event)}
                                     >
-                                        <div className="event-name">{event.name}</div>
-                                        <div className="text-sm text-gray-500">
-                                            {event.displayDate.toDateString()}
+                                        <div className="event-name">
+                                            {event.name}
                                             {event.repetition && event.repetition !== 'none' && (
                                                 <span className="text-xs text-gray-400 ml-2">({event.repetition} repeating)</span>
                                             )}
+                                        </div>
+                                        <div className="text-sm text-gray-600">
+                                            <div className="font-medium text-gray-700">
+                                                {formatNepaliDate(event.displayDate).withDayShortNepali}
+                                            </div>
+                                            <div className="text-xs text-gray-500 mt-0.5">
+                                                {formatEnglishDate(event.displayDate).short}
+                                            </div>
                                         </div>
                                         {event.personName && (
                                             <div className="text-xs text-gray-400 mt-1">For: {event.personName} ({event.personRelation})</div>
@@ -137,12 +145,19 @@ const LandingPageEventsSection = ({ events, familyMembers, onDoubleClickEvent })
                                 className="event-card"
                                 onDoubleClick={() => onDoubleClickEvent(event)}
                             >
-                                <div className="event-name">{event.name}</div>
-                                <div className="text-sm text-gray-500">
-                                    {event.displayDate.toDateString()}
+                                <div className="event-name">
+                                    {event.name}
                                     {event.repetition && event.repetition !== 'none' && (
                                         <span className="text-xs text-gray-400 ml-2">({event.repetition} repeating)</span>
                                     )}
+                                </div>
+                                <div className="text-sm text-gray-600">
+                                    <div className="font-medium text-gray-700">
+                                        {formatNepaliDate(event.displayDate).withDayShortNepali}
+                                    </div>
+                                    <div className="text-xs text-gray-500 mt-0.5">
+                                        {formatEnglishDate(event.displayDate).short}
+                                    </div>
                                 </div>
                                 {event.personName && (
                                     <div className="text-xs text-gray-400 mt-1">For: {event.personName} ({event.personRelation})</div>

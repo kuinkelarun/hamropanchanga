@@ -1,0 +1,253 @@
+/* Nepali Date Picker Styles */
+
+/* Modal Backdrop */
+.np-modal-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+/* Modal Container */
+.np-modal {
+    background: white;
+    border-radius: 12px;
+    padding: 20px;
+    max-width: 500px;
+    width: 90%;
+    max-height: 90vh;
+    overflow: auto;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+/* Modal Header */
+.np-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.np-modal-title {
+    font-size: 18px;
+    font-weight: 700;
+    color: #1f2937;
+    margin: 0;
+}
+
+.np-close-btn {
+    background: transparent;
+    border: none;
+    font-size: 20px;
+    color: #6b7280;
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 4px;
+    transition: background-color 0.2s;
+}
+
+.np-close-btn:hover {
+    background: #f3f4f6;
+    color: #374151;
+}
+
+/* Calendar Container */
+.np-calendar-container {
+    background: #f8fafc;
+    border-radius: 10px;
+    padding: 16px;
+}
+
+/* Calendar Header */
+.np-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+}
+
+.np-nav-btn {
+    background: #e5e7eb;
+    border: none;
+    padding: 8px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    color: #374151;
+    transition: all 0.2s;
+}
+
+.np-nav-btn:hover {
+    background: #d1d5db;
+    color: #1f2937;
+}
+
+.np-center {
+    text-align: center;
+}
+
+.np-nepali {
+    font-weight: 700;
+    font-size: 18px;
+    color: #1f2937;
+    margin-bottom: 2px;
+}
+
+.np-english {
+    color: #6b7280;
+    font-size: 13px;
+}
+
+/* Calendar Weekdays */
+.np-weekdays {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.np-weekday {
+    text-align: center;
+    font-weight: 600;
+    color: #4b5563;
+    font-size: 12px;
+    padding: 8px 4px;
+    background: rgba(255, 255, 255, 0.8);
+    border-radius: 6px;
+}
+
+.np-weekday-nepali {
+    font-size: 13px;
+    font-weight: 700;
+    margin-bottom: 2px;
+    color: #374151;
+}
+
+.np-weekday-english {
+    font-size: 10px;
+    color: #6b7280;
+}
+
+/* Calendar Grid */
+.np-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 8px;
+}
+
+/* Day Tiles */
+.np-day-tile {
+    background: white;
+    border-radius: 8px;
+    padding: 8px;
+    min-height: 60px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: 2px solid transparent;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.np-day-tile:hover {
+    background: #f0f9ff;
+    border-color: #0ea5e9;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.np-day-tile.today {
+    background: #dbeafe;
+    border-color: #3b82f6;
+    font-weight: 700;
+}
+
+.np-day-tile.today:hover {
+    background: #bfdbfe;
+    border-color: #2563eb;
+}
+
+.np-day-tile.empty {
+    background: transparent;
+    box-shadow: none;
+    cursor: default;
+    pointer-events: none;
+}
+
+.np-nepali-date {
+    font-size: 16px;
+    font-weight: 700;
+    color: #1f2937;
+    margin-bottom: 2px;
+}
+
+.np-english-date {
+    font-size: 11px;
+    color: #6b7280;
+    font-weight: 500;
+}
+
+.np-day-tile.today .np-nepali-date {
+    color: #1e40af;
+}
+
+.np-day-tile.today .np-english-date {
+    color: #3b82f6;
+}
+
+/* Selected state */
+.np-day-tile.selected {
+    background: #10b981;
+    border-color: #059669;
+    color: white;
+}
+
+.np-day-tile.selected .np-nepali-date,
+.np-day-tile.selected .np-english-date {
+    color: white;
+}
+
+.np-day-tile.selected:hover {
+    background: #059669;
+    border-color: #047857;
+}
+
+/* Responsive Design */
+@media (max-width: 640px) {
+    .np-modal {
+        width: 95%;
+        padding: 16px;
+    }
+    
+    .np-modal-title {
+        font-size: 16px;
+    }
+    
+    .np-nepali {
+        font-size: 16px;
+    }
+    
+    .np-day-tile {
+        min-height: 50px;
+        padding: 6px;
+    }
+    
+    .np-nepali-date {
+        font-size: 14px;
+    }
+    
+    .np-english-date {
+        font-size: 10px;
+    }
+}
