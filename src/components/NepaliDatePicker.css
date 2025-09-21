@@ -224,6 +224,144 @@
 }
 
 /* Responsive Design */
+@media (max-width: 768px) {
+    .np-modal {
+        width: 95%;
+        padding: 16px;
+        max-height: 85vh;
+    }
+    
+    .np-modal-title {
+        font-size: 16px;
+    }
+    
+    .np-calendar-container {
+        padding: 12px;
+    }
+    
+    .np-header {
+        margin-bottom: 12px;
+    }
+    
+    .np-nav-btn {
+        padding: 6px 10px;
+        font-size: 13px;
+    }
+    
+    .np-nepali {
+        font-size: 16px;
+    }
+    
+    .np-english {
+        font-size: 11px;
+    }
+    
+    .np-weekdays {
+        gap: 4px;
+        margin-bottom: 6px;
+    }
+    
+    .np-weekday {
+        padding: 6px 2px;
+        min-height: 45px;
+    }
+    
+    .np-weekday-nepali {
+        font-size: 11px;
+        margin-bottom: 1px;
+    }
+    
+    .np-weekday-english {
+        font-size: 9px;
+    }
+    
+    .np-grid {
+        gap: 4px;
+    }
+    
+    .np-day-tile {
+        min-height: 55px;
+        padding: 6px 4px;
+    }
+    
+    .np-nepali-date {
+        font-size: 14px;
+    }
+    
+    .np-english-date {
+        font-size: 10px;
+    }
+}
+
+@media (max-width: 480px) {
+    .np-modal {
+        width: 98%;
+        padding: 12px;
+        max-height: 90vh;
+    }
+    
+    .np-modal-title {
+        font-size: 15px;
+    }
+    
+    .np-calendar-container {
+        padding: 8px;
+    }
+    
+    .np-header {
+        margin-bottom: 10px;
+    }
+    
+    .np-nav-btn {
+        padding: 5px 8px;
+        font-size: 12px;
+    }
+    
+    .np-nepali {
+        font-size: 15px;
+    }
+    
+    .np-english {
+        font-size: 10px;
+    }
+    
+    .np-weekdays {
+        gap: 2px;
+        margin-bottom: 4px;
+    }
+    
+    .np-weekday {
+        padding: 4px 1px;
+        min-height: 40px;
+    }
+    
+    .np-weekday-nepali {
+        font-size: 10px;
+        margin-bottom: 1px;
+    }
+    
+    .np-weekday-english {
+        font-size: 8px;
+    }
+    
+    .np-grid {
+        gap: 2px;
+    }
+    
+    .np-day-tile {
+        min-height: 50px;
+        padding: 4px 2px;
+    }
+    
+    .np-nepali-date {
+        font-size: 13px;
+    }
+    
+    .np-english-date {
+        font-size: 9px;
+    }
+}
+
 @media (max-width: 640px) {
     .np-modal {
         width: 95%;

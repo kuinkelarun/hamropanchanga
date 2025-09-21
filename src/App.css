@@ -2,6 +2,79 @@
   text-align: center;
 }
 
+/* Mobile-first responsive optimizations */
+.min-h-screen {
+  min-height: 100vh;
+  min-height: 100dvh; /* Dynamic viewport height for mobile */
+}
+
+/* Ensure proper mobile scaling */
+* {
+  box-sizing: border-box;
+}
+
+/* Prevent horizontal scroll on mobile */
+html, body {
+  overflow-x: hidden;
+  width: 100%;
+}
+
+/* Mobile container optimizations */
+@media (max-width: 768px) {
+  .p-8 {
+    padding: 1rem !important;
+  }
+  
+  .space-x-4 > * + * {
+    margin-left: 0.5rem !important;
+  }
+  
+  .mb-6 {
+    margin-bottom: 1rem !important;
+  }
+  
+  /* Header responsive adjustments */
+  header {
+    flex-direction: column !important;
+    gap: 1rem !important;
+    text-align: center !important;
+  }
+  
+  /* Make text smaller on mobile for better fit */
+  .text-4xl {
+    font-size: 2rem !important;
+  }
+  
+  /* Button adjustments for mobile */
+  button {
+    min-height: 44px; /* Minimum touch target size */
+  }
+}
+
+@media (max-width: 480px) {
+  .p-8 {
+    padding: 0.5rem !important;
+  }
+  
+  .space-x-4 > * + * {
+    margin-left: 0.25rem !important;
+  }
+  
+  .mb-6 {
+    margin-bottom: 0.75rem !important;
+  }
+  
+  /* Even smaller text on very small screens */
+  .text-4xl {
+    font-size: 1.5rem !important;
+  }
+  
+  /* Ensure cards don't get too narrow */
+  .rounded-xl {
+    padding: 0.75rem !important;
+  }
+}
+
 .App-logo {
   height: 40vmin;
   pointer-events: none;
