@@ -578,6 +578,197 @@
 }
 
 /* Responsive Design */
+@media (max-width: 768px) {
+    .nc-calendar {
+        margin: 10px;
+        font-size: 14px;
+    }
+    
+    .nc-header {
+        flex-direction: row;
+        gap: 8px;
+        text-align: center;
+        margin-bottom: 12px;
+        align-items: center;
+        justify-content: space-between;
+    }
+    
+    .nc-nav-btn {
+        padding: 6px 10px;
+        font-size: 12px;
+        flex-shrink: 0;
+        min-width: 60px;
+    }
+    
+    .nc-btn {
+        padding: 6px 10px;
+        font-size: 12px;
+        flex-shrink: 0;
+    }
+    
+    .nc-nepali {
+        font-size: 16px;
+    }
+    
+    .nc-english {
+        font-size: 12px;
+    }
+    
+    .nc-weekdays {
+        gap: 3px;
+        margin-bottom: 6px;
+    }
+    
+    .nc-weekday {
+        padding: 4px 1px;
+        font-size: 9px;
+        min-width: 0;
+        overflow: hidden;
+    }
+    
+    .nc-weekday-nepali {
+        font-size: 10px;
+        margin-bottom: 1px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    
+    .nc-weekday-english {
+        font-size: 7px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    
+    .nc-weekday-english {
+        font-size: 9px;
+    }
+    
+    .nc-grid {
+        gap: 4px;
+    }
+    
+    .nt-day-tile {
+        min-height: 65px;
+        max-height: 65px;
+        padding: 6px 4px;
+        border-radius: 8px;
+    }
+    
+    .nc-nepali-date {
+        font-size: 14px;
+        margin-bottom: 1px;
+    }
+    
+    .nc-english-date {
+        font-size: 10px;
+    }
+    
+    .nc-event-indicator {
+        height: 2px;
+        font-size: 8px;
+    }
+    
+    .nc-tithi-indicator {
+        font-size: 9px;
+        padding: 1px 3px;
+    }
+}
+
+@media (max-width: 480px) {
+    .nc-calendar {
+        margin: 5px;
+        font-size: 13px;
+    }
+    
+    .nc-header {
+        flex-direction: row;
+        gap: 6px;
+        margin-bottom: 10px;
+        align-items: center;
+        justify-content: space-between;
+    }
+    
+    .nc-nav-btn {
+        padding: 5px 8px;
+        font-size: 11px;
+        flex-shrink: 0;
+        min-width: 50px;
+    }
+    
+    .nc-btn {
+        padding: 5px 8px;
+        font-size: 11px;
+        flex-shrink: 0;
+    }
+    
+    .nc-nepali {
+        font-size: 14px;
+    }
+    
+    .nc-english {
+        font-size: 11px;
+    }
+    
+    .nc-weekdays {
+        gap: 1px;
+        margin-bottom: 4px;
+    }
+    
+    .nc-weekday {
+        padding: 3px 0px;
+        font-size: 8px;
+        min-width: 0;
+        overflow: hidden;
+    }
+    
+    .nc-weekday-nepali {
+        font-size: 9px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    
+    .nc-weekday-english {
+        font-size: 6px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    
+    .nc-grid {
+        gap: 2px;
+    }
+    
+    .nt-day-tile {
+        min-height: 55px;
+        max-height: 55px;
+        padding: 4px 2px;
+        border-radius: 6px;
+    }
+    
+    .nc-nepali-date {
+        font-size: 13px;
+        line-height: 1.1;
+    }
+    
+    .nc-english-date {
+        font-size: 9px;
+    }
+    
+    .nc-tithi-indicator {
+        font-size: 8px;
+        padding: 1px 2px;
+        margin-top: 1px;
+    }
+    
+    .nc-event-indicator {
+        height: 1.5px;
+        margin-top: 1px;
+    }
+}
+
 @media (max-width:420px) {
     .nc-form-row { 
         flex-direction:column; 
@@ -585,6 +776,79 @@
     }
     .nc-input-time, .nc-input, .nc-select { 
         width:100%; 
+    }
+    
+    .nc-calendar {
+        margin: 2px;
+    }
+    
+    .nc-header {
+        flex-direction: row;
+        gap: 4px;
+        margin-bottom: 8px;
+        align-items: center;
+        justify-content: space-between;
+    }
+    
+    .nc-nav-btn {
+        padding: 4px 6px;
+        font-size: 10px;
+        flex-shrink: 0;
+        min-width: 45px;
+    }
+    
+    .nc-btn {
+        padding: 4px 6px;
+        font-size: 10px;
+        flex-shrink: 0;
+    }
+    
+    .nc-nepali {
+        font-size: 13px;
+    }
+    
+    .nc-english {
+        font-size: 10px;
+    }
+    
+    .nc-weekdays {
+        gap: 1px;
+        margin-bottom: 3px;
+    }
+    
+    .nc-weekday {
+        padding: 2px 0px;
+        font-size: 7px;
+        min-width: 0;
+        overflow: hidden;
+    }
+    
+    .nc-weekday-nepali {
+        font-size: 8px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    
+    .nc-weekday-english {
+        font-size: 5px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    
+    .nt-day-tile {
+        min-height: 50px;
+        max-height: 50px;
+        padding: 3px 1px;
+    }
+    
+    .nc-nepali-date {
+        font-size: 12px;
+    }
+    
+    .nc-english-date {
+        font-size: 8px;
     }
 }
 
