@@ -1,120 +1,363 @@
-/* .nepali-calendar-container { background: #fff; padding: 16px; border-radius: 8px; box-shadow: 0 6px 18px rgba(0,0,0,0.06); margin-bottom: 18px; }
-.nc-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; }
-.nc-btn { background:#eef2ff; border:0; padding:8px 12px; border-radius:6px; cursor:pointer; }
+/* Nepali Calendar Container */
+.nepali-calendar-container { 
+    background: #cab5ef; 
+    padding: 16px; 
+    border-radius: 8px; 
+    box-shadow: 0 6px 18px rgba(0,0,0,0.06); 
+    margin-bottom: 18px; 
+}
+
+/* Calendar Header */
+.nc-header { 
+    display:flex; 
+    align-items:center; 
+    justify-content:space-between; 
+    margin-bottom:12px; 
+}
+.nc-btn { 
+    background:#eef2ff; 
+    border:0; 
+    padding:8px 12px; 
+    border-radius:6px; 
+    cursor:pointer; 
+}
 .nc-center { text-align:center; }
 .nc-nepali { font-weight:700; font-size:18px; }
 .nc-english { color:#6b7280; font-size:13px; }
-.nc-weekdays { display:grid; grid-template-columns:repeat(7,1fr); gap:8px; margin-bottom:8px; }
-.nc-weekday { text-align:center; font-weight:600; color:#4b5563; font-size:13px; }
-.nc-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:10px; }
-.nt-day-tile { background:#fff; border-radius:10px; padding:10px; min-height:88px; position:relative; box-shadow:0 4px 10px rgba(0,0,0,0.04); cursor:pointer; display:flex; flex-direction:column; }
-.nt-day-tile.empty { background:transparent; box-shadow:none; cursor:default; }
+
+/* Calendar Grid */
+.nc-weekdays { 
+    display:grid; 
+    grid-template-columns:repeat(7,1fr); 
+    gap:8px; 
+    margin-bottom:8px; 
+}
+.nc-weekday { 
+    text-align:center; 
+    font-weight:600; 
+    color:#4b5563; 
+    font-size:13px; 
+    padding: 8px 4px;
+    background: rgba(255, 255, 255, 0.7);
+    border-radius: 6px;
+    border: 1px solid rgba(75, 85, 99, 0.1);
+}
+.nc-weekday-nepali {
+    font-size: 14px;
+    font-weight: 700;
+    margin-bottom: 2px;
+    color: #374151;
+}
+.nc-weekday-english {
+    font-size: 11px;
+    font-weight: 500;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+.nc-grid { 
+    display:grid; 
+    grid-template-columns:repeat(7,1fr); 
+    gap:10px; 
+}
+
+/* Day Tiles */
+.nt-day-tile { 
+    background:#fff; 
+    border-radius:10px; 
+    padding:10px; 
+    min-height:88px; 
+    max-height:88px; /* Fixed height to prevent expansion */
+    position:relative; 
+    box-shadow:0 4px 10px rgba(0,0,0,0.04); 
+    cursor:pointer; 
+    display:flex; 
+    flex-direction:column; 
+    overflow:hidden; /* Prevent content overflow */
+}
+.nt-day-tile.empty { 
+    background:transparent; 
+    box-shadow:none; 
+    cursor:default; 
+}
 .nt-day-tile.today { border:2px solid #3b82f6; }
-.nt-nepali-date { position:absolute; top:8px; left:8px; font-size:18px; font-weight:700; }
-.nt-english-date { position:absolute; bottom:8px; right:8px; color:#9ca3af; font-size:12px; }
-.nt-summary { margin-top:28px; display:flex; flex-direction:column; gap:4px; }
-.nt-summary-item { font-size:12px; color:#374151; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.nt-nepali-date { 
+    position:absolute; 
+    top:8px; 
+    left:8px; 
+    font-size:18px; 
+    font-weight:700; 
+}
+.nt-english-date { 
+    position:absolute; 
+    bottom:8px; 
+    right:8px; 
+    color:#9ca3af; 
+    font-size:12px; 
+}
+.nt-summary { 
+    position:absolute;
+    top:32px; /* Start below the Nepali date */
+    left:8px;
+    right:8px;
+    bottom:25px; /* Leave space for English date at bottom */
+    display:flex; 
+    flex-direction:column; 
+    gap:2px; 
+    overflow:hidden; /* Hide overflow content */
+}
+.nt-summary-item { 
+    font-size:10px; 
+    color:#374151; 
+    white-space:nowrap; 
+    overflow:hidden; 
+    text-overflow:ellipsis; 
+    display:block;
+    padding:1px 0;
+    line-height:1.3;
+    text-align:center; /* Center the slash-separated tithis */
+}
 .nt-summary-item.tithi { color:#6b21a8; }
-.nt-summary-item.event { color:#0ea5a5; } */
+.nt-summary-item.event { color:#0ea5a5; }
 
-.nc-modal-backdrop { position:fixed; inset:0; background: rgba(0,0,0,0.35); display:flex; align-items:center; justify-content:center; z-index:50; }
-.nc-modal { background:#fff; width:92%; max-width:760px; border-radius:10px; padding:16px; max-height:90vh; overflow:auto; }
-.nc-modal-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; }
-.nc-modal-section { margin-bottom:12px; }
-.nc-item { display:flex; justify-content:space-between; align-items:center; padding:8px; background:#f3f4f6; border-radius:8px; margin-bottom:8px; }
-.nc-item-title { font-weight:600; }
-.nc-form-row { display:flex; gap:8px; align-items:center; margin-bottom:8px; }
-.nc-validation { color:#dc2626; margin-bottom:8px; }
-.nc-add-btn { background:#2563eb; color:#fff; padding:8px 12px; border-radius:8px; border:0; cursor:pointer; margin-right:8px; }
-.muted { color:#6b7280; font-size:13px; }
-
-
-
-/* ...existing code... */
-.nepali-calendar-container { background: #fff; padding: 16px; border-radius: 8px; box-shadow: 0 6px 18px rgba(0,0,0,0.06); margin-bottom: 18px; }
-.nc-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; }
-.nc-btn { background:#eef2ff; border:0; padding:8px 12px; border-radius:6px; cursor:pointer; }
-.nc-center { text-align:center; }
-.nc-nepali { font-weight:700; font-size:18px; }
-.nc-english { color:#6b7280; font-size:13px; }
-.nc-weekdays { display:grid; grid-template-columns:repeat(7,1fr); gap:8px; margin-bottom:8px; }
-.nc-weekday { text-align:center; font-weight:600; color:#4b5563; font-size:13px; }
-.nc-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:10px; }
-.nt-day-tile { background:#fff; border-radius:10px; padding:10px; min-height:88px; position:relative; box-shadow:0 4px 10px rgba(0,0,0,0.04); cursor:pointer; display:flex; flex-direction:column; }
-.nt-day-tile.empty { background:transparent; box-shadow:none; cursor:default; }
-.nt-day-tile.today { border:2px solid #3b82f6; }
-.nt-nepali-date { position:absolute; top:8px; left:8px; font-size:18px; font-weight:700; }
-.nt-english-date { position:absolute; bottom:8px; right:8px; color:#9ca3af; font-size:12px; }
-.nt-summary { margin-top:28px; display:flex; flex-direction:column; gap:4px; }
-.nt-summary-item { font-size:12px; color:#374151; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; display:flex; justify-content:space-between; gap:8px; }
-.nt-summary-item.tithi { color:#6b21a8; }
-.nt-tithi-name { font-weight:600; margin-right:8px; }
-.nt-tithi-time { color:#6b7280; font-size:11px; }
-
-/* Edit and quick-add visibility on hover, keyboard focusable */
-.nt-edit-btn,
+/* Quick Add Button */
 .nt-quick-add-btn {
     opacity: 0;
     transform: translateY(-4px);
     transition: opacity 0.18s ease, transform 0.18s ease;
     pointer-events: none;
     border: none;
-    background: transparent;
+    background-color: #10b981;
+    color: white;
     padding: 4px;
+    position: absolute;
+    top: 6px;
+    right: 6px; /* Moved to top-right corner */
+    width: 20px; /* Made slightly smaller */
+    height: 20px; /* Made slightly smaller */
+    border-radius: 4px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    font-size: 12px; /* Adjusted font size */
+    box-shadow: 0 2px 6px rgba(16,185,129,0.18);
 }
-.nt-day-tile:hover .nt-edit-btn,
-.nt-day-tile:focus-within .nt-edit-btn,
+
 .nt-day-tile:hover .nt-quick-add-btn,
 .nt-day-tile:focus-within .nt-quick-add-btn {
     opacity: 1;
     transform: translateY(0);
     pointer-events: auto;
 }
+/* Modal */
+.nc-modal-backdrop { 
+    position:fixed; 
+    inset:0; 
+    background: rgba(0,0,0,0.35); 
+    display:flex; 
+    align-items:center; 
+    justify-content:center; 
+    z-index:50; 
+}
 
-/* edit button */
-.nt-edit-btn {
-    position: absolute;
-    top: 6px;
-    right: 8px;
-    color: #9ca3af;
-    width: 28px;
-    height: 28px;
+.nc-modal {
+    background:#fff;
+    width:92%;
+    max-width:520px;
+    border-radius:12px;
+    padding:20px 20px 18px;
+    max-height:90vh;
+    overflow:auto;
+    box-shadow:0 20px 50px rgba(2,6,23,0.35);
+    font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+}
+
+.nc-modal-header { 
+    display:flex; 
+    justify-content:space-between; 
+    align-items:center; 
+    margin-bottom:12px; 
+}
+
+.nc-modal-title {
+    font-weight:700;
+    font-size:18px;
+    color:#0f172a;
+    margin:0;
+}
+
+.nc-modal-header > button[aria-label="Close"] {
+    background:transparent;
+    border:0;
+    font-size:18px;
+    line-height:1;
+    color:#6b7280;
+    cursor:pointer;
+    padding:6px;
+    border-radius:6px;
+}
+
+.nc-modal-header > button[aria-label="Close"]:hover { 
+    background:#f3f4f6; 
+    color:#111827; 
+}
+
+.nc-modal-section { margin-bottom:12px; }
+.nc-modal-section h4 { 
+    margin:0 0 8px 0; 
+    font-size:14px; 
+    font-weight:700; 
+    color:#0f172a; 
+}
+/* Tithi List Items */
+.nc-item {
+    background:#ffffff;
+    border:1px solid #e6e9ee;
     display:flex;
+    justify-content:space-between;
+    align-items:center;
+    padding:12px;
+    border-radius:10px;
+    margin-bottom:10px;
+    box-shadow: 0 4px 10px rgba(2,6,23,0.04);
+}
+
+.nc-item-title { 
+    font-weight:600; 
+    font-size:14px; 
+    color:#0f172a; 
+    margin-bottom:4px; 
+}
+
+.nc-item .muted { 
+    color:#6b7280; 
+    font-size:13px; 
+}
+
+/* Delete button on items */
+.nc-item > button {
+    background:transparent;
+    border:0;
+    color:#ef4444;
+    font-weight:700;
+    font-size:14px;
+    width:28px;
+    height:28px;
+    display:inline-flex;
     align-items:center;
     justify-content:center;
     border-radius:6px;
-    background: transparent;
+    cursor:pointer;
 }
 
-/* quick-add (green +) */
-.nt-quick-add-btn {
-    position: absolute;
-    top: 6px;
-    right: 44px;
-    background-color: #10b981;
-    color: white;
-    width: 28px;
-    height: 28px;
-    border-radius: 6px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: 600;
-    box-shadow: 0 2px 6px rgba(16,185,129,0.18);
+.nc-item > button:hover { 
+    background: rgba(239,68,68,0.08); 
 }
 
-/* modal tweaks */
-.nc-modal { background:#fff; width:92%; max-width:760px; border-radius:10px; padding:16px; max-height:90vh; overflow:auto; }
-.nc-modal-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; }
-.nc-modal-section { margin-bottom:12px; }
-.nc-item { display:flex; justify-content:space-between; align-items:center; padding:8px; background:#f3f4f6; border-radius:8px; margin-bottom:8px; }
-.nc-item-title { font-weight:600; }
-.nc-form-row { display:flex; gap:8px; align-items:center; margin-bottom:8px; }
-.nc-input { padding:8px 10px; border-radius:8px; border:1px solid #e5e7eb; flex:1; }
-.nc-input-time { padding:6px 8px; border-radius:8px; border:1px solid #e5e7eb; width:110px; }
-.nc-validation { color:#dc2626; margin-bottom:8px; }
-.nc-add-btn { background:#6b21a8; color:#fff; padding:8px 12px; border-radius:8px; border:0; cursor:pointer; margin-right:8px; }
-.muted { color:#6b7280; font-size:13px; }
+/* Form Elements */
+.nc-form-row { 
+    display:flex; 
+    gap:8px; 
+    align-items:center; 
+    margin-bottom:12px; 
+    flex-direction:column; /* Stack label above input */
+    align-items:flex-start;
+}
 
-/* accessibility helper */
-.sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); border:0; }
+.nc-label {
+    font-weight:600;
+    font-size:14px;
+    color:#0f172a;
+    margin-bottom:4px;
+    display:block;
+    width:100%;
+}
+
+.nc-input, .nc-select, .nc-input-time {
+    padding:10px 12px;
+    border-radius:8px;
+    border:1px solid #e5e7eb;
+    background:white;
+    font-size:14px;
+    color:#0f172a;
+    width:100%;
+}
+
+.nc-select { 
+    appearance: none; 
+    -webkit-appearance:none; 
+    background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='8' viewBox='0 0 20 12'%3E%3Cpath fill='%236b7280' d='M0 0l10 12L20 0z'/%3E%3C/svg%3E"); 
+    background-repeat:no-repeat; 
+    background-position:right 12px center; 
+    background-size:12px; 
+    padding-right:30px; 
+}
+
+.nc-validation { 
+    color:#dc2626; 
+    margin-bottom:8px; 
+}
+
+/* Form Actions */
+.nc-modal-actions { 
+    display:flex; 
+    gap:8px; 
+    align-items:center; 
+    margin-top:6px; 
+}
+
+.nc-add-btn {
+    background:#2563eb;
+    color:#fff;
+    padding:12px 14px;
+    border-radius:8px;
+    border:0;
+    cursor:pointer;
+    flex:1;
+    font-weight:600;
+    font-size:15px;
+}
+
+.nc-cancel-btn {
+    background:transparent;
+    color:#374151;
+    padding:10px 12px;
+    border-radius:8px;
+    border:1px solid #e5e7eb;
+    cursor:pointer;
+}
+
+/* Utility Classes */
+.muted { 
+    color:#6b7280; 
+    font-size:13px; 
+}
+
+.sr-only { 
+    position:absolute; 
+    width:1px; 
+    height:1px; 
+    padding:0; 
+    margin:-1px; 
+    overflow:hidden; 
+    clip:rect(0,0,0,0); 
+    border:0; 
+}
+
+/* Responsive Design */
+@media (max-width:420px) {
+    .nc-form-row { 
+        flex-direction:column; 
+        align-items:stretch; 
+    }
+    .nc-input-time, .nc-input, .nc-select { 
+        width:100%; 
+    }
+}
+
+/* Accessibility */
+.nc-modal :focus { 
+    outline: 2px solid rgba(37,99,235,0.18); 
+    outline-offset:2px; 
+}

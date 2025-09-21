@@ -12,6 +12,20 @@ const englishMonths = [
 const nepaliWeekdays = [
   "आइतबार", "सोमबार", "मंगलबार", "बुधबार", "बिहिबार", "शुक्रबार", "शनिबार"
 ];
+const englishWeekdays = [
+  "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"
+];
+
+const shuklaPackshyaTithis = [
+  "प्रतिपदा", "द्वितीया", "तृतीया", "चतुर्थी", "पञ्चमी", "षष्ठी", "सप्तमी", 
+  "अष्टमी", "नवमी", "दशमी", "एकादशी", "द्वादशी", "त्रयोदशी", "चतुर्दशी", "पूर्णिमा"
+];
+
+const krishnaPackshyaTithis = [
+  "प्रतिपदा", "द्वितीया", "तृतीया", "चतुर्थी", "पञ्चमी", "षष्ठी", "सप्तमी", 
+  "अष्टमी", "नवमी", "दशमी", "एकादशी", "द्वादशी", "त्रयोदशी", "चतुर्दशी", "औंसी"
+];
+
 const nepaliNumbers = ["०","१","२","३","४","५","६","७","८","९"];
 
 const bsCalendarData = {
@@ -81,6 +95,7 @@ export default function NepaliCalendar() {
   const [activeDate, setActiveDate] = useState(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [modalFocusHint, setModalFocusHint] = useState(null);
+  const [tithiOptions, setTithiOptions] = useState([]); // loaded from calendar.txt (public/) or fallback
 
   const tithiInputRef = useRef(null);
 
@@ -138,6 +153,7 @@ export default function NepaliCalendar() {
   }
 
   // controlled inputs inside modal
+  const [newPakshya, setNewPakshya] = useState('शुक्लपक्ष');
   const [newTithi, setNewTithi] = useState('');
   const [startTime, setStartTime] = useState('');
   const [endTime, setEndTime] = useState('');
@@ -152,17 +168,20 @@ export default function NepaliCalendar() {
     }
     if (!modalOpen) {
       setModalFocusHint(null);
-      setNewTithi(''); setStartTime(''); setEndTime(''); setValidation('');
+      setNewPakshya('शुक्लपक्ष'); setNewTithi(''); setStartTime(''); setEndTime(''); setValidation('');
     }
   }, [modalOpen, modalFocusHint]);
 
   function submitAdd(){
     setValidation('');
-    if (!newTithi) { setValidation('Enter a Tithi name'); return; }
+    if (!newPakshya) { setValidation('Select a Pakshya'); return; }
+    if (!newTithi) { setValidation('Select a Tithi'); return; }
     if (!startTime || !endTime) { setValidation('Start and end times required for tithi'); return; }
     if (endTime <= startTime) { setValidation('End must be after start'); return; }
-    addTithi(activeDate, newTithi, startTime, endTime);
-    setNewTithi(''); setStartTime(''); setEndTime('');
+    
+    const fullTithiName = `${newPakshya} ${newTithi}`;
+    addTithi(activeDate, fullTithiName, startTime, endTime);
+    setNewPakshya('शुक्लपक्ष'); setNewTithi(''); setStartTime(''); setEndTime('');
   }
 
   function renderDayTiles(){
@@ -175,6 +194,7 @@ export default function NepaliCalendar() {
       const dateKey = dateKeyFromAd(ad);
       const isToday = todayBs.year === currentBsYear && todayBs.month === currentBsMonth && todayBs.day === day;
       const tithis = tithisByDate[dateKey] || [];
+      const dayOfWeek = new Date(ad.year, ad.month, ad.day).getDay(); // 0=Sunday, 1=Monday, etc.
 
       tiles.push(
         <div
@@ -192,28 +212,20 @@ export default function NepaliCalendar() {
             onClick={(e)=>{ e.stopPropagation(); openModalForDate(ad.year, ad.month, ad.day, 'tithi'); }}
           >+</button>
 
-          <button
-            className="nt-edit-btn"
-            aria-label="Edit tithis"
-            title="Edit Tithis"
-            onClick={(e)=>{ e.stopPropagation(); openModalForDate(ad.year, ad.month, ad.day); }}
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-              <circle cx="12" cy="5" r="2" fill="currentColor"/>
-              <circle cx="12" cy="12" r="2" fill="currentColor"/>
-              <circle cx="12" cy="19" r="2" fill="currentColor"/>
-            </svg>
-          </button>
+          {/* removed three-dot edit button: use tile click or quick-add (+) instead */}
 
           <div className="nt-nepali-date" aria-hidden>{toNepaliNumber(day)}</div>
           <div className="nt-english-date" aria-hidden>{ad.day}</div>
           <div className="nt-summary" aria-hidden>
-            {tithis.slice(0,3).map(t=> (
-              <div key={t.id} className="nt-summary-item tithi">
-                <span className="nt-tithi-name">{t.name}</span>
-                <span className="nt-tithi-time">{t.startTime}–{t.endTime}</span>
+            {tithis.length > 0 && (
+              <div className="nt-summary-item tithi">
+                {tithis
+                  .sort((a, b) => a.startTime.localeCompare(b.startTime)) // Sort by start time
+                  .map(t => t.name)
+                  .join(' / ') // Join with slash separator
+                }
               </div>
-            ))}
+            )}
           </div>
         </div>
       );
@@ -235,7 +247,12 @@ export default function NepaliCalendar() {
       </div>
 
       <div className="nc-weekdays">
-        {nepaliWeekdays.map(w => <div key={w} className="nc-weekday">{w}</div>)}
+        {nepaliWeekdays.map((nepaliDay, index) => (
+          <div key={nepaliDay} className="nc-weekday">
+            <div className="nc-weekday-nepali">{nepaliDay}</div>
+            <div className="nc-weekday-english">{englishWeekdays[index]}</div>
+          </div>
+        ))}
       </div>
 
       <div className="nc-grid" role="grid" aria-label="Nepali calendar">
@@ -246,14 +263,27 @@ export default function NepaliCalendar() {
         <div className="nc-modal-backdrop" onClick={()=> setModalOpen(false)}>
           <div className="nc-modal" onClick={(e)=>e.stopPropagation()}>
             <div className="nc-modal-header">
-              <h3 className="nc-modal-title">{activeDate}</h3>
+              {/* show Nepali date (BS) for the activeDate key which is in AD form "YYYY-M-D" */}
+              <h3 className="nc-modal-title">{
+                (() => {
+                  if (!activeDate) return '';
+                  const parts = activeDate.split('-').map(p=>+p);
+                  const adYear = parts[0];
+                  const adMonthZeroBased = parts[1]-1;
+                  const adDay = parts[2];
+                  const bs = convertAdToBs(adYear, adMonthZeroBased, adDay);
+                  return `${nepaliMonths[bs.month-1]} ${toNepaliNumber(bs.day)}, ${toNepaliNumber(bs.year)}`;
+                })()
+              }</h3>
               <button onClick={()=> setModalOpen(false)} aria-label="Close">✕</button>
             </div>
 
             <div className="nc-modal-section">
               <h4>Tithis</h4>
               {modalTithis.length===0 && <div className="muted">No tithis</div>}
-              {modalTithis.map(t => (
+              {modalTithis
+                .sort((a, b) => a.startTime.localeCompare(b.startTime)) // Sort by start time
+                .map(t => (
                 <div key={t.id} className="nc-item">
                   <div>
                     <div className="nc-item-title">{t.name}</div>
@@ -266,18 +296,60 @@ export default function NepaliCalendar() {
 
             <div className="nc-modal-section">
               <h4>Add Tithi</h4>
+              
+              {/* Pakshya Field */}
               <div className="nc-form-row">
-                <label className="sr-only">Tithi name</label>
-                <input
+                <label className="nc-label">पक्ष (Pakshya):</label>
+                <select
+                  value={newPakshya}
+                  onChange={e => {
+                    setNewPakshya(e.target.value);
+                    setNewTithi(''); // Reset tithi when pakshya changes
+                  }}
+                  className="nc-select"
+                >
+                  <option value="शुक्लपक्ष">शुक्लपक्ष (Shukla Pakshya)</option>
+                  <option value="कृष्णपक्ष">कृष्णपक्ष (Krishna Pakshya)</option>
+                </select>
+              </div>
+
+              {/* Tithi Field */}
+              <div className="nc-form-row">
+                <label className="nc-label">तिथि (Tithi):</label>
+                <select
                   ref={tithiInputRef}
                   value={newTithi}
-                  onChange={e=>setNewTithi(e.target.value)}
-                  placeholder="e.g. अमावस्या"
-                  className="nc-input"
-                />
-                <input type="time" value={startTime} onChange={e=>setStartTime(e.target.value)} className="nc-input-time" />
-                <input type="time" value={endTime} onChange={e=>setEndTime(e.target.value)} className="nc-input-time" />
+                  onChange={e => setNewTithi(e.target.value)}
+                  className="nc-select"
+                >
+                  <option value="">Select Tithi</option>
+                  {(newPakshya === 'शुक्लपक्ष' ? shuklaPackshyaTithis : krishnaPackshyaTithis).map(tithi => (
+                    <option key={tithi} value={tithi}>{tithi}</option>
+                  ))}
+                </select>
               </div>
+
+              {/* Time Fields */}
+              <div className="nc-form-row">
+                <label className="nc-label">आरम्भकाल (Start Time):</label>
+                <input 
+                  type="time" 
+                  value={startTime} 
+                  onChange={e=>setStartTime(e.target.value)} 
+                  className="nc-input-time" 
+                />
+              </div>
+
+              <div className="nc-form-row">
+                <label className="nc-label">समाप्तिकाल (End Time):</label>
+                <input 
+                  type="time" 
+                  value={endTime} 
+                  onChange={e=>setEndTime(e.target.value)} 
+                  className="nc-input-time" 
+                />
+              </div>
+
               {validation && <div className="nc-validation">{validation}</div>}
               <div className="nc-modal-actions">
                 <button onClick={submitAdd} className="nc-add-btn">Add Tithi</button>
