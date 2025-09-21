@@ -1,6 +1,8 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { onAuthStateChanged, signOut, getIdTokenResult } from 'firebase/auth';
 import { auth } from './firebase';
+import { SettingsProvider } from './contexts/SettingsContext';
+import SettingsMenu from './components/SettingsMenu';
 import Login from './Login';
 import { collection, query, where, onSnapshot, getDoc, addDoc, updateDoc, doc } from 'firebase/firestore';
 import { db } from './firebase';
@@ -206,20 +208,15 @@ export default function App() {
     const allFamilyMembers = customers.flatMap(customer => Object.values(customer.familyMembers || {}));
 
     return (
-        <div className="min-h-screen bg-gray-100 p-8">
-            <header className="flex justify-between items-center mb-6">
-                {/* <h1 className="text-4xl font-extrabold text-gray-900">Family Tree Management</h1> */}
-                <div> </div>
-                <div className="flex items-center space-x-4">
-                    <span className="text-gray-700">Logged in as: {user.email}</span>
-                    <button onClick={handleSignOut}
-                        className="bg-red-500 hover:bg-red-600 text-white font-semibold py-2 px-4 rounded-xl shadow-md transition-transform transform hover:scale-105">
-                        Sign Out
-                    </button>
-                </div>
-            </header>
+        <SettingsProvider>
+            <div className="min-h-screen bg-gray-100 p-8">
+                <header className="flex justify-between items-center mb-6">
+                    {/* <h1 className="text-4xl font-extrabold text-gray-900">Family Tree Management</h1> */}
+                    <div> </div>
+                    <SettingsMenu user={user} onSignOut={handleSignOut} />
+                </header>
 
-            {error && <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-xl mb-4" role="alert">{error}</div>}
+                {error && <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-xl mb-4" role="alert">{error}</div>}
 
             {view === 'list' && (
                 <LandingPage
@@ -251,6 +248,7 @@ export default function App() {
                     onCancel={handleBackToList}
                 />
             )}
-        </div>
+            </div>
+        </SettingsProvider>
     );
 }

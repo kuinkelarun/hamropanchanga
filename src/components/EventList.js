@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 import EventMenu from './EventMenu';
-import CalendarToggle from './CalendarToggle';
+import { useSettings } from '../contexts/SettingsContext';
 import { formatNepaliDate, formatEnglishDate, formatNepaliMonthYear, formatGregorianMonthYear } from '../utils/nepaliDateUtils';
 
 // Component to list all events
 const EventList = ({ events, eventFilter, onEdit, onDelete }) => {
-    const [isNepaliCalendar, setIsNepaliCalendar] = useState(true); // Default to Nepali
+    const { isNepaliCalendar } = useSettings(); // Use global settings
     // Helper function to calculate the next occurrence of a repeating event
     const getNextOccurrence = (originalDate, repetition) => {
         const today = new Date();
@@ -92,15 +92,6 @@ const EventList = ({ events, eventFilter, onEdit, onDelete }) => {
 
     return (
         <div className="space-y-3">
-            {/* Calendar Toggle */}
-            <div className="flex justify-end mb-4">
-                <CalendarToggle 
-                    isNepali={isNepaliCalendar}
-                    onToggle={() => setIsNepaliCalendar(!isNepaliCalendar)}
-                    label="Display"
-                />
-            </div>
-            
             {sortedAndFilteredEvents.length === 0 ? (
                 <div className="text-center py-4 text-gray-400 text-sm">
                     No events found for this filter.

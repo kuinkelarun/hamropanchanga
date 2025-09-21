@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import './NepaliDatePicker.css'; // Import styles for Nepali date picker
-import CalendarToggle from './CalendarToggle';
+import { useSettings } from '../contexts/SettingsContext';
 
 // Nepali Calendar utilities
 const nepaliMonths = [
@@ -264,7 +264,7 @@ const AddEventForm = ({ onAdd, familyMembers, onCancel }) => {
     const [selectedPersonId, setSelectedPersonId] = useState('');
     const [repetition, setRepetition] = useState('none');
     const [showNepaliCalendar, setShowNepaliCalendar] = useState(false);
-    const [isNepaliCalendar, setIsNepaliCalendar] = useState(true); // Default to Nepali
+    const { isNepaliCalendar } = useSettings(); // Use global settings
 
     const handleSubmit = (e) => {
         e.preventDefault();
@@ -330,15 +330,6 @@ const AddEventForm = ({ onAdd, familyMembers, onCancel }) => {
                             onChange={(e) => setName(e.target.value)}
                             className="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-green-500"
                             required
-                        />
-                    </div>
-                    
-                    {/* Calendar Toggle */}
-                    <div className="mb-3">
-                        <CalendarToggle 
-                            isNepali={isNepaliCalendar}
-                            onToggle={() => setIsNepaliCalendar(!isNepaliCalendar)}
-                            label="Date Input"
                         />
                     </div>
                     
