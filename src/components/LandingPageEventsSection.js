@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import './LandingPageEventsSection.css';
-import { formatNepaliDate, formatEnglishDate, formatNepaliMonthYear } from '../utils/nepaliDateUtils';
+import CalendarToggle from './CalendarToggle';
+import { formatNepaliDate, formatEnglishDate, formatNepaliMonthYear, formatGregorianMonthYear } from '../utils/nepaliDateUtils';
 
 const LandingPageEventsSection = ({ events, familyMembers, onDoubleClickEvent }) => {
     const [eventFilter, setEventFilter] = useState('upcoming');
+    const [isNepaliCalendar, setIsNepaliCalendar] = useState(true); // Default to Nepali
 
     // Helper function to calculate the next occurrence of a repeating event
     const getNextOccurrence = (originalDate, repetition) => {
@@ -73,11 +75,13 @@ const LandingPageEventsSection = ({ events, familyMembers, onDoubleClickEvent })
 
     if (shouldGroup) {
         sortedAndFilteredEvents.forEach(event => {
-            const nepaliMonthYear = formatNepaliMonthYear(event.displayDate).english;
-            if (!groupedEvents[nepaliMonthYear]) {
-                groupedEvents[nepaliMonthYear] = [];
+            const monthYear = isNepaliCalendar 
+                ? formatNepaliMonthYear(event.displayDate).english
+                : formatGregorianMonthYear(event.displayDate).full;
+            if (!groupedEvents[monthYear]) {
+                groupedEvents[monthYear] = [];
             }
-            groupedEvents[nepaliMonthYear].push(event);
+            groupedEvents[monthYear].push(event);
         });
     }
 
@@ -85,18 +89,25 @@ const LandingPageEventsSection = ({ events, familyMembers, onDoubleClickEvent })
         <div className="events-section">
             <div className="flex items-center justify-between mb-4">
                 <h2 className="section-title">Events & Reminders</h2>
-                <select
-                    value={eventFilter}
-                    onChange={(e) => setEventFilter(e.target.value)}
-                    className="border rounded-xl p-1 text-sm"
-                >
-                    <option value="upcoming">Upcoming</option>
-                    <option value="all">All Events</option>
-                    <option value="past">Past Events</option>
-                    <option value="next-week">Next 7 Days</option>
-                    <option value="next-month">Next 30 Days</option>
-                    <option value="next-90-days">Next 90 Days</option>
-                </select>
+                <div className="flex items-center space-x-4">
+                    <CalendarToggle 
+                        isNepali={isNepaliCalendar}
+                        onToggle={() => setIsNepaliCalendar(!isNepaliCalendar)}
+                        label="Display"
+                    />
+                    <select
+                        value={eventFilter}
+                        onChange={(e) => setEventFilter(e.target.value)}
+                        className="border rounded-xl p-1 text-sm"
+                    >
+                        <option value="upcoming">Upcoming</option>
+                        <option value="all">All Events</option>
+                        <option value="past">Past Events</option>
+                        <option value="next-week">Next 7 Days</option>
+                        <option value="next-month">Next 30 Days</option>
+                        <option value="next-90-days">Next 90 Days</option>
+                    </select>
+                </div>
             </div>
             
             {sortedAndFilteredEvents.length === 0 ? (
@@ -105,11 +116,11 @@ const LandingPageEventsSection = ({ events, familyMembers, onDoubleClickEvent })
                 </div>
             ) : (
                 shouldGroup ? (
-                    Object.keys(groupedEvents).map(nepaliMonthYear => (
-                        <div key={nepaliMonthYear}>
-                            <h5 className="text-lg font-bold text-gray-700 mb-2 mt-4">{nepaliMonthYear}</h5>
+                    Object.keys(groupedEvents).map(monthYear => (
+                        <div key={monthYear}>
+                            <h5 className="text-lg font-bold text-gray-700 mb-2 mt-4">{monthYear}</h5>
                             <div className="event-cards-grid">
-                                {groupedEvents[nepaliMonthYear].map((event, index) => (
+                                {groupedEvents[monthYear].map((event, index) => (
                                     <div 
                                         key={index} 
                                         className="event-card"
@@ -123,10 +134,16 @@ const LandingPageEventsSection = ({ events, familyMembers, onDoubleClickEvent })
                                         </div>
                                         <div className="text-sm text-gray-600">
                                             <div className="font-medium text-gray-700">
-                                                {formatNepaliDate(event.displayDate).withDayShortNepali}
+                                                {isNepaliCalendar 
+                                                    ? formatNepaliDate(event.displayDate).withDayShortNepali
+                                                    : formatEnglishDate(event.displayDate).withDayShort
+                                                }
                                             </div>
                                             <div className="text-xs text-gray-500 mt-0.5">
-                                                {formatEnglishDate(event.displayDate).short}
+                                                {isNepaliCalendar 
+                                                    ? formatEnglishDate(event.displayDate).short
+                                                    : formatNepaliDate(event.displayDate).shortNepali
+                                                }
                                             </div>
                                         </div>
                                         {event.personName && (
@@ -153,10 +170,16 @@ const LandingPageEventsSection = ({ events, familyMembers, onDoubleClickEvent })
                                 </div>
                                 <div className="text-sm text-gray-600">
                                     <div className="font-medium text-gray-700">
-                                        {formatNepaliDate(event.displayDate).withDayShortNepali}
+                                        {isNepaliCalendar 
+                                            ? formatNepaliDate(event.displayDate).withDayShortNepali
+                                            : formatEnglishDate(event.displayDate).withDayShort
+                                        }
                                     </div>
                                     <div className="text-xs text-gray-500 mt-0.5">
-                                        {formatEnglishDate(event.displayDate).short}
+                                        {isNepaliCalendar 
+                                            ? formatEnglishDate(event.displayDate).short
+                                            : formatNepaliDate(event.displayDate).shortNepali
+                                        }
                                     </div>
                                 </div>
                                 {event.personName && (
