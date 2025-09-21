@@ -209,45 +209,46 @@ export default function App() {
 
     return (
         <SettingsProvider>
-            <div className="min-h-screen bg-gray-100 p-8">
-                <header className="flex justify-between items-center mb-6">
-                    {/* <h1 className="text-4xl font-extrabold text-gray-900">Family Tree Management</h1> */}
-                    <div> </div>
+            <div className="min-h-screen bg-gray-100">
+                <header className="flex justify-between items-center p-4 bg-white shadow-md">
+                    <div />
                     <SettingsMenu user={user} onSignOut={handleSignOut} />
                 </header>
 
-                {error && <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-xl mb-4" role="alert">{error}</div>}
+                <main className="p-4">
+                    {error && <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-xl mb-4" role="alert">{error}</div>}
 
-            {view === 'list' && (
-                <LandingPage
-                    user={user}
-                    customers={customers}
-                    onSelectCustomer={handleSelectCustomer}
-                    onAddCustomer={handleAddCustomer}
-                    events={allEvents} // Pass the combined list of events
-                    familyMembers={allFamilyMembers} // Pass the combined list of family members
-                    onDoubleClickEvent={handleDoubleClickEvent} // Pass the new handler here
-                    onEditCustomer={handleEditCustomer}
-                    onDeleteCustomer={handleDeleteCustomer}
-                />
-            )}
+                    {view === 'list' && (
+                        <LandingPage
+                            user={user}
+                            customers={customers}
+                            onSelectCustomer={handleSelectCustomer}
+                            onAddCustomer={handleAddCustomer}
+                            events={allEvents}
+                            familyMembers={allFamilyMembers}
+                            onDoubleClickEvent={handleDoubleClickEvent}
+                            onEditCustomer={handleEditCustomer}
+                            onDeleteCustomer={handleDeleteCustomer}
+                        />
+                    )}
 
-            {view === 'details' && selectedCustomer && (
-                <CustomerDetail
-                    customer={customers.find(c => c.id === selectedCustomer.id) || selectedCustomer}
-                    onBack={handleBackToList}
-                    onUpdate={handleUpdateCustomer}
-                />
-            )}
+                    {view === 'details' && selectedCustomer && (
+                        <CustomerDetail
+                            customer={customers.find(c => c.id === selectedCustomer.id) || selectedCustomer}
+                            onBack={handleBackToList}
+                            onUpdate={handleUpdateCustomer}
+                        />
+                    )}
 
-            {view === 'add' && (
-                <AddCustomerForm
-                    initialData={selectedCustomer}
-                    onAddSuccess={handleAddCustomerSuccess}
-                    onUpdateSuccess={handleUpdateCustomer}
-                    onCancel={handleBackToList}
-                />
-            )}
+                    {view === 'add' && (
+                        <AddCustomerForm
+                            initialData={selectedCustomer}
+                            onAddSuccess={handleAddCustomerSuccess}
+                            onUpdateSuccess={handleUpdateCustomer}
+                            onCancel={handleBackToList}
+                        />
+                    )}
+                </main>
             </div>
         </SettingsProvider>
     );

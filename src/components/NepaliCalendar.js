@@ -519,9 +519,30 @@ export default function NepaliCalendar() {
 
   function renderDayTiles(){
     const tiles = [];
-    for (let i=0;i<startDayOfWeek;i++){
-      tiles.push(<div key={`b-${i}`} className="nt-day-tile empty" aria-hidden="true"/>);
+
+    // --- 1. Previous Month's Days ---
+    const prevMonth = currentBsMonth === 1 ? 12 : currentBsMonth - 1;
+    const prevYear = currentBsMonth === 1 ? currentBsYear - 1 : currentBsYear;
+    const daysInPrevMonth = bsCalendarData[prevYear]?.daysInMonths[prevMonth - 1] ?? 30;
+
+    for (let i = 0; i < startDayOfWeek; i++) {
+      const day = daysInPrevMonth - startDayOfWeek + i + 1;
+      const ad = convertBsToAd(prevYear, prevMonth, day);
+      const dateKey = ad ? dateKeyFromAd(ad) : `prev-${i}`;
+
+      tiles.push(
+        <div
+          key={dateKey}
+          className="nt-day-tile other-month"
+          aria-hidden="true"
+        >
+          <div className="nt-nepali-date">{toNepaliNumber(day)}</div>
+          {ad && <div className="nt-english-date">{ad.day}</div>}
+        </div>
+      );
     }
+
+    // --- 2. Current Month's Days ---
     for (let day=1; day<=nepaliMonthDays; day++){
       const ad = convertBsToAd(currentBsYear, currentBsMonth, day);
       const dateKey = dateKeyFromAd(ad);
@@ -573,6 +594,29 @@ export default function NepaliCalendar() {
         </div>
       );
     }
+
+    // --- 3. Next Month's Days ---
+    const totalTiles = tiles.length;
+    const remainingTiles = totalTiles > 35 ? 42 - totalTiles : 35 - totalTiles;
+    const nextMonth = currentBsMonth === 12 ? 1 : currentBsMonth + 1;
+    const nextYear = currentBsMonth === 12 ? currentBsYear + 1 : currentBsYear;
+
+    for (let i = 1; i <= remainingTiles; i++) {
+      const ad = convertBsToAd(nextYear, nextMonth, i);
+      const dateKey = ad ? dateKeyFromAd(ad) : `next-${i}`;
+
+      tiles.push(
+        <div
+          key={dateKey}
+          className="nt-day-tile other-month"
+          aria-hidden="true"
+        >
+          <div className="nt-nepali-date">{toNepaliNumber(i)}</div>
+          {ad && <div className="nt-english-date">{ad.day}</div>}
+        </div>
+      );
+    }
+
     return tiles;
   }
 

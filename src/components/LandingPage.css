@@ -53,51 +53,39 @@
     background-color: #f7fafc;
     color: #2d3748;
     min-height: 100vh;
-    padding: 2rem;
+    /* padding is now handled by the main element in App.js */
 }
 
 @media (max-width: 768px) {
     .hero-section {
         flex-direction: column;
         height: auto;
-        padding: 2rem;
-    }
-    
-    .landing-container {
-        padding: 1rem;
+        padding: 1.5rem; /* Slightly reduced */
     }
 }
 
 @media (max-width: 480px) {
-    .landing-container {
-        padding: 0.75rem;
-    }
-    
     .hero-section {
-        padding: 1.5rem;
-        margin-bottom: 1.5rem;
-        border-radius: 15px;
+        padding: 0.75rem; /* Reduced hero padding */
+        margin-bottom: 0.75rem; /* Reduced margin */
+        border-radius: 10px; /* Slightly smaller radius */
         height: auto;
     }
     
     .hero-section::before {
-        border-radius: 15px;
+        border-radius: 10px;
     }
 }
 
 @media (max-width: 320px) {
-    .landing-container {
-        padding: 0.5rem;
-    }
-    
     .hero-section {
-        padding: 1rem;
-        margin-bottom: 1rem;
-        border-radius: 10px;
+        padding: 0.5rem;
+        margin-bottom: 0.5rem;
+        border-radius: 6px;
     }
     
     .hero-section::before {
-        border-radius: 10px;
+        border-radius: 6px;
     }
 }
 
@@ -210,12 +198,16 @@
 @media (max-width: 480px) {
     .branches-section, .events-section {
         margin-bottom: 1.25rem;
+        padding: 0; /* Remove any internal padding */
+        width: 100%;
     }
 }
 
 @media (max-width: 320px) {
     .branches-section, .events-section {
         margin-bottom: 1rem;
+        padding: 0; /* Remove any internal padding */
+        width: 100%;
     }
 }
 
