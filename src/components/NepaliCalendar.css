@@ -37,10 +37,15 @@
     font-weight:600; 
     color:#4b5563; 
     font-size:13px; 
-    padding: 8px 4px;
+    padding: 12px 6px; /* Increased padding */
     background: rgba(255, 255, 255, 0.7);
-    border-radius: 6px;
+    border-radius: 8px; /* Slightly larger radius */
     border: 1px solid rgba(75, 85, 99, 0.1);
+    min-height: 50px; /* Ensure a minimum height */
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
 }
 .nc-weekday-nepali {
     font-size: 14px;
@@ -74,11 +79,55 @@
     display:flex; 
     flex-direction:column; 
     overflow:hidden; /* Prevent content overflow */
+    transition: background 0.08s ease, box-shadow 0.08s ease, transform 0.08s ease; /* Fast, immediate transitions */
 }
+
+/* Immediate hover effect for day tiles */
+.nt-day-tile:hover:not(.empty):not(.active) {
+    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+    box-shadow: 0 8px 20px rgba(0,0,0,0.12), 
+                0 4px 8px rgba(0,0,0,0.08);
+    transform: translateY(-2px);
+}
+
+/* Focus-visible for keyboard accessibility */
+.nt-day-tile:focus-visible:not(.empty):not(.active) {
+    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+    box-shadow: 0 8px 20px rgba(0,0,0,0.12), 
+                0 4px 8px rgba(0,0,0,0.08),
+                0 0 0 3px rgba(79, 70, 229, 0.3); /* Focus ring */
+    transform: translateY(-2px);
+    outline: none;
+}
+
+/* Ensure child elements don't interfere with hover */
+.nt-day-tile * {
+    pointer-events: none;
+}
+
+.nt-day-tile.other-month {
+  background: #f1f5f9; /* A slightly different background */
+  cursor: default;
+  box-shadow: none;
+  opacity: 0.6; /* Make them appear faded */
+}
+
+.nt-day-tile.other-month:hover {
+  transform: none;
+  box-shadow: none;
+  background: #f1f5f9;
+}
+
+.nt-day-tile.other-month .nt-nepali-date,
+.nt-day-tile.other-month .nt-english-date {
+  color: #94a3b8; /* Faded text color */
+}
+
 .nt-day-tile.empty { 
     background:transparent; 
     box-shadow:none; 
     cursor:default; 
+    transition: none; /* No transition for empty tiles */
 }
 .nt-day-tile.today { border:4px solid #3f72c9; }
 
@@ -89,7 +138,7 @@
     box-shadow: 0 8px 25px rgba(79, 70, 229, 0.25), 
                 0 0 0 4px rgba(79, 70, 229, 0.1);
     transform: translateY(-2px);
-    transition: all 0.2s ease;
+    transition: background 0.08s ease, box-shadow 0.08s ease, transform 0.08s ease;
 }
 
 /* Active tile with today modifier */
@@ -150,7 +199,7 @@
 .nt-summary-item.tithi { color:#6b21a8; }
 .nt-summary-item.event { color:#0ea5a5; }
 
-/* Quick Add Button */
+/* Quick Add Button - Hidden but functionality preserved */
 .nt-quick-add-btn {
     opacity: 0;
     transform: translateY(-4px);
@@ -166,7 +215,7 @@
     width: 20px; /* Made slightly smaller */
     height: 20px; /* Made slightly smaller */
     border-radius: 4px;
-    display: inline-flex;
+    display: none; /* Hide the button completely */
     align-items: center;
     justify-content: center;
     font-weight: 600;
@@ -176,9 +225,9 @@
 
 .nt-day-tile:hover .nt-quick-add-btn,
 .nt-day-tile:focus-within .nt-quick-add-btn {
-    opacity: 1;
-    transform: translateY(0);
-    pointer-events: auto;
+    opacity: 0; /* Keep hidden even on hover */
+    transform: translateY(-4px);
+    pointer-events: none; /* Remove interaction */
 }
 /* Modal */
 .nc-modal-backdrop { 
@@ -579,6 +628,27 @@
 
 /* Responsive Design */
 @media (max-width: 768px) {
+    .nepali-calendar-container {
+        padding: 12px; /* Reduced padding for more width */
+        margin-bottom: 12px;
+        border-radius: 6px;
+    }
+    
+    .nc-modal {
+        width: 96%; /* Increased width for better mobile usage */
+        padding: 15px; /* Reduced padding */
+        max-width: none; /* Remove max-width constraint on mobile */
+        border-radius: 10px;
+    }
+    
+    .nc-modal-header {
+        margin-bottom: 15px;
+    }
+    
+    .nc-modal-title {
+        font-size: 16px;
+    }
+    
     .nc-calendar {
         margin: 10px;
         font-size: 14px;
@@ -654,15 +724,42 @@
         max-height: 65px;
         padding: 6px 4px;
         border-radius: 8px;
+        transition: background 0.08s ease, box-shadow 0.08s ease, transform 0.08s ease;
+    }
+    
+    /* Immediate hover effect for 768px */
+    .nt-day-tile:hover:not(.empty):not(.active) {
+        background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+        box-shadow: 0 6px 16px rgba(0,0,0,0.1), 
+                    0 3px 6px rgba(0,0,0,0.06);
+        transform: translateY(-1px);
+    }
+    
+    /* Focus-visible for keyboard accessibility on mobile */
+    .nt-day-tile:focus-visible:not(.empty):not(.active) {
+        background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+        box-shadow: 0 6px 16px rgba(0,0,0,0.1), 
+                    0 3px 6px rgba(0,0,0,0.06),
+                    0 0 0 2px rgba(79, 70, 229, 0.3);
+        transform: translateY(-1px);
+        outline: none;
     }
     
     .nc-nepali-date {
         font-size: 14px;
         margin-bottom: 1px;
+        position: absolute;
+        top: 6px;
+        left: 6px;
+        font-weight: 700;
     }
     
     .nc-english-date {
         font-size: 10px;
+        position: absolute;
+        bottom: 6px;
+        right: 6px;
+        color: #9ca3af;
     }
     
     .nc-event-indicator {
@@ -677,6 +774,26 @@
 }
 
 @media (max-width: 480px) {
+    .nepali-calendar-container {
+        padding: 8px; /* Further reduced padding */
+        margin-bottom: 12px; /* Increased spacing between dates */
+        border-radius: 4px;
+    }
+    
+    .nc-modal {
+        width: 98%; /* Maximum width usage */
+        padding: 12px; /* Minimal padding */
+        border-radius: 8px;
+    }
+    
+    .nc-modal-header {
+        margin-bottom: 12px;
+    }
+    
+    .nc-modal-title {
+        font-size: 15px;
+    }
+    
     .nc-calendar {
         margin: 5px;
         font-size: 13px;
@@ -742,19 +859,55 @@
     }
     
     .nt-day-tile {
-        min-height: 55px;
-        max-height: 55px;
+        min-height: 60px; /* Increased for better spacing */
+        max-height: 60px;
         padding: 4px 2px;
         border-radius: 6px;
+        transition: background 0.08s ease, box-shadow 0.08s ease, transform 0.08s ease;
+    }
+    
+    /* Touch-optimized hover effect for 480px */
+    .nt-day-tile:hover:not(.empty):not(.active) {
+        background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+        box-shadow: 0 5px 14px rgba(0,0,0,0.08), 
+                    0 2px 4px rgba(0,0,0,0.05);
+        transform: translateY(-1px);
+    }
+    
+    /* Touch active state for mobile interaction */
+    .nt-day-tile:active:not(.empty):not(.active) {
+        background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+        box-shadow: 0 3px 8px rgba(0,0,0,0.1);
+        transform: translateY(0px);
+        transition: all 0.05s ease;
+    }
+    
+    /* Focus-visible for 480px */
+    .nt-day-tile:focus-visible:not(.empty):not(.active) {
+        background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+        box-shadow: 0 5px 14px rgba(0,0,0,0.08), 
+                    0 2px 4px rgba(0,0,0,0.05),
+                    0 0 0 2px rgba(79, 70, 229, 0.3);
+        transform: translateY(-1px);
+        outline: none;
     }
     
     .nc-nepali-date {
-        font-size: 13px;
-        line-height: 1.1;
+        font-size: 14px; /* Larger for better readability */
+        line-height: 1.2;
+        position: absolute;
+        top: 5px; /* More spacing from top */
+        left: 5px; /* More spacing from left */
+        font-weight: 700;
     }
     
     .nc-english-date {
-        font-size: 9px;
+        font-size: 10px; /* Larger for better readability */
+        position: absolute;
+        bottom: 5px; /* More spacing from bottom */
+        right: 5px; /* More spacing from right */
+        color: #9ca3af;
+        line-height: 1.2;
     }
     
     .nc-tithi-indicator {
@@ -770,6 +923,26 @@
 }
 
 @media (max-width:420px) {
+    .nepali-calendar-container {
+        padding: 6px; /* Minimal padding for maximum width */
+        margin-bottom: 6px;
+        border-radius: 3px;
+    }
+    
+    .nc-modal {
+        width: 99%; /* Maximum width for very small screens */
+        padding: 10px; /* Minimal padding */
+        border-radius: 6px;
+    }
+    
+    .nc-modal-header {
+        margin-bottom: 10px;
+    }
+    
+    .nc-modal-title {
+        font-size: 14px;
+    }
+    
     .nc-form-row { 
         flex-direction:column; 
         align-items:stretch; 
@@ -785,7 +958,7 @@
     .nc-header {
         flex-direction: row;
         gap: 4px;
-        margin-bottom: 8px;
+        margin-bottom: 12px; /* Increased spacing */
         align-items: center;
         justify-content: space-between;
     }
@@ -837,18 +1010,59 @@
         text-overflow: ellipsis;
     }
     
+    .nc-grid {
+        gap: 2px;
+    }
+    
     .nt-day-tile {
-        min-height: 50px;
-        max-height: 50px;
+        min-height: 55px; /* Increased for better spacing */
+        max-height: 55px;
         padding: 3px 1px;
+        transition: background 0.08s ease, box-shadow 0.08s ease, transform 0.08s ease;
+    }
+    
+    /* Minimal hover effect for 420px */
+    .nt-day-tile:hover:not(.empty):not(.active) {
+        background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.07), 
+                    0 2px 4px rgba(0,0,0,0.04);
+        transform: translateY(-0.5px);
+    }
+    
+    /* Touch active state for small screens */
+    .nt-day-tile:active:not(.empty):not(.active) {
+        background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+        box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+        transform: translateY(0px);
+        transition: all 0.05s ease;
+    }
+    
+    /* Focus-visible for 420px */
+    .nt-day-tile:focus-visible:not(.empty):not(.active) {
+        background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.07), 
+                    0 2px 4px rgba(0,0,0,0.04),
+                    0 0 0 2px rgba(79, 70, 229, 0.3);
+        transform: translateY(-0.5px);
+        outline: none;
     }
     
     .nc-nepali-date {
-        font-size: 12px;
+        font-size: 13px; /* Slightly larger */
+        position: absolute;
+        top: 4px; /* More spacing from top */
+        left: 4px; /* More spacing from left */
+        font-weight: 700;
+        line-height: 1.2;
     }
     
     .nc-english-date {
-        font-size: 8px;
+        font-size: 9px; /* Slightly larger */
+        position: absolute;
+        bottom: 4px; /* More spacing from bottom */
+        right: 4px; /* More spacing from right */
+        color: #9ca3af;
+        line-height: 1.2;
     }
 }
 

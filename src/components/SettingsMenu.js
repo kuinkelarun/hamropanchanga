@@ -37,10 +37,10 @@ const SettingsMenu = ({ user, onSignOut }) => {
     };
 
     return (
-        <div className="relative" ref={menuRef}>
+    <div className="settings-root relative" ref={menuRef}>
             {/* User Info and Menu Button */}
             <div className="flex items-center space-x-4">
-                <span className="text-gray-700">Logged in as: {user.email}</span>
+                <span className="logged-in text-gray-700">Logged in as: {user.email}</span>
                 <button
                     onClick={() => setIsOpen(!isOpen)}
                     className="bg-gray-500 hover:bg-gray-600 text-white font-medium py-1.5 px-3 rounded-lg shadow-sm transition-all duration-200 hover:shadow-md flex items-center space-x-2 text-sm"

@@ -1,80 +1,28 @@
-.App {
-  text-align: center;
-}
-
-/* Mobile-first responsive optimizations */
-.min-h-screen {
-  min-height: 100vh;
-  min-height: 100dvh; /* Dynamic viewport height for mobile */
-}
-
-/* Ensure proper mobile scaling */
+/* Reset and Base Styles */
 * {
   box-sizing: border-box;
 }
 
-/* Prevent horizontal scroll on mobile */
 html, body {
-  overflow-x: hidden;
   width: 100%;
+  overflow-x: hidden;
+  margin: 0;
+  padding: 0;
+  background-color: #f7fafc; /* Consistent background */
 }
 
-/* Mobile container optimizations */
-@media (max-width: 768px) {
-  .p-8 {
-    padding: 1rem !important;
-  }
-  
-  .space-x-4 > * + * {
-    margin-left: 0.5rem !important;
-  }
-  
-  .mb-6 {
-    margin-bottom: 1rem !important;
-  }
-  
-  /* Header responsive adjustments */
-  header {
-    flex-direction: column !important;
-    gap: 1rem !important;
-    text-align: center !important;
-  }
-  
-  /* Make text smaller on mobile for better fit */
-  .text-4xl {
-    font-size: 2rem !important;
-  }
-  
-  /* Button adjustments for mobile */
-  button {
-    min-height: 44px; /* Minimum touch target size */
-  }
+.App {
+  text-align: center;
 }
 
-@media (max-width: 480px) {
-  .p-8 {
-    padding: 0.5rem !important;
-  }
-  
-  .space-x-4 > * + * {
-    margin-left: 0.25rem !important;
-  }
-  
-  .mb-6 {
-    margin-bottom: 0.75rem !important;
-  }
-  
-  /* Even smaller text on very small screens */
-  .text-4xl {
-    font-size: 1.5rem !important;
-  }
-  
-  /* Ensure cards don't get too narrow */
-  .rounded-xl {
-    padding: 0.75rem !important;
-  }
-}
+/*
+ * The new layout structure in App.js removes the need for complex CSS overrides.
+ * The header and main content are now separate siblings, making layout much simpler.
+ * Tailwind utility classes can now handle the padding and alignment directly.
+ * All previous mobile-specific CSS has been removed for a cleaner, more maintainable approach.
+ */
 
+/* Default App.js styles (can be removed if not used) */
 .App-logo {
   height: 40vmin;
   pointer-events: none;
