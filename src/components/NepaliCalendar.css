@@ -1,0 +1,120 @@
+/* .nepali-calendar-container { background: #fff; padding: 16px; border-radius: 8px; box-shadow: 0 6px 18px rgba(0,0,0,0.06); margin-bottom: 18px; }
+.nc-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; }
+.nc-btn { background:#eef2ff; border:0; padding:8px 12px; border-radius:6px; cursor:pointer; }
+.nc-center { text-align:center; }
+.nc-nepali { font-weight:700; font-size:18px; }
+.nc-english { color:#6b7280; font-size:13px; }
+.nc-weekdays { display:grid; grid-template-columns:repeat(7,1fr); gap:8px; margin-bottom:8px; }
+.nc-weekday { text-align:center; font-weight:600; color:#4b5563; font-size:13px; }
+.nc-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:10px; }
+.nt-day-tile { background:#fff; border-radius:10px; padding:10px; min-height:88px; position:relative; box-shadow:0 4px 10px rgba(0,0,0,0.04); cursor:pointer; display:flex; flex-direction:column; }
+.nt-day-tile.empty { background:transparent; box-shadow:none; cursor:default; }
+.nt-day-tile.today { border:2px solid #3b82f6; }
+.nt-nepali-date { position:absolute; top:8px; left:8px; font-size:18px; font-weight:700; }
+.nt-english-date { position:absolute; bottom:8px; right:8px; color:#9ca3af; font-size:12px; }
+.nt-summary { margin-top:28px; display:flex; flex-direction:column; gap:4px; }
+.nt-summary-item { font-size:12px; color:#374151; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.nt-summary-item.tithi { color:#6b21a8; }
+.nt-summary-item.event { color:#0ea5a5; } */
+
+.nc-modal-backdrop { position:fixed; inset:0; background: rgba(0,0,0,0.35); display:flex; align-items:center; justify-content:center; z-index:50; }
+.nc-modal { background:#fff; width:92%; max-width:760px; border-radius:10px; padding:16px; max-height:90vh; overflow:auto; }
+.nc-modal-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; }
+.nc-modal-section { margin-bottom:12px; }
+.nc-item { display:flex; justify-content:space-between; align-items:center; padding:8px; background:#f3f4f6; border-radius:8px; margin-bottom:8px; }
+.nc-item-title { font-weight:600; }
+.nc-form-row { display:flex; gap:8px; align-items:center; margin-bottom:8px; }
+.nc-validation { color:#dc2626; margin-bottom:8px; }
+.nc-add-btn { background:#2563eb; color:#fff; padding:8px 12px; border-radius:8px; border:0; cursor:pointer; margin-right:8px; }
+.muted { color:#6b7280; font-size:13px; }
+
+
+
+/* ...existing code... */
+.nepali-calendar-container { background: #fff; padding: 16px; border-radius: 8px; box-shadow: 0 6px 18px rgba(0,0,0,0.06); margin-bottom: 18px; }
+.nc-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; }
+.nc-btn { background:#eef2ff; border:0; padding:8px 12px; border-radius:6px; cursor:pointer; }
+.nc-center { text-align:center; }
+.nc-nepali { font-weight:700; font-size:18px; }
+.nc-english { color:#6b7280; font-size:13px; }
+.nc-weekdays { display:grid; grid-template-columns:repeat(7,1fr); gap:8px; margin-bottom:8px; }
+.nc-weekday { text-align:center; font-weight:600; color:#4b5563; font-size:13px; }
+.nc-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:10px; }
+.nt-day-tile { background:#fff; border-radius:10px; padding:10px; min-height:88px; position:relative; box-shadow:0 4px 10px rgba(0,0,0,0.04); cursor:pointer; display:flex; flex-direction:column; }
+.nt-day-tile.empty { background:transparent; box-shadow:none; cursor:default; }
+.nt-day-tile.today { border:2px solid #3b82f6; }
+.nt-nepali-date { position:absolute; top:8px; left:8px; font-size:18px; font-weight:700; }
+.nt-english-date { position:absolute; bottom:8px; right:8px; color:#9ca3af; font-size:12px; }
+.nt-summary { margin-top:28px; display:flex; flex-direction:column; gap:4px; }
+.nt-summary-item { font-size:12px; color:#374151; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; display:flex; justify-content:space-between; gap:8px; }
+.nt-summary-item.tithi { color:#6b21a8; }
+.nt-tithi-name { font-weight:600; margin-right:8px; }
+.nt-tithi-time { color:#6b7280; font-size:11px; }
+
+/* Edit and quick-add visibility on hover, keyboard focusable */
+.nt-edit-btn,
+.nt-quick-add-btn {
+    opacity: 0;
+    transform: translateY(-4px);
+    transition: opacity 0.18s ease, transform 0.18s ease;
+    pointer-events: none;
+    border: none;
+    background: transparent;
+    padding: 4px;
+}
+.nt-day-tile:hover .nt-edit-btn,
+.nt-day-tile:focus-within .nt-edit-btn,
+.nt-day-tile:hover .nt-quick-add-btn,
+.nt-day-tile:focus-within .nt-quick-add-btn {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
+}
+
+/* edit button */
+.nt-edit-btn {
+    position: absolute;
+    top: 6px;
+    right: 8px;
+    color: #9ca3af;
+    width: 28px;
+    height: 28px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    border-radius:6px;
+    background: transparent;
+}
+
+/* quick-add (green +) */
+.nt-quick-add-btn {
+    position: absolute;
+    top: 6px;
+    right: 44px;
+    background-color: #10b981;
+    color: white;
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    box-shadow: 0 2px 6px rgba(16,185,129,0.18);
+}
+
+/* modal tweaks */
+.nc-modal { background:#fff; width:92%; max-width:760px; border-radius:10px; padding:16px; max-height:90vh; overflow:auto; }
+.nc-modal-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; }
+.nc-modal-section { margin-bottom:12px; }
+.nc-item { display:flex; justify-content:space-between; align-items:center; padding:8px; background:#f3f4f6; border-radius:8px; margin-bottom:8px; }
+.nc-item-title { font-weight:600; }
+.nc-form-row { display:flex; gap:8px; align-items:center; margin-bottom:8px; }
+.nc-input { padding:8px 10px; border-radius:8px; border:1px solid #e5e7eb; flex:1; }
+.nc-input-time { padding:6px 8px; border-radius:8px; border:1px solid #e5e7eb; width:110px; }
+.nc-validation { color:#dc2626; margin-bottom:8px; }
+.nc-add-btn { background:#6b21a8; color:#fff; padding:8px 12px; border-radius:8px; border:0; cursor:pointer; margin-right:8px; }
+.muted { color:#6b7280; font-size:13px; }
+
+/* accessibility helper */
+.sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); border:0; }
