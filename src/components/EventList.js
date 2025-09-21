@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import EventMenu from './EventMenu';
+import { formatNepaliDate, formatEnglishDate, formatNepaliMonthYear } from '../utils/nepaliDateUtils';
 
 // Component to list all events
 const EventList = ({ events, eventFilter, onEdit, onDelete }) => {
@@ -67,11 +68,11 @@ const EventList = ({ events, eventFilter, onEdit, onDelete }) => {
     const groupedEvents = {};
     if (shouldGroup) {
         sortedAndFilteredEvents.forEach(event => {
-            const monthYear = event.displayDate.toLocaleString('default', { month: 'long', year: 'numeric' });
-            if (!groupedEvents[monthYear]) {
-                groupedEvents[monthYear] = [];
+            const nepaliMonthYear = formatNepaliMonthYear(event.displayDate).english;
+            if (!groupedEvents[nepaliMonthYear]) {
+                groupedEvents[nepaliMonthYear] = [];
             }
-            groupedEvents[monthYear].push(event);
+            groupedEvents[nepaliMonthYear].push(event);
         });
     }
 
@@ -93,21 +94,28 @@ const EventList = ({ events, eventFilter, onEdit, onDelete }) => {
                 </div>
             ) : (
                 shouldGroup ? (
-                    Object.keys(groupedEvents).map(monthYear => (
-                        <div key={monthYear}>
-                            <h5 className="text-lg font-bold text-gray-700 mb-2 mt-4">{monthYear}</h5>
+                    Object.keys(groupedEvents).map(nepaliMonthYear => (
+                        <div key={nepaliMonthYear}>
+                            <h5 className="text-lg font-bold text-gray-700 mb-2 mt-4">{nepaliMonthYear}</h5>
                             <ul className="space-y-2">
-                                {groupedEvents[monthYear].map((event, index) => {
+                                {groupedEvents[nepaliMonthYear].map((event, index) => {
                                     const id = event.id ?? index;
                                     return (
                                         <li key={id} className="bg-white p-3 rounded-xl shadow-sm flex justify-between items-center">
                                         <div className="flex-1">
-                                            <div className="text-gray-800 font-medium">{event.name}</div>
-                                            <div className="text-sm text-gray-500">
-                                                {event.displayDate.toDateString()}
+                                            <div className="text-gray-800 font-medium">
+                                                {event.name}
                                                 {event.repetition && event.repetition !== 'none' && (
                                                     <span className="text-xs text-gray-400 ml-2">({event.repetition} repeating)</span>
                                                 )}
+                                            </div>
+                                            <div className="text-sm text-gray-600">
+                                                <div className="font-medium text-gray-700">
+                                                    {formatNepaliDate(event.displayDate).withDayShortNepali}
+                                                </div>
+                                                <div className="text-xs text-gray-500 mt-0.5">
+                                                    {formatEnglishDate(event.displayDate).short}
+                                                </div>
                                             </div>
                                             {event.personName && (
                                                 <div className="text-xs text-gray-400 mt-1">For: {event.personName} ({event.personRelation})</div>
@@ -134,12 +142,19 @@ const EventList = ({ events, eventFilter, onEdit, onDelete }) => {
                             return (
                                 <li key={id} className="bg-white p-3 rounded-xl shadow-sm flex justify-between items-center">
                                     <div className="flex-1">
-                                    <div className="text-gray-800 font-medium">{event.name}</div>
-                                    <div className="text-sm text-gray-500">
-                                        {event.displayDate.toDateString()}
+                                    <div className="text-gray-800 font-medium">
+                                        {event.name}
                                         {event.repetition && event.repetition !== 'none' && (
                                             <span className="text-xs text-gray-400 ml-2">({event.repetition} repeating)</span>
                                         )}
+                                    </div>
+                                    <div className="text-sm text-gray-600">
+                                        <div className="font-medium text-gray-700">
+                                            {formatNepaliDate(event.displayDate).withDayShortNepali}
+                                        </div>
+                                        <div className="text-xs text-gray-500 mt-0.5">
+                                            {formatEnglishDate(event.displayDate).short}
+                                        </div>
                                     </div>
                                     {event.personName && (
                                         <div className="text-xs text-gray-400 mt-1">For: {event.personName} ({event.personRelation})</div>
