@@ -1,8 +1,9 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import { collection, addDoc, deleteDoc, doc, onSnapshot, query, orderBy, getDocs } from 'firebase/firestore';
 import { onAuthStateChanged } from 'firebase/auth';
 import { db, auth } from '../firebase';
 import './NepaliCalendar.css';
+import bsCalendarData from '../data/bsCalendarData';
 
 const nepaliMonths = [
   "वैशाख", "जेठ", "असार", "साउन", "भदौ", "असोज",
@@ -31,14 +32,7 @@ const krishnaPackshyaTithis = [
 
 const nepaliNumbers = ["०","१","२","३","४","५","६","७","८","९"];
 
-const bsCalendarData = {
-  2070: { startAdDate: new Date(2013,3,14), daysInMonths:[31,31,32,31,30,30,30,29,29,29,30,31] },
-  2071: { startAdDate: new Date(2014,3,14), daysInMonths:[31,31,32,31,31,30,30,29,29,30,29,31] },
-  2072: { startAdDate: new Date(2015,3,14), daysInMonths:[31,32,31,31,30,30,30,29,29,29,30,31] },
-  2073: { startAdDate: new Date(2016,3,13), daysInMonths:[31,31,32,31,31,30,30,29,29,29,30,31] },
-  2081: { startAdDate: new Date(2024,3,13), daysInMonths:[31,32,31,31,30,30,30,29,29,29,30,31] },
-  2082: { startAdDate: new Date(2025,3,14), daysInMonths:[31,31,32,31,31,30,30,29,29,30,29,31] }
-};
+// bsCalendarData moved to src/data/bsCalendarData.js
 const minBsYear = Math.min(...Object.keys(bsCalendarData).map(n=>+n));
 const maxBsYear = Math.max(...Object.keys(bsCalendarData).map(n=>+n));
 
@@ -176,27 +170,6 @@ export default function NepaliCalendar() {
     return () => unsubscribe();
   }, []);
 
-  /* 
-   * Optional: Migrate existing local data to Firebase (run once)
-   * 
-   * const migrateLocalDataToFirebase = async () => {
-   *   const localData = {
-   *     "2025-4-15": [{ name: "शुक्लपक्ष प्रतिपदा", startTime: "06:00", endTime: "18:00" }]
-   *   };
-   *   
-   *   for (const [dateKey, tithis] of Object.entries(localData)) {
-   *     for (const tithi of tithis) {
-   *       await addDoc(collection(db, 'tithis'), {
-   *         dateKey,
-   *         name: tithi.name,
-   *         startTime: tithi.startTime,
-   *         endTime: tithi.endTime,
-   *         createdAt: new Date().toISOString()
-   *       });
-   *     }
-   *   }
-   * };
-   */
 
   useEffect(()=>{
     if (currentBsYear < minBsYear) setCurrentBsYear(minBsYear);
@@ -219,7 +192,7 @@ export default function NepaliCalendar() {
   function dateKeyFromAd(ad){ return `${ad.year}-${ad.month+1}-${ad.day}`; }
 
   // Robust lookup for tithis: try common dateKey formats (no padding and zero-padded)
-  function findTithisForAdDate(adYear, adMonthZeroBased, adDay) {
+  const findTithisForAdDate = useCallback((adYear, adMonthZeroBased, adDay) => {
     const y = adYear;
     const m = adMonthZeroBased + 1;
     const d = adDay;
@@ -233,10 +206,10 @@ export default function NepaliCalendar() {
       if (tithisByDate[k]) return tithisByDate[k];
     }
     return tithisByDate[`${y}-${m}-${d}`] || [];
-  }
+  }, [tithisByDate]);
 
   // Manual refresh function to force reload tithis data
-  const refreshTithis = async () => {
+  const refreshTithis = useCallback(async () => {
     console.log('Manual refresh triggered...');
     try {
       const tithisCollection = collection(db, 'tithis');
@@ -264,10 +237,10 @@ export default function NepaliCalendar() {
     } catch (error) {
       console.error('Error in manual refresh:', error);
     }
-  };
+  }, [setTithisByDate]);
 
   // Debug function to check what's actually in Firestore
-  const debugFirestore = async () => {
+  const debugFirestore = useCallback(async () => {
     try {
       console.log('=== FIRESTORE DEBUG CHECK ===');
       const tithisCollection = collection(db, 'tithis');
@@ -282,7 +255,7 @@ export default function NepaliCalendar() {
     } catch (error) {
       console.error('Debug check failed:', error);
     }
-  };
+  }, []);
 
   function handlePrev(){
     let m = currentBsMonth - 1;
@@ -315,17 +288,90 @@ export default function NepaliCalendar() {
 
   async function addTithi(dateKey, name, startTime='', endTime=''){
     console.log('addTithi called with:', { dateKey, name, startTime, endTime, user: !!user });
-    
+
     if (!user) {
       setValidation('Please log in to add tithis.');
       return;
     }
 
+    // Helper: convert Nepali numerals to latin digits
+    function nepaliDigitsToLatin(s) {
+      if (!s) return s;
+      const map = { '०':'0','१':'1','२':'2','३':'3','४':'4','५':'5','६':'6','७':'7','८':'8','९':'9' };
+      return String(s).split('').map(ch => map[ch] ?? ch).join('');
+    }
+
+    // Normalize incoming dateKey to canonical YYYY-MM-DD (zero-padded) and produce nepali display
+    function normalizeToCanonical(inKey) {
+      const original = String(inKey || '');
+      let adYear, adMonth, adDay; // month: 1-12
+
+      // Case 1: already AD like 2025-4-15 or 2025-04-15
+      let m = original.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+      if (m) {
+        adYear = +m[1]; adMonth = +m[2]; adDay = +m[3];
+      }
+
+      // Case 2: dd/mm/yyyy (common UI english format)
+      if (!adYear) {
+        m = original.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+        if (m) {
+          adDay = +m[1]; adMonth = +m[2]; adYear = +m[3];
+        }
+      }
+
+      // Case 3: BS Nepali like "५ माघ २०८१" or "5 माघ 2081" or with extra english date prefix
+      if (!adYear) {
+        // Try to extract BS tokens: day (maybe nepali digits), month name (nepali), year (maybe nepali digits)
+        const bsMatch = original.match(/([\d०-९]{1,2})\s+([^\s]+)\s+([\d०-९]{3,4})/);
+        if (bsMatch) {
+          let bsDayStr = nepaliDigitsToLatin(bsMatch[1]);
+          const bsMonthName = bsMatch[2];
+          let bsYearStr = nepaliDigitsToLatin(bsMatch[3]);
+          const bsDay = +bsDayStr;
+          const bsYear = +bsYearStr;
+          const monthIndex = nepaliMonths.findIndex(mn => mn === bsMonthName);
+          if (monthIndex >= 0 && bsDay && bsYear) {
+            const adObj = convertBsToAd(bsYear, monthIndex+1, bsDay);
+            if (adObj) {
+              adYear = adObj.year; adMonth = adObj.month + 1; adDay = adObj.day;
+            }
+          }
+        }
+      }
+
+      // Fallback: try Date parsing
+      if (!adYear) {
+        const parsed = new Date(original);
+        if (!isNaN(parsed.getTime())) {
+          adYear = parsed.getFullYear(); adMonth = parsed.getMonth() + 1; adDay = parsed.getDate();
+        }
+      }
+
+      if (!adYear) {
+        // As a last resort, use today's AD date
+        const now = new Date();
+        adYear = now.getFullYear(); adMonth = now.getMonth() + 1; adDay = now.getDate();
+      }
+
+      const canonical = `${adYear}-${String(adMonth).padStart(2,'0')}-${String(adDay).padStart(2,'0')}`;
+      const bs = convertAdToBs(adYear, adMonth-1, adDay);
+      const nepaliDisplay = bs ? `${toNepaliNumber(bs.day)} ${nepaliMonths[bs.month-1]} ${toNepaliNumber(bs.year)}` : '';
+
+      return { canonical, original, nepaliDisplay, adYear, adMonth, adDay };
+    }
+
+    const normalized = normalizeToCanonical(dateKey);
+    const canonicalKey = normalized.canonical;
+    const nepaliDateDisplay = normalized.nepaliDisplay;
+
     try {
       // Create the new tithi object
       const newTithi = {
         id: crypto.randomUUID(), // Generate temporary ID
-        dateKey: dateKey,
+        dateKey: canonicalKey, // store canonical zero-padded key
+        originalDateKey: normalized.original,
+        nepaliDateDisplay: nepaliDateDisplay,
         name: name,
         startTime: startTime,
         endTime: endTime,
@@ -336,10 +382,10 @@ export default function NepaliCalendar() {
       console.log('Updating local state immediately...');
       setTithisByDate(prevTithis => {
         const updatedTithis = { ...prevTithis };
-        if (!updatedTithis[dateKey]) {
-          updatedTithis[dateKey] = [];
+        if (!updatedTithis[canonicalKey]) {
+          updatedTithis[canonicalKey] = [];
         }
-        updatedTithis[dateKey] = [...updatedTithis[dateKey], {
+        updatedTithis[canonicalKey] = [...updatedTithis[canonicalKey], {
           id: newTithi.id,
           name: newTithi.name,
           startTime: newTithi.startTime,
@@ -361,10 +407,10 @@ export default function NepaliCalendar() {
       // Update the local state with the real Firebase ID
       setTithisByDate(prevTithis => {
         const updatedTithis = { ...prevTithis };
-        if (updatedTithis[dateKey]) {
-          const tithiIndex = updatedTithis[dateKey].findIndex(t => t.id === newTithi.id);
+        if (updatedTithis[canonicalKey]) {
+          const tithiIndex = updatedTithis[canonicalKey].findIndex(t => t.id === newTithi.id);
           if (tithiIndex >= 0) {
-            updatedTithis[dateKey][tithiIndex].id = docRef.id;
+            updatedTithis[canonicalKey][tithiIndex].id = docRef.id;
             console.log('Updated local state with real Firebase ID:', docRef.id);
           }
         }
@@ -381,8 +427,8 @@ export default function NepaliCalendar() {
       // Revert local state on error
       setTithisByDate(prevTithis => {
         const updatedTithis = { ...prevTithis };
-        if (updatedTithis[dateKey]) {
-          updatedTithis[dateKey] = updatedTithis[dateKey].filter(t => t.id !== newTithi.id);
+        if (updatedTithis[canonicalKey]) {
+          updatedTithis[canonicalKey] = updatedTithis[canonicalKey].filter(t => t.id !== newTithi.id);
         }
         return updatedTithis;
       });
@@ -679,7 +725,7 @@ export default function NepaliCalendar() {
     const adMonthZeroBased = parts[1]-1;
     const adDay = parts[2];
     return findTithisForAdDate(adYear, adMonthZeroBased, adDay) || [];
-  }, [tithisByDate, activeDate]);
+  }, [activeDate, findTithisForAdDate]);
 
   // Expose manual debug helpers to window during development so they're usable and not flagged as unused
   useEffect(() => {
