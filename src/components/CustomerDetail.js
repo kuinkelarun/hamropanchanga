@@ -270,14 +270,19 @@ const CustomerDetail = ({ customer: propCustomer, onBack, onUpdate }) => {
                 }
             }
 
+            const computedGeneration = (memberData.generationOverride !== undefined && memberData.generationOverride !== '')
+                ? Number(memberData.generationOverride)
+                : calculateGeneration(newRelation, memberData.parentIds, familyMembers);
+
             const newMember = {
                 id: newMemberId,
                 name: memberData.name,
                 relation: newRelation,
                 parentIds: memberData.parentIds || [],
                 spouseIds: [],
-                generation: calculateGeneration(newRelation, memberData.parentIds, familyMembers),
-                isDirectAncestor: isDirectAncestor
+                generation: computedGeneration,
+                isDirectAncestor: isDirectAncestor,
+                generationOverride: (memberData.generationOverride !== undefined && memberData.generationOverride !== '') ? Number(memberData.generationOverride) : undefined
             };
             const updatedFamilyMembers = {
                 ...familyMembers,
@@ -305,9 +310,20 @@ const CustomerDetail = ({ customer: propCustomer, onBack, onUpdate }) => {
     const handleUpdateFamilyMember = async (updatedMember) => {
         setEditingMember(null);
         try {
+            // Use generationOverride if provided on the updatedMember object
+            const computedGeneration = (updatedMember.generationOverride !== undefined && updatedMember.generationOverride !== '')
+                ? Number(updatedMember.generationOverride)
+                : calculateGeneration(updatedMember.relation, updatedMember.parentIds, customer.familyMembers || {});
+
+            const memberToSave = {
+                ...updatedMember,
+                generation: computedGeneration,
+                generationOverride: (updatedMember.generationOverride !== undefined && updatedMember.generationOverride !== '') ? Number(updatedMember.generationOverride) : undefined
+            };
+
             const updatedFamilyMembers = {
                 ...customer.familyMembers,
-                [updatedMember.id]: updatedMember
+                [updatedMember.id]: memberToSave
             };
 
             const customerDocRef = doc(db, 'customers', customer.id);
