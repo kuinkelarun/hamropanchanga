@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import RelationInput from './RelationInput';
 
 // const AddFamilyMemberForm = ({ onAdd, familyMembers }) => {
 //     const [name, setName] = useState('');
@@ -108,6 +109,40 @@ const AddFamilyMemberForm = ({ onAdd, familyMembers }) => {
     const [relation, setRelation] = useState('');
     const [name, setName] = useState('');
     const [selectedParentIds, setSelectedParentIds] = useState([]);
+    const [generationOverride, setGenerationOverride] = useState('');
+
+    // Map known relation names to generation numbers so selecting a relation auto-assigns group
+    const relationToGeneration = {
+        'Great Great Great Grandmother': 5,
+        'Great Great Great Grandfather': 5,
+        'Great Great Grandmother': 4,
+        'Great Great Grandfather': 4,
+        'Great Grandmother': 3,
+        'Great Grandfather': 3,
+        'Grandmother': 2,
+        'Grandfather': 2,
+        'Mother': 1,
+        'Father': 1,
+        'Uncle': 1,
+        'Aunt': 1,
+        'Self': 0,
+        'Spouse': 0,
+        'Brother': 0,
+        'Sister': 0,
+        'Son': -1,
+        'Daughter': -1,
+        'Grandson': -2,
+        'Granddaughter': -2
+    };
+
+    useEffect(() => {
+        // If relation matches a known mapping and the user hasn't manually chosen a group,
+        // auto-select the appropriate generationOverride so the member appears in the correct group.
+        if (relation && (!generationOverride || generationOverride === '')) {
+            const gen = relationToGeneration[relation];
+            if (gen !== undefined) setGenerationOverride(String(gen));
+        }
+    }, [relation]);
 
     const directRelations = [
         'Father', 'Mother', 'Spouse', 'Brother', 'Sister', 'Uncle', 'Aunt',
@@ -128,7 +163,8 @@ const AddFamilyMemberForm = ({ onAdd, familyMembers }) => {
         onAdd({
             name,
             relation,
-            parentIds: selectedParentIds
+            parentIds: selectedParentIds,
+            generationOverride: generationOverride // '' means auto
         });
 
         setRelationshipType('');
@@ -164,21 +200,20 @@ const AddFamilyMemberForm = ({ onAdd, familyMembers }) => {
                     <label htmlFor="relation" className="block text-gray-700 font-semibold mb-1 text-sm">
                         Select Relation
                     </label>
-                    <select
+                    <RelationInput
                         id="relation"
                         value={relation}
-                        onChange={(e) => {
-                            setRelation(e.target.value);
-                            setSelectedParentIds([]);
-                        }}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-green-500"
+                        onChange={(val) => { setRelation(val); setSelectedParentIds([]); }}
+                        groupedOptions={[
+                            { label: 'Current level', options: ['Self','Spouse','Sibling'] },
+                            { label: 'Parents', options: ['Father','Mother'] },
+                            { label: 'Grandparents', options: ['Grandfather','Grandmother'] },
+                            { label: 'Great Grandparents', options: ['Great Grandfather','Great Grandmother'] },
+                            { label: 'Children', options: ['Son','Daughter'] }
+                        ]}
+                        placeholder="Select or type relation..."
                         required
-                    >
-                        <option value="" disabled>Select relation...</option>
-                        {directRelations.map(rel => (
-                            <option key={rel} value={rel}>{rel}</option>
-                        ))}
-                    </select>
+                    />
                 </div>
             )}
 
@@ -239,6 +274,25 @@ const AddFamilyMemberForm = ({ onAdd, familyMembers }) => {
                     </div>
                 </div>
             )}
+
+            <div className="mt-2">
+                <label className="block text-gray-700 font-semibold mb-1 text-sm">Hierarchy group</label>
+                <select
+                    value={generationOverride}
+                    onChange={e => setGenerationOverride(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-green-500"
+                >
+                    <option value="">Auto (derive from relation/parents)</option>
+                    <option value="5">Great Great Great Grandparents</option>
+                    <option value="4">Great Great Grandparents</option>
+                    <option value="3">Great Grandparents</option>
+                    <option value="2">Grandparents</option>
+                    <option value="1">Parents</option>
+                    <option value="0">Current level</option>
+                    <option value="-1">Children</option>
+                    <option value="-2">Grandchildren</option>
+                </select>
+            </div>
 
             <button
                 onClick={handleSubmit}

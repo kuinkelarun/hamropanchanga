@@ -1,9 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import EventMenu from './EventMenu';
 
 // --- Family Tree Chart Component ---
 const FamilyTreeChart = ({ familyMembers, onEdit, onDeleteRequest }) => {
     const [openMenuId, setOpenMenuId] = useState(null);
+    const containerRef = useRef(null);
+    const boxRefs = useRef({}); // map id -> DOM element
+    const [connectors, setConnectors] = useState([]);
 
     const handleToggle = (id) => {
         setOpenMenuId(prev => (prev === id ? null : id));
@@ -13,13 +16,6 @@ const FamilyTreeChart = ({ familyMembers, onEdit, onDeleteRequest }) => {
         setOpenMenuId(prev => (prev === id ? null : prev));
     };
 
-    if (!familyMembers || Object.keys(familyMembers).length === 0) {
-        return (
-            <div className="text-center py-8 text-gray-400">
-                No family members added yet.
-            </div>
-        );
-    }
 
     const membersByGeneration = {};
     Object.values(familyMembers).forEach(member => {
@@ -34,9 +30,72 @@ const FamilyTreeChart = ({ familyMembers, onEdit, onDeleteRequest }) => {
         .map(Number)
         .sort((a, b) => b - a);
 
+    // compute connectors after render
+    useEffect(() => {
+        function compute() {
+            const container = containerRef.current;
+            if (!container) return;
+            const cRect = container.getBoundingClientRect();
+            const lines = [];
+
+            Object.values(familyMembers || {}).forEach(member => {
+                const childEl = boxRefs.current[member.id];
+                if (!member.parentIds || member.parentIds.length === 0) return;
+                if (!childEl) return;
+                const childRect = childEl.getBoundingClientRect();
+                const childX = childRect.left - cRect.left + childRect.width / 2;
+                const childY = childRect.top - cRect.top; // top of child box
+
+                member.parentIds.forEach(pid => {
+                    const parentEl = boxRefs.current[pid];
+                    if (!parentEl) return;
+                    const pRect = parentEl.getBoundingClientRect();
+                    const parentX = pRect.left - cRect.left + pRect.width / 2;
+                    const parentY = pRect.top - cRect.top + pRect.height; // bottom of parent box
+
+                    lines.push({ x1: parentX, y1: parentY, x2: childX, y2: childY, id: `${pid}->${member.id}` });
+                });
+            });
+
+            setConnectors(lines);
+        }
+
+        // compute on next frame to ensure layout is settled
+        const raf = requestAnimationFrame(compute);
+        const onResize = () => requestAnimationFrame(compute);
+        window.addEventListener('resize', onResize);
+        return () => { window.removeEventListener('resize', onResize); cancelAnimationFrame(raf); };
+    }, [familyMembers]);
+
+    if (!familyMembers || Object.keys(familyMembers).length === 0) {
+        return (
+            <div className="text-center py-8 text-gray-400">
+                No family members added yet.
+            </div>
+        );
+    }
 
     return (
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto" ref={containerRef} style={{ position: 'relative' }}>
+            {/* SVG overlay for connectors */}
+            <svg
+                aria-hidden
+                style={{ position: 'absolute', left: 0, top: 0, pointerEvents: 'none', width: '100%', height: '100%' }}
+            >
+                {connectors.map(line => (
+                    <line
+                        key={line.id}
+                        x1={line.x1}
+                        y1={line.y1}
+                        x2={line.x2}
+                        y2={line.y2}
+                        stroke="#9ca3af"
+                        strokeWidth={2}
+                        strokeLinecap="round"
+                      />
+                ))}
+            </svg>
+
             <div className="min-w-full space-y-8 p-4">
                 {sortedGenerations.map(generation => (
                     <div key={generation} className="flex flex-col items-center">
@@ -49,6 +108,7 @@ const FamilyTreeChart = ({ familyMembers, onEdit, onDeleteRequest }) => {
                                 return (
                                     <div
                                         key={id}
+                                        ref={(el) => { boxRefs.current[id] = el; }}
                                         className={`relative pr-10 pl-3 py-3 rounded-xl shadow-md border-2 border-gray-200 hover:shadow-lg transition-all cursor-pointer min-w-32 text-center max-w-xs break-words flex flex-col items-center justify-center
                                             ${member.isDirectAncestor ? 'bg-white' : 'bg-gray-100'}`}
                                     >
