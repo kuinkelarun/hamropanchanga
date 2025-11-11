@@ -1,4 +1,24 @@
 /* Updated Hero Section Styling */
+.hero-full {
+    width: 100%;
+    display: block; /* ensures it spans the viewport */
+}
+
+/* When hero-section is placed inside .hero-full we want it to span edge-to-edge visually */
+.hero-full .hero-section {
+    border-radius: 0;
+    box-shadow: none;
+    margin-bottom: 0; /* spacing will be handled by page body */
+}
+
+/* Constrained page body used for the rest of the site content */
+.page-body {
+    max-width: 1100px; /* adjust this to make body narrower/wider */
+    margin: 2rem auto; /* center the content */
+    padding: 0 1.25rem; /* small horizontal padding for very small screens */
+    box-sizing: border-box;
+}
+
 .hero-section {
     position: relative; /* Establishes a positioning context for children */
     display: flex; /* Use flexbox to position content horizontally */
@@ -7,8 +27,7 @@
     height: 40vh; /* Set a specific height for the banner */
     color: white;
     padding: 2rem 4rem;
-    border-radius: 20px;
-    box-shadow: 0 10px 15px rgba(0, 0, 0, 0.1);
+    /* border-radius and box-shadow removed when inside .hero-full to allow edge-to-edge appearance */
     margin-bottom: 2rem;
     overflow: hidden; /* Ensures image and content don't exceed the rounded corners */
 }

@@ -9,15 +9,20 @@ export default function RelationInput({ id, value, onChange, groupedOptions = []
   useEffect(() => {
     function onDocClick(e){
       if (!ref.current) return;
-      if (!ref.current.contains(e.target)) setOpen(false);
+      if (!ref.current.contains(e.target)) {
+        // click outside: close dropdown
+        setOpen(false);
+      }
     }
     document.addEventListener('mousedown', onDocClick);
     return () => document.removeEventListener('mousedown', onDocClick);
   }, []);
 
   useEffect(() => {
-    // reset query when value externally changes
+    // When the controlled value changes externally (e.g., form resets or parent updates),
+    // clear the local query and close suggestions to avoid auto-opening.
     setQuery('');
+    setOpen(false);
   }, [value]);
 
   const filteredGroups = groupedOptions.map(group => {
@@ -28,13 +33,24 @@ export default function RelationInput({ id, value, onChange, groupedOptions = []
     return { label: group.label, options: opts };
   }).filter(g => g.options.length > 0);
 
+  // handle user typing (only open on user-initiated events)
+  const handleInputChange = (e) => {
+    const v = e.target.value;
+    onChange(v);
+    setQuery(v);
+    // Only open if this is a user interaction (avoid opening on programmatic changes)
+    if (e.isTrusted !== false) setOpen(true);
+  };
+
   return (
     <div className="relative" ref={ref}>
       <input
         id={id}
+        name={id}
+        autoComplete="off"
         type="text"
         value={value}
-        onChange={e => { onChange(e.target.value); setQuery(e.target.value); setOpen(true); }}
+        onChange={handleInputChange}
         onFocus={() => setOpen(true)}
         placeholder={placeholder}
         required={required}

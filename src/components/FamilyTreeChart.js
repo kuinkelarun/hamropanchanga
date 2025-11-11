@@ -53,7 +53,22 @@ const FamilyTreeChart = ({ familyMembers, onEdit, onDeleteRequest }) => {
                     const parentX = pRect.left - cRect.left + pRect.width / 2;
                     const parentY = pRect.top - cRect.top + pRect.height; // bottom of parent box
 
-                    lines.push({ x1: parentX, y1: parentY, x2: childX, y2: childY, id: `${pid}->${member.id}` });
+                    // Build a smooth cubic Bezier path from parent's bottom to child's top.
+                    // We choose control points vertically offset based on the distance so curves
+                    // look natural; this is similar to ER diagram connectors.
+                    const dx = childX - parentX;
+                    const dy = childY - parentY;
+                    const curvature = Math.min(0.5, Math.abs(dy) / 200); // tuneable
+                    const controlOffsetY = Math.max(20, Math.abs(dy) * curvature);
+
+                    const c1x = parentX;
+                    const c1y = parentY + controlOffsetY;
+                    const c2x = childX;
+                    const c2y = childY - controlOffsetY;
+
+                    const d = `M ${parentX} ${parentY} C ${c1x} ${c1y}, ${c2x} ${c2y}, ${childX} ${childY}`;
+
+                    lines.push({ x1: parentX, y1: parentY, x2: childX, y2: childY, d, id: `${pid}->${member.id}` });
                 });
             });
 
@@ -83,16 +98,16 @@ const FamilyTreeChart = ({ familyMembers, onEdit, onDeleteRequest }) => {
                 style={{ position: 'absolute', left: 0, top: 0, pointerEvents: 'none', width: '100%', height: '100%' }}
             >
                 {connectors.map(line => (
-                    <line
+                    <path
                         key={line.id}
-                        x1={line.x1}
-                        y1={line.y1}
-                        x2={line.x2}
-                        y2={line.y2}
+                        d={line.d}
+                        fill="none"
                         stroke="#9ca3af"
                         strokeWidth={2}
                         strokeLinecap="round"
-                      />
+                        strokeLinejoin="round"
+                        style={{ transition: 'd 200ms ease' }}
+                    />
                 ))}
             </svg>
 
