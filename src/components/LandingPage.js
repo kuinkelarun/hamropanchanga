@@ -9,7 +9,7 @@ import { signInWithGoogle } from '../firebase';
 const LandingPage = ({ user, customers, onSelectCustomer, onAddCustomer, events, familyMembers, onDoubleClickEvent, onEditCustomer, onDeleteCustomer }) => {
     return (
         <div className="landing-container">
-            {/* HERO: full-width container */}
+            {/* HERO: full-width container - visible to all users */}
             <div className="hero-full">
                 <div className="hero-section">
                     <div className="hero-content">
@@ -18,23 +18,6 @@ const LandingPage = ({ user, customers, onSelectCustomer, onAddCustomer, events,
                         <button className="cta-button" onClick={onAddCustomer}>
                             Start Your Tree
                         </button>
-
-                        {!user && (
-                            <div style={{ marginTop: '0.75rem' }}>
-                                <button
-                                    onClick={async () => {
-                                        try {
-                                            await signInWithGoogle();
-                                        } catch (err) {
-                                            // sign-in helper logs errors
-                                        }
-                                    }}
-                                    className="login-small"
-                                >
-                                    Login
-                                </button>
-                            </div>
-                        )}
                     </div>
                     <div className="hero-illustration">
                         <img
@@ -56,7 +39,8 @@ const LandingPage = ({ user, customers, onSelectCustomer, onAddCustomer, events,
                     </div>
 
                     {/* Branches Cards Section */}
-                    <div className="section-card branches-section">
+                    {user && (
+                        <div className="section-card branches-section">
                         <CustomerList
                             customers={customers}
                             onSelectCustomer={onSelectCustomer}
@@ -64,16 +48,19 @@ const LandingPage = ({ user, customers, onSelectCustomer, onAddCustomer, events,
                             onEditCustomer={onEditCustomer}
                             onDeleteCustomer={onDeleteCustomer}
                         />
-                    </div>
+                        </div>
+                    )}
 
                     {/* Events/Updates Section */}
-                    <div className="section-card events-section">
-                        <LandingPageEventsSection 
-                            events={events} 
-                            familyMembers={familyMembers} 
-                            onDoubleClickEvent={onDoubleClickEvent} 
-                        />
-                    </div>
+                    {user && (
+                        <div className="section-card events-section">
+                            <LandingPageEventsSection 
+                                events={events} 
+                                familyMembers={familyMembers} 
+                                onDoubleClickEvent={onDoubleClickEvent} 
+                            />
+                        </div>
+                    )}
                 </div>
             </main>
         </div>
