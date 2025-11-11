@@ -132,6 +132,17 @@ export default function NepaliCalendar() {
   const [tithisByDate, setTithisByDate] = useState({}); // { "YYYY-M-D": [{name,start,end}, ...] }
   const [activeDate, setActiveDate] = useState(null);
 
+  // Calendar-only transition state and direction
+  const [isMonthTransitioning, setIsMonthTransitioning] = useState(false);
+  const [transitionDir, setTransitionDir] = useState('jump'); // 'prev' | 'next' | 'jump'
+  const transitionMs = 900;
+  const triggerMonthTransition = useCallback((applyChange) => {
+    if (isMonthTransitioning) return;
+    setIsMonthTransitioning(true);
+    setTimeout(() => { applyChange(); }, transitionMs * 0.45);
+    setTimeout(() => { setIsMonthTransitioning(false); }, transitionMs);
+  }, [isMonthTransitioning]);
+
   // Modal states - separate details and add tithi modals
   const [detailsModalOpen, setDetailsModalOpen] = useState(false);
   const [addTithiModalOpen, setAddTithiModalOpen] = useState(false);
@@ -222,6 +233,25 @@ export default function NepaliCalendar() {
   const firstDayOfBsMonthAd = useMemo(() => {
     return convertBsToAd(currentBsYear, currentBsMonth, 1);
   }, [currentBsYear, currentBsMonth]);
+
+  // Compute AD date for the last day of the current Nepali month so we can show an AD range
+  // when the Nepali month spans two AD months (e.g., October/November 2025)
+  const lastDayOfBsMonthAd = useMemo(() => {
+    const lastDay = nepaliMonthDays;
+    return convertBsToAd(currentBsYear, currentBsMonth, lastDay);
+  }, [currentBsYear, currentBsMonth, nepaliMonthDays]);
+
+  const adMonthRangeDisplay = useMemo(() => {
+    const start = firstDayOfBsMonthAd;
+    const end = lastDayOfBsMonthAd;
+    if (!start) return '';
+    if (!end) return `${englishMonths[start.month ?? 0]} ${start.year ?? ''}`;
+    const sMon = start.month; const eMon = end.month;
+    const sYr = start.year; const eYr = end.year;
+    if (sMon === eMon && sYr === eYr) return `${englishMonths[sMon]} ${sYr}`;
+    if (sYr === eYr) return `${englishMonths[sMon]}/${englishMonths[eMon]} ${sYr}`;
+    return `${englishMonths[sMon]} ${sYr} / ${englishMonths[eMon]} ${eYr}`;
+  }, [firstDayOfBsMonthAd, lastDayOfBsMonthAd]);
 
   const startDayOfWeek = useMemo(() => {
     if (!firstDayOfBsMonthAd) return 0;
@@ -334,6 +364,20 @@ export default function NepaliCalendar() {
     let y = currentBsYear;
     if (m > 12) { m = 1; y += 1; }
     setCurrentBsMonth(m); setCurrentBsYear(y);
+  }
+
+  // Helper functions to compute previous/next Nepali month names
+  function getPrevMonthName(){
+    let m = currentBsMonth - 1;
+    let y = currentBsYear;
+    if (m < 1) { m = 12; y -= 1; }
+    return nepaliMonths[m-1] || '';
+  }
+  function getNextMonthName(){
+    let m = currentBsMonth + 1;
+    let y = currentBsYear;
+    if (m > 12) { m = 1; y += 1; }
+    return nepaliMonths[m-1] || '';
   }
 
   // open details modal when clicking on tile
@@ -684,7 +728,7 @@ export default function NepaliCalendar() {
                   }
                 </div>
               )}
-            </div>
+              </div>
           </div>
         );
       }
@@ -840,14 +884,71 @@ export default function NepaliCalendar() {
         >
           Nepali Calendar {toNepaliNumber(todayBs.year)} {nepaliMonths[todayBs.month-1]}
         </button>
+          {/* Right-aligned month/year controls (keep selects here) */}
+          <div className="nc-topbar-right">
+            <div className="nc-select-month-year" role="group" aria-label="Jump to Nepali month and year">
+              <select
+                className="nc-select-month"
+                aria-label="Select Nepali month"
+                value={currentBsMonth}
+                onChange={(e) => {
+                  const m = Number(e.target.value);
+                  setTransitionDir('jump');
+                  triggerMonthTransition(() => { setCurrentBsMonth(m); });
+                }}
+              >
+                {nepaliMonths.map((mn, idx) => (
+                  <option key={mn} value={idx+1}>{mn}</option>
+                ))}
+              </select>
+
+              <select
+                className="nc-select-year"
+                aria-label="Select Nepali year"
+                value={currentBsYear}
+                onChange={(e) => {
+                  const y = Number(e.target.value);
+                  setTransitionDir('jump');
+                  triggerMonthTransition(() => { setCurrentBsYear(y); });
+                }}
+              >
+                {Array.from({ length: maxBsYear - minBsYear + 1 }, (_, i) => minBsYear + i).map(y => (
+                  <option key={y} value={y}>{toNepaliNumber(y)}</option>
+                ))}
+              </select>
+            </div>
+            {/* Screen-reader announcement region: polite live updates when month/year changes */}
+            <div className="sr-only" aria-live="polite" aria-atomic="true" id="nc-month-announcement">
+              {`Nepali ${nepaliMonths[currentBsMonth-1]} ${toNepaliNumber(currentBsYear)} — ${adMonthRangeDisplay}`}
+            </div>
+          </div>
       </div>
       <div className="nc-header">
-        <button onClick={handlePrev} className="nc-btn">‹ Prev</button>
+        <button
+          onClick={handlePrev}
+          className="nc-btn nc-nav-btn"
+          aria-label={`Previous Nepali month: ${getPrevMonthName()}`}
+        >
+          <span className="nc-arrow nc-arrow-left">‹</span>
+          <span className="nc-label nc-label-default">Prev</span>
+          <span className="nc-label nc-label-hover">{getPrevMonthName()}</span>
+        </button>
         <div className="nc-center">
-          <div className="nc-nepali">{nepaliMonths[currentBsMonth-1]} {toNepaliNumber(currentBsYear)}</div>
-          <div className="nc-english">{englishMonths[firstDayOfBsMonthAd?.month ?? 0]} {firstDayOfBsMonthAd?.year ?? ''}</div>
+          {/* Restore the BS/AD display back into the calendar header (original place) */}
+          <div className="nc-header-display" aria-hidden>
+            <div className="nc-header-bs">{nepaliMonths[currentBsMonth-1]} {toNepaliNumber(currentBsYear)}</div>
+            <div className="nc-header-ad">{adMonthRangeDisplay}</div>
+          </div>
         </div>
-        <button onClick={handleNext} className="nc-btn">Next ›</button>
+        <button
+          onClick={handleNext}
+          className="nc-btn nc-nav-btn"
+          aria-label={`Next Nepali month: ${getNextMonthName()}`}
+        >
+          <span className="nc-label nc-label-default">Next</span>
+          <span className="nc-label nc-label-hover">{getNextMonthName()}</span>
+          <span className="nc-arrow nc-arrow-right">›</span>
+        </button>
       </div>
 
       <div className="nc-weekdays">
