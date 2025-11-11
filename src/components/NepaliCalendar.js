@@ -3,6 +3,7 @@ import { collection, addDoc, deleteDoc, doc, onSnapshot, query, orderBy, getDocs
 import { onAuthStateChanged } from 'firebase/auth';
 import { db, auth } from '../firebase';
 import './NepaliCalendar.css';
+import ConfirmModal from './ConfirmModal';
 import bsCalendarData from '../data/bsCalendarData';
 
 const nepaliMonths = [
@@ -85,11 +86,49 @@ function convertBsToAd(year, month, day){
 export default function NepaliCalendar() {
   const [user, setUser] = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
-  const todayAd = useMemo(() => getNepalDate(), []);
-  const todayBs = useMemo(() => convertAdToBs(todayAd.getFullYear(), todayAd.getMonth(), todayAd.getDate()), [todayAd]);
+  // Track "today" in Nepal timezone and update daily so the topbar reflects the real current Nepali month/year
+  const [todayAd, setTodayAd] = useState(() => getNepalDate());
+  const [todayBs, setTodayBs] = useState(() => convertAdToBs(todayAd.getFullYear(), todayAd.getMonth(), todayAd.getDate()));
 
-  const [currentBsYear, setCurrentBsYear] = useState(todayBs.year);
-  const [currentBsMonth, setCurrentBsMonth] = useState(todayBs.month);
+  // Keep todayAd/todayBs in sync with the real current time.
+  // Instead of polling every minute, schedule a single timeout that fires exactly at the next NPT midnight.
+  useEffect(() => {
+    let timeoutId = null;
+
+    function refreshToday() {
+      const nowAd = getNepalDate();
+      setTodayAd(nowAd);
+      const bs = convertAdToBs(nowAd.getFullYear(), nowAd.getMonth(), nowAd.getDate());
+      setTodayBs(bs);
+
+      // Calculate milliseconds until next NPT midnight using the NPT fields (use UTC getters because getNepalDate()'s UTC fields represent NPT)
+      const hours = nowAd.getUTCHours();
+      const mins = nowAd.getUTCMinutes();
+      const secs = nowAd.getUTCSeconds();
+      const ms = nowAd.getUTCMilliseconds();
+      const msSinceMidnight = ((hours * 60 + mins) * 60 + secs) * 1000 + ms;
+      const msInDay = 24 * 60 * 60 * 1000;
+      let msUntilNextMidnight = msInDay - msSinceMidnight;
+
+      // Safety: if computed time is very small or negative, schedule a short delay
+      if (msUntilNextMidnight <= 0) msUntilNextMidnight = 1000;
+
+      // Add a small buffer (200ms) to avoid race conditions around the exact boundary
+      timeoutId = setTimeout(() => {
+        refreshToday();
+      }, msUntilNextMidnight + 200);
+    }
+
+    // Initialize
+    refreshToday();
+
+    return () => {
+      if (timeoutId) clearTimeout(timeoutId);
+    };
+  }, []);
+
+  const [currentBsYear, setCurrentBsYear] = useState(() => todayBs.year);
+  const [currentBsMonth, setCurrentBsMonth] = useState(() => todayBs.month);
   const [tithisByDate, setTithisByDate] = useState({}); // { "YYYY-M-D": [{name,start,end}, ...] }
   const [activeDate, setActiveDate] = useState(null);
 
@@ -241,22 +280,30 @@ export default function NepaliCalendar() {
 
   // Navigate to the current Nepali month/year (today)
   const handleGoToToday = useCallback(async () => {
-    // If user has open modals / pending edits, warn them first
+    // If user has open modals / pending edits, open app modal to confirm
     if (addTithiModalOpen || detailsModalOpen) {
-      const proceed = window.confirm('You have an open edit or pending changes on the calendar. If you go to the current month you may lose unsaved changes. Continue?');
-      if (!proceed) return;
-      // Close modals to avoid leftover UI
-      setAddTithiModalOpen(false);
-      setDetailsModalOpen(false);
-      setModalFocusHint(null);
+      setConfirmOpen(true);
+      return;
     }
+    // Otherwise proceed immediately
+    await proceedGoToToday();
+  }, [addTithiModalOpen, detailsModalOpen, refreshTithis, setActiveDate, setCurrentBsMonth, setCurrentBsYear, setAddTithiModalOpen, setDetailsModalOpen, setModalFocusHint, todayBs]);
+
+  const [confirmOpen, setConfirmOpen] = useState(false);
+
+  const proceedGoToToday = useCallback(async () => {
+    // Close modals to avoid leftover UI
+    setAddTithiModalOpen(false);
+    setDetailsModalOpen(false);
+    setModalFocusHint(null);
 
     // Move view to today's Nepali month/year and refresh tithis
     setCurrentBsYear(todayBs.year);
     setCurrentBsMonth(todayBs.month);
     try { await refreshTithis(); } catch (e) { /* ignore refresh errors */ }
     setActiveDate(null);
-  }, [addTithiModalOpen, detailsModalOpen, refreshTithis, setActiveDate, setCurrentBsMonth, setCurrentBsYear, setAddTithiModalOpen, setDetailsModalOpen, setModalFocusHint, todayBs]);
+    setConfirmOpen(false);
+  }, [refreshTithis, setActiveDate, setCurrentBsMonth, setCurrentBsYear, setAddTithiModalOpen, setDetailsModalOpen, setModalFocusHint, todayBs]);
 
   // Debug function to check what's actually in Firestore
   const debugFirestore = useCallback(async () => {
@@ -871,6 +918,16 @@ export default function NepaliCalendar() {
           </div>
         </div>
       )}
+
+      {/* App confirm modal for unsaved edits before jumping to today */}
+      <ConfirmModal
+        open={confirmOpen}
+        title="Unsaved changes"
+        message={'You have an open edit or pending changes on the calendar. If you go to the current month you may lose unsaved changes. Continue?'}
+        confirmText="Go to Today"
+        onConfirm={() => proceedGoToToday()}
+        onCancel={() => setConfirmOpen(false)}
+      />
 
       {/* Add Tithi Modal - form for adding new tithi */}
       {addTithiModalOpen && (
