@@ -1,13 +1,12 @@
 // src/Login.js
-import { GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
-import { auth } from './firebase';
+import { signInWithGoogle } from './firebase';
 
 export default function Login() {
   const handleGoogleSignIn = async () => {
-    const provider = new GoogleAuthProvider();
     try {
-      await signInWithPopup(auth, provider);
+      await signInWithGoogle();
     } catch (error) {
+      // already logged in by helper; log for debug
       console.error("Error signing in with Google", error);
     }
   };

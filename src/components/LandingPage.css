@@ -15,8 +15,12 @@
 .page-body {
     max-width: 1100px; /* adjust this to make body narrower/wider */
     margin: 2rem auto; /* center the content */
-    padding: 0 1.25rem; /* small horizontal padding for very small screens */
+    padding: 0 1rem; /* page body provides layout spacing but not a card */
     box-sizing: border-box;
+    background: transparent; /* removed to avoid nested card look; single-container is the card */
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
 }
 
 .hero-section {
@@ -179,6 +183,23 @@
     background-color: #ed8936;
 }
 
+/* small login button shown on the public homepage */
+.login-small {
+    background: transparent;
+    color: #fff;
+    border: 1px solid rgba(255,255,255,0.65);
+    padding: 0.35rem 0.75rem;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: background-color 0.15s ease, transform 0.08s ease;
+}
+
+.login-small:hover {
+    background: rgba(255,255,255,0.08);
+    transform: translateY(-1px);
+}
+
 @media (max-width: 768px) {
     .cta-button {
         display: block;
@@ -206,7 +227,27 @@
 
 .branches-section, .events-section {
     margin-bottom: 2rem;
+    padding: 0.5rem 0; /* keep sections spaced inside the page body */
 }
+
+/* Outer layout wrapper (no card visuals) */
+.single-container { padding: 0; border: 0; background: transparent; box-shadow: none; }
+
+/* Unified single-card style applied to each section wrapper */
+.section-card {
+    background: #ffffff;
+    border: 1px solid rgba(15,23,42,0.06);
+    border-radius: 12px;
+    padding: 1.25rem 1.25rem 1.1rem; /* consistent internal spacing */
+    box-shadow: 0 4px 12px rgba(15,23,42,0.05);
+    margin-bottom: 1.4rem;
+}
+
+/* Remove margin from the last section */
+.single-container .section-card:last-child { margin-bottom: 0; }
+
+/* Fine-tune heading spacing inside cards */
+.section-card .section-title { margin-bottom: 0.9rem; }
 
 @media (max-width: 768px) {
     .branches-section, .events-section {
