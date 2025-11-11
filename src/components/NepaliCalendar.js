@@ -239,6 +239,25 @@ export default function NepaliCalendar() {
     }
   }, [setTithisByDate]);
 
+  // Navigate to the current Nepali month/year (today)
+  const handleGoToToday = useCallback(async () => {
+    // If user has open modals / pending edits, warn them first
+    if (addTithiModalOpen || detailsModalOpen) {
+      const proceed = window.confirm('You have an open edit or pending changes on the calendar. If you go to the current month you may lose unsaved changes. Continue?');
+      if (!proceed) return;
+      // Close modals to avoid leftover UI
+      setAddTithiModalOpen(false);
+      setDetailsModalOpen(false);
+      setModalFocusHint(null);
+    }
+
+    // Move view to today's Nepali month/year and refresh tithis
+    setCurrentBsYear(todayBs.year);
+    setCurrentBsMonth(todayBs.month);
+    try { await refreshTithis(); } catch (e) { /* ignore refresh errors */ }
+    setActiveDate(null);
+  }, [addTithiModalOpen, detailsModalOpen, refreshTithis, setActiveDate, setCurrentBsMonth, setCurrentBsYear, setAddTithiModalOpen, setDetailsModalOpen, setModalFocusHint, todayBs]);
+
   // Debug function to check what's actually in Firestore
   const debugFirestore = useCallback(async () => {
     try {
@@ -678,8 +697,10 @@ export default function NepaliCalendar() {
     }
 
     // --- 3. Next Month's Days ---
-    const totalTiles = tiles.length;
-    const remainingTiles = totalTiles > 35 ? 42 - totalTiles : 35 - totalTiles;
+  const totalTiles = tiles.length;
+  // Always render enough tiles to fill 6 rows (7 columns * 6 = 42 tiles)
+  // This ensures consistent layout across months
+  const remainingTiles = Math.max(0, 42 - totalTiles);
     const nextMonth = currentBsMonth === 12 ? 1 : currentBsMonth + 1;
     const nextYear = currentBsMonth === 12 ? currentBsYear + 1 : currentBsYear;
 
@@ -763,6 +784,16 @@ export default function NepaliCalendar() {
 
   return (
     <div className="nepali-calendar-container">
+      {/* Top bar above the calendar header */}
+      <div className="nc-topbar">
+        <button
+          className="nc-topbar-btn"
+          onClick={handleGoToToday}
+          title={`Go to current Nepali month: ${nepaliMonths[todayBs.month-1]} ${toNepaliNumber(todayBs.year)}`}
+        >
+          Nepali Calendar {toNepaliNumber(todayBs.year)} {nepaliMonths[todayBs.month-1]}
+        </button>
+      </div>
       <div className="nc-header">
         <button onClick={handlePrev} className="nc-btn">‹ Prev</button>
         <div className="nc-center">

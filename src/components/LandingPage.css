@@ -249,6 +249,25 @@
 /* Fine-tune heading spacing inside cards */
 .section-card .section-title { margin-bottom: 0.9rem; }
 
+/* Calendar header for unauthenticated users (login button) */
+.calendar-card-header {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 0.5rem;
+}
+
+.login-card-button {
+    background-color: #2563eb; /* blue */
+    color: #fff;
+    border: none;
+    padding: 0.45rem 0.8rem;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    cursor: pointer;
+}
+
+.login-card-button:hover { background-color: #1e40af; }
+
 @media (max-width: 768px) {
     .branches-section, .events-section {
         margin-bottom: 1.5rem;

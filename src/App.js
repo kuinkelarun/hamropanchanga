@@ -225,7 +225,7 @@ export default function App() {
     return (
         <SettingsProvider>
             <div className="min-h-screen bg-gray-100">
-                <header className="flex justify-between items-center p-4 bg-white shadow-md">
+                <header className="sticky top-0 z-50 flex justify-between items-center p-4 bg-white shadow-md">
                     <div />
                     <div>
                         {user ? (

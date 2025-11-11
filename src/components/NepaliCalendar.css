@@ -1,7 +1,9 @@
 /* Nepali Calendar Container */
 .nepali-calendar-container { 
+    position: relative; /* allow positioning of inner elements */
     background: #cab5ef; 
-    padding: 16px; 
+    /* increase top padding to accommodate the absolute topbar so content sits below it */
+    padding: 72px 16px 16px 16px; 
     border-radius: 8px; 
     box-shadow: 0 6px 18px rgba(0,0,0,0.06); 
     margin-bottom: 18px; 
@@ -64,6 +66,40 @@
     display:grid; 
     grid-template-columns:repeat(7,1fr); 
     gap:10px; 
+    /* Force consistent 6 rows: each tile has fixed height, so explicitly set row height */
+    grid-auto-rows: 88px; /* matches .nt-day-tile min/max height */
+}
+
+/* Today quick-jump button (top-right) */
+.nc-topbar {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 64px; /* thicker topbar */
+    display:flex;
+    align-items:center;
+    justify-content:flex-start;
+    background: #9f7aea; /* slightly darker than the calendar card */
+    color: #fff;
+    padding: 12px 18px;
+    border-radius: 8px 8px 0 0; /* round top corners flush with card */
+}
+.nc-topbar-btn {
+    background: transparent;
+    border: 0;
+    color: inherit;
+    font-weight: 800;
+    font-size: 16px; /* increased font size */
+    padding: 8px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+}
+.nc-topbar-btn:hover { background: rgba(255,255,255,0.06); }
+
+@media (max-width: 640px) {
+    .nc-topbar-btn { font-size: 14px; padding: 6px 8px; }
+    .nepali-calendar-container { padding-top: 56px; }
 }
 
 /* Day Tiles */
