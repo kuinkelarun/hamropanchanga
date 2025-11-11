@@ -1,6 +1,6 @@
 // src/firebase.js
 import { initializeApp } from "firebase/app";
-import { getAuth } from "firebase/auth";
+import { getAuth, GoogleAuthProvider, signInWithPopup } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 
 // Your web app's Firebase configuration
@@ -19,3 +19,14 @@ const app = initializeApp(firebaseConfig);
 // Export Firebase services
 export const auth = getAuth(app);
 export const db = getFirestore(app);
+
+// Helper: sign in with Google popup — exported so other components can reuse the same logic
+export async function signInWithGoogle() {
+    const provider = new GoogleAuthProvider();
+    try {
+        await signInWithPopup(auth, provider);
+    } catch (error) {
+        console.error('Error signing in with Google', error);
+        throw error;
+    }
+}

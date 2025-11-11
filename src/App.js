@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { onAuthStateChanged, signOut, getIdTokenResult } from 'firebase/auth';
-import { auth } from './firebase';
+import { auth, signInWithGoogle } from './firebase';
 import { SettingsProvider } from './contexts/SettingsContext';
 import SettingsMenu from './components/SettingsMenu';
-import Login from './Login';
 import { collection, query, where, onSnapshot, getDoc, addDoc, updateDoc, doc } from 'firebase/firestore';
 import { db } from './firebase';
 // CustomerList is rendered inside LandingPage; App does not use it directly here
@@ -95,9 +94,22 @@ export default function App() {
     }, [user, isAdmin]);
 
     // --- HANDLERS ---
-    const handleSelectCustomer = (customer) => {
+    const handleSelectCustomer = async (customer) => {
+        const ok = await requireAuthOrPrompt();
+        if (!ok) return;
         setSelectedCustomer(customer);
         setView('details');
+    };
+    const requireAuthOrPrompt = async () => {
+        if (!user) {
+            try {
+                await signInWithGoogle();
+            } catch (err) {
+                // ignore — sign-in helper already logs
+            }
+            return false;
+        }
+        return true;
     };
 
     const handleBackToList = () => {
@@ -105,12 +117,16 @@ export default function App() {
         setView('list');
     };
 
-    const handleAddCustomer = () => {
+    const handleAddCustomer = async () => {
+        const ok = await requireAuthOrPrompt();
+        if (!ok) return;
         setView('add');
     };
 
     // Open customer details (legacy behavior)
-    const handleEditCustomer = (customer) => {
+    const handleEditCustomer = async (customer) => {
+        const ok = await requireAuthOrPrompt();
+        if (!ok) return;
         // Prefer editing the basic customer fields on the AddCustomerForm page
         setSelectedCustomer(customer);
         setView('add');
@@ -187,9 +203,8 @@ export default function App() {
         </div>;
     }
 
-    if (!user) {
-        return <Login />;
-    }
+    // Do not force-navigation to Login; allow landing page to be public.
+    // The Login UI is available via header button or the explicit /login route (Login component still exists).
 
     const handleDoubleClickEvent = (event) => {
     // Find the customer who owns this event's personId
@@ -212,7 +227,24 @@ export default function App() {
             <div className="min-h-screen bg-gray-100">
                 <header className="flex justify-between items-center p-4 bg-white shadow-md">
                     <div />
-                    <SettingsMenu user={user} onSignOut={handleSignOut} />
+                    <div>
+                        {user ? (
+                            <SettingsMenu user={user} onSignOut={handleSignOut} />
+                        ) : (
+                            <button
+                                onClick={async () => {
+                                    try {
+                                        await signInWithGoogle();
+                                    } catch (err) {
+                                        // logged in helper handles logging
+                                    }
+                                }}
+                                className="text-sm bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded-md shadow-sm"
+                            >
+                                Login
+                            </button>
+                        )}
+                    </div>
                 </header>
 
                 <main className="p-4">
