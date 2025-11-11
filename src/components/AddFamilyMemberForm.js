@@ -136,13 +136,16 @@ const AddFamilyMemberForm = ({ onAdd, familyMembers }) => {
     };
 
     useEffect(() => {
-        // If relation matches a known mapping and the user hasn't manually chosen a group,
-        // auto-select the appropriate generationOverride so the member appears in the correct group.
-        if (relation && (!generationOverride || generationOverride === '')) {
+        // Only auto-set generation when the user is adding a direct relation.
+        // When adding as `child_of` the form's selected relation (Son/Daughter) may be
+        // rewritten by parent-based logic on submit (e.g. becomes Brother/Sister). If
+        // we pre-set the generationOverride for the child_of flow it can conflict with
+        // the resolved relation and place the member into the wrong generation group.
+        if (relationshipType === 'direct' && relation && (!generationOverride || generationOverride === '')) {
             const gen = relationToGeneration[relation];
             if (gen !== undefined) setGenerationOverride(String(gen));
         }
-    }, [relation]);
+    }, [relation, relationshipType]);
 
     const directRelations = [
         'Father', 'Mother', 'Spouse', 'Brother', 'Sister', 'Uncle', 'Aunt',
