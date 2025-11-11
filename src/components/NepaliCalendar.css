@@ -43,7 +43,7 @@
 /* Arrow and label spacing & soft swap */
 .nc-nav-btn { position: relative; overflow: hidden; padding-left: 34px; padding-right: 34px; }
 /* position arrows absolutely so labels can be perfectly centered */
-.nc-nav-btn .nc-arrow { font-weight:700; color: inherit; position: absolute; top: 50%; transform: translateY(-50%); }
+.nc-nav-btn .nc-arrow { font-weight:700; color: inherit; position: absolute; top: 45%; transform: translateY(calc(-50% - 0.08em)); font-size: 22px; line-height:1; }
 .nc-arrow-left { left: 10px; }
 .nc-arrow-right { right: 10px; }
 
@@ -138,18 +138,39 @@
     border: 1px solid #e5e7eb;
     padding: 8px 10px;
     border-radius: 8px;
-    font-size: 14px;
+    font-size: 13px; /* match nav button text size */
+    font-weight: 600; /* stronger weight to match Prev/Next text */
     color: #0f172a;
+    font-family: inherit; /* inherit app font */
+    -webkit-appearance: none; /* remove native arrow where possible */
+    -moz-appearance: none;
+    appearance: none;
+    /* single svg caret for consistent placement across browsers */
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'><path fill='%23374151' d='M0 0l5 6 5-6z'/></svg>");
+    background-position: right 12px center;
+    background-size: 10px 6px;
+    background-repeat: no-repeat;
 }
-.nc-select-month { min-width: 96px; max-width: 120px; cursor: pointer; transition: background 0.12s ease, border-color 0.12s ease; }
-.nc-select-year { min-width: 84px; max-width: 110px; cursor: pointer; transition: background 0.12s ease, border-color 0.12s ease; }
+.nc-select-month { min-width: 96px; max-width: 120px; cursor: pointer; transition: background 0.12s ease, border-color 0.12s ease, box-shadow 140ms ease; padding-right: 36px; }
+.nc-select-year { min-width: 84px; max-width: 110px; cursor: pointer; transition: background 0.12s ease, border-color 0.12s ease, box-shadow 140ms ease; padding-right: 36px; }
 
 /* Make selects feel interactive like nav buttons */
 .nc-select-month:hover, .nc-select-year:hover,
 .nc-select-month:focus, .nc-select-year:focus {
-    background: #f8fafc;
+    background-color: #f8fafc; /* use background-color so background-image (caret) remains visible */
     border-color: #dbeafe;
     outline: none;
+    box-shadow: 0 6px 18px rgba(15, 23, 42, 0.06);
+}
+
+/* Soft-population hint for native option lists: browsers limit option styling/animation, but this adds a subtle transition where supported */
+.nc-select-month option, .nc-select-year option {
+    transition: background 160ms ease, color 160ms ease;
+}
+.nc-select-month option:focus, .nc-select-year option:focus,
+.nc-select-month option:hover, .nc-select-year option:hover {
+    background: #eef2ff;
+    color: #0f172a;
 }
 
 @media (max-width: 640px) {
