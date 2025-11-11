@@ -23,9 +23,64 @@
     border-radius:6px; 
     cursor:pointer; 
 }
+
+/* Navigation buttons (Prev/Next) - wider but shorter and smaller text to avoid layout shift when label changes */
+.nc-nav-btn {
+    min-width: 96px; /* wider so month name fits without pushing header */
+    max-width: 140px;
+    padding: 6px 10px;
+    height: 36px; /* reduce height */
+    font-size: 13px; /* slightly smaller text */
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.12s ease, transform 0.08s ease;
+}
+.nc-nav-btn:hover {
+    transform: translateY(-1px);
+}
+
+/* Arrow and label spacing & soft swap */
+.nc-nav-btn { position: relative; overflow: hidden; padding-left: 34px; padding-right: 34px; }
+/* position arrows absolutely so labels can be perfectly centered */
+.nc-nav-btn .nc-arrow { font-weight:700; color: inherit; position: absolute; top: 50%; transform: translateY(-50%); }
+.nc-arrow-left { left: 10px; }
+.nc-arrow-right { right: 10px; }
+
+/* center labels exactly between arrows and use cross-fade/slide for soft swap */
+.nc-nav-btn .nc-label { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); white-space: nowrap; transition: opacity 180ms ease, transform 180ms ease; }
+.nc-nav-btn .nc-label-default { opacity: 1; }
+.nc-nav-btn .nc-label-hover { opacity: 0; }
+.nc-nav-btn:hover .nc-label-default { opacity: 0; /* nudge up 6px relative to centered position */ transform: translate(-50%, calc(-50% - 6px)); }
+.nc-nav-btn:hover .nc-label-hover { opacity: 1; /* ensure hover label stays centered vertically */ transform: translate(-50%, -50%); }
 .nc-center { text-align:center; }
 .nc-nepali { font-weight:700; font-size:18px; }
 .nc-english { color:#6b7280; font-size:13px; }
+
+/* Header display for BS/AD when shown inside the calendar header */
+.nc-header-display { text-align: center; }
+.nc-header-display { text-align: center; padding-top: 8px; }
+.nc-header-bs { font-weight:700; font-size:18px; color:#0f172a; margin-top: 2px; }
+.nc-header-ad { font-size:13px; color:#6b7280; }
+
+/* Responsive tweaks: tighten header padding on smaller viewports */
+@media (max-width: 768px) {
+    .nc-header-display { padding-top: 6px; }
+}
+
+@media (max-width: 480px) {
+    .nc-header-display { padding-top: 4px; }
+}
+
+/* Make the AD (English) line slightly smaller on narrower screens for better vertical rhythm */
+@media (max-width: 768px) {
+    .nc-header-ad { font-size: 12px; }
+}
+
+@media (max-width: 480px) {
+    .nc-header-ad { font-size: 11px; }
+    .nc-header-bs { font-size: 16px; } /* slightly smaller BS headline on very small screens */
+}
 
 /* Calendar Grid */
 .nc-weekdays { 
@@ -70,36 +125,90 @@
     grid-auto-rows: 88px; /* matches .nt-day-tile min/max height */
 }
 
+/* Month/Year selects inside calendar window */
+.nc-select-month-year {
+    margin-top: 8px;
+    display: inline-flex;
+    gap: 8px;
+    align-items: center;
+    justify-content: center;
+}
+.nc-select-month, .nc-select-year {
+    background: white;
+    border: 1px solid #e5e7eb;
+    padding: 8px 10px;
+    border-radius: 8px;
+    font-size: 14px;
+    color: #0f172a;
+}
+.nc-select-month { min-width: 96px; max-width: 120px; cursor: pointer; transition: background 0.12s ease, border-color 0.12s ease; }
+.nc-select-year { min-width: 84px; max-width: 110px; cursor: pointer; transition: background 0.12s ease, border-color 0.12s ease; }
+
+/* Make selects feel interactive like nav buttons */
+.nc-select-month:hover, .nc-select-year:hover,
+.nc-select-month:focus, .nc-select-year:focus {
+    background: #f8fafc;
+    border-color: #dbeafe;
+    outline: none;
+}
+
+@media (max-width: 640px) {
+    .nc-select-month, .nc-select-year { font-size: 13px; padding: 6px 8px; }
+}
+
 /* Today quick-jump button (top-right) */
 .nc-topbar {
     position: absolute;
     top: 0;
     left: 0;
     right: 0;
-    height: 64px; /* thicker topbar */
+    height: 72px; /* increased to accommodate larger font */
     display:flex;
     align-items:center;
     justify-content:flex-start;
     background: #9f7aea; /* slightly darker than the calendar card */
     color: #fff;
-    padding: 12px 18px;
+    padding: 14px 18px;
     border-radius: 8px 8px 0 0; /* round top corners flush with card */
 }
 .nc-topbar-btn {
     background: transparent;
     border: 0;
-    color: inherit;
+    color: #000; /* changed from white to black as requested */
     font-weight: 800;
-    font-size: 16px; /* increased font size */
-    padding: 8px 12px;
+    font-size: 20px; /* bumped font size */
+    padding: 10px 14px;
     border-radius: 6px;
     cursor: pointer;
 }
 .nc-topbar-btn:hover { background: rgba(255,255,255,0.06); }
 
+/* Right-aligned month/year inside topbar */
+.nc-topbar-right {
+    margin-left: auto;
+    display:flex;
+    gap:12px;
+    align-items:center;
+    color: #000;
+}
+.nc-topbar-bs {
+    font-weight:700;
+    font-size: 16px;
+}
+.nc-topbar-ad {
+    font-size:13px;
+    color: #111827;
+}
+
 @media (max-width: 640px) {
-    .nc-topbar-btn { font-size: 14px; padding: 6px 8px; }
-    .nepali-calendar-container { padding-top: 56px; }
+    .nc-topbar-right { gap:8px; }
+    .nc-topbar-bs { font-size: 15px; }
+    .nc-topbar-ad { font-size: 12px; }
+}
+
+@media (max-width: 640px) {
+    .nc-topbar-btn { font-size: 18px; padding: 8px 10px; }
+    .nepali-calendar-container { padding-top: 64px; }
 }
 
 /* Day Tiles */
