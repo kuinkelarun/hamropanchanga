@@ -9,6 +9,7 @@ import { db } from './firebase';
 import CustomerDetail from './components/CustomerDetail';
 import AddCustomerForm from './components/AddCustomerForm';
 import LandingPage from './components/LandingPage';
+import AdminEditCards from './components/AdminEditCards';
 import { deleteDoc } from 'firebase/firestore';
 
 export default function App() {
@@ -196,6 +197,10 @@ export default function App() {
         });
     };
 
+    const handleAdminEditCards = () => {
+        setView('adminEditCards');
+    };
+
     // --- RENDER ---
     if (isLoading) {
         return <div className="min-h-screen flex items-center justify-center bg-gray-100">
@@ -229,7 +234,12 @@ export default function App() {
                     <div />
                     <div>
                         {user ? (
-                            <SettingsMenu user={user} onSignOut={handleSignOut} />
+                            <SettingsMenu 
+                                user={user} 
+                                onSignOut={handleSignOut} 
+                                isAdmin={isAdmin}
+                                onAdminEditCards={handleAdminEditCards}
+                            />
                         ) : (
                             <button
                                 onClick={async () => {
@@ -278,6 +288,14 @@ export default function App() {
                             onAddSuccess={handleAddCustomerSuccess}
                             onUpdateSuccess={handleUpdateCustomer}
                             onCancel={handleBackToList}
+                        />
+                    )}
+
+                    {view === 'adminEditCards' && (
+                        <AdminEditCards
+                            user={user}
+                            isAdmin={isAdmin}
+                            onBack={handleBackToList}
                         />
                     )}
                 </main>

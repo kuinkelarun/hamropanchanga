@@ -869,8 +869,9 @@
         /* Use more of the available width */
         width: 100%;
         max-width: 100%;
-        /* Optionally increase height utilization */
-        min-height: 85vh; /* Expand vertically to use most of screen */
+        /* Reduce height to prevent scroll flicker */
+        min-height: auto; /* Changed from 85vh to auto */
+        height: auto; /* Let content determine height */
         display: flex;
         flex-direction: column;
         box-shadow: none; /* Remove shadow on mobile */
@@ -960,14 +961,14 @@
         gap: 4px;
         /* Allow grid to expand and fill available space */
         flex: 1;
-        grid-auto-rows: minmax(60px, 1fr); /* Reduced from 70px for better proportions */
+        grid-auto-rows: minmax(52px, 1fr); /* Further reduced from 60px */
         padding: 0 4px 8px 4px; /* Small horizontal padding and bottom padding */
     }
     
     .nt-day-tile {
-        min-height: 60px; /* Reduced from 70px for better proportions */
+        min-height: 52px; /* Further reduced from 60px */
         max-height: none; /* Allow flexible height */
-        padding: 8px 6px; /* Better padding for touch */
+        padding: 6px 5px; /* Adjusted padding */
         border-radius: 8px;
         transition: background 0.08s ease, box-shadow 0.08s ease, transform 0.08s ease;
         /* Ensure content is well-spaced for touch interaction */
@@ -1029,7 +1030,8 @@
         border-radius: 0; /* Full edge-to-edge */
         /* Nearly full viewport coverage */
         width: 100%;
-        min-height: 90vh; /* Use even more vertical space */
+        min-height: auto; /* Changed from 90vh to auto */
+        height: auto; /* Let content determine height */
         display: flex;
         flex-direction: column;
         box-shadow: none;
@@ -1130,14 +1132,14 @@
     .nc-grid {
         gap: 3px; /* Slightly wider gaps for breathing room */
         flex: 1;
-        grid-auto-rows: minmax(55px, 1fr); /* Reduced from 65px for better proportions */
+        grid-auto-rows: minmax(48px, 1fr); /* Further reduced from 55px */
         padding: 0 3px 6px 3px; /* Minimal horizontal padding and bottom padding */
     }
     
     .nt-day-tile {
-        min-height: 55px; /* Reduced from 65px for better proportions */
+        min-height: 48px; /* Further reduced from 55px */
         max-height: none; /* Allow flexible height */
-        padding: 6px 4px; /* Adequate padding for touch */
+        padding: 5px 3px; /* Compact padding */
         border-radius: 6px;
         transition: background 0.08s ease, box-shadow 0.08s ease, transform 0.08s ease;
         display: flex;
@@ -1208,7 +1210,8 @@
         border-radius: 0; /* Complete edge-to-edge */
         /* Full viewport utilization */
         width: 100%;
-        min-height: 92vh; /* Maximum vertical coverage */
+        min-height: auto; /* Changed from 92vh to auto */
+        height: auto; /* Let content determine height */
         display: flex;
         flex-direction: column;
         box-shadow: none;
@@ -1316,14 +1319,14 @@
     .nc-grid {
         gap: 2px;
         flex: 1;
-        grid-auto-rows: minmax(52px, 1fr); /* Reduced from 60px for better proportions */
+        grid-auto-rows: minmax(45px, 1fr); /* Further reduced from 52px */
         padding: 0 2px 4px 2px; /* Absolute minimal padding */
     }
     
     .nt-day-tile {
-        min-height: 52px; /* Reduced from 60px for better proportions */
+        min-height: 45px; /* Further reduced from 52px */
         max-height: none; /* Allow flexible height */
-        padding: 5px 3px; /* Sufficient padding */
+        padding: 4px 2px; /* Very compact padding */
         transition: background 0.08s ease, box-shadow 0.08s ease, transform 0.08s ease;
         display: flex;
         flex-direction: column;

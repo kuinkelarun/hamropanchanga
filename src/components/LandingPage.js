@@ -4,6 +4,8 @@ import LandingPageEventsSection from './LandingPageEventsSection'; // Make sure 
 import './LandingPage.css';
 import heroAnimation from './hero-image.png';
 import NepaliCalendar from './NepaliCalendar';
+import Block1 from './Block1';
+import Footer from './Footer';
 import { signInWithGoogle } from '../firebase';
 
 const LandingPage = ({ user, customers, onSelectCustomer, onAddCustomer, events, familyMembers, onDoubleClickEvent, onEditCustomer, onDeleteCustomer }) => {
@@ -28,6 +30,9 @@ const LandingPage = ({ user, customers, onSelectCustomer, onAddCustomer, events,
                     </div>
                 </div>
             </div>
+
+            {/* Block 1: Horizontal Scrolling Cards - Visible to all users */}
+            <Block1 />
 
             {/* PAGE BODY: constrained width and centered */}
             <main className="page-body">
@@ -63,6 +68,9 @@ const LandingPage = ({ user, customers, onSelectCustomer, onAddCustomer, events,
                     )}
                 </div>
             </main>
+            
+            {/* Footer */}
+            <Footer />
         </div>
     );
 };
