@@ -22,6 +22,19 @@ html, body {
  * All previous mobile-specific CSS has been removed for a cleaner, more maintainable approach.
  */
 
+/* Remove padding from main element on mobile for full-width calendar */
+@media (max-width: 768px) {
+  main.p-4 {
+    padding: 0 !important;
+  }
+  
+  /* Also ensure the parent div has no constraints */
+  .min-h-screen.bg-gray-100 {
+    padding: 0;
+    margin: 0;
+  }
+}
+
 /* Default App.js styles (can be removed if not used) */
 .App-logo {
   height: 40vmin;
