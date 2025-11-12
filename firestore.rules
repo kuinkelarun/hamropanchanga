@@ -40,6 +40,14 @@ service cloud.firestore {
       allow read, write: if isAuthenticated();
     }
 
+    // Home cards collection - for managing Block1 feature cards
+    match /homeCards/{cardId} {
+      // Anyone can read published cards (for public display on landing page)
+      allow read: if resource.data.published == true;
+      // Only admins can read drafts and perform write operations
+      allow read, write: if isAdmin();
+    }
+
     // adminList controls which users are considered admins (bootstrap via console)
     match /adminList/{adminId} {
       // Allow a user to read their own admin doc, or allow admins to read any

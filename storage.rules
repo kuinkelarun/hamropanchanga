@@ -1,0 +1,29 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    
+    // Helper function to check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    // Helper function to check if user is admin
+    function isAdmin() {
+      return isAuthenticated() && (
+        request.auth.token.admin == true ||
+        firestore.exists(/databases/(default)/documents/adminList/$(request.auth.uid))
+      );
+    }
+    
+    // Home cards images - only admins can upload/delete
+    match /homeCards/{imageId} {
+      allow read: if true; // Anyone can read images
+      allow write: if isAdmin(); // Only admins can upload/delete
+    }
+    
+    // Default rule for all other storage paths
+    match /{allPaths=**} {
+      allow read, write: if isAuthenticated();
+    }
+  }
+}
