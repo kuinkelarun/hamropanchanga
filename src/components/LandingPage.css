@@ -4,6 +4,20 @@
     display: block; /* ensures it spans the viewport */
 }
 
+/* Force full viewport width on mobile - match header behavior */
+@media (max-width: 768px) {
+    .hero-full {
+        margin: 0 !important;
+        padding: 0 !important;
+        width: 100vw !important; /* Full viewport width */
+        position: relative;
+        left: 50%;
+        right: 50%;
+        margin-left: -50vw !important;
+        margin-right: -50vw !important;
+    }
+}
+
 /* When hero-section is placed inside .hero-full we want it to span edge-to-edge visually */
 .hero-full .hero-section {
     border-radius: 0;
@@ -26,8 +40,10 @@
 /* Remove padding on mobile for full-width calendar */
 @media (max-width: 768px) {
     .page-body {
-        padding: 0; /* Remove padding to allow full-width calendar */
-        margin: 1rem 0; /* Remove horizontal margin */
+        padding: 0 !important; /* Force remove all padding */
+        margin: 0 !important; /* Force remove all margins */
+        max-width: 100% !important; /* Ensure full width */
+        width: 100% !important;
     }
 }
 
@@ -87,36 +103,53 @@
     /* padding is now handled by the main element in App.js */
 }
 
+/* Remove all padding/margin from landing container on mobile */
+@media (max-width: 768px) {
+    .landing-container {
+        padding: 0;
+        margin: 0;
+    }
+}
+
 @media (max-width: 768px) {
     .hero-section {
         flex-direction: column;
         height: auto;
         padding: 1.5rem; /* Slightly reduced */
+        margin: 0 !important; /* Force remove margin for edge-to-edge */
+        border-radius: 0 !important; /* Force remove border radius for full-width */
+        width: 100% !important;
+    }
+    
+    .hero-section::before {
+        border-radius: 0 !important; /* Match hero section */
     }
 }
 
 @media (max-width: 480px) {
     .hero-section {
         padding: 0.75rem; /* Reduced hero padding */
-        margin-bottom: 0.75rem; /* Reduced margin */
-        border-radius: 10px; /* Slightly smaller radius */
+        margin: 0 !important; /* Force remove margin */
+        border-radius: 0 !important; /* Force full-width */
         height: auto;
+        width: 100% !important;
     }
     
     .hero-section::before {
-        border-radius: 10px;
+        border-radius: 0 !important; /* Force full-width */
     }
 }
 
 @media (max-width: 320px) {
     .hero-section {
         padding: 0.5rem;
-        margin-bottom: 0.5rem;
-        border-radius: 6px;
+        margin: 0 !important; /* Force remove margin */
+        border-radius: 0 !important; /* Force full-width */
+        width: 100% !important;
     }
     
     .hero-section::before {
-        border-radius: 6px;
+        border-radius: 0 !important; /* Force full-width */
     }
 }
 
@@ -239,7 +272,21 @@
 }
 
 /* Outer layout wrapper (no card visuals) */
-.single-container { padding: 0; border: 0; background: transparent; box-shadow: none; }
+.single-container { 
+    padding: 0; 
+    border: 0; 
+    background: transparent; 
+    box-shadow: none; 
+}
+
+/* Force full-width on mobile */
+@media (max-width: 768px) {
+    .single-container {
+        padding: 0 !important;
+        margin: 0 !important;
+        width: 100% !important;
+    }
+}
 
 /* Unified single-card style applied to each section wrapper */
 .section-card {
@@ -254,12 +301,18 @@
 /* Make calendar card full-width on mobile */
 @media (max-width: 768px) {
     .calendar-wrapper.section-card {
-        border-radius: 0; /* Remove rounded corners for edge-to-edge look */
-        border-left: none; /* Remove side borders */
-        border-right: none; /* Remove side borders */
-        padding: 0; /* Remove all padding */
-        margin-bottom: 0; /* Remove bottom margin */
-        box-shadow: none; /* Remove shadow for cleaner look */
+        border-radius: 0 !important; /* Remove rounded corners for edge-to-edge look */
+        border-left: none !important; /* Remove side borders */
+        border-right: none !important; /* Remove side borders */
+        padding: 0 !important; /* Remove all padding */
+        margin: 0 !important; /* Remove all margins */
+        box-shadow: none !important; /* Remove shadow for cleaner look */
+        width: 100vw !important; /* Full viewport width */
+        position: relative;
+        left: 50%;
+        right: 50%;
+        margin-left: -50vw !important;
+        margin-right: -50vw !important;
     }
     
     /* Keep card styling for other sections */
@@ -267,7 +320,7 @@
     .events-section.section-card {
         border-radius: 12px;
         padding: 1rem;
-        margin: 0 0.5rem 1.5rem 0.5rem; /* Add horizontal margins for other sections */
+        margin: 1rem 0.5rem 1.5rem 0.5rem; /* Add horizontal margins for other sections */
     }
 }
 

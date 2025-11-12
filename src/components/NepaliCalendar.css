@@ -59,6 +59,45 @@
 .nc-nav-btn .nc-label-hover { opacity: 0; }
 .nc-nav-btn:hover .nc-label-default { opacity: 0; /* nudge up 6px relative to centered position */ transform: translate(-50%, calc(-50% - 6px)); }
 .nc-nav-btn:hover .nc-label-hover { opacity: 1; /* ensure hover label stays centered vertically */ transform: translate(-50%, -50%); }
+
+/* Mobile: Always show month names, remove hover behavior, fix overlap */
+@media (max-width: 768px) {
+    .nc-nav-btn {
+        min-width: 100px;
+        padding: 6px 8px;
+        padding-left: 26px; /* Reduced left padding to prevent overlap */
+        padding-right: 26px; /* Reduced right padding to prevent overlap */
+        font-size: 11px; /* Smaller font for compact view */
+        height: 32px;
+    }
+    
+    /* Smaller arrows on mobile */
+    .nc-nav-btn .nc-arrow { 
+        font-size: 16px; /* Reduced arrow size */
+    }
+    .nc-arrow-left { left: 6px; } /* Move arrow closer to edge */
+    .nc-arrow-right { right: 6px; } /* Move arrow closer to edge */
+    
+    /* Always show month name (hover label), hide default label */
+    .nc-nav-btn .nc-label-default { 
+        opacity: 0;
+        display: none; /* Completely hide "Prev/Next" */
+    }
+    .nc-nav-btn .nc-label-hover { 
+        opacity: 1; /* Always show month name */
+        font-size: 10px; /* Smaller text for month name */
+    }
+    
+    /* Remove hover effects on mobile */
+    .nc-nav-btn:hover .nc-label-default { 
+        opacity: 0;
+        transform: translate(-50%, -50%); /* No animation */
+    }
+    .nc-nav-btn:hover .nc-label-hover { 
+        opacity: 1;
+        transform: translate(-50%, -50%); /* No animation */
+    }
+}
 .nc-center { text-align:center; }
 .nc-nepali { font-weight:700; font-size:18px; }
 .nc-english { color:#6b7280; font-size:13px; }
@@ -921,12 +960,12 @@
         gap: 4px;
         /* Allow grid to expand and fill available space */
         flex: 1;
-        grid-auto-rows: minmax(70px, 1fr); /* More flexible row sizing for better vertical fill */
+        grid-auto-rows: minmax(60px, 1fr); /* Reduced from 70px for better proportions */
         padding: 0 4px 8px 4px; /* Small horizontal padding and bottom padding */
     }
     
     .nt-day-tile {
-        min-height: 70px; /* Increased for better tap targets */
+        min-height: 60px; /* Reduced from 70px for better proportions */
         max-height: none; /* Allow flexible height */
         padding: 8px 6px; /* Better padding for touch */
         border-radius: 8px;
@@ -1026,9 +1065,24 @@
     
     .nc-nav-btn {
         padding: 5px 8px;
-        font-size: 11px;
+        font-size: 10px;
         flex-shrink: 0;
-        min-width: 50px;
+        min-width: 90px;
+        padding-left: 24px;
+        padding-right: 24px;
+        height: 30px;
+    }
+    
+    /* Smaller arrows for 480px */
+    .nc-nav-btn .nc-arrow { 
+        font-size: 14px;
+    }
+    .nc-arrow-left { left: 5px; }
+    .nc-arrow-right { right: 5px; }
+    
+    /* Month name styling */
+    .nc-nav-btn .nc-label-hover { 
+        font-size: 9px;
     }
     
     .nc-btn {
@@ -1076,12 +1130,12 @@
     .nc-grid {
         gap: 3px; /* Slightly wider gaps for breathing room */
         flex: 1;
-        grid-auto-rows: minmax(65px, 1fr); /* Flexible sizing to fill space */
+        grid-auto-rows: minmax(55px, 1fr); /* Reduced from 65px for better proportions */
         padding: 0 3px 6px 3px; /* Minimal horizontal padding and bottom padding */
     }
     
     .nt-day-tile {
-        min-height: 65px; /* Better tap target size */
+        min-height: 55px; /* Reduced from 65px for better proportions */
         max-height: none; /* Allow flexible height */
         padding: 6px 4px; /* Adequate padding for touch */
         border-radius: 6px;
@@ -1197,9 +1251,24 @@
     
     .nc-nav-btn {
         padding: 4px 6px;
-        font-size: 10px;
+        font-size: 9px;
         flex-shrink: 0;
-        min-width: 45px;
+        min-width: 80px;
+        padding-left: 22px;
+        padding-right: 22px;
+        height: 28px;
+    }
+    
+    /* Even smaller arrows for 420px */
+    .nc-nav-btn .nc-arrow { 
+        font-size: 13px;
+    }
+    .nc-arrow-left { left: 4px; }
+    .nc-arrow-right { right: 4px; }
+    
+    /* Month name styling */
+    .nc-nav-btn .nc-label-hover { 
+        font-size: 8px;
     }
     
     .nc-btn {
@@ -1247,12 +1316,12 @@
     .nc-grid {
         gap: 2px;
         flex: 1;
-        grid-auto-rows: minmax(60px, 1fr); /* Fill remaining space proportionally */
+        grid-auto-rows: minmax(52px, 1fr); /* Reduced from 60px for better proportions */
         padding: 0 2px 4px 2px; /* Absolute minimal padding */
     }
     
     .nt-day-tile {
-        min-height: 60px; /* Adequate tap target */
+        min-height: 52px; /* Reduced from 60px for better proportions */
         max-height: none; /* Allow flexible height */
         padding: 5px 3px; /* Sufficient padding */
         transition: background 0.08s ease, box-shadow 0.08s ease, transform 0.08s ease;
