@@ -23,6 +23,14 @@
     box-shadow: none;
 }
 
+/* Remove padding on mobile for full-width calendar */
+@media (max-width: 768px) {
+    .page-body {
+        padding: 0; /* Remove padding to allow full-width calendar */
+        margin: 1rem 0; /* Remove horizontal margin */
+    }
+}
+
 .hero-section {
     position: relative; /* Establishes a positioning context for children */
     display: flex; /* Use flexbox to position content horizontally */
@@ -241,6 +249,26 @@
     padding: 1.25rem 1.25rem 1.1rem; /* consistent internal spacing */
     box-shadow: 0 4px 12px rgba(15,23,42,0.05);
     margin-bottom: 1.4rem;
+}
+
+/* Make calendar card full-width on mobile */
+@media (max-width: 768px) {
+    .calendar-wrapper.section-card {
+        border-radius: 0; /* Remove rounded corners for edge-to-edge look */
+        border-left: none; /* Remove side borders */
+        border-right: none; /* Remove side borders */
+        padding: 0; /* Remove all padding */
+        margin-bottom: 0; /* Remove bottom margin */
+        box-shadow: none; /* Remove shadow for cleaner look */
+    }
+    
+    /* Keep card styling for other sections */
+    .branches-section.section-card,
+    .events-section.section-card {
+        border-radius: 12px;
+        padding: 1rem;
+        margin: 0 0.5rem 1.5rem 0.5rem; /* Add horizontal margins for other sections */
+    }
 }
 
 /* Remove margin from the last section */
