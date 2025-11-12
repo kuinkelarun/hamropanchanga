@@ -33,11 +33,12 @@ service cloud.firestore {
       allow read, write: if isAuthenticated() && (request.auth.uid == userId || isAdmin());
     }
 
-    // Tithis collection - allow authenticated users to read/write their own tithis
+    // Tithis collection - public read access, admin write access
     match /tithis/{tithiId} {
-      // For now, allow all authenticated users to read/write all tithis
-      // You can modify this later to be user-specific if needed
-      allow read, write: if isAuthenticated();
+      // Anyone can read tithis (calendar is shown on public landing page)
+      allow read: if true;
+      // Only admins can create/update/delete tithis
+      allow write: if isAdmin();
     }
 
     // Home cards collection - for managing Block1 feature cards
