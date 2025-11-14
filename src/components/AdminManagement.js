@@ -5,6 +5,30 @@ import * as XLSX from 'xlsx';
 import './AdminManagement.css';
 import NepaliDatePicker from './NepaliDatePicker';
 
+// Convert 24-hour time (HH:MM) to 12-hour format with AM/PM
+function formatTime12Hour(time24) {
+  if (!time24) return '';
+  const [hours, minutes] = time24.split(':').map(Number);
+  const period = hours >= 12 ? 'PM' : 'AM';
+  const hours12 = hours % 12 || 12;
+  return `${hours12}:${String(minutes).padStart(2, '0')} ${period}`;
+}
+
+// Convert 12-hour time with AM/PM to 24-hour format (HH:MM)
+function formatTime24Hour(time12) {
+  if (!time12) return '';
+  const match = time12.match(/(\d+):(\d+)\s*(AM|PM)/i);
+  if (!match) return time12; // Return as-is if format doesn't match
+  let hours = parseInt(match[1]);
+  const minutes = match[2];
+  const period = match[3].toUpperCase();
+  
+  if (period === 'PM' && hours !== 12) hours += 12;
+  if (period === 'AM' && hours === 12) hours = 0;
+  
+  return `${String(hours).padStart(2, '0')}:${minutes}`;
+}
+
 export default function AdminManagement({ user, isAdmin, onBack }) {
   const [activeTab, setActiveTab] = useState('tithis'); // 'tithis' or 'events'
   const [tithis, setTithis] = useState([]);
@@ -77,22 +101,73 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
     }
   }
 
-  // Generate Excel template for download
+  // Generate Excel template for download with data validation dropdowns
   function downloadTemplate() {
     const wb = XLSX.utils.book_new();
     
     if (activeTab === 'tithis') {
-      // Tithis template
+      // Tithis template with examples
       const wsData = [
         ['Name*', 'Pakshya*', 'Start Date* (YYYY-MM-DD)', 'Start Time* (HH:MM)', 'End Date* (YYYY-MM-DD)', 'End Time* (HH:MM)', 'Category (optional)'],
-        ['शुक्लपक्ष एकादशी', 'शुक्लपक्ष', '2025-11-15', '06:00', '2025-11-16', '18:00', 'Festival'],
-        ['कृष्णपक्ष अष्टमी', 'कृष्णपक्ष', '2025-11-20', '10:00', '2025-11-20', '22:00', ''],
+        ['एकादशी', 'शुक्लपक्ष', '2025-11-15', '06:00', '2025-11-16', '18:00', 'Festival'],
+        ['अष्टमी', 'कृष्णपक्ष', '2025-11-20', '10:00', '2025-11-20', '22:00', ''],
       ];
       const ws = XLSX.utils.aoa_to_sheet(wsData);
       ws['!cols'] = [{ wch: 25 }, { wch: 15 }, { wch: 25 }, { wch: 20 }, { wch: 25 }, { wch: 20 }, { wch: 20 }];
+      
+      // Add data validation for Pakshya column (column B, starting from row 2)
+      const pakshyaValidation = {
+        type: 'list',
+        allowBlank: false,
+        formula1: '"शुक्लपक्ष,कृष्णपक्ष"',
+        showErrorMessage: true,
+        errorTitle: 'Invalid Pakshya',
+        error: 'Please select either शुक्लपक्ष or कृष्णपक्ष'
+      };
+      
+      // Apply validation to first 1000 rows
+      if (!ws['!dataValidation']) ws['!dataValidation'] = [];
+      ws['!dataValidation'].push({
+        type: 'list',
+        allowBlank: false,
+        sqref: 'B2:B1000',
+        formulas: ['"शुक्लपक्ष,कृष्णपक्ष"']
+      });
+      
       XLSX.utils.book_append_sheet(wb, ws, 'Tithis');
+      
+      // Add reference sheet with all valid tithi names
+      const tithiReference = [
+        ['Pakshya Values', 'Shukla Pakshya Tithis', 'Krishna Pakshya Tithis'],
+        ['शुक्लपक्ष', 'प्रतिपदा', 'प्रतिपदा'],
+        ['कृष्णपक्ष', 'द्वितीया', 'द्वितीया'],
+        ['', 'तृतीया', 'तृतीया'],
+        ['', 'चतुर्थी', 'चतुर्थी'],
+        ['', 'पञ्चमी', 'पञ्चमी'],
+        ['', 'षष्ठी', 'षष्ठी'],
+        ['', 'सप्तमी', 'सप्तमी'],
+        ['', 'अष्टमी', 'अष्टमी'],
+        ['', 'नवमी', 'नवमी'],
+        ['', 'दशमी', 'दशमी'],
+        ['', 'एकादशी', 'एकादशी'],
+        ['', 'द्वादशी', 'द्वादशी'],
+        ['', 'त्रयोदशी', 'त्रयोदशी'],
+        ['', 'चतुर्दशी', 'चतुर्दशी'],
+        ['', 'पूर्णिमा', 'औंसी'],
+        ['', '', ''],
+        ['Instructions:', '', ''],
+        ['1. Enter only the Tithi name (e.g., एकादशी) in Name column', '', ''],
+        ['2. Select Pakshya from dropdown', '', ''],
+        ['3. Date format: YYYY-MM-DD (e.g., 2025-11-15)', '', ''],
+        ['4. Time format: HH:MM in 24-hour (e.g., 06:00, 18:00)', '', ''],
+        ['5. End Date can be same as Start Date or next day', '', ''],
+      ];
+      const wsRef = XLSX.utils.aoa_to_sheet(tithiReference);
+      wsRef['!cols'] = [{ wch: 20 }, { wch: 25 }, { wch: 25 }];
+      XLSX.utils.book_append_sheet(wb, wsRef, 'Reference');
+      
     } else {
-      // Events template
+      // Events template with validation
       const wsData = [
         ['Title*', 'Description', 'Date* (YYYY-MM-DD)', 'Is Public* (TRUE/FALSE)', 'Associated Person (optional)'],
         ['Family Gathering', 'Annual family reunion', '2025-12-25', 'TRUE', 'John Doe'],
@@ -100,7 +175,32 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
       ];
       const ws = XLSX.utils.aoa_to_sheet(wsData);
       ws['!cols'] = [{ wch: 25 }, { wch: 35 }, { wch: 25 }, { wch: 25 }, { wch: 25 }];
+      
+      // Add data validation for Is Public column (column D, starting from row 2)
+      if (!ws['!dataValidation']) ws['!dataValidation'] = [];
+      ws['!dataValidation'].push({
+        type: 'list',
+        allowBlank: false,
+        sqref: 'D2:D1000',
+        formulas: ['"TRUE,FALSE"']
+      });
+      
       XLSX.utils.book_append_sheet(wb, ws, 'Events');
+      
+      // Add reference sheet with instructions
+      const eventReference = [
+        ['Instructions:', ''],
+        ['1. Title is required - brief event name', ''],
+        ['2. Description is optional - detailed information', ''],
+        ['3. Date format: YYYY-MM-DD (e.g., 2025-12-25)', ''],
+        ['4. Is Public: Select TRUE or FALSE from dropdown', ''],
+        ['   - TRUE: Visible to all users', ''],
+        ['   - FALSE: Only visible to you', ''],
+        ['5. Associated Person is optional', ''],
+      ];
+      const wsRef = XLSX.utils.aoa_to_sheet(eventReference);
+      wsRef['!cols'] = [{ wch: 45 }, { wch: 20 }];
+      XLSX.utils.book_append_sheet(wb, wsRef, 'Reference');
     }
     
     const fileName = activeTab === 'tithis' ? 'Tithis_Template.xlsx' : 'Events_Template.xlsx';
@@ -283,8 +383,11 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
       if (errors.length > 0) {
         results.invalid.push({ row: rowNum, data: row, errors });
       } else {
+        // Combine pakshya and name for storage (user only enters tithi name, we prepend pakshya)
+        const fullName = name.startsWith(pakshya) ? name : `${pakshya} ${name}`;
+        
         const tithiData = {
-          name: `${pakshya} ${name.replace(pakshya, '').trim()}`,
+          name: fullName,
           startDate,
           startTime,
           endDate,
@@ -699,9 +802,9 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
                         <>
                           <td>{item.name}</td>
                           <td>{item.startDate}</td>
-                          <td>{item.startTime}</td>
+                          <td>{formatTime12Hour(item.startTime)}</td>
                           <td>{item.endDate}</td>
-                          <td>{item.endTime}</td>
+                          <td>{formatTime12Hour(item.endTime)}</td>
                           <td>{item.id ? '🔄 Update' : '✨ New'}</td>
                         </>
                       ) : (
@@ -833,9 +936,9 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
                         <>
                           <td>{tithi.name}</td>
                           <td>{tithi.startDate}</td>
-                          <td>{tithi.startTime}</td>
+                          <td>{formatTime12Hour(tithi.startTime)}</td>
                           <td>{tithi.endDate}</td>
-                          <td>{tithi.endTime}</td>
+                          <td>{formatTime12Hour(tithi.endTime)}</td>
                           <td>
                             <div className="action-buttons">
                               <button onClick={() => startEdit(tithi)} className="btn-edit">✏️</button>
