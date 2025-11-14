@@ -4,6 +4,7 @@ import { db } from '../firebase';
 import * as XLSX from 'xlsx';
 import './AdminManagement.css';
 import NepaliDatePicker from './NepaliDatePicker';
+import { convertAdToBs, toNepaliNumber, nepaliMonths } from '../utils/nepaliDateUtils';
 
 // Convert 24-hour time (HH:MM) to 12-hour format with AM/PM
 function formatTime12Hour(time24) {
@@ -39,6 +40,7 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
   const [validationResults, setValidationResults] = useState(null);
   const [previewData, setPreviewData] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
+  const [yearFilter, setYearFilter] = useState('all');
   const [monthFilter, setMonthFilter] = useState('all');
   const [editingId, setEditingId] = useState(null);
   const [editingData, setEditingData] = useState({});
@@ -50,6 +52,13 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
     loadTithis();
     loadEvents();
   }, [isAdmin]);
+
+  // Reset filters when switching tabs
+  useEffect(() => {
+    setSearchTerm('');
+    setYearFilter('all');
+    setMonthFilter('all');
+  }, [activeTab]);
 
   // Redirect if not admin
   if (!isAdmin) {
@@ -615,17 +624,30 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
     setEditingData(prev => ({ ...prev, [field]: value }));
   }
 
-  // Filter data based on search and month
+  // Convert AD date string (YYYY-MM-DD) to Nepali format (MM-DD-YYYY with Nepali numerals)
+  function formatDateToNepali(dateStr) {
+    if (!dateStr) return '';
+    const [year, month, day] = dateStr.split('-').map(Number);
+    const bs = convertAdToBs(year, month - 1, day); // month is 0-indexed in Date
+    return `${toNepaliNumber(bs.month).padStart(2, '०')}-${toNepaliNumber(bs.day).padStart(2, '०')}-${toNepaliNumber(bs.year)}`;
+  }
+
+  // Filter data based on search, year, and month
   const filteredTithis = tithis.filter(t => {
     const matchesSearch = t.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       t.startDate?.includes(searchTerm) ||
       t.endDate?.includes(searchTerm);
     
-    if (monthFilter === 'all') return matchesSearch;
+    if (yearFilter === 'all' && monthFilter === 'all') return matchesSearch;
     
-    // Extract year-month from startDate (YYYY-MM)
-    const tithiMonth = t.startDate?.substring(0, 7);
-    return matchesSearch && tithiMonth === monthFilter;
+    // Extract year-month from startDate
+    const [year, month] = t.startDate?.split('-') || [];
+    const bs = year && month ? convertAdToBs(parseInt(year), parseInt(month) - 1, 1) : null;
+    
+    let matchesYear = yearFilter === 'all' || (bs && bs.year.toString() === yearFilter);
+    let matchesMonth = monthFilter === 'all' || (bs && bs.month.toString() === monthFilter);
+    
+    return matchesSearch && matchesYear && matchesMonth;
   });
 
   const filteredEvents = events.filter(e => {
@@ -633,26 +655,34 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
       e.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       e.dateKey?.includes(searchTerm);
     
-    if (monthFilter === 'all') return matchesSearch;
+    if (yearFilter === 'all' && monthFilter === 'all') return matchesSearch;
     
-    // Extract year-month from dateKey (YYYY-MM)
-    const eventMonth = e.dateKey?.substring(0, 7);
-    return matchesSearch && eventMonth === monthFilter;
+    // Extract year-month from dateKey
+    const [year, month] = e.dateKey?.split('-') || [];
+    const bs = year && month ? convertAdToBs(parseInt(year), parseInt(month) - 1, 1) : null;
+    
+    let matchesYear = yearFilter === 'all' || (bs && bs.year.toString() === yearFilter);
+    let matchesMonth = monthFilter === 'all' || (bs && bs.month.toString() === monthFilter);
+    
+    return matchesSearch && matchesYear && matchesMonth;
   });
 
-  // Get unique months from data for filter dropdown
-  const getUniqueMonths = () => {
-    const months = new Set();
-    if (activeTab === 'tithis') {
-      tithis.forEach(t => {
-        if (t.startDate) months.add(t.startDate.substring(0, 7));
-      });
-    } else {
-      events.forEach(e => {
-        if (e.dateKey) months.add(e.dateKey.substring(0, 7));
-      });
-    }
-    return Array.from(months).sort().reverse(); // Most recent first
+  // Get unique BS years from data
+  const getUniqueYears = () => {
+    const years = new Set();
+    const dataSource = activeTab === 'tithis' ? tithis : events;
+    const dateField = activeTab === 'tithis' ? 'startDate' : 'dateKey';
+    
+    dataSource.forEach(item => {
+      const dateStr = item[dateField];
+      if (dateStr) {
+        const [year, month, day] = dateStr.split('-').map(Number);
+        const bs = convertAdToBs(year, month - 1, day);
+        years.add(bs.year);
+      }
+    });
+    
+    return Array.from(years).sort((a, b) => b - a); // Most recent first
   };
 
   return (
@@ -849,14 +879,31 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
           />
           
           <select
+            value={yearFilter}
+            onChange={(e) => {
+              setYearFilter(e.target.value);
+              setMonthFilter('all'); // Reset month when year changes
+            }}
+            className="year-filter"
+          >
+            <option value="all">सबै वर्ष (All Years)</option>
+            {getUniqueYears().map(year => (
+              <option key={year} value={year}>
+                {toNepaliNumber(year)}
+              </option>
+            ))}
+          </select>
+
+          <select
             value={monthFilter}
             onChange={(e) => setMonthFilter(e.target.value)}
             className="month-filter"
+            disabled={yearFilter === 'all'}
           >
-            <option value="all">All Months</option>
-            {getUniqueMonths().map(month => (
-              <option key={month} value={month}>
-                {new Date(month + '-01').toLocaleDateString('en-US', { year: 'numeric', month: 'long' })}
+            <option value="all">सबै महिना (All Months)</option>
+            {nepaliMonths.map((month, idx) => (
+              <option key={idx + 1} value={idx + 1}>
+                {month}
               </option>
             ))}
           </select>
@@ -935,9 +982,9 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
                         // View mode
                         <>
                           <td>{tithi.name}</td>
-                          <td>{tithi.startDate}</td>
+                          <td>{formatDateToNepali(tithi.startDate)}</td>
                           <td>{formatTime12Hour(tithi.startTime)}</td>
-                          <td>{tithi.endDate}</td>
+                          <td>{formatDateToNepali(tithi.endDate)}</td>
                           <td>{formatTime12Hour(tithi.endTime)}</td>
                           <td>
                             <div className="action-buttons">
@@ -1001,7 +1048,7 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
                         <>
                           <td>{event.title}</td>
                           <td>{event.description}</td>
-                          <td>{event.dateKey}</td>
+                          <td>{formatDateToNepali(event.dateKey)}</td>
                           <td>{event.isPublic ? '✅' : '❌'}</td>
                           <td>{event.createdByAdmin ? '✅' : '❌'}</td>
                           <td>
@@ -1025,7 +1072,7 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
         <div className="table-footer">
           <p>
             Total: {activeTab === 'tithis' ? filteredTithis.length : filteredEvents.length} records
-            {(searchTerm || monthFilter !== 'all') && ` (filtered from ${activeTab === 'tithis' ? tithis.length : events.length})`}
+            {(searchTerm || yearFilter !== 'all' || monthFilter !== 'all') && ` (filtered from ${activeTab === 'tithis' ? tithis.length : events.length})`}
           </p>
         </div>
       </div>

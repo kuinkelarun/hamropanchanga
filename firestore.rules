@@ -73,5 +73,13 @@ service cloud.firestore {
       // Only admins can create/update/delete adminList entries
       allow create, update, delete: if isAdmin();
     }
+
+    // Site settings - for managing global settings like Block 1 visibility
+    match /siteSettings/{settingId} {
+      // Anyone can read settings (for public display preferences)
+      allow read: if true;
+      // Only admins can modify settings
+      allow write: if isAdmin();
+    }
   }
 }
