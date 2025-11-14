@@ -1,17 +1,17 @@
 import React, { useState, useEffect } from 'react';
+import { collection, query, where, onSnapshot, doc, getDoc, setDoc, updateDoc, addDoc, deleteDoc } from 'firebase/firestore';
 import { onAuthStateChanged, signOut, getIdTokenResult } from 'firebase/auth';
-import { auth, signInWithGoogle } from './firebase';
+import { auth, signInWithGoogle, db } from './firebase';
 import { SettingsProvider } from './contexts/SettingsContext';
 import SettingsMenu from './components/SettingsMenu';
-import { collection, query, where, onSnapshot, getDoc, addDoc, updateDoc, doc } from 'firebase/firestore';
-import { db } from './firebase';
 // CustomerList is rendered inside LandingPage; App does not use it directly here
 import CustomerDetail from './components/CustomerDetail';
 import AddCustomerForm from './components/AddCustomerForm';
 import LandingPage from './components/LandingPage';
 import AdminEditCards from './components/AdminEditCards';
 import AdminManagement from './components/AdminManagement';
-import { deleteDoc } from 'firebase/firestore';
+import { useUserPermissions } from './hooks/usePermissions';
+import { PERMISSIONS } from './constants/roles';
 
 export default function App() {
     // STATE MANAGEMENT
@@ -23,13 +23,93 @@ export default function App() {
     const [isAdmin, setIsAdmin] = useState(false);
     const [error, setError] = useState(null);
 
+    // Use the new permissions hook
+    const { 
+        hasPermission, 
+        isAdmin: isAdminFromHook, 
+        isSuperUser,
+        loading: permissionsLoading 
+    } = useUserPermissions(user);
+
     // --- HOOKS ---
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
             if (currentUser) {
                 setUser(currentUser);
 
-                // Check adminList collection in Firestore for admin status (no-cost server-side APIs required)
+                // STEP 1: Check if user has a pending invitation and process it
+                try {
+                    const rawEmail = currentUser.email || '';
+                    const lowerEmail = rawEmail.toLowerCase();
+                    console.log('Processing potential invitation for', rawEmail, 'lower:', lowerEmail);
+
+                    // Try both possible document IDs: lowercased email and raw email
+                    const invitationRefs = [
+                        doc(db, 'userInvitations', lowerEmail),
+                        doc(db, 'userInvitations', rawEmail)
+                    ];
+
+                    let invitationSnap = null;
+                    let invitationRefUsed = null;
+
+                    for (const ref of invitationRefs) {
+                        try {
+                            const snap = await getDoc(ref);
+                            if (snap.exists()) {
+                                invitationSnap = snap;
+                                invitationRefUsed = ref;
+                                break;
+                            }
+                        } catch (readErr) {
+                            // Log read error for diagnostics but continue to try other refs
+                            console.warn('Invitation read attempt failed for', ref.path, readErr.code, readErr.message);
+                        }
+                    }
+
+                    if (invitationSnap && invitationSnap.exists() && !invitationSnap.data().processed) {
+                        const invitationData = invitationSnap.data();
+                        console.log('Found invitation doc (using):', invitationRefUsed.path, invitationData);
+
+                        const userDocRef = doc(db, 'users', currentUser.uid);
+
+                        await setDoc(userDocRef, {
+                            email: currentUser.email,
+                            displayName: currentUser.displayName || invitationData.displayName || '',
+                            role: invitationData.role,
+                            permissions: invitationData.permissions,
+                            active: true,
+                            createdAt: new Date().toISOString(),
+                            updatedAt: new Date().toISOString()
+                        });
+
+                        // If invited as admin, also add to adminList
+                        if (invitationData.role === 'admin') {
+                            const adminDocRef = doc(db, 'adminList', currentUser.uid);
+                            await setDoc(adminDocRef, {
+                                email: currentUser.email,
+                                addedAt: new Date().toISOString()
+                            });
+                        }
+
+                        // Mark invitation as processed
+                        try {
+                            await updateDoc(invitationRefUsed, {
+                                processed: true,
+                                processedAt: new Date().toISOString(),
+                                processedUid: currentUser.uid
+                            });
+                            console.log('User invitation processed successfully for', currentUser.email);
+                        } catch (udErr) {
+                            console.error('Failed to mark invitation processed for', invitationRefUsed.path, udErr.code, udErr.message);
+                        }
+                    } else {
+                        console.log('No pending invitation found for', rawEmail);
+                    }
+                } catch (err) {
+                    console.error('Error processing user invitation:', err.code || err.message || err);
+                }
+
+                // STEP 2: Check adminList collection in Firestore for admin status (no-cost server-side APIs required)
                 try {
                     // First check adminList/{uid} doc existence (admin bootstrap: create this doc via Firestore console for initial admin)
                     const adminDocRef = doc(db, 'adminList', currentUser.uid);
@@ -74,7 +154,10 @@ export default function App() {
 
         setIsLoading(true);
         let q;
-        if (isAdmin) {
+        
+        // Admins can see all customers (have viewAllCustomers permission)
+        // Super Users and regular users can only see their own customers
+        if (isAdmin || hasPermission(PERMISSIONS.VIEW_ALL_CUSTOMERS)) {
             q = collection(db, 'customers');
         } else {
             q = query(collection(db, 'customers'), where('userId', '==', user.uid));
@@ -93,7 +176,7 @@ export default function App() {
             setIsLoading(false);
         });
         return () => unsubscribe();
-    }, [user, isAdmin]);
+    }, [user, isAdmin, hasPermission]);
 
     // --- HANDLERS ---
     const handleSelectCustomer = async (customer) => {
