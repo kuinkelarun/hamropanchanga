@@ -1064,25 +1064,21 @@ export default function NepaliCalendar({ user: propUser, isAdmin }) {
       return `${tithi.startTime} — ${tithi.endTime}`;
     }
 
-    const startDateObj = new Date(tithi.startDate);
-    const endDateObj = new Date(tithi.endDate);
+    // Parse start and end dates
+    const [startY, startM, startD] = tithi.startDate.split('-').map(Number);
+    const [endY, endM, endD] = tithi.endDate.split('-').map(Number);
     
-    // Check if single day
-    const isSingleDay = tithi.startDate === tithi.endDate;
+    // Convert to Nepali dates
+    const startBs = convertAdToBs(startY, startM - 1, startD);
+    const endBs = convertAdToBs(endY, endM - 1, endD);
     
-    if (isSingleDay) {
-      // Single day: just show times
-      return `${tithi.startTime} — ${tithi.endTime}`;
-    }
-
-    // Multi-day: show full date-time ranges
-    const startMonth = englishMonths[startDateObj.getMonth()];
-    const startDay = startDateObj.getDate();
-    const endMonth = englishMonths[endDateObj.getMonth()];
-    const endDay = endDateObj.getDate();
+    // Format start date-time in Nepali
+    const startDateStr = `${nepaliMonths[startBs.month - 1]} ${toNepaliNumber(startBs.day)}, ${toNepaliNumber(startBs.year)}`;
+    const endDateStr = `${nepaliMonths[endBs.month - 1]} ${toNepaliNumber(endBs.day)}, ${toNepaliNumber(endBs.year)}`;
     
-    // Format: "Nov 11, 10:00 PM - Nov 12, 9:45 PM"
-    return `${startMonth} ${startDay}, ${tithi.startTime} — ${endMonth} ${endDay}, ${tithi.endTime}`;
+    // Always show full date-time format for consistency
+    // Format: "कात्तिक २७, २०८२, 06:00 — कात्तिक २८, २०८२, 18:00"
+    return `${startDateStr}, ${tithi.startTime} — ${endDateStr}, ${tithi.endTime}`;
   };
 
   function renderDayTiles(){
@@ -1701,22 +1697,65 @@ export default function NepaliCalendar({ user: propUser, isAdmin }) {
                 </div>
               </div>
 
+              {/* Quick Actions for Date Selection */}
+              <div style={{ marginBottom: '1rem', display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                <button 
+                  type="button"
+                  onClick={() => {
+                    setStartDate(activeDate);
+                    setEndDate(activeDate);
+                  }}
+                  style={{ 
+                    padding: '0.25rem 0.75rem', 
+                    fontSize: '0.85rem',
+                    background: '#e5e7eb',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '4px',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Same Day
+                </button>
+                <button 
+                  type="button"
+                  onClick={() => {
+                    if (!activeDate) return;
+                    const date = new Date(activeDate + 'T00:00:00');
+                    date.setDate(date.getDate() + 1);
+                    const nextDay = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+                    setStartDate(activeDate);
+                    setEndDate(nextDay);
+                  }}
+                  style={{ 
+                    padding: '0.25rem 0.75rem', 
+                    fontSize: '0.85rem',
+                    background: '#e5e7eb',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '4px',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Extends to Next Day
+                </button>
+              </div>
+
               {/* Date Range Fields - Start */}
               <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1rem' }}>
                 <div style={{ flex: 1 }}>
                   <label className="nc-label">Start Date *</label>
-                  <div style={{ 
-                    padding: '0.5rem', 
-                    background: '#f3f4f6', 
-                    borderRadius: '4px',
-                    fontSize: '0.95rem',
-                    color: '#374151'
-                  }}>
+                  <input
+                    type="date"
+                    value={startDate}
+                    onChange={e => setStartDate(e.target.value)}
+                    className="nc-input"
+                    required
+                  />
+                  <div style={{ fontSize: '0.8rem', color: '#6b7280', marginTop: '0.25rem' }}>
                     {(() => {
-                      if (!startDate) return 'No date selected';
+                      if (!startDate) return '';
                       const [y, m, d] = startDate.split('-').map(Number);
                       const bs = convertAdToBs(y, m - 1, d);
-                      return `${nepaliMonths[bs.month - 1]} ${toNepaliNumber(bs.day)}, ${toNepaliNumber(bs.year)} (AD: ${startDate})`;
+                      return `BS: ${nepaliMonths[bs.month - 1]} ${toNepaliNumber(bs.day)}, ${toNepaliNumber(bs.year)}`;
                     })()}
                   </div>
                 </div>
@@ -1738,18 +1777,19 @@ export default function NepaliCalendar({ user: propUser, isAdmin }) {
               <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1rem' }}>
                 <div style={{ flex: 1 }}>
                   <label className="nc-label">End Date *</label>
-                  <div style={{ 
-                    padding: '0.5rem', 
-                    background: '#f3f4f6', 
-                    borderRadius: '4px',
-                    fontSize: '0.95rem',
-                    color: '#374151'
-                  }}>
+                  <input
+                    type="date"
+                    value={endDate}
+                    onChange={e => setEndDate(e.target.value)}
+                    className="nc-input"
+                    required
+                  />
+                  <div style={{ fontSize: '0.8rem', color: '#6b7280', marginTop: '0.25rem' }}>
                     {(() => {
-                      if (!endDate) return 'No date selected';
+                      if (!endDate) return '';
                       const [y, m, d] = endDate.split('-').map(Number);
                       const bs = convertAdToBs(y, m - 1, d);
-                      return `${nepaliMonths[bs.month - 1]} ${toNepaliNumber(bs.day)}, ${toNepaliNumber(bs.year)} (AD: ${endDate})`;
+                      return `BS: ${nepaliMonths[bs.month - 1]} ${toNepaliNumber(bs.day)}, ${toNepaliNumber(bs.year)}`;
                     })()}
                   </div>
                 </div>
@@ -1766,6 +1806,20 @@ export default function NepaliCalendar({ user: propUser, isAdmin }) {
                   />
                 </div>
               </div>
+
+              {/* Multi-day indicator */}
+              {startDate && endDate && startDate !== endDate && (
+                <div style={{ 
+                  padding: '0.5rem', 
+                  background: '#dbeafe', 
+                  borderLeft: '3px solid #3b82f6',
+                  borderRadius: '4px',
+                  fontSize: '0.85rem',
+                  marginBottom: '1rem'
+                }}>
+                  ℹ️ This Tithi spans multiple days and will appear on all day cards from {startDate} to {endDate}
+                </div>
+              )}
 
               {validation && <div className="nc-validation">{validation}</div>}
               {!user && !authLoading && <div className="nc-validation">Please log in to add tithis</div>}
