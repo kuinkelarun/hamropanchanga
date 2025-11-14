@@ -1,10 +1,16 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { collection, getDocs, deleteDoc, doc, writeBatch, query, orderBy, updateDoc } from 'firebase/firestore';
+import { collection, getDocs, deleteDoc, doc, writeBatch, query, orderBy, updateDoc, where, addDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import * as XLSX from 'xlsx';
 import './AdminManagement.css';
 import NepaliDatePicker from './NepaliDatePicker';
-import { convertAdToBs, toNepaliNumber, nepaliMonths } from '../utils/nepaliDateUtils';
+import { convertAdToBs, toNepaliNumber, nepaliMonths, parseNepaliDate, formatAdDateToNepaliStringWithNumerals } from '../utils/nepaliDateUtils';
+
+// Tithi options for dropdown
+const allTithis = [
+  "प्रतिपदा", "द्वितीया", "तृतीया", "चतुर्थी", "पञ्चमी", "षष्ठी", "सप्तमी", 
+  "अष्टमी", "नवमी", "दशमी", "एकादशी", "द्वादशी", "त्रयोदशी", "चतुर्दशी", "पूर्णिमा", "औंसी"
+];
 
 // Convert 24-hour time (HH:MM) to 12-hour format with AM/PM
 function formatTime12Hour(time24) {
@@ -44,6 +50,8 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
   const [monthFilter, setMonthFilter] = useState('all');
   const [editingId, setEditingId] = useState(null);
   const [editingData, setEditingData] = useState({});
+  const [isAddingNew, setIsAddingNew] = useState(false);
+  const [newRecordData, setNewRecordData] = useState({});
   const fileInputRef = useRef(null);
 
   // Load existing data on mount
@@ -115,16 +123,17 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
     const wb = XLSX.utils.book_new();
     
     if (activeTab === 'tithis') {
-      // Tithis template with examples
+      // Tithis template with examples using Nepali dates
       const wsData = [
-        ['Name*', 'Pakshya*', 'Start Date* (YYYY-MM-DD)', 'Start Time* (HH:MM)', 'End Date* (YYYY-MM-DD)', 'End Time* (HH:MM)', 'Category (optional)'],
-        ['एकादशी', 'शुक्लपक्ष', '2025-11-15', '06:00', '2025-11-16', '18:00', 'Festival'],
-        ['अष्टमी', 'कृष्णपक्ष', '2025-11-20', '10:00', '2025-11-20', '22:00', ''],
+        ['Tithi*', 'Pakshya*', 'Start Date* (MM-DD-YYYY Nepali)', 'Start Time* (HH:MM)', 'End Date* (MM-DD-YYYY Nepali)', 'End Time* (HH:MM)', 'AddOrReplace*', 'Category (optional)'],
+        ['एकादशी', 'शुक्लपक्ष', '०७-३१-२०८२', '06:00', '०८-०१-२०८२', '18:00', 'ADD', 'Festival'],
+        ['अष्टमी', 'कृष्णपक्ष', '०८-०६-२०८२', '10:00', '०८-०६-२०८२', '22:00', 'ADD', ''],
       ];
       const ws = XLSX.utils.aoa_to_sheet(wsData);
-      ws['!cols'] = [{ wch: 25 }, { wch: 15 }, { wch: 25 }, { wch: 20 }, { wch: 25 }, { wch: 20 }, { wch: 20 }];
+      ws['!cols'] = [{ wch: 25 }, { wch: 15 }, { wch: 30 }, { wch: 20 }, { wch: 30 }, { wch: 20 }, { wch: 15 }, { wch: 20 }];
       
       // Add data validation for Pakshya column (column B, starting from row 2)
+      // eslint-disable-next-line no-unused-vars
       const pakshyaValidation = {
         type: 'list',
         allowBlank: false,
@@ -141,6 +150,12 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
         allowBlank: false,
         sqref: 'B2:B1000',
         formulas: ['"शुक्लपक्ष,कृष्णपक्ष"']
+      });
+      ws['!dataValidation'].push({
+        type: 'list',
+        allowBlank: false,
+        sqref: 'G2:G1000',
+        formulas: ['"ADD,REPLACE"']
       });
       
       XLSX.utils.book_append_sheet(wb, ws, 'Tithis');
@@ -165,33 +180,40 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
         ['', 'पूर्णिमा', 'औंसी'],
         ['', '', ''],
         ['Instructions:', '', ''],
-        ['1. Enter only the Tithi name (e.g., एकादशी) in Name column', '', ''],
+        ['1. Enter only the Tithi name (e.g., एकादशी) in Tithi column', '', ''],
         ['2. Select Pakshya from dropdown', '', ''],
-        ['3. Date format: YYYY-MM-DD (e.g., 2025-11-15)', '', ''],
+        ['3. Date format: MM-DD-YYYY Nepali (e.g., ०७-३१-२०८२)', '', ''],
         ['4. Time format: HH:MM in 24-hour (e.g., 06:00, 18:00)', '', ''],
         ['5. End Date can be same as Start Date or next day', '', ''],
+        ['6. AddOrReplace: ADD (append) or REPLACE (delete existing for date & add new)', '', ''],
       ];
       const wsRef = XLSX.utils.aoa_to_sheet(tithiReference);
       wsRef['!cols'] = [{ wch: 20 }, { wch: 25 }, { wch: 25 }];
       XLSX.utils.book_append_sheet(wb, wsRef, 'Reference');
       
     } else {
-      // Events template with validation
+      // Events template with validation using Nepali dates
       const wsData = [
-        ['Title*', 'Description', 'Date* (YYYY-MM-DD)', 'Is Public* (TRUE/FALSE)', 'Associated Person (optional)'],
-        ['Family Gathering', 'Annual family reunion', '2025-12-25', 'TRUE', 'John Doe'],
-        ['Birthday Celebration', 'Grandmother\'s birthday', '2025-12-01', 'FALSE', 'Mary Smith'],
+        ['Title*', 'Description', 'Date* (MM-DD-YYYY Nepali)', 'Is Public* (TRUE/FALSE)', 'AddOrReplace*', 'Associated Person (optional)'],
+        ['Family Gathering', 'Annual family reunion', '०९-१०-२०८२', 'TRUE', 'ADD', 'John Doe'],
+        ['Birthday Celebration', 'Grandmother\'s birthday', '०८-१६-२०८२', 'FALSE', 'ADD', 'Mary Smith'],
       ];
       const ws = XLSX.utils.aoa_to_sheet(wsData);
-      ws['!cols'] = [{ wch: 25 }, { wch: 35 }, { wch: 25 }, { wch: 25 }, { wch: 25 }];
+      ws['!cols'] = [{ wch: 25 }, { wch: 35 }, { wch: 30 }, { wch: 25 }, { wch: 15 }, { wch: 25 }];
       
-      // Add data validation for Is Public column (column D, starting from row 2)
+      // Add data validation for Is Public column (column D) and AddOrReplace column (column E)
       if (!ws['!dataValidation']) ws['!dataValidation'] = [];
       ws['!dataValidation'].push({
         type: 'list',
         allowBlank: false,
         sqref: 'D2:D1000',
         formulas: ['"TRUE,FALSE"']
+      });
+      ws['!dataValidation'].push({
+        type: 'list',
+        allowBlank: false,
+        sqref: 'E2:E1000',
+        formulas: ['"ADD,REPLACE"']
       });
       
       XLSX.utils.book_append_sheet(wb, ws, 'Events');
@@ -201,11 +223,12 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
         ['Instructions:', ''],
         ['1. Title is required - brief event name', ''],
         ['2. Description is optional - detailed information', ''],
-        ['3. Date format: YYYY-MM-DD (e.g., 2025-12-25)', ''],
+        ['3. Date format: MM-DD-YYYY Nepali (e.g., ०९-१०-२०८२)', ''],
         ['4. Is Public: Select TRUE or FALSE from dropdown', ''],
         ['   - TRUE: Visible to all users', ''],
         ['   - FALSE: Only visible to you', ''],
-        ['5. Associated Person is optional', ''],
+        ['5. AddOrReplace: ADD (append) or REPLACE (delete existing for date & add new)', ''],
+        ['6. Associated Person is optional', ''],
       ];
       const wsRef = XLSX.utils.aoa_to_sheet(eventReference);
       wsRef['!cols'] = [{ wch: 45 }, { wch: 20 }];
@@ -223,38 +246,43 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
     
     if (activeTab === 'tithis') {
       const wsData = [
-        ['ID', 'Name', 'Pakshya', 'Start Date', 'Start Time', 'End Date', 'End Time', 'Created At'],
-        ...tithis.map(t => [
-          t.id,
-          t.name || '',
-          t.name?.split(' ')[0] || '',
-          t.startDate || '',
-          t.startTime || '',
-          t.endDate || '',
-          t.endTime || '',
-          t.createdAt || ''
-        ])
+        ['ID', 'Tithi', 'Pakshya', 'Start Date (Nepali)', 'Start Time', 'End Date (Nepali)', 'End Time', 'Created At'],
+        ...tithis.map(t => {
+          const nameParts = (t.name || '').split(' ');
+          const pakshya = nameParts[0] || '';
+          const tithi = nameParts.slice(1).join(' ') || t.name || '';
+          return [
+            t.id,
+            tithi,
+            pakshya,
+            formatAdDateToNepaliStringWithNumerals(t.startDate),
+            t.startTime || '',
+            formatAdDateToNepaliStringWithNumerals(t.endDate),
+            t.endTime || '',
+            t.createdAt || ''
+          ];
+        })
       ];
       const ws = XLSX.utils.aoa_to_sheet(wsData);
-      ws['!cols'] = [{ wch: 25 }, { wch: 25 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 25 }];
+      ws['!cols'] = [{ wch: 25 }, { wch: 20 }, { wch: 15 }, { wch: 20 }, { wch: 15 }, { wch: 20 }, { wch: 15 }, { wch: 25 }];
       XLSX.utils.book_append_sheet(wb, ws, 'Tithis');
       XLSX.writeFile(wb, 'Tithis_Export.xlsx');
       setUploadStatus(`✅ Exported ${tithis.length} tithis to Tithis_Export.xlsx`);
     } else {
       const wsData = [
-        ['ID', 'Title', 'Description', 'Date', 'Is Public', 'Created By Admin', 'Created At'],
+        ['ID', 'Title', 'Description', 'Date (Nepali)', 'Is Public', 'Created By Admin', 'Created At'],
         ...events.map(e => [
           e.id,
           e.title || '',
           e.description || '',
-          e.dateKey || '',
+          formatAdDateToNepaliStringWithNumerals(e.dateKey),
           e.isPublic ? 'TRUE' : 'FALSE',
           e.createdByAdmin ? 'TRUE' : 'FALSE',
           e.createdAt || ''
         ])
       ];
       const ws = XLSX.utils.aoa_to_sheet(wsData);
-      ws['!cols'] = [{ wch: 25 }, { wch: 25 }, { wch: 40 }, { wch: 15 }, { wch: 12 }, { wch: 18 }, { wch: 25 }];
+      ws['!cols'] = [{ wch: 25 }, { wch: 25 }, { wch: 40 }, { wch: 20 }, { wch: 12 }, { wch: 18 }, { wch: 25 }];
       XLSX.utils.book_append_sheet(wb, ws, 'Events');
       XLSX.writeFile(wb, 'Events_Export.xlsx');
       setUploadStatus(`✅ Exported ${events.length} events to Events_Export.xlsx`);
@@ -347,32 +375,41 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
       const rowNum = index + 2; // +2 because Excel starts at 1 and we have header row
 
       // Required fields
-      const name = row['Name*']?.toString().trim();
+      const tithi = row['Tithi*']?.toString().trim();
       const pakshya = row['Pakshya*']?.toString().trim();
-      const startDate = row['Start Date* (YYYY-MM-DD)']?.toString().trim();
+      const startDateRaw = row['Start Date* (MM-DD-YYYY Nepali)']?.toString().trim();
       const startTime = row['Start Time* (HH:MM)']?.toString().trim();
-      const endDate = row['End Date* (YYYY-MM-DD)']?.toString().trim();
+      const endDateRaw = row['End Date* (MM-DD-YYYY Nepali)']?.toString().trim();
       const endTime = row['End Time* (HH:MM)']?.toString().trim();
+      const addOrReplace = row['AddOrReplace*']?.toString().trim().toUpperCase();
 
-      if (!name) errors.push('Name is required');
+      if (!tithi) errors.push('Tithi is required');
       if (!pakshya) errors.push('Pakshya is required');
-      if (!startDate) errors.push('Start Date is required');
+      if (!startDateRaw) errors.push('Start Date is required');
       if (!startTime) errors.push('Start Time is required');
-      if (!endDate) errors.push('End Date is required');
+      if (!endDateRaw) errors.push('End Date is required');
       if (!endTime) errors.push('End Time is required');
+      if (!addOrReplace) errors.push('AddOrReplace is required');
 
       // Validate pakshya value
       if (pakshya && pakshya !== 'शुक्लपक्ष' && pakshya !== 'कृष्णपक्ष') {
         errors.push('Pakshya must be either शुक्लपक्ष or कृष्णपक्ष');
       }
 
-      // Validate date format
-      const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
-      if (startDate && !dateRegex.test(startDate)) {
-        errors.push('Start Date must be in YYYY-MM-DD format');
+      // Validate AddOrReplace value
+      if (addOrReplace && addOrReplace !== 'ADD' && addOrReplace !== 'REPLACE') {
+        errors.push('AddOrReplace must be either ADD or REPLACE');
       }
-      if (endDate && !dateRegex.test(endDate)) {
-        errors.push('End Date must be in YYYY-MM-DD format');
+
+      // Parse Nepali dates to AD format
+      const startDate = startDateRaw ? parseNepaliDate(startDateRaw) : null;
+      const endDate = endDateRaw ? parseNepaliDate(endDateRaw) : null;
+
+      if (startDateRaw && !startDate) {
+        errors.push('Start Date must be in MM-DD-YYYY format (Nepali)');
+      }
+      if (endDateRaw && !endDate) {
+        errors.push('End Date must be in MM-DD-YYYY format (Nepali)');
       }
 
       // Validate time format
@@ -384,7 +421,7 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
         errors.push('End Time must be in HH:MM format');
       }
 
-      // Validate date range
+      // Validate date range (only if both dates are valid)
       if (startDate && endDate && new Date(endDate) < new Date(startDate)) {
         errors.push('End Date cannot be before Start Date');
       }
@@ -392,15 +429,16 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
       if (errors.length > 0) {
         results.invalid.push({ row: rowNum, data: row, errors });
       } else {
-        // Combine pakshya and name for storage (user only enters tithi name, we prepend pakshya)
-        const fullName = name.startsWith(pakshya) ? name : `${pakshya} ${name}`;
+        // Combine pakshya and tithi for storage
+        const fullName = `${pakshya} ${tithi}`;
         
         const tithiData = {
           name: fullName,
           startDate,
           startTime,
           endDate,
-          endTime
+          endTime,
+          addOrReplace
         };
         
         // Only add category if provided
@@ -433,22 +471,30 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
 
       const title = row['Title*']?.toString().trim();
       const description = row['Description']?.toString().trim() || '';
-      const dateKey = row['Date* (YYYY-MM-DD)']?.toString().trim();
+      const dateRaw = row['Date* (MM-DD-YYYY Nepali)']?.toString().trim();
       const isPublicStr = row['Is Public* (TRUE/FALSE)']?.toString().trim().toUpperCase();
+      const addOrReplace = row['AddOrReplace*']?.toString().trim().toUpperCase();
 
       if (!title) errors.push('Title is required');
-      if (!dateKey) errors.push('Date is required');
+      if (!dateRaw) errors.push('Date is required');
       if (!isPublicStr) errors.push('Is Public is required');
+      if (!addOrReplace) errors.push('AddOrReplace is required');
 
-      // Validate date format
-      const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
-      if (dateKey && !dateRegex.test(dateKey)) {
-        errors.push('Date must be in YYYY-MM-DD format');
+      // Parse Nepali date to AD format
+      const dateKey = dateRaw ? parseNepaliDate(dateRaw) : null;
+
+      if (dateRaw && !dateKey) {
+        errors.push('Date must be in MM-DD-YYYY format (Nepali)');
       }
 
       // Validate boolean
       if (isPublicStr && isPublicStr !== 'TRUE' && isPublicStr !== 'FALSE') {
         errors.push('Is Public must be TRUE or FALSE');
+      }
+
+      // Validate AddOrReplace value
+      if (addOrReplace && addOrReplace !== 'ADD' && addOrReplace !== 'REPLACE') {
+        errors.push('AddOrReplace must be either ADD or REPLACE');
       }
 
       if (errors.length > 0) {
@@ -459,7 +505,8 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
           description,
           dateKey,
           isPublic: isPublicStr === 'TRUE',
-          associatedPerson: row['Associated Person (optional)']?.toString().trim() || ''
+          associatedPerson: row['Associated Person (optional)']?.toString().trim() || '',
+          addOrReplace
         };
 
         // Check if exists (by title and date)
@@ -490,39 +537,95 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
     setUploadStatus('Publishing changes...');
 
     try {
-      const batch = writeBatch(db);
       const collectionName = activeTab === 'tithis' ? 'tithis' : 'calendarEvents';
       const collectionRef = collection(db, collectionName);
 
       let addCount = 0;
-      let updateCount = 0;
+      let replaceCount = 0;
 
+      // Group items by AddOrReplace mode
+      const itemsToReplace = validationResults.valid.filter(item => item.addOrReplace === 'REPLACE');
+
+      // Handle REPLACE operations first (delete existing records for those dates)
+      if (itemsToReplace.length > 0) {
+        for (const item of itemsToReplace) {
+          // Get the date field based on type
+          const dateField = activeTab === 'tithis' ? 'startDate' : 'dateKey';
+          const dateValue = item[dateField];
+
+          if (activeTab === 'tithis') {
+            // For tithis, we need to handle date ranges (startDate to endDate)
+            // Find all tithis that overlap with this date range
+            const q = query(
+              collectionRef,
+              where('startDate', '<=', item.endDate),
+              where('endDate', '>=', item.startDate)
+            );
+            const snapshot = await getDocs(q);
+            
+            // Delete in batches (Firestore batch limit is 500)
+            const deleteBatch = writeBatch(db);
+            let deleteOps = 0;
+            
+            snapshot.docs.forEach((docSnapshot) => {
+              deleteBatch.delete(docSnapshot.ref);
+              deleteOps++;
+            });
+            
+            if (deleteOps > 0) {
+              await deleteBatch.commit();
+              replaceCount += deleteOps;
+            }
+          } else {
+            // For events, delete all events on the same date
+            const q = query(collectionRef, where('dateKey', '==', dateValue));
+            const snapshot = await getDocs(q);
+            
+            const deleteBatch = writeBatch(db);
+            let deleteOps = 0;
+            
+            snapshot.docs.forEach((docSnapshot) => {
+              deleteBatch.delete(docSnapshot.ref);
+              deleteOps++;
+            });
+            
+            if (deleteOps > 0) {
+              await deleteBatch.commit();
+              replaceCount += deleteOps;
+            }
+          }
+        }
+      }
+
+      // Now add all records (both REPLACE and ADD)
+      const batch = writeBatch(db);
+      
       for (const item of validationResults.valid) {
-        if (item.id) {
-          // Update existing
-          const docRef = doc(db, collectionName, item.id);
-          const updateData = { ...item };
-          delete updateData.id;
-          delete updateData.row;
-          updateData.updatedAt = new Date().toISOString();
-          batch.update(docRef, updateData);
-          updateCount++;
+        const newDocRef = doc(collectionRef);
+        const newData = { ...item };
+        delete newData.row;
+        delete newData.id;
+        delete newData.addOrReplace; // Don't store this field in Firestore
+        newData.createdAt = new Date().toISOString();
+        newData.createdBy = user.uid;
+        newData.createdByAdmin = true;
+        batch.set(newDocRef, newData);
+        
+        if (item.addOrReplace === 'REPLACE') {
+          // Count as both replace and add
+          addCount++;
         } else {
-          // Add new
-          const newDocRef = doc(collectionRef);
-          const newData = { ...item };
-          delete newData.row;
-          newData.createdAt = new Date().toISOString();
-          newData.createdBy = user.uid;
-          newData.createdByAdmin = true;
-          batch.set(newDocRef, newData);
           addCount++;
         }
       }
 
       await batch.commit();
 
-      setUploadStatus(`✅ Successfully published: ${addCount} new, ${updateCount} updated`);
+      const summary = itemsToReplace.length > 0
+        ? `✅ Successfully published: ${addCount} added, ${replaceCount} existing deleted (replaced)`
+        : `✅ Successfully published: ${addCount} added`;
+      
+      setUploadStatus(summary);
       setValidationResults(null);
       setPreviewData([]);
       setUploadFile(null);
@@ -589,6 +692,14 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
       const docRef = doc(db, collectionName, id);
       
       const updateData = { ...editingData };
+      
+      // For Tithis, recombine tithi and pakshya into name
+      if (activeTab === 'tithis' && updateData.tithi && updateData.pakshya) {
+        updateData.name = `${updateData.pakshya} ${updateData.tithi}`;
+        delete updateData.tithi;
+        delete updateData.pakshya;
+      }
+      
       updateData.updatedAt = new Date().toISOString();
       
       await updateDoc(docRef, updateData);
@@ -613,10 +724,88 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
     setEditingData({});
   }
 
+  // Handle adding new record
+  async function handleAddRecord() {
+    try {
+      // Validate required fields
+      if (activeTab === 'tithis') {
+        if (!newRecordData.tithi || !newRecordData.pakshya || !newRecordData.startDate || 
+            !newRecordData.endDate || !newRecordData.startTime || !newRecordData.endTime) {
+          setUploadStatus('❌ Please fill all required fields');
+          return;
+        }
+        
+        // Create Tithi record
+        const tithiData = {
+          name: `${newRecordData.pakshya} ${newRecordData.tithi}`,
+          startDate: newRecordData.startDate,
+          endDate: newRecordData.endDate,
+          startTime: newRecordData.startTime,
+          endTime: newRecordData.endTime,
+          createdAt: new Date().toISOString(),
+          createdByAdmin: true
+        };
+        
+        await addDoc(collection(db, 'tithis'), tithiData);
+        setUploadStatus('✅ Tithi added successfully');
+        await loadTithis();
+        
+      } else {
+        if (!newRecordData.title || !newRecordData.dateKey) {
+          setUploadStatus('❌ Please fill all required fields');
+          return;
+        }
+        
+        // Create Event record
+        const eventData = {
+          title: newRecordData.title,
+          description: newRecordData.description || '',
+          dateKey: newRecordData.dateKey,
+          isPublic: newRecordData.isPublic || false,
+          associatedPerson: '',
+          createdAt: new Date().toISOString(),
+          createdByAdmin: true
+        };
+        
+        await addDoc(collection(db, 'calendarEvents'), eventData);
+        setUploadStatus('✅ Event added successfully');
+        await loadEvents();
+      }
+      
+      // Reset inline form
+      setIsAddingNew(false);
+      setNewRecordData({});
+      
+    } catch (error) {
+      console.error('Error adding record:', error);
+      setUploadStatus('❌ Error adding record: ' + error.message);
+    }
+  }
+
+  // Cancel adding new record
+  function cancelAddNew() {
+    setIsAddingNew(false);
+    setNewRecordData({});
+  }
+
+  // Update new record field
+  function updateNewRecordField(field, value) {
+    setNewRecordData(prev => ({ ...prev, [field]: value }));
+  }
+
   // Start editing
   function startEdit(record) {
     setEditingId(record.id);
-    setEditingData({ ...record });
+    const editData = { ...record };
+    
+    // Split name into tithi and pakshya for Tithis
+    if (activeTab === 'tithis' && record.name) {
+      const parts = record.name.split(' ');
+      editData.pakshya = parts[0] || 'शुक्लपक्ष';
+      editData.tithi = parts.slice(1).join(' ') || '';
+    }
+    
+    setEditingData(editData);
   }
 
   // Update editing data
@@ -640,9 +829,11 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
     
     if (yearFilter === 'all' && monthFilter === 'all') return matchesSearch;
     
-    // Extract year-month from startDate
-    const [year, month] = t.startDate?.split('-') || [];
-    const bs = year && month ? convertAdToBs(parseInt(year), parseInt(month) - 1, 1) : null;
+    // Extract year-month-day from startDate and convert to BS
+    const [year, month, day] = t.startDate?.split('-').map(Number) || [];
+    if (!year || !month || !day) return matchesSearch && yearFilter === 'all' && monthFilter === 'all';
+    
+    const bs = convertAdToBs(year, month - 1, day); // month is 0-indexed
     
     let matchesYear = yearFilter === 'all' || (bs && bs.year.toString() === yearFilter);
     let matchesMonth = monthFilter === 'all' || (bs && bs.month.toString() === monthFilter);
@@ -657,9 +848,11 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
     
     if (yearFilter === 'all' && monthFilter === 'all') return matchesSearch;
     
-    // Extract year-month from dateKey
-    const [year, month] = e.dateKey?.split('-') || [];
-    const bs = year && month ? convertAdToBs(parseInt(year), parseInt(month) - 1, 1) : null;
+    // Extract year-month-day from dateKey and convert to BS
+    const [year, month, day] = e.dateKey?.split('-').map(Number) || [];
+    if (!year || !month || !day) return matchesSearch && yearFilter === 'all' && monthFilter === 'all';
+    
+    const bs = convertAdToBs(year, month - 1, day); // month is 0-indexed
     
     let matchesYear = yearFilter === 'all' || (bs && bs.year.toString() === yearFilter);
     let matchesMonth = monthFilter === 'all' || (bs && bs.month.toString() === monthFilter);
@@ -835,7 +1028,7 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
                           <td>{formatTime12Hour(item.startTime)}</td>
                           <td>{item.endDate}</td>
                           <td>{formatTime12Hour(item.endTime)}</td>
-                          <td>{item.id ? '🔄 Update' : '✨ New'}</td>
+                          <td>{item.addOrReplace === 'REPLACE' ? '🔄 Replace' : '✨ Add'}</td>
                         </>
                       ) : (
                         <>
@@ -843,7 +1036,7 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
                           <td>{item.description}</td>
                           <td>{item.dateKey}</td>
                           <td>{item.isPublic ? '✅' : '❌'}</td>
-                          <td>{item.id ? '🔄 Update' : '✨ New'}</td>
+                          <td>{item.addOrReplace === 'REPLACE' ? '🔄 Replace' : '✨ Add'}</td>
                         </>
                       )}
                     </tr>
@@ -867,7 +1060,23 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
 
       {/* Manual Management Section */}
       <div className="admin-section">
-        <h2>📝 Manual Management</h2>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+          <h2>📝 Manual Management</h2>
+          <button 
+            onClick={() => {
+              setIsAddingNew(true);
+              setNewRecordData(activeTab === 'tithis' 
+                ? { pakshya: 'शुक्लपक्ष', tithi: allTithis[0], startDate: '', endDate: '', startTime: '', endTime: '' } 
+                : { isPublic: false, title: '', description: '', dateKey: '' });
+            }}
+            className="btn-primary"
+            style={{ padding: '0.5rem 1rem', fontSize: '1.2rem', borderRadius: '50%', width: '40px', height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+            title={`Add new ${activeTab === 'tithis' ? 'Tithi' : 'Event'}`}
+            disabled={isAddingNew}
+          >
+            +
+          </button>
+        </div>
         
         <div className="filter-bar">
           <input
@@ -915,7 +1124,8 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
               <tr>
                 {activeTab === 'tithis' ? (
                   <>
-                    <th>Name</th>
+                    <th>Tithi</th>
+                    <th>Pakshya</th>
                     <th>Start Date</th>
                     <th>Start Time</th>
                     <th>End Date</th>
@@ -935,6 +1145,95 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
               </tr>
             </thead>
             <tbody>
+              {/* Inline add new record row */}
+              {isAddingNew && activeTab === 'tithis' && (
+                <tr className="new-record-row">
+                  <td>
+                    <select
+                      value={newRecordData.tithi || allTithis[0]}
+                      onChange={(e) => updateNewRecordField('tithi', e.target.value)}
+                      className="edit-input"
+                    >
+                      {allTithis.map(tithi => (
+                        <option key={tithi} value={tithi}>{tithi}</option>
+                      ))}
+                    </select>
+                  </td>
+                  <td>
+                    <select
+                      value={newRecordData.pakshya || 'शुक्लपक्ष'}
+                      onChange={(e) => updateNewRecordField('pakshya', e.target.value)}
+                      className="edit-input"
+                    >
+                      <option value="शुक्लपक्ष">शुक्लपक्ष</option>
+                      <option value="कृष्णपक्ष">कृष्णपक्ष</option>
+                    </select>
+                  </td>
+                  <td>
+                    {newRecordData.startDate ? (
+                      <NepaliDatePicker
+                        value={newRecordData.startDate}
+                        onChange={(adDate) => updateNewRecordField('startDate', adDate)}
+                      />
+                    ) : (
+                      <div 
+                        className="date-placeholder"
+                        onClick={() => {
+                          const today = new Date();
+                          const adDate = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+                          updateNewRecordField('startDate', adDate);
+                        }}
+                      >
+                        -- -- ----
+                      </div>
+                    )}
+                  </td>
+                  <td>
+                    <input
+                      type="time"
+                      value={newRecordData.startTime || ''}
+                      onChange={(e) => updateNewRecordField('startTime', e.target.value)}
+                      className="edit-input"
+                      placeholder="--:--"
+                    />
+                  </td>
+                  <td>
+                    {newRecordData.endDate ? (
+                      <NepaliDatePicker
+                        value={newRecordData.endDate}
+                        onChange={(adDate) => updateNewRecordField('endDate', adDate)}
+                      />
+                    ) : (
+                      <div 
+                        className="date-placeholder"
+                        onClick={() => {
+                          const today = new Date();
+                          const adDate = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+                          updateNewRecordField('endDate', adDate);
+                        }}
+                      >
+                        -- -- ----
+                      </div>
+                    )}
+                  </td>
+                  <td>
+                    <input
+                      type="time"
+                      value={newRecordData.endTime || ''}
+                      onChange={(e) => updateNewRecordField('endTime', e.target.value)}
+                      className="edit-input"
+                      placeholder="--:--"
+                    />
+                  </td>
+                  <td>
+                    <div className="action-buttons">
+                      <button onClick={handleAddRecord} className="btn-save">💾</button>
+                      <button onClick={cancelAddNew} className="btn-cancel">✖️</button>
+                    </div>
+                  </td>
+                </tr>
+              )}
+              
               {activeTab === 'tithis' ? (
                 filteredTithis.length > 0 ? (
                   filteredTithis.map(tithi => (
@@ -942,7 +1241,27 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
                       {editingId === tithi.id ? (
                         // Edit mode
                         <>
-                          <td>{tithi.name}</td>
+                          <td>
+                            <select
+                              value={editingData.tithi || allTithis[0]}
+                              onChange={(e) => updateEditField('tithi', e.target.value)}
+                              className="edit-input"
+                            >
+                              {allTithis.map(tithi => (
+                                <option key={tithi} value={tithi}>{tithi}</option>
+                              ))}
+                            </select>
+                          </td>
+                          <td>
+                            <select
+                              value={editingData.pakshya || 'शुक्लपक्ष'}
+                              onChange={(e) => updateEditField('pakshya', e.target.value)}
+                              className="edit-input"
+                            >
+                              <option value="शुक्लपक्ष">शुक्लपक्ष</option>
+                              <option value="कृष्णपक्ष">कृष्णपक्ष</option>
+                            </select>
+                          </td>
                           <td>
                             <NepaliDatePicker
                               value={editingData.startDate || ''}
@@ -981,7 +1300,8 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
                       ) : (
                         // View mode
                         <>
-                          <td>{tithi.name}</td>
+                          <td>{(tithi.name || '').split(' ').slice(1).join(' ') || tithi.name}</td>
+                          <td>{(tithi.name || '').split(' ')[0] || ''}</td>
                           <td>{formatDateToNepali(tithi.startDate)}</td>
                           <td>{formatTime12Hour(tithi.startTime)}</td>
                           <td>{formatDateToNepali(tithi.endDate)}</td>
@@ -1000,8 +1320,66 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
                   <tr><td colSpan="6" className="empty-state">No tithis found</td></tr>
                 )
               ) : (
-                filteredEvents.length > 0 ? (
-                  filteredEvents.map(event => (
+                <>
+                  {/* Inline add new event row */}
+                  {isAddingNew && (
+                    <tr className="new-record-row">
+                      <td>
+                        <input
+                          type="text"
+                          value={newRecordData.title || ''}
+                          onChange={(e) => updateNewRecordField('title', e.target.value)}
+                          className="edit-input"
+                          placeholder="Event title"
+                        />
+                      </td>
+                      <td>
+                        <textarea
+                          value={newRecordData.description || ''}
+                          onChange={(e) => updateNewRecordField('description', e.target.value)}
+                          className="edit-input"
+                          placeholder="Description (optional)"
+                          rows="2"
+                        />
+                      </td>
+                      <td>
+                        {newRecordData.dateKey ? (
+                          <NepaliDatePicker
+                            value={newRecordData.dateKey}
+                            onChange={(adDate) => updateNewRecordField('dateKey', adDate)}
+                          />
+                        ) : (
+                          <div 
+                            className="date-placeholder"
+                            onClick={() => {
+                              const today = new Date();
+                              const adDate = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+                              updateNewRecordField('dateKey', adDate);
+                            }}
+                          >
+                            -- -- ----
+                          </div>
+                        )}
+                      </td>
+                      <td>
+                        <input
+                          type="checkbox"
+                          checked={newRecordData.isPublic || false}
+                          onChange={(e) => updateNewRecordField('isPublic', e.target.checked)}
+                        />
+                      </td>
+                      <td>✅</td>
+                      <td>
+                        <div className="action-buttons">
+                          <button onClick={handleAddRecord} className="btn-save">💾</button>
+                          <button onClick={cancelAddNew} className="btn-cancel">✖️</button>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                  
+                  {filteredEvents.length > 0 ? (
+                    filteredEvents.map(event => (
                     <tr key={event.id}>
                       {editingId === event.id ? (
                         // Edit mode
@@ -1063,7 +1441,8 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
                   ))
                 ) : (
                   <tr><td colSpan="6" className="empty-state">No events found</td></tr>
-                )
+                )}
+              </>
               )}
             </tbody>
           </table>
