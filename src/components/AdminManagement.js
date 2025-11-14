@@ -57,7 +57,6 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
   const [deleteConfirmation, setDeleteConfirmation] = useState({ show: false, type: '', count: 0, confirmText: '' });
   const fileInputRef = useRef(null);
   const hasLoadedData = useRef(false);
-  const [debugTithis, setDebugTithis] = useState(null);
 
   // Define load functions with useCallback
   const loadTithis = useCallback(async () => {
@@ -127,30 +126,15 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
     setMonthFilter('all');
   }, [activeTab]);
 
-  // Debug helper: fetch detailed tithis info (ids, data, getDoc.exists())
-  async function fetchDebugTithis() {
-    try {
-      const collectionRef = collection(db, 'tithis');
-      const snapshot = await getDocs(collectionRef);
-      const items = [];
-      for (const d of snapshot.docs) {
-        const id = d.id;
-        const data = d.data();
-        let existsServer = null;
-        try {
-          const snap = await getDoc(doc(db, 'tithis', id));
-          existsServer = snap.exists();
-        } catch (e) {
-          existsServer = `error:${e.message}`;
-        }
-        items.push({ id, data, existsServer });
-      }
-      console.log('Debug fetchTithis result:', items);
-      setDebugTithis(items);
-    } catch (err) {
-      console.error('Error in fetchDebugTithis:', err);
-    }
-  }
+  // Compute recent (last 30 days) item counts for UI enable/disable
+  const recentThreshold = new Date();
+  recentThreshold.setDate(recentThreshold.getDate() - 30);
+  const recentIso = recentThreshold.toISOString();
+  const recentTithisCount = tithis.filter(t => t.createdAt && t.createdAt > recentIso).length;
+  const recentEventsCount = events.filter(e => e.createdAt && e.createdAt > recentIso).length;
+  const recentCount = recentTithisCount + recentEventsCount;
+
+  
 
   // Redirect if not admin
   if (!isAdmin) {
@@ -1077,52 +1061,68 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
   }
 
   async function deleteTestData() {
-    // Show confirmation for deleting test data (created in last 30 days)
+    // This function has been replaced by a two-step flow: requestDeleteTestData
+    // triggers confirmation modal; performDeleteTestData executes the deletion.
+    console.warn('deleteTestData() should not be called directly. Use requestDeleteTestData() to show confirmation.');
+  }
+
+  // Request confirmation for deleting recent test data (created in last 30 days)
+  function requestDeleteTestData() {
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
     const cutoffDate = thirtyDaysAgo.toISOString();
-    
+
     const recentTithis = tithis.filter(t => t.createdAt && t.createdAt > cutoffDate);
     const recentEvents = events.filter(e => e.createdAt && e.createdAt > cutoffDate);
-    
-    if (recentTithis.length === 0 && recentEvents.length === 0) {
+
+    const total = recentTithis.length + recentEvents.length;
+    if (total === 0) {
       setUploadStatus('ℹ️ No recent data found (created in last 30 days)');
       return;
     }
-    
-    const confirmText = `Found ${recentTithis.length} recent Tithis and ${recentEvents.length} recent Events created in the last 30 days.\n\nDelete them?`;
-    
-    if (!window.confirm(confirmText)) {
-      return;
-    }
-    
+
+    // Store counts in deleteConfirmation.details for use in modal
+    setDeleteConfirmation({ show: true, type: 'recent', count: total, confirmText: '', details: { tithis: recentTithis.length, events: recentEvents.length } });
+  }
+
+  // Execute deletion of recent test data after user confirms
+  async function performDeleteTestData() {
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    const cutoffDate = thirtyDaysAgo.toISOString();
+
+    const recentTithis = tithis.filter(t => t.createdAt && t.createdAt > cutoffDate);
+    const recentEvents = events.filter(e => e.createdAt && e.createdAt > cutoffDate);
+
     setLoading(true);
     setUploadStatus('🗑️ Deleting recent test data...');
-    
+
     try {
       const batch = writeBatch(db);
       let deletedCount = 0;
-      
+
       recentTithis.forEach(tithi => {
         const docRef = doc(db, 'tithis', tithi.id);
         batch.delete(docRef);
         deletedCount++;
       });
-      
+
       recentEvents.forEach(event => {
         const docRef = doc(db, 'calendarEvents', event.id);
         batch.delete(docRef);
         deletedCount++;
       });
-      
+
       await batch.commit();
-      
+
       setUploadStatus(`✅ Deleted ${deletedCount} recent records (${recentTithis.length} Tithis, ${recentEvents.length} Events)`);
-      
+
       // Reload data
       await loadTithis();
       await loadEvents();
-      
+
+      // Close confirmation dialog
+      setDeleteConfirmation({ show: false, type: '', count: 0, confirmText: '', details: null });
     } catch (error) {
       console.error('Error deleting test data:', error);
       setUploadStatus('❌ Error deleting test data: ' + error.message);
@@ -1333,9 +1333,10 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
                   <p>Remove all Tithis and Events created in the last 30 days. Useful for cleaning up test entries.</p>
                 </div>
                 <button 
-                  onClick={deleteTestData}
+                  onClick={requestDeleteTestData}
                   className="btn-warning"
-                  disabled={loading}
+                  disabled={loading || recentCount === 0}
+                  title={recentCount === 0 ? 'No recent data found (last 30 days)' : 'Delete recent test data'}
                 >
                   Delete Recent Test Data
                 </button>
@@ -1492,15 +1493,7 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
       </div>
       )}
 
-      {/* Debug panel */}
-      <div style={{ marginTop: 16 }}>
-        <button onClick={fetchDebugTithis} className="btn-warning">Debug: Inspect Tithis</button>
-        {debugTithis && (
-          <pre style={{ maxHeight: 300, overflow: 'auto', background: '#111', color: '#eee', padding: 10 }}>
-            {JSON.stringify(debugTithis, null, 2)}
-          </pre>
-        )}
-      </div>
+      
 
       {/* Manual Management Section - Only show for tithis/events tabs */}
       {(activeTab === 'tithis' || activeTab === 'events') && (
@@ -1914,22 +1907,41 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
             <div className="modal-body">
               <div className="confirmation-warning">
                 <div className="warning-icon">🚨</div>
-                <p className="warning-text">
-                  You are about to permanently delete <strong>{deleteConfirmation.count} {deleteConfirmation.type}</strong>.
-                </p>
-                <p className="warning-subtext">
-                  A backup file will be automatically downloaded before deletion.
-                </p>
+                {deleteConfirmation.type === 'recent' ? (
+                  <>
+                    <p className="warning-text">
+                      You are about to permanently delete <strong>{deleteConfirmation.count} recent test records</strong> created in the last 30 days.
+                    </p>
+                    <p className="warning-subtext">
+                      This will delete <strong>{deleteConfirmation.details?.tithis || 0} Tithis</strong> and <strong>{deleteConfirmation.details?.events || 0} Events</strong>. A backup file will be automatically downloaded before deletion.
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <p className="warning-text">
+                      You are about to permanently delete <strong>{deleteConfirmation.count} {deleteConfirmation.type}</strong>.
+                    </p>
+                    <p className="warning-subtext">
+                      A backup file will be automatically downloaded before deletion.
+                    </p>
+                  </>
+                )}
               </div>
 
               <div className="form-group">
-                <label>Type <code>DELETE ALL {deleteConfirmation.type.toUpperCase()}</code> to confirm:</label>
+                <label>
+                  {deleteConfirmation.type === 'recent' ? (
+                    <>Type <code>DELETE RECENT TEST DATA</code> to confirm:</>
+                  ) : (
+                    <>Type <code>DELETE ALL {deleteConfirmation.type.toUpperCase()}</code> to confirm:</>
+                  )}
+                </label>
                 <input
                   type="text"
                   value={deleteConfirmation.confirmText}
                   onChange={(e) => setDeleteConfirmation(prev => ({ ...prev, confirmText: e.target.value }))}
                   className="form-input"
-                  placeholder={`DELETE ALL ${deleteConfirmation.type.toUpperCase()}`}
+                  placeholder={deleteConfirmation.type === 'recent' ? 'DELETE RECENT TEST DATA' : `DELETE ALL ${deleteConfirmation.type.toUpperCase()}`}
                   autoFocus
                 />
               </div>
@@ -1943,11 +1955,17 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
                 Cancel
               </button>
               <button 
-                onClick={executeBulkDelete} 
+                onClick={() => {
+                  if (deleteConfirmation.type === 'recent') {
+                    performDeleteTestData();
+                  } else {
+                    executeBulkDelete();
+                  }
+                }}
                 className="btn-danger"
-                disabled={deleteConfirmation.confirmText !== `DELETE ALL ${deleteConfirmation.type.toUpperCase()}`}
+                disabled={deleteConfirmation.confirmText !== (deleteConfirmation.type === 'recent' ? 'DELETE RECENT TEST DATA' : `DELETE ALL ${deleteConfirmation.type.toUpperCase()}`)}
               >
-                Delete All {deleteConfirmation.count} {deleteConfirmation.type}
+                {deleteConfirmation.type === 'recent' ? `Delete ${deleteConfirmation.count} Recent Test Records` : `Delete All ${deleteConfirmation.count} ${deleteConfirmation.type}`}
               </button>
             </div>
           </div>
