@@ -1,0 +1,441 @@
+Rendering tile for day 1: {dateKey: '2025-10-18', tithisCount: 0, eventsCount: 0, tithisNames: Array(0), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 2: {dateKey: '2025-10-19', tithisCount: 0, eventsCount: 0, tithisNames: Array(0), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 3: {dateKey: '2025-10-20', tithisCount: 0, eventsCount: 0, tithisNames: Array(0), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 4: {dateKey: '2025-10-21', tithisCount: 1, eventsCount: 0, tithisNames: Array(1), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 5: {dateKey: '2025-10-22', tithisCount: 1, eventsCount: 0, tithisNames: Array(1), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 6: {dateKey: '2025-10-23', tithisCount: 1, eventsCount: 0, tithisNames: Array(1), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 12: {dateKey: '2025-10-29', tithisCount: 1, eventsCount: 0, tithisNames: Array(1), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 14: {dateKey: '2025-10-31', tithisCount: 1, eventsCount: 0, tithisNames: Array(1), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 19: {dateKey: '2025-11-05', tithisCount: 2, eventsCount: 0, tithisNames: Array(2), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 27: {dateKey: '2025-11-13', tithisCount: 0, eventsCount: 1, tithisNames: Array(0), eventTitles: Array(1)}
+NepaliCalendar.js:1155 Rendering tile for day 28: {dateKey: '2025-11-14', tithisCount: 1, eventsCount: 0, tithisNames: Array(1), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 29: {dateKey: '2025-11-15', tithisCount: 1, eventsCount: 1, tithisNames: Array(1), eventTitles: Array(1)}
+NepaliCalendar.js:1155 Rendering tile for day 1: {dateKey: '2025-10-18', tithisCount: 0, eventsCount: 0, tithisNames: Array(0), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 2: {dateKey: '2025-10-19', tithisCount: 0, eventsCount: 0, tithisNames: Array(0), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 3: {dateKey: '2025-10-20', tithisCount: 0, eventsCount: 0, tithisNames: Array(0), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 4: {dateKey: '2025-10-21', tithisCount: 1, eventsCount: 0, tithisNames: Array(1), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 5: {dateKey: '2025-10-22', tithisCount: 1, eventsCount: 0, tithisNames: Array(1), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 6: {dateKey: '2025-10-23', tithisCount: 1, eventsCount: 0, tithisNames: Array(1), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 12: {dateKey: '2025-10-29', tithisCount: 1, eventsCount: 0, tithisNames: Array(1), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 14: {dateKey: '2025-10-31', tithisCount: 1, eventsCount: 0, tithisNames: Array(1), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 19: {dateKey: '2025-11-05', tithisCount: 2, eventsCount: 0, tithisNames: Array(2), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 27: {dateKey: '2025-11-13', tithisCount: 0, eventsCount: 1, tithisNames: Array(0), eventTitles: Array(1)}
+NepaliCalendar.js:1155 Rendering tile for day 28: {dateKey: '2025-11-14', tithisCount: 1, eventsCount: 0, tithisNames: Array(1), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 29: {dateKey: '2025-11-15', tithisCount: 1, eventsCount: 1, tithisNames: Array(1), eventTitles: Array(1)}
+NepaliCalendar.js:1314 Modal opened for date: 2025-11-3
+NepaliCalendar.js:1315 tithisByDate keys: (12) ['2025-10-21', '2025-10-22', '2025-10-23', '2025-10-29', '2025-10-31', '2025-11-5', '2025-11-14', '2025-11-15', '2025-11-26', '2025-11-27', '2025-11-28', '2026-1-14']
+NepaliCalendar.js:1316 modalTithis for 2025-11-3 : []
+NepaliCalendar.js:1155 Rendering tile for day 1: {dateKey: '2025-10-18', tithisCount: 0, eventsCount: 0, tithisNames: Array(0), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 2: {dateKey: '2025-10-19', tithisCount: 0, eventsCount: 0, tithisNames: Array(0), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 3: {dateKey: '2025-10-20', tithisCount: 0, eventsCount: 0, tithisNames: Array(0), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 4: {dateKey: '2025-10-21', tithisCount: 1, eventsCount: 0, tithisNames: Array(1), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 5: {dateKey: '2025-10-22', tithisCount: 1, eventsCount: 0, tithisNames: Array(1), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 6: {dateKey: '2025-10-23', tithisCount: 1, eventsCount: 0, tithisNames: Array(1), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 12: {dateKey: '2025-10-29', tithisCount: 1, eventsCount: 0, tithisNames: Array(1), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 14: {dateKey: '2025-10-31', tithisCount: 1, eventsCount: 0, tithisNames: Array(1), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 19: {dateKey: '2025-11-05', tithisCount: 2, eventsCount: 0, tithisNames: Array(2), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 27: {dateKey: '2025-11-13', tithisCount: 0, eventsCount: 1, tithisNames: Array(0), eventTitles: Array(1)}
+NepaliCalendar.js:1155 Rendering tile for day 28: {dateKey: '2025-11-14', tithisCount: 1, eventsCount: 0, tithisNames: Array(1), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 29: {dateKey: '2025-11-15', tithisCount: 1, eventsCount: 1, tithisNames: Array(1), eventTitles: Array(1)}
+NepaliCalendar.js:1155 Rendering tile for day 1: {dateKey: '2025-10-18', tithisCount: 0, eventsCount: 0, tithisNames: Array(0), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 2: {dateKey: '2025-10-19', tithisCount: 0, eventsCount: 0, tithisNames: Array(0), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 3: {dateKey: '2025-10-20', tithisCount: 0, eventsCount: 0, tithisNames: Array(0), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 4: {dateKey: '2025-10-21', tithisCount: 1, eventsCount: 0, tithisNames: Array(1), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 5: {dateKey: '2025-10-22', tithisCount: 1, eventsCount: 0, tithisNames: Array(1), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 6: {dateKey: '2025-10-23', tithisCount: 1, eventsCount: 0, tithisNames: Array(1), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 12: {dateKey: '2025-10-29', tithisCount: 1, eventsCount: 0, tithisNames: Array(1), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 14: {dateKey: '2025-10-31', tithisCount: 1, eventsCount: 0, tithisNames: Array(1), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 19: {dateKey: '2025-11-05', tithisCount: 2, eventsCount: 0, tithisNames: Array(2), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 27: {dateKey: '2025-11-13', tithisCount: 0, eventsCount: 1, tithisNames: Array(0), eventTitles: Array(1)}
+NepaliCalendar.js:1155 Rendering tile for day 28: {dateKey: '2025-11-14', tithisCount: 1, eventsCount: 0, tithisNames: Array(1), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 29: {dateKey: '2025-11-15', tithisCount: 1, eventsCount: 1, tithisNames: Array(1), eventTitles: Array(1)}
+NepaliCalendar.js:587 openAddTithiModalForDate called with: {adYear: 2025, adMonthZeroBased: 10, adDay: 3}
+NepaliCalendar.js:594 openAddTithiModalForDate: Setting defaultDate to: 2025-11-03
+NepaliCalendar.js:1155 Rendering tile for day 1: {dateKey: '2025-10-18', tithisCount: 0, eventsCount: 0, tithisNames: Array(0), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 2: {dateKey: '2025-10-19', tithisCount: 0, eventsCount: 0, tithisNames: Array(0), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 3: {dateKey: '2025-10-20', tithisCount: 0, eventsCount: 0, tithisNames: Array(0), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 4: {dateKey: '2025-10-21', tithisCount: 1, eventsCount: 0, tithisNames: Array(1), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 5: {dateKey: '2025-10-22', tithisCount: 1, eventsCount: 0, tithisNames: Array(1), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 6: {dateKey: '2025-10-23', tithisCount: 1, eventsCount: 0, tithisNames: Array(1), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 12: {dateKey: '2025-10-29', tithisCount: 1, eventsCount: 0, tithisNames: Array(1), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 14: {dateKey: '2025-10-31', tithisCount: 1, eventsCount: 0, tithisNames: Array(1), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 19: {dateKey: '2025-11-05', tithisCount: 2, eventsCount: 0, tithisNames: Array(2), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 27: {dateKey: '2025-11-13', tithisCount: 0, eventsCount: 1, tithisNames: Array(0), eventTitles: Array(1)}
+NepaliCalendar.js:1155 Rendering tile for day 28: {dateKey: '2025-11-14', tithisCount: 1, eventsCount: 0, tithisNames: Array(1), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 29: {dateKey: '2025-11-15', tithisCount: 1, eventsCount: 1, tithisNames: Array(1), eventTitles: Array(1)}
+NepaliCalendar.js:1155 Rendering tile for day 1: {dateKey: '2025-10-18', tithisCount: 0, eventsCount: 0, tithisNames: Array(0), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 2: {dateKey: '2025-10-19', tithisCount: 0, eventsCount: 0, tithisNames: Array(0), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 3: {dateKey: '2025-10-20', tithisCount: 0, eventsCount: 0, tithisNames: Array(0), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 4: {dateKey: '2025-10-21', tithisCount: 1, eventsCount: 0, tithisNames: Array(1), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 5: {dateKey: '2025-10-22', tithisCount: 1, eventsCount: 0, tithisNames: Array(1), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 6: {dateKey: '2025-10-23', tithisCount: 1, eventsCount: 0, tithisNames: Array(1), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 12: {dateKey: '2025-10-29', tithisCount: 1, eventsCount: 0, tithisNames: Array(1), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 14: {dateKey: '2025-10-31', tithisCount: 1, eventsCount: 0, tithisNames: Array(1), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 19: {dateKey: '2025-11-05', tithisCount: 2, eventsCount: 0, tithisNames: Array(2), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 27: {dateKey: '2025-11-13', tithisCount: 0, eventsCount: 1, tithisNames: Array(0), eventTitles: Array(1)}
+NepaliCalendar.js:1155 Rendering tile for day 28: {dateKey: '2025-11-14', tithisCount: 1, eventsCount: 0, tithisNames: Array(1), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 29: {dateKey: '2025-11-15', tithisCount: 1, eventsCount: 1, tithisNames: Array(1), eventTitles: Array(1)}
+NepaliDatePicker.js:17 NepaliDatePicker: Initializing with value: 2025-11-03
+NepaliDatePicker.js:19 NepaliDatePicker: Parsed AD: {y: 2025, m: 11, d: 3}
+NepaliDatePicker.js:21 NepaliDatePicker: Converted to BS: {year: 2082, month: 7, day: 18, dayOfWeek: 1}
+NepaliDatePicker.js:17 NepaliDatePicker: Initializing with value: 2025-11-03
+NepaliDatePicker.js:19 NepaliDatePicker: Parsed AD: {y: 2025, m: 11, d: 3}
+NepaliDatePicker.js:21 NepaliDatePicker: Converted to BS: {year: 2082, month: 7, day: 18, dayOfWeek: 1}
+NepaliCalendar.js:1314 Modal opened for date: 2025-11-3
+NepaliCalendar.js:1315 tithisByDate keys: (12) ['2025-10-21', '2025-10-22', '2025-10-23', '2025-10-29', '2025-10-31', '2025-11-5', '2025-11-14', '2025-11-15', '2025-11-26', '2025-11-27', '2025-11-28', '2026-1-14']
+NepaliCalendar.js:1316 modalTithis for 2025-11-3 : []
+NepaliDatePicker.js:17 NepaliDatePicker: Initializing with value: 2025-11-03
+NepaliDatePicker.js:19 NepaliDatePicker: Parsed AD: {y: 2025, m: 11, d: 3}
+NepaliDatePicker.js:21 NepaliDatePicker: Converted to BS: {year: 2082, month: 7, day: 18, dayOfWeek: 1}
+NepaliDatePicker.js:17 NepaliDatePicker: Initializing with value: 2025-11-03
+NepaliDatePicker.js:19 NepaliDatePicker: Parsed AD: {y: 2025, m: 11, d: 3}
+NepaliDatePicker.js:21 NepaliDatePicker: Converted to BS: {year: 2082, month: 7, day: 18, dayOfWeek: 1}
+NepaliCalendar.js:1155 Rendering tile for day 1: {dateKey: '2025-10-18', tithisCount: 0, eventsCount: 0, tithisNames: Array(0), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 2: {dateKey: '2025-10-19', tithisCount: 0, eventsCount: 0, tithisNames: Array(0), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 3: {dateKey: '2025-10-20', tithisCount: 0, eventsCount: 0, tithisNames: Array(0), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 4: {dateKey: '2025-10-21', tithisCount: 1, eventsCount: 0, tithisNames: Array(1), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 5: {dateKey: '2025-10-22', tithisCount: 1, eventsCount: 0, tithisNames: Array(1), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 6: {dateKey: '2025-10-23', tithisCount: 1, eventsCount: 0, tithisNames: Array(1), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 12: {dateKey: '2025-10-29', tithisCount: 1, eventsCount: 0, tithisNames: Array(1), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 14: {dateKey: '2025-10-31', tithisCount: 1, eventsCount: 0, tithisNames: Array(1), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 19: {dateKey: '2025-11-05', tithisCount: 2, eventsCount: 0, tithisNames: Array(2), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 27: {dateKey: '2025-11-13', tithisCount: 0, eventsCount: 1, tithisNames: Array(0), eventTitles: Array(1)}
+NepaliCalendar.js:1155 Rendering tile for day 28: {dateKey: '2025-11-14', tithisCount: 1, eventsCount: 0, tithisNames: Array(1), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 29: {dateKey: '2025-11-15', tithisCount: 1, eventsCount: 1, tithisNames: Array(1), eventTitles: Array(1)}
+NepaliCalendar.js:1155 Rendering tile for day 1: {dateKey: '2025-10-18', tithisCount: 0, eventsCount: 0, tithisNames: Array(0), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 2: {dateKey: '2025-10-19', tithisCount: 0, eventsCount: 0, tithisNames: Array(0), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 3: {dateKey: '2025-10-20', tithisCount: 0, eventsCount: 0, tithisNames: Array(0), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 4: {dateKey: '2025-10-21', tithisCount: 1, eventsCount: 0, tithisNames: Array(1), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 5: {dateKey: '2025-10-22', tithisCount: 1, eventsCount: 0, tithisNames: Array(1), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 6: {dateKey: '2025-10-23', tithisCount: 1, eventsCount: 0, tithisNames: Array(1), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 12: {dateKey: '2025-10-29', tithisCount: 1, eventsCount: 0, tithisNames: Array(1), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 14: {dateKey: '2025-10-31', tithisCount: 1, eventsCount: 0, tithisNames: Array(1), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 19: {dateKey: '2025-11-05', tithisCount: 2, eventsCount: 0, tithisNames: Array(2), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 27: {dateKey: '2025-11-13', tithisCount: 0, eventsCount: 1, tithisNames: Array(0), eventTitles: Array(1)}
+NepaliCalendar.js:1155 Rendering tile for day 28: {dateKey: '2025-11-14', tithisCount: 1, eventsCount: 0, tithisNames: Array(1), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 29: {dateKey: '2025-11-15', tithisCount: 1, eventsCount: 1, tithisNames: Array(1), eventTitles: Array(1)}
+NepaliCalendar.js:1155 Rendering tile for day 1: {dateKey: '2025-10-18', tithisCount: 0, eventsCount: 0, tithisNames: Array(0), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 2: {dateKey: '2025-10-19', tithisCount: 0, eventsCount: 0, tithisNames: Array(0), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 3: {dateKey: '2025-10-20', tithisCount: 0, eventsCount: 0, tithisNames: Array(0), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 4: {dateKey: '2025-10-21', tithisCount: 1, eventsCount: 0, tithisNames: Array(1), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 5: {dateKey: '2025-10-22', tithisCount: 1, eventsCount: 0, tithisNames: Array(1), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 6: {dateKey: '2025-10-23', tithisCount: 1, eventsCount: 0, tithisNames: Array(1), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 12: {dateKey: '2025-10-29', tithisCount: 1, eventsCount: 0, tithisNames: Array(1), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 14: {dateKey: '2025-10-31', tithisCount: 1, eventsCount: 0, tithisNames: Array(1), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 19: {dateKey: '2025-11-05', tithisCount: 2, eventsCount: 0, tithisNames: Array(2), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 27: {dateKey: '2025-11-13', tithisCount: 0, eventsCount: 1, tithisNames: Array(0), eventTitles: Array(1)}
+NepaliCalendar.js:1155 Rendering tile for day 28: {dateKey: '2025-11-14', tithisCount: 1, eventsCount: 0, tithisNames: Array(1), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 29: {dateKey: '2025-11-15', tithisCount: 1, eventsCount: 1, tithisNames: Array(1), eventTitles: Array(1)}
+NepaliCalendar.js:1155 Rendering tile for day 1: {dateKey: '2025-10-18', tithisCount: 0, eventsCount: 0, tithisNames: Array(0), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 2: {dateKey: '2025-10-19', tithisCount: 0, eventsCount: 0, tithisNames: Array(0), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 3: {dateKey: '2025-10-20', tithisCount: 0, eventsCount: 0, tithisNames: Array(0), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 4: {dateKey: '2025-10-21', tithisCount: 1, eventsCount: 0, tithisNames: Array(1), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 5: {dateKey: '2025-10-22', tithisCount: 1, eventsCount: 0, tithisNames: Array(1), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 6: {dateKey: '2025-10-23', tithisCount: 1, eventsCount: 0, tithisNames: Array(1), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 12: {dateKey: '2025-10-29', tithisCount: 1, eventsCount: 0, tithisNames: Array(1), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 14: {dateKey: '2025-10-31', tithisCount: 1, eventsCount: 0, tithisNames: Array(1), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 19: {dateKey: '2025-11-05', tithisCount: 2, eventsCount: 0, tithisNames: Array(2), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 27: {dateKey: '2025-11-13', tithisCount: 0, eventsCount: 1, tithisNames: Array(0), eventTitles: Array(1)}
+NepaliCalendar.js:1155 Rendering tile for day 28: {dateKey: '2025-11-14', tithisCount: 1, eventsCount: 0, tithisNames: Array(1), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 29: {dateKey: '2025-11-15', tithisCount: 1, eventsCount: 1, tithisNames: Array(1), eventTitles: Array(1)}
+NepaliCalendar.js:1155 Rendering tile for day 1: {dateKey: '2025-10-18', tithisCount: 0, eventsCount: 0, tithisNames: Array(0), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 2: {dateKey: '2025-10-19', tithisCount: 0, eventsCount: 0, tithisNames: Array(0), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 3: {dateKey: '2025-10-20', tithisCount: 0, eventsCount: 0, tithisNames: Array(0), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 4: {dateKey: '2025-10-21', tithisCount: 1, eventsCount: 0, tithisNames: Array(1), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 5: {dateKey: '2025-10-22', tithisCount: 1, eventsCount: 0, tithisNames: Array(1), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 6: {dateKey: '2025-10-23', tithisCount: 1, eventsCount: 0, tithisNames: Array(1), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 12: {dateKey: '2025-10-29', tithisCount: 1, eventsCount: 0, tithisNames: Array(1), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 14: {dateKey: '2025-10-31', tithisCount: 1, eventsCount: 0, tithisNames: Array(1), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 19: {dateKey: '2025-11-05', tithisCount: 2, eventsCount: 0, tithisNames: Array(2), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 27: {dateKey: '2025-11-13', tithisCount: 0, eventsCount: 1, tithisNames: Array(0), eventTitles: Array(1)}
+NepaliCalendar.js:1155 Rendering tile for day 28: {dateKey: '2025-11-14', tithisCount: 1, eventsCount: 0, tithisNames: Array(1), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 29: {dateKey: '2025-11-15', tithisCount: 1, eventsCount: 1, tithisNames: Array(1), eventTitles: Array(1)}
+NepaliCalendar.js:1155 Rendering tile for day 1: {dateKey: '2025-10-18', tithisCount: 0, eventsCount: 0, tithisNames: Array(0), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 2: {dateKey: '2025-10-19', tithisCount: 0, eventsCount: 0, tithisNames: Array(0), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 3: {dateKey: '2025-10-20', tithisCount: 0, eventsCount: 0, tithisNames: Array(0), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 4: {dateKey: '2025-10-21', tithisCount: 1, eventsCount: 0, tithisNames: Array(1), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 5: {dateKey: '2025-10-22', tithisCount: 1, eventsCount: 0, tithisNames: Array(1), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 6: {dateKey: '2025-10-23', tithisCount: 1, eventsCount: 0, tithisNames: Array(1), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 12: {dateKey: '2025-10-29', tithisCount: 1, eventsCount: 0, tithisNames: Array(1), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 14: {dateKey: '2025-10-31', tithisCount: 1, eventsCount: 0, tithisNames: Array(1), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 19: {dateKey: '2025-11-05', tithisCount: 2, eventsCount: 0, tithisNames: Array(2), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 27: {dateKey: '2025-11-13', tithisCount: 0, eventsCount: 1, tithisNames: Array(0), eventTitles: Array(1)}
+NepaliCalendar.js:1155 Rendering tile for day 28: {dateKey: '2025-11-14', tithisCount: 1, eventsCount: 0, tithisNames: Array(1), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 29: {dateKey: '2025-11-15', tithisCount: 1, eventsCount: 1, tithisNames: Array(1), eventTitles: Array(1)}
+NepaliDatePicker.js:38 NepaliDatePicker: BS Date Selected: {year: 2082, month: 7, day: 17, dayOfWeek: 1}
+NepaliDatePicker.js:42 NepaliDatePicker: AD conversion result: {year: 2025, month: 10, day: 2}
+NepaliDatePicker.js:47 NepaliDatePicker: Formatted AD date: 2025-11-02
+NepaliCalendar.js:1155 Rendering tile for day 1: {dateKey: '2025-10-18', tithisCount: 0, eventsCount: 0, tithisNames: Array(0), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 2: {dateKey: '2025-10-19', tithisCount: 0, eventsCount: 0, tithisNames: Array(0), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 3: {dateKey: '2025-10-20', tithisCount: 0, eventsCount: 0, tithisNames: Array(0), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 4: {dateKey: '2025-10-21', tithisCount: 1, eventsCount: 0, tithisNames: Array(1), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 5: {dateKey: '2025-10-22', tithisCount: 1, eventsCount: 0, tithisNames: Array(1), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 6: {dateKey: '2025-10-23', tithisCount: 1, eventsCount: 0, tithisNames: Array(1), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 12: {dateKey: '2025-10-29', tithisCount: 1, eventsCount: 0, tithisNames: Array(1), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 14: {dateKey: '2025-10-31', tithisCount: 1, eventsCount: 0, tithisNames: Array(1), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 19: {dateKey: '2025-11-05', tithisCount: 2, eventsCount: 0, tithisNames: Array(2), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 27: {dateKey: '2025-11-13', tithisCount: 0, eventsCount: 1, tithisNames: Array(0), eventTitles: Array(1)}
+NepaliCalendar.js:1155 Rendering tile for day 28: {dateKey: '2025-11-14', tithisCount: 1, eventsCount: 0, tithisNames: Array(1), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 29: {dateKey: '2025-11-15', tithisCount: 1, eventsCount: 1, tithisNames: Array(1), eventTitles: Array(1)}
+NepaliCalendar.js:1155 Rendering tile for day 1: {dateKey: '2025-10-18', tithisCount: 0, eventsCount: 0, tithisNames: Array(0), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 2: {dateKey: '2025-10-19', tithisCount: 0, eventsCount: 0, tithisNames: Array(0), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 3: {dateKey: '2025-10-20', tithisCount: 0, eventsCount: 0, tithisNames: Array(0), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 4: {dateKey: '2025-10-21', tithisCount: 1, eventsCount: 0, tithisNames: Array(1), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 5: {dateKey: '2025-10-22', tithisCount: 1, eventsCount: 0, tithisNames: Array(1), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 6: {dateKey: '2025-10-23', tithisCount: 1, eventsCount: 0, tithisNames: Array(1), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 12: {dateKey: '2025-10-29', tithisCount: 1, eventsCount: 0, tithisNames: Array(1), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 14: {dateKey: '2025-10-31', tithisCount: 1, eventsCount: 0, tithisNames: Array(1), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 19: {dateKey: '2025-11-05', tithisCount: 2, eventsCount: 0, tithisNames: Array(2), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 27: {dateKey: '2025-11-13', tithisCount: 0, eventsCount: 1, tithisNames: Array(0), eventTitles: Array(1)}
+NepaliCalendar.js:1155 Rendering tile for day 28: {dateKey: '2025-11-14', tithisCount: 1, eventsCount: 0, tithisNames: Array(1), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 29: {dateKey: '2025-11-15', tithisCount: 1, eventsCount: 1, tithisNames: Array(1), eventTitles: Array(1)}
+NepaliDatePicker.js:17 NepaliDatePicker: Initializing with value: 2025-11-02
+NepaliDatePicker.js:19 NepaliDatePicker: Parsed AD: {y: 2025, m: 11, d: 2}
+NepaliDatePicker.js:21 NepaliDatePicker: Converted to BS: {year: 2082, month: 7, day: 17, dayOfWeek: 0}
+NepaliDatePicker.js:38 NepaliDatePicker: BS Date Selected: {year: 2082, month: 7, day: 17, dayOfWeek: 1}
+NepaliDatePicker.js:42 NepaliDatePicker: AD conversion result: {year: 2025, month: 10, day: 2}
+NepaliDatePicker.js:47 NepaliDatePicker: Formatted AD date: 2025-11-02
+NepaliCalendar.js:1155 Rendering tile for day 1: {dateKey: '2025-10-18', tithisCount: 0, eventsCount: 0, tithisNames: Array(0), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 2: {dateKey: '2025-10-19', tithisCount: 0, eventsCount: 0, tithisNames: Array(0), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 3: {dateKey: '2025-10-20', tithisCount: 0, eventsCount: 0, tithisNames: Array(0), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 4: {dateKey: '2025-10-21', tithisCount: 1, eventsCount: 0, tithisNames: Array(1), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 5: {dateKey: '2025-10-22', tithisCount: 1, eventsCount: 0, tithisNames: Array(1), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 6: {dateKey: '2025-10-23', tithisCount: 1, eventsCount: 0, tithisNames: Array(1), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 12: {dateKey: '2025-10-29', tithisCount: 1, eventsCount: 0, tithisNames: Array(1), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 14: {dateKey: '2025-10-31', tithisCount: 1, eventsCount: 0, tithisNames: Array(1), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 19: {dateKey: '2025-11-05', tithisCount: 2, eventsCount: 0, tithisNames: Array(2), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 27: {dateKey: '2025-11-13', tithisCount: 0, eventsCount: 1, tithisNames: Array(0), eventTitles: Array(1)}
+NepaliCalendar.js:1155 Rendering tile for day 28: {dateKey: '2025-11-14', tithisCount: 1, eventsCount: 0, tithisNames: Array(1), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 29: {dateKey: '2025-11-15', tithisCount: 1, eventsCount: 1, tithisNames: Array(1), eventTitles: Array(1)}
+NepaliCalendar.js:1155 Rendering tile for day 1: {dateKey: '2025-10-18', tithisCount: 0, eventsCount: 0, tithisNames: Array(0), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 2: {dateKey: '2025-10-19', tithisCount: 0, eventsCount: 0, tithisNames: Array(0), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 3: {dateKey: '2025-10-20', tithisCount: 0, eventsCount: 0, tithisNames: Array(0), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 4: {dateKey: '2025-10-21', tithisCount: 1, eventsCount: 0, tithisNames: Array(1), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 5: {dateKey: '2025-10-22', tithisCount: 1, eventsCount: 0, tithisNames: Array(1), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 6: {dateKey: '2025-10-23', tithisCount: 1, eventsCount: 0, tithisNames: Array(1), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 12: {dateKey: '2025-10-29', tithisCount: 1, eventsCount: 0, tithisNames: Array(1), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 14: {dateKey: '2025-10-31', tithisCount: 1, eventsCount: 0, tithisNames: Array(1), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 19: {dateKey: '2025-11-05', tithisCount: 2, eventsCount: 0, tithisNames: Array(2), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 27: {dateKey: '2025-11-13', tithisCount: 0, eventsCount: 1, tithisNames: Array(0), eventTitles: Array(1)}
+NepaliCalendar.js:1155 Rendering tile for day 28: {dateKey: '2025-11-14', tithisCount: 1, eventsCount: 0, tithisNames: Array(1), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 29: {dateKey: '2025-11-15', tithisCount: 1, eventsCount: 1, tithisNames: Array(1), eventTitles: Array(1)}
+NepaliDatePicker.js:17 NepaliDatePicker: Initializing with value: 2025-11-02
+NepaliDatePicker.js:19 NepaliDatePicker: Parsed AD: {y: 2025, m: 11, d: 2}
+NepaliDatePicker.js:21 NepaliDatePicker: Converted to BS: {year: 2082, month: 7, day: 17, dayOfWeek: 0}
+NepaliCalendar.js:961 submitAdd called with: {newPakshya: 'शुक्लपक्ष', newTithi: 'पूर्णिमा', startDate: '2025-11-02', startTime: '06:00', endDate: '2025-11-02', …}
+NepaliCalendar.js:1017 Validation passed, attempting to add tithi...
+NepaliCalendar.js:603 addTithi called with: {dateKey: '2025-11-3', name: 'शुक्लपक्ष पूर्णिमा', startDate: '2025-11-02', startTime: '06:00', endDate: '2025-11-02', …}
+NepaliCalendar.js:639 Tithi spans dates: ['2025-11-2']
+NepaliCalendar.js:642 Updating local state immediately...
+NepaliCalendar.js:665 Syncing to Firestore...
+NepaliCalendar.js:666 User authenticated: true User ID: J8vox9b34GbisZIZotJzas50o9n1
+NepaliCalendar.js:678 Data to save: {name: 'शुक्लपक्ष पूर्णिमा', startDate: '2025-11-02', startTime: '06:00', endDate: '2025-11-02', endTime: '18:00', …}
+NepaliCalendar.js:660 Local state updated with new tithi across dates: ['2025-11-2']
+NepaliCalendar.js:1155 Rendering tile for day 1: {dateKey: '2025-10-18', tithisCount: 0, eventsCount: 0, tithisNames: Array(0), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 2: {dateKey: '2025-10-19', tithisCount: 0, eventsCount: 0, tithisNames: Array(0), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 3: {dateKey: '2025-10-20', tithisCount: 0, eventsCount: 0, tithisNames: Array(0), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 4: {dateKey: '2025-10-21', tithisCount: 1, eventsCount: 0, tithisNames: Array(1), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 5: {dateKey: '2025-10-22', tithisCount: 1, eventsCount: 0, tithisNames: Array(1), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 6: {dateKey: '2025-10-23', tithisCount: 1, eventsCount: 0, tithisNames: Array(1), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 12: {dateKey: '2025-10-29', tithisCount: 1, eventsCount: 0, tithisNames: Array(1), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 14: {dateKey: '2025-10-31', tithisCount: 1, eventsCount: 0, tithisNames: Array(1), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 16: {dateKey: '2025-11-02', tithisCount: 1, eventsCount: 0, tithisNames: Array(1), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 19: {dateKey: '2025-11-05', tithisCount: 2, eventsCount: 0, tithisNames: Array(2), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 27: {dateKey: '2025-11-13', tithisCount: 0, eventsCount: 1, tithisNames: Array(0), eventTitles: Array(1)}
+NepaliCalendar.js:1155 Rendering tile for day 28: {dateKey: '2025-11-14', tithisCount: 1, eventsCount: 0, tithisNames: Array(1), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 29: {dateKey: '2025-11-15', tithisCount: 1, eventsCount: 1, tithisNames: Array(1), eventTitles: Array(1)}
+NepaliCalendar.js:660 Local state updated with new tithi across dates: ['2025-11-2']
+NepaliCalendar.js:1155 Rendering tile for day 1: {dateKey: '2025-10-18', tithisCount: 0, eventsCount: 0, tithisNames: Array(0), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 2: {dateKey: '2025-10-19', tithisCount: 0, eventsCount: 0, tithisNames: Array(0), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 3: {dateKey: '2025-10-20', tithisCount: 0, eventsCount: 0, tithisNames: Array(0), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 4: {dateKey: '2025-10-21', tithisCount: 1, eventsCount: 0, tithisNames: Array(1), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 5: {dateKey: '2025-10-22', tithisCount: 1, eventsCount: 0, tithisNames: Array(1), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 6: {dateKey: '2025-10-23', tithisCount: 1, eventsCount: 0, tithisNames: Array(1), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 12: {dateKey: '2025-10-29', tithisCount: 1, eventsCount: 0, tithisNames: Array(1), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 14: {dateKey: '2025-10-31', tithisCount: 1, eventsCount: 0, tithisNames: Array(1), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 16: {dateKey: '2025-11-02', tithisCount: 1, eventsCount: 0, tithisNames: Array(1), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 19: {dateKey: '2025-11-05', tithisCount: 2, eventsCount: 0, tithisNames: Array(2), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 27: {dateKey: '2025-11-13', tithisCount: 0, eventsCount: 1, tithisNames: Array(0), eventTitles: Array(1)}
+NepaliCalendar.js:1155 Rendering tile for day 28: {dateKey: '2025-11-14', tithisCount: 1, eventsCount: 0, tithisNames: Array(1), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 29: {dateKey: '2025-11-15', tithisCount: 1, eventsCount: 1, tithisNames: Array(1), eventTitles: Array(1)}
+NepaliCalendar.js:1302 === TITHIS STATE UPDATE ===
+NepaliCalendar.js:1303 tithisByDate changed: {2025-10-21: Array(1), 2025-10-22: Array(1), 2025-10-23: Array(1), 2025-10-29: Array(1), 2025-10-31: Array(1), …}
+NepaliCalendar.js:1304 Total dates with tithis: 13
+NepaliCalendar.js:1306 Date 2025-10-21: 1 tithis ['शुक्लपक्ष पूर्णिमा']
+NepaliCalendar.js:1306 Date 2025-10-22: 1 tithis ['शुक्लपक्ष चतुर्थी']
+NepaliCalendar.js:1306 Date 2025-10-23: 1 tithis ['शुक्लपक्ष तृतीया']
+NepaliCalendar.js:1306 Date 2025-10-29: 1 tithis ['शुक्लपक्ष चतुर्थी']
+NepaliCalendar.js:1306 Date 2025-10-31: 1 tithis ['शुक्लपक्ष तृतीया']
+NepaliCalendar.js:1306 Date 2025-11-5: 2 tithis (2) ['शुक्लपक्ष तृतीया', 'शुक्लपक्ष त्रयोदशी']
+NepaliCalendar.js:1306 Date 2025-11-14: 1 tithis ['शुक्लपक्ष द्वितीया']
+NepaliCalendar.js:1306 Date 2025-11-15: 1 tithis ['शुक्लपक्ष द्वितीया']
+NepaliCalendar.js:1306 Date 2025-11-26: 1 tithis ['कृष्णपक्ष अष्टमी']
+NepaliCalendar.js:1306 Date 2025-11-27: 1 tithis ['शुक्लपक्ष एकादशी']
+NepaliCalendar.js:1306 Date 2025-11-28: 1 tithis ['कृष्णपक्ष एकादशी']
+NepaliCalendar.js:1306 Date 2026-1-14: 1 tithis ['शुक्लपक्ष द्वितीया']
+NepaliCalendar.js:1306 Date 2025-11-2: 1 tithis ['शुक्लपक्ष पूर्णिमा']
+NepaliCalendar.js:1308 === END STATE UPDATE ===
+NepaliCalendar.js:1314 Modal opened for date: 2025-11-3
+NepaliCalendar.js:1315 tithisByDate keys: (13) ['2025-10-21', '2025-10-22', '2025-10-23', '2025-10-29', '2025-10-31', '2025-11-5', '2025-11-14', '2025-11-15', '2025-11-26', '2025-11-27', '2025-11-28', '2026-1-14', '2025-11-2']
+NepaliCalendar.js:1316 modalTithis for 2025-11-3 : []
+NepaliCalendar.js:169 Firebase snapshot received: {docsCount: 13, hasPendingWrites: true, fromCache: false, timestamp: '10:56:05 PM'}
+NepaliCalendar.js:179 Processing tithi 1: {id: 'oYnKEt8kdYVvl4qmtBCu', endDate: '2025-10-21', createdAt: '2025-11-13T02:10:13.226Z', endTime: '18:00', startDate: '2025-10-21', …}
+NepaliCalendar.js:179 Processing tithi 2: {id: 'WzIkYIIfF5KGHiFoFMj0', endTime: '18:00', createdAt: '2025-11-13T03:33:22.365Z', startTime: '06:00', startDate: '2025-10-22', …}
+NepaliCalendar.js:179 Processing tithi 3: {id: 'qynXc8yunvIsma7XyYSa', endDate: '2025-10-23', endTime: '18:00', startDate: '2025-10-23', name: 'शुक्लपक्ष तृतीया', …}
+NepaliCalendar.js:179 Processing tithi 4: {id: 'QOgjIxcHcTz2kmXCTk0x', endDate: '2025-10-29', startTime: '06:00', createdAt: '2025-11-12T23:42:08.177Z', startDate: '2025-10-29', …}
+NepaliCalendar.js:179 Processing tithi 5: {id: 'W8Rc28JboESPoB7fmBrV', startDate: '2025-10-31', createdAt: '2025-11-13T00:39:13.709Z', name: 'शुक्लपक्ष तृतीया', endTime: '18:00', …}
+NepaliCalendar.js:179 Processing tithi 6: {id: 'saqn0K1qycSHOiShfYu1', name: 'शुक्लपक्ष पूर्णिमा', startDate: '2025-11-02', startTime: '06:00', endDate: '2025-11-02', …}
+NepaliCalendar.js:179 Processing tithi 7: {id: 'VjokbmVPfl5nr5Qu0oFT', startTime: '06:00', endTime: '18:00', endDate: '2025-11-05', startDate: '2025-11-05', …}
+NepaliCalendar.js:179 Processing tithi 8: {id: 'cUjk3gg1SarJI6Mi2xxc', endTime: '18:00', name: 'शुक्लपक्ष त्रयोदशी', endDate: '2025-11-05', createdAt: '2025-11-13T02:07:37.442Z', …}
+NepaliCalendar.js:179 Processing tithi 9: {id: 'f6a898f3-a505-492c-9053-056df8536d33', endTime: '18:00', endDate: '2025-11-15', createdAt: '2025-11-12T21:24:11.939Z', startTime: '06:00', …}
+NepaliCalendar.js:179 Processing tithi 10: {id: 'VoxLqL5PHM4mWssRjziG', startDate: '2025-11-26', updatedAt: '2025-11-12T22:38:49.130Z', category: '', startTime: '10:00', …}
+NepaliCalendar.js:179 Processing tithi 11: {id: 'BLBIidAuLyzBLt6N9ODc', endDate: '2025-11-27', category: 'Festival', startDate: '2025-11-27', updatedAt: '2025-11-12T22:35:55.577Z', …}
+NepaliCalendar.js:179 Processing tithi 12: {id: 'XrdayLGjno02BkW78E0k', name: 'कृष्णपक्ष एकादशी', startDate: '2025-11-28', createdByAdmin: true, createdAt: '2025-11-12T22:38:49.131Z', …}
+NepaliCalendar.js:179 Processing tithi 13: {id: 'A88Q2yyyqcizQXStSxF6', name: 'शुक्लपक्ष द्वितीया', startTime: '06:00', startDate: '2026-01-14', createdAt: '2025-11-12T23:41:19.213Z', …}
+NepaliCalendar.js:226 Final tithisData being set: {2025-10-21: Array(1), 2025-10-22: Array(1), 2025-10-23: Array(1), 2025-10-29: Array(1), 2025-10-31: Array(1), …}
+NepaliCalendar.js:227 Total dates with tithis: 13
+NepaliCalendar.js:1155 Rendering tile for day 1: {dateKey: '2025-10-18', tithisCount: 0, eventsCount: 0, tithisNames: Array(0), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 2: {dateKey: '2025-10-19', tithisCount: 0, eventsCount: 0, tithisNames: Array(0), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 3: {dateKey: '2025-10-20', tithisCount: 0, eventsCount: 0, tithisNames: Array(0), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 4: {dateKey: '2025-10-21', tithisCount: 1, eventsCount: 0, tithisNames: Array(1), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 5: {dateKey: '2025-10-22', tithisCount: 1, eventsCount: 0, tithisNames: Array(1), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 6: {dateKey: '2025-10-23', tithisCount: 1, eventsCount: 0, tithisNames: Array(1), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 12: {dateKey: '2025-10-29', tithisCount: 1, eventsCount: 0, tithisNames: Array(1), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 14: {dateKey: '2025-10-31', tithisCount: 1, eventsCount: 0, tithisNames: Array(1), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 16: {dateKey: '2025-11-02', tithisCount: 1, eventsCount: 0, tithisNames: Array(1), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 19: {dateKey: '2025-11-05', tithisCount: 2, eventsCount: 0, tithisNames: Array(2), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 27: {dateKey: '2025-11-13', tithisCount: 0, eventsCount: 1, tithisNames: Array(0), eventTitles: Array(1)}
+NepaliCalendar.js:1155 Rendering tile for day 28: {dateKey: '2025-11-14', tithisCount: 1, eventsCount: 0, tithisNames: Array(1), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 29: {dateKey: '2025-11-15', tithisCount: 1, eventsCount: 1, tithisNames: Array(1), eventTitles: Array(1)}
+NepaliCalendar.js:1155 Rendering tile for day 1: {dateKey: '2025-10-18', tithisCount: 0, eventsCount: 0, tithisNames: Array(0), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 2: {dateKey: '2025-10-19', tithisCount: 0, eventsCount: 0, tithisNames: Array(0), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 3: {dateKey: '2025-10-20', tithisCount: 0, eventsCount: 0, tithisNames: Array(0), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 4: {dateKey: '2025-10-21', tithisCount: 1, eventsCount: 0, tithisNames: Array(1), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 5: {dateKey: '2025-10-22', tithisCount: 1, eventsCount: 0, tithisNames: Array(1), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 6: {dateKey: '2025-10-23', tithisCount: 1, eventsCount: 0, tithisNames: Array(1), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 12: {dateKey: '2025-10-29', tithisCount: 1, eventsCount: 0, tithisNames: Array(1), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 14: {dateKey: '2025-10-31', tithisCount: 1, eventsCount: 0, tithisNames: Array(1), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 16: {dateKey: '2025-11-02', tithisCount: 1, eventsCount: 0, tithisNames: Array(1), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 19: {dateKey: '2025-11-05', tithisCount: 2, eventsCount: 0, tithisNames: Array(2), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 27: {dateKey: '2025-11-13', tithisCount: 0, eventsCount: 1, tithisNames: Array(0), eventTitles: Array(1)}
+NepaliCalendar.js:1155 Rendering tile for day 28: {dateKey: '2025-11-14', tithisCount: 1, eventsCount: 0, tithisNames: Array(1), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 29: {dateKey: '2025-11-15', tithisCount: 1, eventsCount: 1, tithisNames: Array(1), eventTitles: Array(1)}
+NepaliCalendar.js:1302 === TITHIS STATE UPDATE ===
+NepaliCalendar.js:1303 tithisByDate changed: {2025-10-21: Array(1), 2025-10-22: Array(1), 2025-10-23: Array(1), 2025-10-29: Array(1), 2025-10-31: Array(1), …}
+NepaliCalendar.js:1304 Total dates with tithis: 13
+NepaliCalendar.js:1306 Date 2025-10-21: 1 tithis ['शुक्लपक्ष पूर्णिमा']
+NepaliCalendar.js:1306 Date 2025-10-22: 1 tithis ['शुक्लपक्ष चतुर्थी']
+NepaliCalendar.js:1306 Date 2025-10-23: 1 tithis ['शुक्लपक्ष तृतीया']
+NepaliCalendar.js:1306 Date 2025-10-29: 1 tithis ['शुक्लपक्ष चतुर्थी']
+NepaliCalendar.js:1306 Date 2025-10-31: 1 tithis ['शुक्लपक्ष तृतीया']
+NepaliCalendar.js:1306 Date 2025-11-2: 1 tithis ['शुक्लपक्ष पूर्णिमा']
+NepaliCalendar.js:1306 Date 2025-11-5: 2 tithis (2) ['शुक्लपक्ष तृतीया', 'शुक्लपक्ष त्रयोदशी']
+NepaliCalendar.js:1306 Date 2025-11-14: 1 tithis ['शुक्लपक्ष द्वितीया']
+NepaliCalendar.js:1306 Date 2025-11-15: 1 tithis ['शुक्लपक्ष द्वितीया']
+NepaliCalendar.js:1306 Date 2025-11-26: 1 tithis ['कृष्णपक्ष अष्टमी']
+NepaliCalendar.js:1306 Date 2025-11-27: 1 tithis ['शुक्लपक्ष एकादशी']
+NepaliCalendar.js:1306 Date 2025-11-28: 1 tithis ['कृष्णपक्ष एकादशी']
+NepaliCalendar.js:1306 Date 2026-1-14: 1 tithis ['शुक्लपक्ष द्वितीया']
+NepaliCalendar.js:1308 === END STATE UPDATE ===
+NepaliCalendar.js:1314 Modal opened for date: 2025-11-3
+NepaliCalendar.js:1315 tithisByDate keys: (13) ['2025-10-21', '2025-10-22', '2025-10-23', '2025-10-29', '2025-10-31', '2025-11-2', '2025-11-5', '2025-11-14', '2025-11-15', '2025-11-26', '2025-11-27', '2025-11-28', '2026-1-14']
+NepaliCalendar.js:1316 modalTithis for 2025-11-3 : []
+NepaliCalendar.js:682 Successfully added tithi to Firestore at 10:56:05 PM with ID: saqn0K1qycSHOiShfYu1
+NepaliCalendar.js:1022 Tithi added successfully, clearing form and closing modal
+NepaliCalendar.js:695 Updated local state with real Firebase ID: saqn0K1qycSHOiShfYu1
+NepaliCalendar.js:1155 Rendering tile for day 1: {dateKey: '2025-10-18', tithisCount: 0, eventsCount: 0, tithisNames: Array(0), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 2: {dateKey: '2025-10-19', tithisCount: 0, eventsCount: 0, tithisNames: Array(0), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 3: {dateKey: '2025-10-20', tithisCount: 0, eventsCount: 0, tithisNames: Array(0), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 4: {dateKey: '2025-10-21', tithisCount: 1, eventsCount: 0, tithisNames: Array(1), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 5: {dateKey: '2025-10-22', tithisCount: 1, eventsCount: 0, tithisNames: Array(1), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 6: {dateKey: '2025-10-23', tithisCount: 1, eventsCount: 0, tithisNames: Array(1), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 12: {dateKey: '2025-10-29', tithisCount: 1, eventsCount: 0, tithisNames: Array(1), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 14: {dateKey: '2025-10-31', tithisCount: 1, eventsCount: 0, tithisNames: Array(1), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 16: {dateKey: '2025-11-02', tithisCount: 1, eventsCount: 0, tithisNames: Array(1), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 19: {dateKey: '2025-11-05', tithisCount: 2, eventsCount: 0, tithisNames: Array(2), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 27: {dateKey: '2025-11-13', tithisCount: 0, eventsCount: 1, tithisNames: Array(0), eventTitles: Array(1)}
+NepaliCalendar.js:1155 Rendering tile for day 28: {dateKey: '2025-11-14', tithisCount: 1, eventsCount: 0, tithisNames: Array(1), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 29: {dateKey: '2025-11-15', tithisCount: 1, eventsCount: 1, tithisNames: Array(1), eventTitles: Array(1)}
+NepaliCalendar.js:695 Updated local state with real Firebase ID: saqn0K1qycSHOiShfYu1
+NepaliCalendar.js:1155 Rendering tile for day 1: {dateKey: '2025-10-18', tithisCount: 0, eventsCount: 0, tithisNames: Array(0), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 2: {dateKey: '2025-10-19', tithisCount: 0, eventsCount: 0, tithisNames: Array(0), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 3: {dateKey: '2025-10-20', tithisCount: 0, eventsCount: 0, tithisNames: Array(0), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 4: {dateKey: '2025-10-21', tithisCount: 1, eventsCount: 0, tithisNames: Array(1), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 5: {dateKey: '2025-10-22', tithisCount: 1, eventsCount: 0, tithisNames: Array(1), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 6: {dateKey: '2025-10-23', tithisCount: 1, eventsCount: 0, tithisNames: Array(1), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 12: {dateKey: '2025-10-29', tithisCount: 1, eventsCount: 0, tithisNames: Array(1), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 14: {dateKey: '2025-10-31', tithisCount: 1, eventsCount: 0, tithisNames: Array(1), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 16: {dateKey: '2025-11-02', tithisCount: 1, eventsCount: 0, tithisNames: Array(1), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 19: {dateKey: '2025-11-05', tithisCount: 2, eventsCount: 0, tithisNames: Array(2), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 27: {dateKey: '2025-11-13', tithisCount: 0, eventsCount: 1, tithisNames: Array(0), eventTitles: Array(1)}
+NepaliCalendar.js:1155 Rendering tile for day 28: {dateKey: '2025-11-14', tithisCount: 1, eventsCount: 0, tithisNames: Array(1), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 29: {dateKey: '2025-11-15', tithisCount: 1, eventsCount: 1, tithisNames: Array(1), eventTitles: Array(1)}
+NepaliCalendar.js:1302 === TITHIS STATE UPDATE ===
+NepaliCalendar.js:1303 tithisByDate changed: {2025-10-21: Array(1), 2025-10-22: Array(1), 2025-10-23: Array(1), 2025-10-29: Array(1), 2025-10-31: Array(1), …}
+NepaliCalendar.js:1304 Total dates with tithis: 13
+NepaliCalendar.js:1306 Date 2025-10-21: 1 tithis ['शुक्लपक्ष पूर्णिमा']
+NepaliCalendar.js:1306 Date 2025-10-22: 1 tithis ['शुक्लपक्ष चतुर्थी']
+NepaliCalendar.js:1306 Date 2025-10-23: 1 tithis ['शुक्लपक्ष तृतीया']
+NepaliCalendar.js:1306 Date 2025-10-29: 1 tithis ['शुक्लपक्ष चतुर्थी']
+NepaliCalendar.js:1306 Date 2025-10-31: 1 tithis ['शुक्लपक्ष तृतीया']
+NepaliCalendar.js:1306 Date 2025-11-2: 1 tithis ['शुक्लपक्ष पूर्णिमा']
+NepaliCalendar.js:1306 Date 2025-11-5: 2 tithis (2) ['शुक्लपक्ष तृतीया', 'शुक्लपक्ष त्रयोदशी']
+NepaliCalendar.js:1306 Date 2025-11-14: 1 tithis ['शुक्लपक्ष द्वितीया']
+NepaliCalendar.js:1306 Date 2025-11-15: 1 tithis ['शुक्लपक्ष द्वितीया']
+NepaliCalendar.js:1306 Date 2025-11-26: 1 tithis ['कृष्णपक्ष अष्टमी']
+NepaliCalendar.js:1306 Date 2025-11-27: 1 tithis ['शुक्लपक्ष एकादशी']
+NepaliCalendar.js:1306 Date 2025-11-28: 1 tithis ['कृष्णपक्ष एकादशी']
+NepaliCalendar.js:1306 Date 2026-1-14: 1 tithis ['शुक्लपक्ष द्वितीया']
+NepaliCalendar.js:1308 === END STATE UPDATE ===
+NepaliCalendar.js:1155 Rendering tile for day 1: {dateKey: '2025-10-18', tithisCount: 0, eventsCount: 0, tithisNames: Array(0), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 2: {dateKey: '2025-10-19', tithisCount: 0, eventsCount: 0, tithisNames: Array(0), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 3: {dateKey: '2025-10-20', tithisCount: 0, eventsCount: 0, tithisNames: Array(0), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 4: {dateKey: '2025-10-21', tithisCount: 1, eventsCount: 0, tithisNames: Array(1), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 5: {dateKey: '2025-10-22', tithisCount: 1, eventsCount: 0, tithisNames: Array(1), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 6: {dateKey: '2025-10-23', tithisCount: 1, eventsCount: 0, tithisNames: Array(1), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 12: {dateKey: '2025-10-29', tithisCount: 1, eventsCount: 0, tithisNames: Array(1), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 14: {dateKey: '2025-10-31', tithisCount: 1, eventsCount: 0, tithisNames: Array(1), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 16: {dateKey: '2025-11-02', tithisCount: 1, eventsCount: 0, tithisNames: Array(1), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 19: {dateKey: '2025-11-05', tithisCount: 2, eventsCount: 0, tithisNames: Array(2), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 27: {dateKey: '2025-11-13', tithisCount: 0, eventsCount: 1, tithisNames: Array(0), eventTitles: Array(1)}
+NepaliCalendar.js:1155 Rendering tile for day 28: {dateKey: '2025-11-14', tithisCount: 1, eventsCount: 0, tithisNames: Array(1), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 29: {dateKey: '2025-11-15', tithisCount: 1, eventsCount: 1, tithisNames: Array(1), eventTitles: Array(1)}
+NepaliCalendar.js:1155 Rendering tile for day 1: {dateKey: '2025-10-18', tithisCount: 0, eventsCount: 0, tithisNames: Array(0), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 2: {dateKey: '2025-10-19', tithisCount: 0, eventsCount: 0, tithisNames: Array(0), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 3: {dateKey: '2025-10-20', tithisCount: 0, eventsCount: 0, tithisNames: Array(0), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 4: {dateKey: '2025-10-21', tithisCount: 1, eventsCount: 0, tithisNames: Array(1), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 5: {dateKey: '2025-10-22', tithisCount: 1, eventsCount: 0, tithisNames: Array(1), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 6: {dateKey: '2025-10-23', tithisCount: 1, eventsCount: 0, tithisNames: Array(1), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 12: {dateKey: '2025-10-29', tithisCount: 1, eventsCount: 0, tithisNames: Array(1), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 14: {dateKey: '2025-10-31', tithisCount: 1, eventsCount: 0, tithisNames: Array(1), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 16: {dateKey: '2025-11-02', tithisCount: 1, eventsCount: 0, tithisNames: Array(1), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 19: {dateKey: '2025-11-05', tithisCount: 2, eventsCount: 0, tithisNames: Array(2), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 27: {dateKey: '2025-11-13', tithisCount: 0, eventsCount: 1, tithisNames: Array(0), eventTitles: Array(1)}
+NepaliCalendar.js:1155 Rendering tile for day 28: {dateKey: '2025-11-14', tithisCount: 1, eventsCount: 0, tithisNames: Array(1), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 29: {dateKey: '2025-11-15', tithisCount: 1, eventsCount: 1, tithisNames: Array(1), eventTitles: Array(1)}
+NepaliCalendar.js:1155 Rendering tile for day 1: {dateKey: '2025-10-18', tithisCount: 0, eventsCount: 0, tithisNames: Array(0), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 2: {dateKey: '2025-10-19', tithisCount: 0, eventsCount: 0, tithisNames: Array(0), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 3: {dateKey: '2025-10-20', tithisCount: 0, eventsCount: 0, tithisNames: Array(0), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 4: {dateKey: '2025-10-21', tithisCount: 1, eventsCount: 0, tithisNames: Array(1), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 5: {dateKey: '2025-10-22', tithisCount: 1, eventsCount: 0, tithisNames: Array(1), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 6: {dateKey: '2025-10-23', tithisCount: 1, eventsCount: 0, tithisNames: Array(1), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 12: {dateKey: '2025-10-29', tithisCount: 1, eventsCount: 0, tithisNames: Array(1), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 14: {dateKey: '2025-10-31', tithisCount: 1, eventsCount: 0, tithisNames: Array(1), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 16: {dateKey: '2025-11-02', tithisCount: 1, eventsCount: 0, tithisNames: Array(1), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 19: {dateKey: '2025-11-05', tithisCount: 2, eventsCount: 0, tithisNames: Array(2), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 27: {dateKey: '2025-11-13', tithisCount: 0, eventsCount: 1, tithisNames: Array(0), eventTitles: Array(1)}
+NepaliCalendar.js:1155 Rendering tile for day 28: {dateKey: '2025-11-14', tithisCount: 1, eventsCount: 0, tithisNames: Array(1), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 29: {dateKey: '2025-11-15', tithisCount: 1, eventsCount: 1, tithisNames: Array(1), eventTitles: Array(1)}
+NepaliCalendar.js:1155 Rendering tile for day 1: {dateKey: '2025-10-18', tithisCount: 0, eventsCount: 0, tithisNames: Array(0), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 2: {dateKey: '2025-10-19', tithisCount: 0, eventsCount: 0, tithisNames: Array(0), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 3: {dateKey: '2025-10-20', tithisCount: 0, eventsCount: 0, tithisNames: Array(0), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 4: {dateKey: '2025-10-21', tithisCount: 1, eventsCount: 0, tithisNames: Array(1), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 5: {dateKey: '2025-10-22', tithisCount: 1, eventsCount: 0, tithisNames: Array(1), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 6: {dateKey: '2025-10-23', tithisCount: 1, eventsCount: 0, tithisNames: Array(1), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 12: {dateKey: '2025-10-29', tithisCount: 1, eventsCount: 0, tithisNames: Array(1), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 14: {dateKey: '2025-10-31', tithisCount: 1, eventsCount: 0, tithisNames: Array(1), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 16: {dateKey: '2025-11-02', tithisCount: 1, eventsCount: 0, tithisNames: Array(1), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 19: {dateKey: '2025-11-05', tithisCount: 2, eventsCount: 0, tithisNames: Array(2), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 27: {dateKey: '2025-11-13', tithisCount: 0, eventsCount: 1, tithisNames: Array(0), eventTitles: Array(1)}
+NepaliCalendar.js:1155 Rendering tile for day 28: {dateKey: '2025-11-14', tithisCount: 1, eventsCount: 0, tithisNames: Array(1), eventTitles: Array(0)}
+NepaliCalendar.js:1155 Rendering tile for day 29: {dateKey: '2025-11-15', tithisCount: 1, eventsCount: 1, tithisNames: Array(1), eventTitles: Array(1)}

@@ -10,6 +10,7 @@ import CustomerDetail from './components/CustomerDetail';
 import AddCustomerForm from './components/AddCustomerForm';
 import LandingPage from './components/LandingPage';
 import AdminEditCards from './components/AdminEditCards';
+import AdminManagement from './components/AdminManagement';
 import { deleteDoc } from 'firebase/firestore';
 
 export default function App() {
@@ -201,6 +202,10 @@ export default function App() {
         setView('adminEditCards');
     };
 
+    const handleAdminManagement = () => {
+        setView('adminManagement');
+    };
+
     // --- RENDER ---
     if (isLoading) {
         return <div className="min-h-screen flex items-center justify-center bg-gray-100">
@@ -239,6 +244,7 @@ export default function App() {
                                 onSignOut={handleSignOut} 
                                 isAdmin={isAdmin}
                                 onAdminEditCards={handleAdminEditCards}
+                                onAdminManagement={handleAdminManagement}
                             />
                         ) : (
                             <button
@@ -263,6 +269,7 @@ export default function App() {
                     {view === 'list' && (
                         <LandingPage
                             user={user}
+                            isAdmin={isAdmin}
                             customers={customers}
                             onSelectCustomer={handleSelectCustomer}
                             onAddCustomer={handleAddCustomer}
@@ -293,6 +300,14 @@ export default function App() {
 
                     {view === 'adminEditCards' && (
                         <AdminEditCards
+                            user={user}
+                            isAdmin={isAdmin}
+                            onBack={handleBackToList}
+                        />
+                    )}
+
+                    {view === 'adminManagement' && (
+                        <AdminManagement
                             user={user}
                             isAdmin={isAdmin}
                             onBack={handleBackToList}

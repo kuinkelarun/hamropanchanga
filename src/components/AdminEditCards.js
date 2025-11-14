@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, orderBy, query } from 'firebase/firestore';
+import { collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, orderBy, query, getDoc, setDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { db, storage } from '../firebase';
 import './AdminEditCards.css';
@@ -10,6 +10,7 @@ const AdminEditCards = ({ user, isAdmin, onBack }) => {
     const [currentCard, setCurrentCard] = useState(null);
     const [loading, setLoading] = useState(false);
     const [notification, setNotification] = useState({ show: false, message: '', type: '' });
+    const [block1Visible, setBlock1Visible] = useState(true);
     
     // Form state
     const [formData, setFormData] = useState({
@@ -47,6 +48,44 @@ const AdminEditCards = ({ user, isAdmin, onBack }) => {
 
         return () => unsubscribe();
     }, [user, isAdmin]);
+
+    // Fetch Block 1 visibility setting
+    useEffect(() => {
+        if (!user || !isAdmin) return;
+        
+        const fetchBlock1Visibility = async () => {
+            try {
+                const settingsDoc = await getDoc(doc(db, 'siteSettings', 'block1'));
+                if (settingsDoc.exists()) {
+                    setBlock1Visible(settingsDoc.data().visible !== false); // Default to true
+                }
+            } catch (error) {
+                console.error('Error fetching Block 1 visibility:', error);
+            }
+        };
+        
+        fetchBlock1Visibility();
+    }, [user, isAdmin]);
+
+    // Toggle Block 1 visibility
+    const toggleBlock1Visibility = async () => {
+        try {
+            const newVisibility = !block1Visible;
+            await setDoc(doc(db, 'siteSettings', 'block1'), {
+                visible: newVisibility,
+                updatedAt: new Date().toISOString(),
+                updatedBy: user.uid
+            });
+            setBlock1Visible(newVisibility);
+            showNotification(
+                `Block 1 is now ${newVisibility ? 'visible' : 'hidden'}`,
+                'success'
+            );
+        } catch (error) {
+            console.error('Error toggling Block 1 visibility:', error);
+            showNotification('Error updating visibility', 'error');
+        }
+    };
 
     const showNotification = (message, type = 'success') => {
         setNotification({ show: true, message, type });
@@ -236,9 +275,23 @@ const AdminEditCards = ({ user, isAdmin, onBack }) => {
                     <button onClick={onBack} className="admin-back-btn">← Back</button>
                     <h1>Manage Home Cards</h1>
                 </div>
-                <button onClick={handleAddNew} className="admin-add-btn">
-                    + Add New Card
-                </button>
+                <div className="admin-header-right">
+                    <div className="block1-visibility-toggle">
+                        <label className="toggle-label">
+                            <span>Show Block 1 on Homepage:</span>
+                            <button
+                                onClick={toggleBlock1Visibility}
+                                className={`toggle-switch ${block1Visible ? 'active' : ''}`}
+                            >
+                                <span className="toggle-slider"></span>
+                            </button>
+                            <span className="toggle-status">{block1Visible ? 'Visible' : 'Hidden'}</span>
+                        </label>
+                    </div>
+                    <button onClick={handleAddNew} className="admin-add-btn">
+                        + Add New Card
+                    </button>
+                </div>
             </div>
 
             {/* Cards Grid */}

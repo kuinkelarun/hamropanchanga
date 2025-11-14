@@ -405,17 +405,35 @@
     color:#9ca3af; 
     font-size:12px; 
 }
+
+/* Tithi at bottom left */
+.nt-tithi-bottom {
+    position: absolute;
+    bottom: 6px;
+    left: 8px;
+    font-size: 9px;
+    font-weight: 600;
+    color: #6b21a8;
+    white-space: nowrap;
+    max-width: 60%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
 .nt-summary { 
     position:absolute;
     top:32px; /* Start below the Nepali date */
     left:8px;
     right:8px;
-    bottom:25px; /* Leave space for English date at bottom */
+    bottom:26px; /* Leave space for tithi and English date at bottom */
     display:flex; 
     flex-direction:column; 
-    gap:2px; 
+    justify-content:center; /* Center vertically */
+    align-items:center; /* Center horizontally */
+    gap:3px; 
     overflow:hidden; /* Hide overflow content */
 }
+
 .nt-summary-item { 
     font-size:10px; 
     color:#374151; 
@@ -423,12 +441,17 @@
     overflow:hidden; 
     text-overflow:ellipsis; 
     display:block;
-    padding:1px 0;
-    line-height:1.3;
-    text-align:center; /* Center the slash-separated tithis */
+    padding:0;
+    line-height:1.5;
+    text-align:center; /* Center text */
+    background: transparent; /* Remove background */
+    max-width: 100%; /* Ensure text doesn't overflow container */
 }
-.nt-summary-item.tithi { color:#6b21a8; }
-.nt-summary-item.event { color:#0ea5a5; }
+
+.nt-summary-item.event { 
+    color:#0ea5e5; 
+    font-weight: 500;
+}
 
 /* Quick Add Button - Hidden but functionality preserved */
 .nt-quick-add-btn {
@@ -961,12 +984,12 @@
         gap: 4px;
         /* Allow grid to expand and fill available space */
         flex: 1;
-        grid-auto-rows: minmax(52px, 1fr); /* Further reduced from 60px */
+        grid-auto-rows: minmax(58px, 1fr); /* Slightly increased for better mobile visibility */
         padding: 0 4px 8px 4px; /* Small horizontal padding and bottom padding */
     }
     
     .nt-day-tile {
-        min-height: 52px; /* Further reduced from 60px */
+        min-height: 58px; /* Slightly increased for better mobile visibility */
         max-height: none; /* Allow flexible height */
         padding: 6px 5px; /* Adjusted padding */
         border-radius: 8px;
@@ -1010,6 +1033,24 @@
         bottom: 8px; /* Better spacing */
         right: 8px;
         color: #9ca3af;
+    }
+    
+    .nt-tithi-bottom {
+        font-size: 8px;
+        bottom: 5px;
+        left: 6px;
+        max-width: 55%;
+    }
+    
+    .nt-summary {
+        top: 28px;
+        bottom: 24px;
+        gap: 2px;
+    }
+    
+    .nt-summary-item {
+        font-size: 9px;
+        line-height: 1.4;
     }
     
     .nc-event-indicator {
@@ -1132,12 +1173,12 @@
     .nc-grid {
         gap: 3px; /* Slightly wider gaps for breathing room */
         flex: 1;
-        grid-auto-rows: minmax(48px, 1fr); /* Further reduced from 55px */
+        grid-auto-rows: minmax(54px, 1fr); /* Slightly increased for better mobile visibility */
         padding: 0 3px 6px 3px; /* Minimal horizontal padding and bottom padding */
     }
     
     .nt-day-tile {
-        min-height: 48px; /* Further reduced from 55px */
+        min-height: 54px; /* Slightly increased for better mobile visibility */
         max-height: none; /* Allow flexible height */
         padding: 5px 3px; /* Compact padding */
         border-radius: 6px;
@@ -1189,6 +1230,24 @@
         right: 6px; /* Comfortable spacing from right */
         color: #9ca3af;
         line-height: 1.2;
+    }
+    
+    .nt-tithi-bottom {
+        font-size: 7px;
+        bottom: 4px;
+        left: 5px;
+        max-width: 50%;
+    }
+    
+    .nt-summary {
+        top: 26px;
+        bottom: 22px;
+        gap: 2px;
+    }
+    
+    .nt-summary-item {
+        font-size: 8px;
+        line-height: 1.3;
     }
     
     .nc-tithi-indicator {
@@ -1319,12 +1378,12 @@
     .nc-grid {
         gap: 2px;
         flex: 1;
-        grid-auto-rows: minmax(45px, 1fr); /* Further reduced from 52px */
+        grid-auto-rows: minmax(50px, 1fr); /* Slightly increased for better mobile visibility */
         padding: 0 2px 4px 2px; /* Absolute minimal padding */
     }
     
     .nt-day-tile {
-        min-height: 45px; /* Further reduced from 52px */
+        min-height: 50px; /* Slightly increased for better mobile visibility */
         max-height: none; /* Allow flexible height */
         padding: 4px 2px; /* Very compact padding */
         transition: background 0.08s ease, box-shadow 0.08s ease, transform 0.08s ease;
