@@ -6,6 +6,7 @@ import './NepaliCalendar.css';
 import ConfirmModal from './ConfirmModal';
 import bsCalendarData from '../data/bsCalendarData';
 import { useSettings } from '../contexts/SettingsContext';
+import NepaliDatePicker from './NepaliDatePicker';
 
 const nepaliMonths = [
   "वैशाख", "जेठ", "असार", "साउन", "भदौ", "असोज",
@@ -47,6 +48,30 @@ function getNepalDate(){
   const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
   const nptOffset = 5.75 * 3600000;
   return new Date(utc + nptOffset);
+}
+
+// Convert 24-hour time (HH:MM) to 12-hour format with AM/PM
+function formatTime12Hour(time24) {
+  if (!time24) return '';
+  const [hours, minutes] = time24.split(':').map(Number);
+  const period = hours >= 12 ? 'PM' : 'AM';
+  const hours12 = hours % 12 || 12;
+  return `${hours12}:${String(minutes).padStart(2, '0')} ${period}`;
+}
+
+// Convert 12-hour time with AM/PM to 24-hour format (HH:MM)
+function formatTime24Hour(time12) {
+  if (!time12) return '';
+  const match = time12.match(/(\d+):(\d+)\s*(AM|PM)/i);
+  if (!match) return time12; // Return as-is if format doesn't match
+  let hours = parseInt(match[1]);
+  const minutes = match[2];
+  const period = match[3].toUpperCase();
+  
+  if (period === 'PM' && hours !== 12) hours += 12;
+  if (period === 'AM' && hours === 12) hours = 0;
+  
+  return `${String(hours).padStart(2, '0')}:${minutes}`;
 }
 
 function convertAdToBs(year, month, day){
@@ -1060,8 +1085,8 @@ export default function NepaliCalendar({ user: propUser, isAdmin }) {
   // Helper function to format tithi datetime display
   const formatTithiDateTime = (tithi) => {
     if (!tithi.startDate || !tithi.endDate) {
-      // Legacy format - just show times
-      return `${tithi.startTime} — ${tithi.endTime}`;
+      // Legacy format - just show times with AM/PM
+      return `${formatTime12Hour(tithi.startTime)} — ${formatTime12Hour(tithi.endTime)}`;
     }
 
     // Parse start and end dates
@@ -1076,9 +1101,9 @@ export default function NepaliCalendar({ user: propUser, isAdmin }) {
     const startDateStr = `${nepaliMonths[startBs.month - 1]} ${toNepaliNumber(startBs.day)}, ${toNepaliNumber(startBs.year)}`;
     const endDateStr = `${nepaliMonths[endBs.month - 1]} ${toNepaliNumber(endBs.day)}, ${toNepaliNumber(endBs.year)}`;
     
-    // Always show full date-time format for consistency
-    // Format: "कात्तिक २७, २०८२, 06:00 — कात्तिक २८, २०८२, 18:00"
-    return `${startDateStr}, ${tithi.startTime} — ${endDateStr}, ${tithi.endTime}`;
+    // Always show full date-time format for consistency with 12-hour time
+    // Format: "कात्तिक २७, २०८२, 6:00 AM — कात्तिक २८, २०८२, 6:00 PM"
+    return `${startDateStr}, ${formatTime12Hour(tithi.startTime)} — ${endDateStr}, ${formatTime12Hour(tithi.endTime)}`;
   };
 
   function renderDayTiles(){
@@ -1697,70 +1722,18 @@ export default function NepaliCalendar({ user: propUser, isAdmin }) {
                 </div>
               </div>
 
-              {/* Quick Actions for Date Selection */}
-              <div style={{ marginBottom: '1rem', display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-                <button 
-                  type="button"
-                  onClick={() => {
-                    setStartDate(activeDate);
-                    setEndDate(activeDate);
-                  }}
-                  style={{ 
-                    padding: '0.25rem 0.75rem', 
-                    fontSize: '0.85rem',
-                    background: '#e5e7eb',
-                    border: '1px solid #d1d5db',
-                    borderRadius: '4px',
-                    cursor: 'pointer'
-                  }}
-                >
-                  Same Day
-                </button>
-                <button 
-                  type="button"
-                  onClick={() => {
-                    if (!activeDate) return;
-                    const date = new Date(activeDate + 'T00:00:00');
-                    date.setDate(date.getDate() + 1);
-                    const nextDay = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-                    setStartDate(activeDate);
-                    setEndDate(nextDay);
-                  }}
-                  style={{ 
-                    padding: '0.25rem 0.75rem', 
-                    fontSize: '0.85rem',
-                    background: '#e5e7eb',
-                    border: '1px solid #d1d5db',
-                    borderRadius: '4px',
-                    cursor: 'pointer'
-                  }}
-                >
-                  Extends to Next Day
-                </button>
-              </div>
-
               {/* Date Range Fields - Start */}
               <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1rem' }}>
                 <div style={{ flex: 1 }}>
-                  <label className="nc-label">Start Date *</label>
-                  <input
-                    type="date"
+                  <NepaliDatePicker
                     value={startDate}
-                    onChange={e => setStartDate(e.target.value)}
-                    className="nc-input"
+                    onChange={setStartDate}
+                    label="आरम्भ मिति (Start Date)"
                     required
                   />
-                  <div style={{ fontSize: '0.8rem', color: '#6b7280', marginTop: '0.25rem' }}>
-                    {(() => {
-                      if (!startDate) return '';
-                      const [y, m, d] = startDate.split('-').map(Number);
-                      const bs = convertAdToBs(y, m - 1, d);
-                      return `BS: ${nepaliMonths[bs.month - 1]} ${toNepaliNumber(bs.day)}, ${toNepaliNumber(bs.year)}`;
-                    })()}
-                  </div>
                 </div>
                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-                  <label className="nc-label" style={{ marginBottom: '0.25rem' }}>आरम्भकाल (Start Time):</label>
+                  <label className="nc-label" style={{ marginBottom: '0.25rem' }}>आरम्भकाल (Start Time) *</label>
                   <input 
                     type="time" 
                     value={startTime} 
@@ -1770,31 +1743,24 @@ export default function NepaliCalendar({ user: propUser, isAdmin }) {
                     step="300"
                     required
                   />
+                  <div style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '0.25rem' }}>
+                    {startTime && formatTime12Hour(startTime)}
+                  </div>
                 </div>
               </div>
 
               {/* Date Range Fields - End */}
               <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1rem' }}>
                 <div style={{ flex: 1 }}>
-                  <label className="nc-label">End Date *</label>
-                  <input
-                    type="date"
+                  <NepaliDatePicker
                     value={endDate}
-                    onChange={e => setEndDate(e.target.value)}
-                    className="nc-input"
+                    onChange={setEndDate}
+                    label="समाप्ति मिति (End Date)"
                     required
                   />
-                  <div style={{ fontSize: '0.8rem', color: '#6b7280', marginTop: '0.25rem' }}>
-                    {(() => {
-                      if (!endDate) return '';
-                      const [y, m, d] = endDate.split('-').map(Number);
-                      const bs = convertAdToBs(y, m - 1, d);
-                      return `BS: ${nepaliMonths[bs.month - 1]} ${toNepaliNumber(bs.day)}, ${toNepaliNumber(bs.year)}`;
-                    })()}
-                  </div>
                 </div>
                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-                  <label className="nc-label" style={{ marginBottom: '0.25rem' }}>समाप्तिकाल (End Time):</label>
+                  <label className="nc-label" style={{ marginBottom: '0.25rem' }}>समाप्तिकाल (End Time) *</label>
                   <input 
                     type="time" 
                     value={endTime} 
@@ -1804,6 +1770,9 @@ export default function NepaliCalendar({ user: propUser, isAdmin }) {
                     step="300"
                     required
                   />
+                  <div style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '0.25rem' }}>
+                    {endTime && formatTime12Hour(endTime)}
+                  </div>
                 </div>
               </div>
 
