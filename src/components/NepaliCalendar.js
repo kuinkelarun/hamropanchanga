@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react';
-import { collection, addDoc, deleteDoc, doc, onSnapshot, query, orderBy, getDocs, where, updateDoc } from 'firebase/firestore';
+import { collection, addDoc, deleteDoc, doc, onSnapshot, query, orderBy, getDocs, where } from 'firebase/firestore';
 import { onAuthStateChanged } from 'firebase/auth';
 import { db, auth, signInWithGoogle } from '../firebase';
 import './NepaliCalendar.css';
@@ -60,6 +60,7 @@ function formatTime12Hour(time24) {
 }
 
 // Convert 12-hour time with AM/PM to 24-hour format (HH:MM)
+// eslint-disable-next-line no-unused-vars
 function formatTime24Hour(time12) {
   if (!time12) return '';
   const match = time12.match(/(\d+):(\d+)\s*(AM|PM)/i);
@@ -162,7 +163,6 @@ export default function NepaliCalendar({ user: propUser, isAdmin }) {
 
   // Calendar-only transition state and direction
   const [isMonthTransitioning, setIsMonthTransitioning] = useState(false);
-  const [transitionDir, setTransitionDir] = useState('jump'); // 'prev' | 'next' | 'jump'
   const transitionMs = 900;
   const triggerMonthTransition = useCallback((applyChange) => {
     if (isMonthTransitioning) return;
@@ -527,17 +527,6 @@ export default function NepaliCalendar({ user: propUser, isAdmin }) {
     }
   }, [setTithisByDate]);
 
-  // Navigate to the current Nepali month/year (today)
-  const handleGoToToday = useCallback(async () => {
-    // If user has open modals / pending edits, open app modal to confirm
-    if (addTithiModalOpen || detailsModalOpen) {
-      setConfirmOpen(true);
-      return;
-    }
-    // Otherwise proceed immediately
-    await proceedGoToToday();
-  }, [addTithiModalOpen, detailsModalOpen, refreshTithis, setActiveDate, setCurrentBsMonth, setCurrentBsYear, setAddTithiModalOpen, setDetailsModalOpen, setModalFocusHint, todayBs]);
-
   const [confirmOpen, setConfirmOpen] = useState(false);
 
   const proceedGoToToday = useCallback(async () => {
@@ -552,7 +541,18 @@ export default function NepaliCalendar({ user: propUser, isAdmin }) {
     try { await refreshTithis(); } catch (e) { /* ignore refresh errors */ }
     setActiveDate(null);
     setConfirmOpen(false);
-  }, [refreshTithis, setActiveDate, setCurrentBsMonth, setCurrentBsYear, setAddTithiModalOpen, setDetailsModalOpen, setModalFocusHint, todayBs]);
+  }, [refreshTithis, todayBs]);
+
+  // Navigate to the current Nepali month/year (today)
+  const handleGoToToday = useCallback(async () => {
+    // If user has open modals / pending edits, open app modal to confirm
+    if (addTithiModalOpen || detailsModalOpen) {
+      setConfirmOpen(true);
+      return;
+    }
+    // Otherwise proceed immediately
+    await proceedGoToToday();
+  }, [addTithiModalOpen, detailsModalOpen, proceedGoToToday]);
 
   // Debug function to check what's actually in Firestore
   const debugFirestore = useCallback(async () => {
@@ -588,14 +588,12 @@ export default function NepaliCalendar({ user: propUser, isAdmin }) {
   // Helper functions to compute previous/next Nepali month names
   function getPrevMonthName(){
     let m = currentBsMonth - 1;
-    let y = currentBsYear;
-    if (m < 1) { m = 12; y -= 1; }
+    if (m < 1) { m = 12; }
     return nepaliMonths[m-1] || '';
   }
   function getNextMonthName(){
     let m = currentBsMonth + 1;
-    let y = currentBsYear;
-    if (m > 12) { m = 1; y += 1; }
+    if (m > 12) { m = 1; }
     return nepaliMonths[m-1] || '';
   }
 
@@ -758,6 +756,7 @@ export default function NepaliCalendar({ user: propUser, isAdmin }) {
     }
   }
 
+  // eslint-disable-next-line no-unused-vars
   async function deleteTithi(dateKey, id){
     if (!user) {
       console.error('User not authenticated for delete operation');
@@ -875,46 +874,6 @@ export default function NepaliCalendar({ user: propUser, isAdmin }) {
       return docRef.id;
     } catch (error) {
       console.error('Error adding calendar event:', error);
-      throw error;
-    }
-  }
-
-  async function deleteCalendarEvent(eventId, event) {
-    if (!user) {
-      console.error('User not authenticated for delete operation');
-      return;
-    }
-
-    // Check permissions: user can delete own events, admin can delete any
-    if (!isAdmin && event.createdBy !== user.uid) {
-      console.error('User not authorized to delete this event');
-      return;
-    }
-
-    try {
-      await deleteDoc(doc(db, 'calendarEvents', eventId));
-      console.log('Successfully deleted calendar event');
-    } catch (error) {
-      console.error('Error deleting calendar event:', error);
-      throw error;
-    }
-  }
-
-  async function updateCalendarEvent(eventId, updates) {
-    if (!user) {
-      console.error('User not authenticated for update operation');
-      return;
-    }
-
-    try {
-      const eventRef = doc(db, 'calendarEvents', eventId);
-      await updateDoc(eventRef, {
-        ...updates,
-        updatedAt: new Date().toISOString()
-      });
-      console.log('Successfully updated calendar event');
-    } catch (error) {
-      console.error('Error updating calendar event:', error);
       throw error;
     }
   }
@@ -1129,7 +1088,6 @@ export default function NepaliCalendar({ user: propUser, isAdmin }) {
           ...t,
           ...parseTithiName(t.name)
         }));
-        const uniquePakshyas = [...new Set(parsedTithis.map(t => t.pakshya).filter(p => p))];
 
         tiles.push(
           <div
@@ -1188,9 +1146,6 @@ export default function NepaliCalendar({ user: propUser, isAdmin }) {
         ...t,
         ...parseTithiName(t.name)
       }));
-
-      // Get unique pakshyas for this date
-      const uniquePakshyas = [...new Set(parsedTithis.map(t => t.pakshya).filter(p => p))];
 
       tiles.push(
         <div
@@ -1254,7 +1209,6 @@ export default function NepaliCalendar({ user: propUser, isAdmin }) {
         ...t,
         ...parseTithiName(t.name)
       }));
-      const uniquePakshyas = [...new Set(parsedTithis.map(t => t.pakshya).filter(p => p))];
 
       tiles.push(
         <div
@@ -1359,7 +1313,6 @@ export default function NepaliCalendar({ user: propUser, isAdmin }) {
                 value={currentBsMonth}
                 onChange={(e) => {
                   const m = Number(e.target.value);
-                  setTransitionDir('jump');
                   triggerMonthTransition(() => { setCurrentBsMonth(m); });
                 }}
               >
@@ -1374,7 +1327,6 @@ export default function NepaliCalendar({ user: propUser, isAdmin }) {
                 value={currentBsYear}
                 onChange={(e) => {
                   const y = Number(e.target.value);
-                  setTransitionDir('jump');
                   triggerMonthTransition(() => { setCurrentBsYear(y); });
                 }}
               >
