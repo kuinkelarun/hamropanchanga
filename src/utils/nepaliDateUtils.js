@@ -184,4 +184,69 @@ export function formatNepaliMonthYear(adDate) {
   };
 }
 
-export { nepaliMonths, englishMonths, nepaliWeekdays, englishWeekdays };
+// Parse Nepali date string in MM-DD-YYYY format (with Nepali or English numerals)
+export function parseNepaliDate(dateStr) {
+  if (!dateStr) return null;
+  
+  // Convert Nepali numerals to English if present
+  let normalizedStr = dateStr.trim();
+  for (let i = 0; i < 10; i++) {
+    normalizedStr = normalizedStr.replace(new RegExp(nepaliNumbers[i], 'g'), i.toString());
+  }
+  
+  // Try MM-DD-YYYY format first
+  let match = normalizedStr.match(/^(\d{1,2})-(\d{1,2})-(\d{4})$/);
+  if (match) {
+    const bsMonth = parseInt(match[1]);
+    const bsDay = parseInt(match[2]);
+    const bsYear = parseInt(match[3]);
+    
+    // Validate BS date
+    if (bsYear < minBsYear || bsYear > maxBsYear) return null;
+    if (bsMonth < 1 || bsMonth > 12) return null;
+    
+    const yearData = bsCalendarData[bsYear];
+    if (!yearData) return null;
+    
+    const maxDay = yearData.daysInMonths[bsMonth - 1];
+    if (bsDay < 1 || bsDay > maxDay) return null;
+    
+    // Convert to AD
+    const ad = convertBsToAd(bsYear, bsMonth, bsDay);
+    if (!ad) return null;
+    
+    // Return YYYY-MM-DD format for Firestore
+    return `${ad.year}-${String(ad.month + 1).padStart(2, '0')}-${String(ad.day).padStart(2, '0')}`;
+  }
+  
+  // Try YYYY-MM-DD format (AD date)
+  match = normalizedStr.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+  if (match) {
+    return normalizedStr; // Already in correct format
+  }
+  
+  return null;
+}
+
+// Format AD date string (YYYY-MM-DD) to Nepali date string (MM-DD-YYYY)
+export function formatAdDateToNepaliString(adDateStr) {
+  if (!adDateStr) return '';
+  const [year, month, day] = adDateStr.split('-').map(Number);
+  if (!year || !month || !day) return '';
+  
+  const bs = convertAdToBs(year, month - 1, day);
+  return `${String(bs.month).padStart(2, '0')}-${String(bs.day).padStart(2, '0')}-${bs.year}`;
+}
+
+// Format AD date string to Nepali with Nepali numerals
+export function formatAdDateToNepaliStringWithNumerals(adDateStr) {
+  const formatted = formatAdDateToNepaliString(adDateStr);
+  if (!formatted) return '';
+  
+  return formatted.split('').map(char => {
+    const num = parseInt(char);
+    return isNaN(num) ? char : nepaliNumbers[num];
+  }).join('');
+}
+
+export { nepaliMonths, englishMonths, nepaliWeekdays, englishWeekdays, minBsYear, maxBsYear };

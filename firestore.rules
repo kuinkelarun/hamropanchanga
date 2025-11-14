@@ -57,9 +57,9 @@ service cloud.firestore {
                      (isAuthenticated() && resource.data.createdBy == request.auth.uid) ||
                      isAdmin();
       
-      // Users can create their own private events
-      allow create: if isAuthenticated() && 
-                       request.resource.data.createdBy == request.auth.uid;
+      // Admins can create any event, users can create their own private events
+      allow create: if isAdmin() || 
+                       (isAuthenticated() && request.resource.data.createdBy == request.auth.uid);
       
       // Users can update/delete only their own events, admins can modify any
       allow update, delete: if isAdmin() || 
