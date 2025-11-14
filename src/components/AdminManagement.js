@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { collection, getDocs, deleteDoc, doc, writeBatch, query, orderBy, updateDoc, where, addDoc } from 'firebase/firestore';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { collection, getDocs, deleteDoc, doc, writeBatch, query, updateDoc, where, addDoc, getDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import * as XLSX from 'xlsx';
 import './AdminManagement.css';
@@ -37,6 +37,8 @@ function formatTime24Hour(time12) {
 }
 
 export default function AdminManagement({ user, isAdmin, onBack }) {
+  console.log('AdminManagement loaded - version 2025-11-14-v3', { isAdmin });
+  
   const [activeTab, setActiveTab] = useState('tithis'); // 'tithis' or 'events'
   const [tithis, setTithis] = useState([]);
   const [events, setEvents] = useState([]);
@@ -52,14 +54,71 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
   const [editingData, setEditingData] = useState({});
   const [isAddingNew, setIsAddingNew] = useState(false);
   const [newRecordData, setNewRecordData] = useState({});
+  const [deleteConfirmation, setDeleteConfirmation] = useState({ show: false, type: '', count: 0, confirmText: '' });
   const fileInputRef = useRef(null);
+  const hasLoadedData = useRef(false);
+  const [debugTithis, setDebugTithis] = useState(null);
+
+  // Define load functions with useCallback
+  const loadTithis = useCallback(async () => {
+    try {
+      const tithisCollection = collection(db, 'tithis');
+      // Don't use orderBy in query - it excludes documents without those fields
+      // Instead, fetch all and sort in JavaScript
+      const snapshot = await getDocs(tithisCollection);
+      const tithisData = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      
+      // Sort in JavaScript (handles missing fields gracefully)
+      tithisData.sort((a, b) => {
+        // Primary sort by startDate
+        const dateCompare = (a.startDate || '').localeCompare(b.startDate || '');
+        if (dateCompare !== 0) return dateCompare;
+        
+        // Secondary sort by startTime
+        return (a.startTime || '').localeCompare(b.startTime || '');
+      });
+      
+      setTithis(tithisData);
+    } catch (error) {
+      console.error('Error loading tithis:', error);
+      setUploadStatus('Error loading tithis: ' + error.message);
+    }
+  }, []);
+
+  const loadEvents = useCallback(async () => {
+    try {
+      const eventsCollection = collection(db, 'calendarEvents');
+      // Don't use orderBy in query - it excludes documents without those fields
+      const snapshot = await getDocs(eventsCollection);
+      const eventsData = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      
+      // Sort in JavaScript (handles missing fields gracefully)
+      eventsData.sort((a, b) => (a.dateKey || '').localeCompare(b.dateKey || ''));
+      
+      setEvents(eventsData);
+    } catch (error) {
+      console.error('Error loading events:', error);
+      setUploadStatus('Error loading events: ' + error.message);
+    }
+  }, []);
 
   // Load existing data on mount
   useEffect(() => {
-    if (!isAdmin) return;
-    loadTithis();
-    loadEvents();
-  }, [isAdmin]);
+    console.log('useEffect triggered - isAdmin:', isAdmin, 'hasLoadedData:', hasLoadedData.current);
+    if (!isAdmin || hasLoadedData.current) return;
+    console.log('Loading data...');
+    hasLoadedData.current = true;
+    setLoading(true);
+    Promise.all([loadTithis(), loadEvents()]).finally(() => {
+      setLoading(false);
+    });
+  }, [isAdmin, loadTithis, loadEvents]);
 
   // Reset filters when switching tabs
   useEffect(() => {
@@ -67,6 +126,31 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
     setYearFilter('all');
     setMonthFilter('all');
   }, [activeTab]);
+
+  // Debug helper: fetch detailed tithis info (ids, data, getDoc.exists())
+  async function fetchDebugTithis() {
+    try {
+      const collectionRef = collection(db, 'tithis');
+      const snapshot = await getDocs(collectionRef);
+      const items = [];
+      for (const d of snapshot.docs) {
+        const id = d.id;
+        const data = d.data();
+        let existsServer = null;
+        try {
+          const snap = await getDoc(doc(db, 'tithis', id));
+          existsServer = snap.exists();
+        } catch (e) {
+          existsServer = `error:${e.message}`;
+        }
+        items.push({ id, data, existsServer });
+      }
+      console.log('Debug fetchTithis result:', items);
+      setDebugTithis(items);
+    } catch (err) {
+      console.error('Error in fetchDebugTithis:', err);
+    }
+  }
 
   // Redirect if not admin
   if (!isAdmin) {
@@ -78,44 +162,6 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
         </div>
       </div>
     );
-  }
-
-  async function loadTithis() {
-    try {
-      setLoading(true);
-      const tithisCollection = collection(db, 'tithis');
-      const q = query(tithisCollection, orderBy('startDate'), orderBy('startTime'));
-      const snapshot = await getDocs(q);
-      const tithisData = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
-      setTithis(tithisData);
-    } catch (error) {
-      console.error('Error loading tithis:', error);
-      setUploadStatus('Error loading tithis: ' + error.message);
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function loadEvents() {
-    try {
-      setLoading(true);
-      const eventsCollection = collection(db, 'calendarEvents');
-      const q = query(eventsCollection, orderBy('dateKey'));
-      const snapshot = await getDocs(q);
-      const eventsData = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
-      setEvents(eventsData);
-    } catch (error) {
-      console.error('Error loading events:', error);
-      setUploadStatus('Error loading events: ' + error.message);
-    } finally {
-      setLoading(false);
-    }
   }
 
   // Generate Excel template for download with data validation dropdowns
@@ -661,12 +707,57 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
     try {
       const collectionName = activeTab === 'tithis' ? 'tithis' : 'calendarEvents';
       console.log('Deleting from collection:', collectionName);
-      
-      await deleteDoc(doc(db, collectionName, id));
+
+      const docRef = doc(db, collectionName, id);
+      console.log('Doc ref path (attempt 1):', docRef.path);
+
+      // First check if document exists at this path
+      const before = await getDoc(docRef);
+      if (before.exists()) {
+        await deleteDoc(docRef);
+        console.log('deleteDoc resolved for', docRef.path);
+        // Verify deletion
+        try {
+          const after = await getDoc(docRef);
+          console.log('Post-delete getDoc.exists():', after.exists());
+        } catch (verifyError) {
+          console.error('Error verifying deletion with getDoc:', verifyError);
+        }
+      } else {
+        // Document didn't exist at this path; try to find by embedded `id` field
+        console.log('No document at path; attempting lookup by embedded id field');
+        const collectionRef = collection(db, collectionName);
+        const q = query(collectionRef, where('id', '==', id));
+        const snap = await getDocs(q);
+        if (snap.empty) {
+          console.warn('No document found by embedded id lookup for', id);
+          setUploadStatus('❌ No matching record found to delete');
+          return;
+        }
+
+        // Delete all matching documents found
+        for (const d of snap.docs) {
+          const foundRef = doc(db, collectionName, d.id);
+          console.log('Deleting found doc at', foundRef.path);
+          await deleteDoc(foundRef);
+          const after = await getDoc(foundRef);
+          console.log('Post-delete exists for found doc:', after.exists(), 'path:', foundRef.path);
+        }
+      }
+
+      // Also log remaining count in collection for debugging
+      try {
+        const collectionRef = collection(db, collectionName);
+        const snapshot = await getDocs(collectionRef);
+        console.log('Remaining documents in', collectionName, ':', snapshot.size);
+      } catch (countError) {
+        console.error('Error counting after delete:', countError);
+      }
+
       console.log('Successfully deleted');
-      
+
       setUploadStatus('✅ Record deleted successfully');
-      
+
       if (activeTab === 'tithis') {
         await loadTithis();
       } else {
@@ -793,6 +884,253 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
     setNewRecordData(prev => ({ ...prev, [field]: value }));
   }
 
+  // Bulk delete functions
+  async function handleBulkDelete(type) {
+    const collectionName = type === 'tithis' ? 'tithis' : 'calendarEvents';
+    
+    // Fetch actual count from Firestore
+    setLoading(true);
+    setUploadStatus(`🔍 Counting ${type} in database...`);
+    
+    try {
+      const collectionRef = collection(db, collectionName);
+      const snapshot = await getDocs(collectionRef);
+      const actualCount = snapshot.size;
+      
+      if (actualCount === 0) {
+        setUploadStatus(`ℹ️ No ${type} found in database`);
+        setLoading(false);
+        return;
+      }
+      
+      // Show confirmation dialog with actual count
+      setDeleteConfirmation({
+        show: true,
+        type: type,
+        count: actualCount,
+        confirmText: ''
+      });
+      
+    } catch (error) {
+      console.error('Error counting records:', error);
+      setUploadStatus(`❌ Error counting ${type}: ` + error.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function executeBulkDelete() {
+    const { type, confirmText } = deleteConfirmation;
+    
+    // Verify confirmation text
+    const expectedText = `DELETE ALL ${type.toUpperCase()}`;
+    if (confirmText !== expectedText) {
+      setUploadStatus(`❌ Please type exactly: ${expectedText}`);
+      return;
+    }
+
+    setLoading(true);
+    setUploadStatus(`🔍 Fetching all ${type} from database...`);
+    
+    try {
+      const collectionName = type === 'tithis' ? 'tithis' : 'calendarEvents';
+      
+      // Fetch ALL records from Firestore (not just from state)
+      const collectionRef = collection(db, collectionName);
+      const snapshot = await getDocs(collectionRef);
+      // Use explicit firestore doc id (docId) and keep the stored data separate.
+      const allRecords = snapshot.docs.map(d => ({
+        docId: d.id,
+        data: d.data()
+      }));
+      console.log('Fetched allRecords length:', allRecords.length);
+      console.log('Sample docIds:', allRecords.slice(0, 20).map(r => r.docId));
+      console.log('Sample data.ids:', allRecords.slice(0, 20).map(r => r.data && r.data.id));
+      
+      if (allRecords.length === 0) {
+        setUploadStatus(`ℹ️ No ${type} found in database`);
+        setLoading(false);
+        setDeleteConfirmation({ show: false, type: '', count: 0, confirmText: '' });
+        return;
+      }
+      
+      setUploadStatus(`📦 Creating backup of ${allRecords.length} ${type}...`);
+      
+      // Create backup data for download (with error handling)
+      let backupData;
+      try {
+        backupData = allRecords.map(item => {
+          const d = item.data || {};
+          if (type === 'tithis') {
+            const parts = (d.name || '').split(' ') || [];
+            return {
+              Tithi: parts.slice(1).join(' ') || '',
+              Pakshya: parts[0] || '',
+              'Start Date': d.startDate ? formatAdDateToNepaliStringWithNumerals(d.startDate) : 'N/A',
+              'Start Time': d.startTime || 'N/A',
+              'End Date': d.endDate ? formatAdDateToNepaliStringWithNumerals(d.endDate) : 'N/A',
+              'End Time': d.endTime || 'N/A',
+              'Created At': d.createdAt || 'N/A',
+              'Created By Admin': d.createdByAdmin ? 'Yes' : 'No',
+              'Created By': d.createdBy || 'N/A',
+              'ID (embedded)': d.id || 'N/A',
+              'FirestoreDocId': item.docId
+            };
+          } else {
+            return {
+              Title: d.title || 'N/A',
+              Description: d.description || '',
+              Date: d.dateKey ? formatAdDateToNepaliStringWithNumerals(d.dateKey) : 'N/A',
+              'Is Public': d.isPublic ? 'Yes' : 'No',
+              'Associated Person': d.associatedPerson || '',
+              'Created At': d.createdAt || 'N/A',
+              'Created By Admin': d.createdByAdmin ? 'Yes' : 'No',
+              'Created By': d.createdBy || 'N/A',
+              'ID (embedded)': d.id || 'N/A',
+              'FirestoreDocId': item.docId
+            };
+          }
+        });
+      } catch (backupError) {
+        console.error('Error creating backup data:', backupError);
+        setUploadStatus(`⚠️ Warning: Backup creation failed. Proceeding with deletion...`);
+        backupData = [{ Error: 'Failed to create backup', Details: backupError.message }];
+      }
+      
+      // Trigger backup download
+      const workbook = XLSX.utils.book_new();
+      const worksheet = XLSX.utils.json_to_sheet(backupData);
+      XLSX.utils.book_append_sheet(workbook, worksheet, type === 'tithis' ? 'Tithis Backup' : 'Events Backup');
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
+      XLSX.writeFile(workbook, `${type}_backup_${timestamp}.xlsx`);
+      
+      setUploadStatus(`🗑️ Deleting ${allRecords.length} ${type}...`);
+      
+      // Delete all records in batches (Firestore limit: 500 per batch)
+      const batchSize = 500;
+      let deletedCount = 0;
+      const deleteErrors = [];
+      
+      for (let i = 0; i < allRecords.length; i += batchSize) {
+        try {
+          const batch = writeBatch(db);
+          const batchItems = allRecords.slice(i, i + batchSize);
+          
+          batchItems.forEach(item => {
+            const docRef = doc(db, collectionName, item.docId);
+            console.log('Scheduling delete for', docRef.path);
+            batch.delete(docRef);
+          });
+          
+          // Before committing, verify first doc exists
+          try {
+            const firstRef = doc(db, collectionName, batchItems[0].docId);
+            const beforeSnap = await getDoc(firstRef);
+            console.log('Before commit - first item exists:', beforeSnap.exists(), 'path:', firstRef.path);
+          } catch (preVerifyErr) {
+            console.error('Error verifying before commit:', preVerifyErr);
+          }
+
+          await batch.commit();
+          deletedCount += batchItems.length;
+          setUploadStatus(`🗑️ Deleted ${deletedCount} of ${allRecords.length} ${type}...`);
+          // Quick verification: count remaining docs after this batch and check first item
+          try {
+            const snapshotAfter = await getDocs(collection(db, collectionName));
+            console.log(`After batch commit, remaining in ${collectionName}:`, snapshotAfter.size);
+            // Verify the first item in this batch was deleted
+            const firstRef = doc(db, collectionName, batchItems[0].docId);
+            const afterSnap = await getDoc(firstRef);
+            console.log('After commit - first item exists?:', afterSnap.exists(), 'path:', firstRef.path);
+          } catch (verifyBatchError) {
+            console.error('Error verifying remaining docs after batch commit:', verifyBatchError);
+          }
+        } catch (batchError) {
+          console.error(`Error deleting batch ${i / batchSize + 1}:`, batchError);
+          deleteErrors.push(`Batch ${i / batchSize + 1}: ${batchError.message}`);
+        }
+      }
+      
+      if (deleteErrors.length > 0) {
+        setUploadStatus(`⚠️ Deleted ${deletedCount} of ${allRecords.length}. ${deleteErrors.length} batch(es) failed. Check console.`);
+        console.error('Delete errors:', deleteErrors);
+      } else {
+        setUploadStatus(`✅ Successfully deleted all ${allRecords.length} ${type}. Backup saved to Downloads.`);
+      }
+      
+      // Reload data
+      if (type === 'tithis') {
+        await loadTithis();
+      } else {
+        await loadEvents();
+      }
+      
+      // Close confirmation dialog
+      setDeleteConfirmation({ show: false, type: '', count: 0, confirmText: '' });
+      
+    } catch (error) {
+      console.error('Error deleting records:', error);
+      setUploadStatus('❌ Error deleting records: ' + error.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function deleteTestData() {
+    // Show confirmation for deleting test data (created in last 30 days)
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    const cutoffDate = thirtyDaysAgo.toISOString();
+    
+    const recentTithis = tithis.filter(t => t.createdAt && t.createdAt > cutoffDate);
+    const recentEvents = events.filter(e => e.createdAt && e.createdAt > cutoffDate);
+    
+    if (recentTithis.length === 0 && recentEvents.length === 0) {
+      setUploadStatus('ℹ️ No recent data found (created in last 30 days)');
+      return;
+    }
+    
+    const confirmText = `Found ${recentTithis.length} recent Tithis and ${recentEvents.length} recent Events created in the last 30 days.\n\nDelete them?`;
+    
+    if (!window.confirm(confirmText)) {
+      return;
+    }
+    
+    setLoading(true);
+    setUploadStatus('🗑️ Deleting recent test data...');
+    
+    try {
+      const batch = writeBatch(db);
+      let deletedCount = 0;
+      
+      recentTithis.forEach(tithi => {
+        const docRef = doc(db, 'tithis', tithi.id);
+        batch.delete(docRef);
+        deletedCount++;
+      });
+      
+      recentEvents.forEach(event => {
+        const docRef = doc(db, 'calendarEvents', event.id);
+        batch.delete(docRef);
+        deletedCount++;
+      });
+      
+      await batch.commit();
+      
+      setUploadStatus(`✅ Deleted ${deletedCount} recent records (${recentTithis.length} Tithis, ${recentEvents.length} Events)`);
+      
+      // Reload data
+      await loadTithis();
+      await loadEvents();
+      
+    } catch (error) {
+      console.error('Error deleting test data:', error);
+      setUploadStatus('❌ Error deleting test data: ' + error.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
   // Start editing
   function startEdit(record) {
     setEditingId(record.id);
@@ -911,9 +1249,104 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
         >
           🎉 Events
         </button>
+        <button 
+          className={`admin-tab ${activeTab === 'dataManagement' ? 'active' : ''}`}
+          onClick={() => setActiveTab('dataManagement')}
+        >
+          🗂️ Data Management
+        </button>
       </div>
 
-      {/* Bulk Upload Section */}
+      {/* Data Management Tab */}
+      {activeTab === 'dataManagement' && (
+        <div className="admin-section data-management-section">
+          <h2>🗂️ Data Management & Cleanup</h2>
+          <p className="section-description">
+            Manage and clean up your data before going to production. All bulk delete operations create automatic backups.
+          </p>
+
+          <div className="data-stats">
+            <div className="stat-card">
+              <div className="stat-icon">📅</div>
+              <div className="stat-content">
+                <div className="stat-label">Total Tithis</div>
+                <div className="stat-value">{tithis.length}</div>
+              </div>
+            </div>
+            <div className="stat-card">
+              <div className="stat-icon">🎉</div>
+              <div className="stat-content">
+                <div className="stat-label">Total Events</div>
+                <div className="stat-value">{events.length}</div>
+              </div>
+            </div>
+            <div className="stat-card">
+              <div className="stat-icon">🕒</div>
+              <div className="stat-content">
+                <div className="stat-label">Recent (30 days)</div>
+                <div className="stat-value">
+                  {tithis.filter(t => t.createdAt && t.createdAt > new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()).length +
+                   events.filter(e => e.createdAt && e.createdAt > new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()).length}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="danger-zone">
+            <h3>⚠️ Danger Zone</h3>
+            <p className="danger-description">
+              These actions are irreversible. A backup will be automatically downloaded before deletion.
+            </p>
+
+            <div className="danger-actions">
+              <div className="danger-action-card">
+                <div className="danger-action-info">
+                  <h4>🗑️ Delete All Tithis</h4>
+                  <p>Remove all {tithis.length} Tithis from the database. A backup file will be downloaded automatically.</p>
+                </div>
+                <button 
+                  onClick={() => handleBulkDelete('tithis')}
+                  className="btn-danger"
+                  disabled={loading || tithis.length === 0}
+                >
+                  Delete All Tithis
+                </button>
+              </div>
+
+              <div className="danger-action-card">
+                <div className="danger-action-info">
+                  <h4>🗑️ Delete All Events</h4>
+                  <p>Remove all {events.length} Events from the database. A backup file will be downloaded automatically.</p>
+                </div>
+                <button 
+                  onClick={() => handleBulkDelete('events')}
+                  className="btn-danger"
+                  disabled={loading || events.length === 0}
+                >
+                  Delete All Events
+                </button>
+              </div>
+
+              <div className="danger-action-card">
+                <div className="danger-action-info">
+                  <h4>🧹 Delete Test Data</h4>
+                  <p>Remove all Tithis and Events created in the last 30 days. Useful for cleaning up test entries.</p>
+                </div>
+                <button 
+                  onClick={deleteTestData}
+                  className="btn-warning"
+                  disabled={loading}
+                >
+                  Delete Recent Test Data
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Bulk Upload Section - Only show for tithis/events tabs */}
+      {(activeTab === 'tithis' || activeTab === 'events') && (
       <div className="admin-section">
         <h2>📤 Bulk Upload</h2>
         
@@ -1057,8 +1490,20 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
           </div>
         )}
       </div>
+      )}
 
-      {/* Manual Management Section */}
+      {/* Debug panel */}
+      <div style={{ marginTop: 16 }}>
+        <button onClick={fetchDebugTithis} className="btn-warning">Debug: Inspect Tithis</button>
+        {debugTithis && (
+          <pre style={{ maxHeight: 300, overflow: 'auto', background: '#111', color: '#eee', padding: 10 }}>
+            {JSON.stringify(debugTithis, null, 2)}
+          </pre>
+        )}
+      </div>
+
+      {/* Manual Management Section - Only show for tithis/events tabs */}
+      {(activeTab === 'tithis' || activeTab === 'events') && (
       <div className="admin-section">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
           <h2>📝 Manual Management</h2>
@@ -1455,6 +1900,59 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
           </p>
         </div>
       </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {deleteConfirmation.show && (
+        <div className="modal-overlay" onClick={() => setDeleteConfirmation({ show: false, type: '', count: 0, confirmText: '' })}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>⚠️ Confirm Bulk Delete</h3>
+              <button onClick={() => setDeleteConfirmation({ show: false, type: '', count: 0, confirmText: '' })} className="modal-close">✕</button>
+            </div>
+            
+            <div className="modal-body">
+              <div className="confirmation-warning">
+                <div className="warning-icon">🚨</div>
+                <p className="warning-text">
+                  You are about to permanently delete <strong>{deleteConfirmation.count} {deleteConfirmation.type}</strong>.
+                </p>
+                <p className="warning-subtext">
+                  A backup file will be automatically downloaded before deletion.
+                </p>
+              </div>
+
+              <div className="form-group">
+                <label>Type <code>DELETE ALL {deleteConfirmation.type.toUpperCase()}</code> to confirm:</label>
+                <input
+                  type="text"
+                  value={deleteConfirmation.confirmText}
+                  onChange={(e) => setDeleteConfirmation(prev => ({ ...prev, confirmText: e.target.value }))}
+                  className="form-input"
+                  placeholder={`DELETE ALL ${deleteConfirmation.type.toUpperCase()}`}
+                  autoFocus
+                />
+              </div>
+            </div>
+            
+            <div className="modal-footer">
+              <button 
+                onClick={() => setDeleteConfirmation({ show: false, type: '', count: 0, confirmText: '' })} 
+                className="btn-secondary"
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={executeBulkDelete} 
+                className="btn-danger"
+                disabled={deleteConfirmation.confirmText !== `DELETE ALL ${deleteConfirmation.type.toUpperCase()}`}
+              >
+                Delete All {deleteConfirmation.count} {deleteConfirmation.type}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

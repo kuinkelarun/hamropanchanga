@@ -732,3 +732,203 @@ button:disabled {
   border-color: #22c55e;
   background: white;
 }
+
+/* Data Management Section */
+.data-management-section {
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+}
+
+.section-description {
+  color: #64748b;
+  margin-bottom: 2rem;
+  font-size: 1rem;
+}
+
+.data-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 3rem;
+}
+
+.stat-card {
+  background: white;
+  border-radius: 12px;
+  padding: 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  border: 1px solid #e2e8f0;
+  transition: all 0.2s;
+}
+
+.stat-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px);
+}
+
+.stat-icon {
+  font-size: 2.5rem;
+}
+
+.stat-content {
+  flex: 1;
+}
+
+.stat-label {
+  font-size: 0.875rem;
+  color: #64748b;
+  margin-bottom: 0.25rem;
+}
+
+.stat-value {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.danger-zone {
+  background: white;
+  border: 2px solid #fee2e2;
+  border-radius: 12px;
+  padding: 2rem;
+}
+
+.danger-zone h3 {
+  color: #dc2626;
+  margin-top: 0;
+  margin-bottom: 0.5rem;
+  font-size: 1.5rem;
+}
+
+.danger-description {
+  color: #64748b;
+  margin-bottom: 2rem;
+}
+
+.danger-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.danger-action-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.5rem;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  gap: 2rem;
+}
+
+.danger-action-info h4 {
+  margin: 0 0 0.5rem 0;
+  color: #1e293b;
+  font-size: 1.125rem;
+}
+
+.danger-action-info p {
+  margin: 0;
+  color: #64748b;
+  font-size: 0.875rem;
+}
+
+.btn-danger {
+  background: #dc2626;
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+  font-size: 0.95rem;
+}
+
+.btn-danger:hover:not(:disabled) {
+  background: #b91c1c;
+  transform: scale(1.02);
+}
+
+.btn-danger:disabled {
+  background: #9ca3af;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.btn-warning {
+  background: #f59e0b;
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+  font-size: 0.95rem;
+}
+
+.btn-warning:hover:not(:disabled) {
+  background: #d97706;
+  transform: scale(1.02);
+}
+
+.btn-warning:disabled {
+  background: #9ca3af;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.confirmation-warning {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.warning-icon {
+  font-size: 4rem;
+  margin-bottom: 1rem;
+}
+
+.warning-text {
+  font-size: 1.125rem;
+  color: #1e293b;
+  margin-bottom: 0.5rem;
+}
+
+.warning-text strong {
+  color: #dc2626;
+}
+
+.warning-subtext {
+  color: #64748b;
+  font-size: 0.875rem;
+}
+
+.form-group code {
+  background: #f1f5f9;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-family: monospace;
+  color: #dc2626;
+  font-weight: 600;
+}
+
+@media (max-width: 768px) {
+  .data-stats {
+    grid-template-columns: 1fr;
+  }
+  
+  .danger-action-card {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .btn-danger, .btn-warning {
+    width: 100%;
+  }
+}
