@@ -2,6 +2,8 @@ import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react'
 import { collection, addDoc, deleteDoc, doc, onSnapshot, query, orderBy, getDocs, where } from 'firebase/firestore';
 import { onAuthStateChanged } from 'firebase/auth';
 import { db, auth, signInWithGoogle } from '../firebase';
+import { useUserPermissions } from '../hooks/usePermissions';
+import { PERMISSIONS } from '../constants/roles';
 import './NepaliCalendar.css';
 import ConfirmModal from './ConfirmModal';
 import bsCalendarData from '../data/bsCalendarData';
@@ -160,6 +162,11 @@ export default function NepaliCalendar({ user: propUser, isAdmin }) {
   const [tithisByDate, setTithisByDate] = useState({}); // { "YYYY-M-D": [{name,start,end}, ...] }
   const [calendarEvents, setCalendarEvents] = useState([]); // Array of calendar events
   const [activeDate, setActiveDate] = useState(null);
+
+  // Permissions
+  const { hasPermission, loading: permsLoading } = useUserPermissions(user);
+  const canManageTithis = isAdmin || (!permsLoading && hasPermission(PERMISSIONS.MANAGE_TITHIS));
+  const canManageEvents = isAdmin || (!permsLoading && hasPermission(PERMISSIONS.MANAGE_EVENTS));
 
   // Calendar-only transition state and direction
   const [isMonthTransitioning, setIsMonthTransitioning] = useState(false);
@@ -859,7 +866,8 @@ export default function NepaliCalendar({ user: propUser, isAdmin }) {
         title: eventData.title,
         description: eventData.description || '',
         createdBy: user.uid,
-        isPublic: isAdmin && eventData.isPublic === true, // Only admins can create public events
+        // Allow admins OR users with manageEvents permission to create public events
+        isPublic: (isAdmin || hasPermission(PERMISSIONS.MANAGE_EVENTS)) && eventData.isPublic === true,
         createdByAdmin: isAdmin || false,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
@@ -1156,12 +1164,14 @@ export default function NepaliCalendar({ user: propUser, isAdmin }) {
           onKeyDown={(e)=> { if (e.key === 'Enter') openDetailsModalForDate(ad.year, ad.month, ad.day); }}
           data-date={dateKey}
         >
-          <button
-            className="nt-quick-add-btn"
-            aria-label="Quick add tithi"
-            title="Add Tithi"
-            onClick={(e)=>{ e.stopPropagation(); openAddTithiModalForDate(ad.year, ad.month, ad.day, 'tithi'); }}
-          >+</button>
+          {(canManageTithis) && (
+            <button
+              className="nt-quick-add-btn"
+              aria-label="Quick add tithi"
+              title="Add Tithi"
+              onClick={(e)=>{ e.stopPropagation(); openAddTithiModalForDate(ad.year, ad.month, ad.day, 'tithi'); }}
+            >+</button>
+          )}
 
           <div className="nt-nepali-date" aria-hidden>{toNepaliNumber(day)}</div>
           <div className="nt-english-date" aria-hidden>{ad.day}</div>
@@ -1466,8 +1476,8 @@ export default function NepaliCalendar({ user: propUser, isAdmin }) {
                     rows={3}
                     style={{ padding: '0.5rem', border: '1px solid #d1d5db', borderRadius: '0.375rem', fontSize: '0.875rem', resize: 'vertical' }}
                   />
-                  {/* Show public checkbox only for admins */}
-                  {isAdmin && (
+                  {/* Show public checkbox for admins or users with manageEvents permission */}
+                  {(canManageEvents) && (
                     <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.875rem' }}>
                       <input
                         type="checkbox"
@@ -1539,7 +1549,7 @@ export default function NepaliCalendar({ user: propUser, isAdmin }) {
               )}
               
               {/* For Logged-in Users: Show "Add Event" button */}
-              {user && !isAdmin && !showAddEventForm && (
+              {user && !showAddEventForm && (
                 <button 
                   onClick={() => setShowAddEventForm(true)}
                   className="nc-add-btn"
@@ -1561,7 +1571,7 @@ export default function NepaliCalendar({ user: propUser, isAdmin }) {
                       Add Event
                     </button>
                   )}
-                  {isEditMode && !showAddEventForm && (
+                  {isEditMode && !showAddEventForm && canManageTithis && (
                     <button 
                       onClick={() => {
                         if (!activeDate) return;

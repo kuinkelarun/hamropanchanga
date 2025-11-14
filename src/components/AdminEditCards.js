@@ -3,6 +3,8 @@ import { collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, orderBy, que
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { db, storage } from '../firebase';
 import './AdminEditCards.css';
+import { useUserPermissions } from '../hooks/usePermissions';
+import { PERMISSIONS } from '../constants/roles';
 
 const AdminEditCards = ({ user, isAdmin, onBack }) => {
     const [cards, setCards] = useState([]);
@@ -11,6 +13,10 @@ const AdminEditCards = ({ user, isAdmin, onBack }) => {
     const [loading, setLoading] = useState(false);
     const [notification, setNotification] = useState({ show: false, message: '', type: '' });
     const [block1Visible, setBlock1Visible] = useState(true);
+    
+    // Check permissions
+    const { hasPermission } = useUserPermissions(user);
+    const canManageHomeCards = hasPermission(PERMISSIONS.MANAGE_HOME_CARDS);
     
     // Form state
     const [formData, setFormData] = useState({
@@ -32,7 +38,7 @@ const AdminEditCards = ({ user, isAdmin, onBack }) => {
 
     // Fetch cards from Firestore
     useEffect(() => {
-        if (!user || !isAdmin) return;
+        if (!user || !canManageHomeCards) return;
         
         const q = query(collection(db, 'homeCards'), orderBy('order', 'asc'));
         const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -47,7 +53,7 @@ const AdminEditCards = ({ user, isAdmin, onBack }) => {
         });
 
         return () => unsubscribe();
-    }, [user, isAdmin]);
+    }, [user, canManageHomeCards]);
 
     // Fetch Block 1 visibility setting
     useEffect(() => {
@@ -250,11 +256,11 @@ const AdminEditCards = ({ user, isAdmin, onBack }) => {
         setLoading(false);
     };
 
-    if (!user || !isAdmin) {
+    if (!user || !canManageHomeCards) {
         return (
             <div className="admin-access-denied">
                 <h2>Access Denied</h2>
-                <p>You must be an administrator to access this page.</p>
+                <p>You must have permission to manage home cards to access this page.</p>
                 <button onClick={onBack}>Go Back</button>
             </div>
         );

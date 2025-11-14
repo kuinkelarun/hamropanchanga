@@ -15,13 +15,30 @@ service cloud.firestore {
       );
     }
 
+    // Check if user is a Super User
+    function isSuperUser() {
+      return isAuthenticated() && 
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'superuser';
+    }
+
+    // Check if user has a specific permission
+    function hasPermission(permission) {
+      return isAuthenticated() && (
+        isAdmin() || // Admins have all permissions
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.permissions[permission] == true)
+      );
+    }
+
     // Owner check for documents that store a `userId` field
     function isOwnerOfUserId(userId) {
       return isAuthenticated() && userId == request.auth.uid;
     }
 
     match /customers/{customerId} {
-      // Admins can read/write any customer. Owners (userId === auth.uid) can read/write their own.
+      // Admins can read/write any customer (they have viewAllCustomers permission)
+      // Super Users and regular users can only access their own customers
       allow read, write: if isAdmin() || (
         // create uses request.resource, reads/updates use resource
         (request.resource != null && isOwnerOfUserId(request.resource.data.userId)) ||
@@ -30,39 +47,48 @@ service cloud.firestore {
     }
 
     match /users/{userId} {
-      allow read, write: if isAuthenticated() && (request.auth.uid == userId || isAdmin());
+      // Users can read their own document
+      // Admins can read/write any user document (for user management)
+      // Super Users cannot read other users' documents
+      allow read: if isAuthenticated() && (request.auth.uid == userId || isAdmin());
+      allow write: if isAdmin(); // Only admins can modify user documents
     }
 
-    // Tithis collection - public read access, admin write access
+    // Tithis collection - public read access, permission-based write access
     match /tithis/{tithiId} {
       // Anyone can read tithis (calendar is shown on public landing page)
       allow read: if true;
-      // Only admins can create/update/delete tithis
-      allow write: if isAdmin();
+      // Admins or users with manageTithis permission can create/update/delete tithis
+      allow write: if hasPermission('manageTithis');
     }
 
     // Home cards collection - for managing Block1 feature cards
     match /homeCards/{cardId} {
       // Anyone can read published cards (for public display on landing page)
       allow read: if resource.data.published == true;
-      // Only admins can read drafts and perform write operations
-      allow read, write: if isAdmin();
+      // Admins can always read/write
+      // Super Users with manageHomeCards permission can read/write
+      allow read, write: if hasPermission('manageHomeCards');
     }
 
     // Calendar Events collection - for calendar-specific events with role-based visibility
     match /calendarEvents/{eventId} {
       // Public events visible to everyone
       // Private events visible only to creator and admins
-      allow read: if resource.data.isPublic == true || 
-                     (isAuthenticated() && resource.data.createdBy == request.auth.uid) ||
-                     isAdmin();
+      // Allow reading if public, if creator, if admin, or if user has manageEvents permission
+      allow read: if resource.data.isPublic == true ||
+             (isAuthenticated() && resource.data.createdBy == request.auth.uid) ||
+             isAdmin() ||
+             hasPermission('manageEvents');
       
-      // Admins can create any event, users can create their own private events
-      allow create: if isAdmin() || 
+      // Admins and users with manageEvents permission can create any event
+      // Regular users can create their own private events
+      allow create: if hasPermission('manageEvents') || 
                        (isAuthenticated() && request.resource.data.createdBy == request.auth.uid);
       
-      // Users can update/delete only their own events, admins can modify any
-      allow update, delete: if isAdmin() || 
+      // Users can update/delete only their own events
+      // Admins and users with manageEvents permission can modify any
+      allow update, delete: if hasPermission('manageEvents') || 
                                (isAuthenticated() && resource.data.createdBy == request.auth.uid);
     }
 
@@ -72,6 +98,22 @@ service cloud.firestore {
       allow read: if isAuthenticated() && (request.auth.uid == adminId || isAdmin());
       // Only admins can create/update/delete adminList entries
       allow create, update, delete: if isAdmin();
+    }
+
+    // User invitations - for pending user setup
+    match /userInvitations/{emailId} {
+      // Admins can create/read/update/delete invitations
+      allow create, read, update, delete: if isAdmin();
+
+      // Allow the invited user (authenticated) to read/update their own invitation
+      // Compare the authenticated user's email with the `email` field stored in the
+      // invitation document to avoid relying on unsupported string functions.
+      // Allow if the stored email matches the authenticated email, or if a stored
+      // lowercased email field matches (covers invitations created with different case)
+      allow read, update: if isAuthenticated() && (
+             resource.data.email == request.auth.token.email ||
+             (resource.data.emailLower != null && resource.data.emailLower == request.auth.token.email)
+            );
     }
 
     // Site settings - for managing global settings like Block 1 visibility

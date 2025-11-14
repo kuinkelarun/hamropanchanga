@@ -5,6 +5,9 @@ import * as XLSX from 'xlsx';
 import './AdminManagement.css';
 import NepaliDatePicker from './NepaliDatePicker';
 import { convertAdToBs, toNepaliNumber, nepaliMonths, parseNepaliDate, formatAdDateToNepaliStringWithNumerals } from '../utils/nepaliDateUtils';
+import UserManagement from './UserManagement';
+import { useUserPermissions } from '../hooks/usePermissions';
+import { PERMISSIONS } from '../constants/roles';
 
 // Tithi options for dropdown
 const allTithis = [
@@ -37,9 +40,19 @@ function formatTime24Hour(time12) {
 }
 
 export default function AdminManagement({ user, isAdmin, onBack }) {
-  console.log('AdminManagement loaded - version 2025-11-14-v3', { isAdmin });
+  console.log('AdminManagement loaded - version 2025-11-14-v4', { isAdmin });
   
-  const [activeTab, setActiveTab] = useState('tithis'); // 'tithis' or 'events'
+  // Get user permissions using the new hook
+  const { hasPermission, isSuperUser, role, loading: permsLoading } = useUserPermissions(user);
+
+  // Determine whether the current user can access admin management features
+  const canAccessAdminPage = isAdmin ||
+    hasPermission(PERMISSIONS.BULK_UPLOAD) ||
+    hasPermission(PERMISSIONS.MANAGE_TITHIS) ||
+    hasPermission(PERMISSIONS.MANAGE_EVENTS) ||
+    hasPermission(PERMISSIONS.MANAGE_HOME_CARDS);
+  
+  const [activeTab, setActiveTab] = useState('tithis'); // 'tithis', 'events', 'dataManagement', 'userManagement'
   const [tithis, setTithis] = useState([]);
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -109,15 +122,15 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
 
   // Load existing data on mount
   useEffect(() => {
-    console.log('useEffect triggered - isAdmin:', isAdmin, 'hasLoadedData:', hasLoadedData.current);
-    if (!isAdmin || hasLoadedData.current) return;
+    console.log('useEffect triggered - canAccessAdminPage:', canAccessAdminPage, 'hasLoadedData:', hasLoadedData.current);
+    if (!canAccessAdminPage || hasLoadedData.current) return;
     console.log('Loading data...');
     hasLoadedData.current = true;
     setLoading(true);
     Promise.all([loadTithis(), loadEvents()]).finally(() => {
       setLoading(false);
     });
-  }, [isAdmin, loadTithis, loadEvents]);
+  }, [canAccessAdminPage, loadTithis, loadEvents]);
 
   // Reset filters when switching tabs
   useEffect(() => {
@@ -136,8 +149,17 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
 
   
 
-  // Redirect if not admin
-  if (!isAdmin) {
+  // While permissions are loading, show a loading state instead of denying access prematurely
+  if (permsLoading) {
+    return (
+      <div className="admin-management">
+        <div className="loading">Checking permissions...</div>
+      </div>
+    );
+  }
+
+  // Redirect if user has no admin-like permissions
+  if (!canAccessAdminPage) {
     return (
       <div className="admin-management">
         <div className="access-denied">
@@ -1240,22 +1262,41 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
         <button 
           className={`admin-tab ${activeTab === 'tithis' ? 'active' : ''}`}
           onClick={() => setActiveTab('tithis')}
+          disabled={!hasPermission(PERMISSIONS.MANAGE_TITHIS)}
+          title={!hasPermission(PERMISSIONS.MANAGE_TITHIS) ? 'No permission to manage tithis' : ''}
         >
           📅 Tithis
         </button>
         <button 
           className={`admin-tab ${activeTab === 'events' ? 'active' : ''}`}
           onClick={() => setActiveTab('events')}
+          disabled={!hasPermission(PERMISSIONS.MANAGE_EVENTS)}
+          title={!hasPermission(PERMISSIONS.MANAGE_EVENTS) ? 'No permission to manage events' : ''}
         >
           🎉 Events
         </button>
         <button 
           className={`admin-tab ${activeTab === 'dataManagement' ? 'active' : ''}`}
           onClick={() => setActiveTab('dataManagement')}
+          disabled={!hasPermission(PERMISSIONS.MANUAL_DASHBOARD)}
+          title={!hasPermission(PERMISSIONS.MANUAL_DASHBOARD) ? 'No permission to access data management' : ''}
         >
           🗂️ Data Management
         </button>
+        {isAdmin && (
+          <button 
+            className={`admin-tab ${activeTab === 'userManagement' ? 'active' : ''}`}
+            onClick={() => setActiveTab('userManagement')}
+          >
+            👥 User Management
+          </button>
+        )}
       </div>
+
+      {/* User Management Tab - Admin Only */}
+      {activeTab === 'userManagement' && isAdmin && (
+        <UserManagement currentUser={user} onBack={() => setActiveTab('tithis')} />
+      )}
 
       {/* Data Management Tab */}
       {activeTab === 'dataManagement' && (
