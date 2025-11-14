@@ -1,4 +1,6 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '../firebase';
 import CustomerList from './CustomerList';
 import LandingPageEventsSection from './LandingPageEventsSection'; // Make sure this import exists
 import './LandingPage.css';
@@ -8,7 +10,27 @@ import Block1 from './Block1';
 import Footer from './Footer';
 import { signInWithGoogle } from '../firebase';
 
-const LandingPage = ({ user, customers, onSelectCustomer, onAddCustomer, events, familyMembers, onDoubleClickEvent, onEditCustomer, onDeleteCustomer }) => {
+const LandingPage = ({ user, isAdmin, customers, onSelectCustomer, onAddCustomer, events, familyMembers, onDoubleClickEvent, onEditCustomer, onDeleteCustomer }) => {
+    const [block1Visible, setBlock1Visible] = useState(true);
+
+    // Fetch Block 1 visibility setting
+    useEffect(() => {
+        const fetchBlock1Visibility = async () => {
+            try {
+                const settingsDoc = await getDoc(doc(db, 'siteSettings', 'block1'));
+                if (settingsDoc.exists()) {
+                    setBlock1Visible(settingsDoc.data().visible !== false);
+                }
+            } catch (error) {
+                console.error('Error fetching Block 1 visibility:', error);
+                // Default to visible on error
+                setBlock1Visible(true);
+            }
+        };
+        
+        fetchBlock1Visibility();
+    }, []);
+
     return (
         <div className="landing-container">
             {/* HERO: full-width container - visible to all users */}
@@ -31,8 +53,8 @@ const LandingPage = ({ user, customers, onSelectCustomer, onAddCustomer, events,
                 </div>
             </div>
 
-            {/* Block 1: Horizontal Scrolling Cards - Visible to all users */}
-            <Block1 />
+            {/* Block 1: Horizontal Scrolling Cards - Conditionally visible */}
+            {block1Visible && <Block1 />}
 
             {/* PAGE BODY: constrained width and centered */}
             <main className="page-body">
@@ -40,7 +62,7 @@ const LandingPage = ({ user, customers, onSelectCustomer, onAddCustomer, events,
                 <div className="single-container">
                     {/* Nepali Calendar - inserted above branches */}
                     <div className="section-card calendar-wrapper">
-                        <NepaliCalendar />
+                        <NepaliCalendar user={user} isAdmin={isAdmin} />
                     </div>
 
                     {/* Branches Cards Section */}

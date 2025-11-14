@@ -49,6 +49,23 @@ service cloud.firestore {
       allow read, write: if isAdmin();
     }
 
+    // Calendar Events collection - for calendar-specific events with role-based visibility
+    match /calendarEvents/{eventId} {
+      // Public events visible to everyone
+      // Private events visible only to creator and admins
+      allow read: if resource.data.isPublic == true || 
+                     (isAuthenticated() && resource.data.createdBy == request.auth.uid) ||
+                     isAdmin();
+      
+      // Users can create their own private events
+      allow create: if isAuthenticated() && 
+                       request.resource.data.createdBy == request.auth.uid;
+      
+      // Users can update/delete only their own events, admins can modify any
+      allow update, delete: if isAdmin() || 
+                               (isAuthenticated() && resource.data.createdBy == request.auth.uid);
+    }
+
     // adminList controls which users are considered admins (bootstrap via console)
     match /adminList/{adminId} {
       // Allow a user to read their own admin doc, or allow admins to read any

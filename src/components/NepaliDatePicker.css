@@ -1,5 +1,46 @@
 /* Nepali Date Picker Styles */
 
+/* Simple Date Input Picker */
+.nepali-date-picker {
+  margin-bottom: 15px;
+}
+
+.nepali-date-picker label {
+  display: block;
+  margin-bottom: 5px;
+  font-weight: 500;
+  color: #333;
+}
+
+.nepali-date-inputs {
+  display: flex;
+  gap: 8px;
+}
+
+.nepali-date-inputs select {
+  flex: 1;
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 14px;
+  background-color: white;
+}
+
+.nepali-date-inputs select:focus {
+  outline: none;
+  border-color: #4A90E2;
+  box-shadow: 0 0 0 2px rgba(74, 144, 226, 0.1);
+}
+
+.nepali-date-ad-display {
+  margin-top: 4px;
+}
+
+.nepali-date-ad-display small {
+  color: #666;
+  font-size: 12px;
+}
+
 /* Modal Backdrop */
 .np-modal-backdrop {
     position: fixed;

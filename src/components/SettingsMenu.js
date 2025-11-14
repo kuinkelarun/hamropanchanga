@@ -2,10 +2,10 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useSettings } from '../contexts/SettingsContext';
 import CalendarSwitchConfirmation from './CalendarSwitchConfirmation';
 
-const SettingsMenu = ({ user, onSignOut, isAdmin, onAdminEditCards }) => {
+const SettingsMenu = ({ user, onSignOut, isAdmin, onAdminEditCards, onAdminManagement }) => {
     const [isOpen, setIsOpen] = useState(false);
     const [showConfirmation, setShowConfirmation] = useState(false);
-    const { isNepaliCalendar, toggleCalendarLanguage } = useSettings();
+    const { isNepaliCalendar, toggleCalendarLanguage, isEditMode, toggleEditMode } = useSettings();
     const menuRef = useRef(null);
 
     // Close menu when clicking outside
@@ -90,6 +90,46 @@ const SettingsMenu = ({ user, onSignOut, isAdmin, onAdminEditCards }) => {
                                 </svg>
                                 <span>Manage Home Cards</span>
                             </button>
+
+                            <button
+                                onClick={() => {
+                                    onAdminManagement();
+                                    setIsOpen(false);
+                                }}
+                                className="w-full text-left px-2 py-2 text-sm text-blue-600 hover:bg-blue-50 rounded-lg transition-colors flex items-center space-x-2 mt-1"
+                            >
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                </svg>
+                                <span>Bulk Upload Management</span>
+                            </button>
+                            
+                            {/* Edit Mode Toggle */}
+                            <div className="mt-2 px-2 py-2">
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center space-x-2">
+                                        <svg className="w-4 h-4 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                                        </svg>
+                                        <span className="text-sm text-gray-700">Edit Mode</span>
+                                    </div>
+                                    <button
+                                        onClick={toggleEditMode}
+                                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                                            isEditMode ? 'bg-orange-600' : 'bg-gray-300'
+                                        }`}
+                                    >
+                                        <span
+                                            className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                                                isEditMode ? 'translate-x-6' : 'translate-x-1'
+                                            }`}
+                                        />
+                                    </button>
+                                </div>
+                                <p className="text-xs text-gray-500 mt-1">
+                                    {isEditMode ? 'Edit calendar tithis and events' : 'Enable to edit tithis'}
+                                </p>
+                            </div>
                         </div>
                     )}
 
