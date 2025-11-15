@@ -355,7 +355,7 @@ export default function UserManagement({ currentUser, onBack }) {
       <div className="user-management-header">
         <div className="header-top">
           <button onClick={onBack} className="back-button">
-            ← Back to Admin Panel
+            ← Back to Home
           </button>
           <h2>User Management</h2>
         </div>
