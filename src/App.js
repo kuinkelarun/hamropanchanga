@@ -64,44 +64,78 @@ export default function App() {
                         }
                     }
 
-                    if (invitationSnap && invitationSnap.exists() && !invitationSnap.data().processed) {
+                    if (invitationSnap && invitationSnap.exists()) {
                         const invitationData = invitationSnap.data();
-                        console.log('Found invitation doc (using):', invitationRefUsed.path, invitationData);
+                        const isProcessed = invitationData.processed;
+                        console.log('Found invitation doc (using):', invitationRefUsed.path, 'processed:', isProcessed, invitationData);
 
                         const userDocRef = doc(db, 'users', currentUser.uid);
+                        
+                        // Check if user document already exists
+                        const existingUserDoc = await getDoc(userDocRef);
+                        
+                        // Create/update user document if it doesn't exist OR if invitation hasn't been processed yet
+                        if (!existingUserDoc.exists() || !isProcessed) {
+                            try {
+                                if (existingUserDoc.exists()) {
+                                    // Update existing user with invitation data
+                                    await updateDoc(userDocRef, {
+                                        email: currentUser.email,
+                                        displayName: currentUser.displayName || invitationData.displayName || existingUserDoc.data().displayName || '',
+                                        role: invitationData.role,
+                                        permissions: invitationData.permissions,
+                                        active: true,
+                                        updatedAt: new Date().toISOString()
+                                    });
+                                    console.log('Updated existing user document with invitation data');
+                                } else {
+                                    // Create new user document
+                                    await setDoc(userDocRef, {
+                                        email: currentUser.email,
+                                        displayName: currentUser.displayName || invitationData.displayName || '',
+                                        role: invitationData.role,
+                                        permissions: invitationData.permissions,
+                                        active: true,
+                                        createdAt: new Date().toISOString(),
+                                        updatedAt: new Date().toISOString()
+                                    });
+                                    console.log('Created new user document from invitation');
+                                }
 
-                        await setDoc(userDocRef, {
-                            email: currentUser.email,
-                            displayName: currentUser.displayName || invitationData.displayName || '',
-                            role: invitationData.role,
-                            permissions: invitationData.permissions,
-                            active: true,
-                            createdAt: new Date().toISOString(),
-                            updatedAt: new Date().toISOString()
-                        });
+                                // If invited as admin, also add to adminList
+                                if (invitationData.role === 'admin') {
+                                    const adminDocRef = doc(db, 'adminList', currentUser.uid);
+                                    const adminDocSnap = await getDoc(adminDocRef);
+                                    if (!adminDocSnap.exists()) {
+                                        await setDoc(adminDocRef, {
+                                            email: currentUser.email,
+                                            addedAt: new Date().toISOString()
+                                        });
+                                        console.log('Added user to adminList');
+                                    }
+                                }
 
-                        // If invited as admin, also add to adminList
-                        if (invitationData.role === 'admin') {
-                            const adminDocRef = doc(db, 'adminList', currentUser.uid);
-                            await setDoc(adminDocRef, {
-                                email: currentUser.email,
-                                addedAt: new Date().toISOString()
-                            });
-                        }
-
-                        // Mark invitation as processed
-                        try {
-                            await updateDoc(invitationRefUsed, {
-                                processed: true,
-                                processedAt: new Date().toISOString(),
-                                processedUid: currentUser.uid
-                            });
-                            console.log('User invitation processed successfully for', currentUser.email);
-                        } catch (udErr) {
-                            console.error('Failed to mark invitation processed for', invitationRefUsed.path, udErr.code, udErr.message);
+                                // Mark invitation as processed (only if not already processed)
+                                if (!isProcessed) {
+                                    try {
+                                        await updateDoc(invitationRefUsed, {
+                                            processed: true,
+                                            processedAt: new Date().toISOString(),
+                                            processedUid: currentUser.uid
+                                        });
+                                        console.log('User invitation processed successfully for', currentUser.email);
+                                    } catch (udErr) {
+                                        console.error('Failed to mark invitation processed for', invitationRefUsed.path, udErr.code, udErr.message);
+                                    }
+                                }
+                            } catch (userDocErr) {
+                                console.error('Error creating/updating user document:', userDocErr);
+                            }
+                        } else {
+                            console.log('User document already exists and invitation already processed for', rawEmail);
                         }
                     } else {
-                        console.log('No pending invitation found for', rawEmail);
+                        console.log('No invitation found for', rawEmail);
                     }
                 } catch (err) {
                     console.error('Error processing user invitation:', err.code || err.message || err);

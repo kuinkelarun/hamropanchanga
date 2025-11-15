@@ -51,7 +51,9 @@ service cloud.firestore {
       // Admins can read/write any user document (for user management)
       // Super Users cannot read other users' documents
       allow read: if isAuthenticated() && (request.auth.uid == userId || isAdmin());
-      allow write: if isAdmin(); // Only admins can modify user documents
+      // Allow users to create/update their own document (for invitation processing)
+      // Admins can modify any user document (for user management)
+      allow write: if isAdmin() || (isAuthenticated() && request.auth.uid == userId);
     }
 
     // Tithis collection - public read access, permission-based write access
