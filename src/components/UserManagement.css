@@ -86,6 +86,29 @@
   background: #2563eb;
 }
 
+.sync-users-button {
+  padding: 10px 20px;
+  background: #10b981;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.sync-users-button:hover:not(:disabled) {
+  background: #059669;
+}
+
+.sync-users-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 .delete-button {
   padding: 8px 12px;
   background: #ef4444;

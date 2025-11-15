@@ -3,7 +3,7 @@
   "description": "Cloud Functions for Family Tree app",
   "private": true,
   "engines": {
-    "node": "18"
+    "node": "20"
   },
   "dependencies": {
     "firebase-admin": "^11.0.0",
