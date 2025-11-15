@@ -11,7 +11,7 @@ import Footer from './Footer';
 import { signInWithGoogle } from '../firebase';
 
 const LandingPage = ({ user, isAdmin, customers, onSelectCustomer, onAddCustomer, events, familyMembers, onDoubleClickEvent, onEditCustomer, onDeleteCustomer }) => {
-    const [block1Visible, setBlock1Visible] = useState(true);
+    const [block1Visible, setBlock1Visible] = useState(null);
 
     // Fetch Block 1 visibility setting
     useEffect(() => {
@@ -20,6 +20,9 @@ const LandingPage = ({ user, isAdmin, customers, onSelectCustomer, onAddCustomer
                 const settingsDoc = await getDoc(doc(db, 'siteSettings', 'block1'));
                 if (settingsDoc.exists()) {
                     setBlock1Visible(settingsDoc.data().visible !== false);
+                } else {
+                    // Default to visible if setting doesn't exist
+                    setBlock1Visible(true);
                 }
             } catch (error) {
                 console.error('Error fetching Block 1 visibility:', error);
@@ -54,7 +57,7 @@ const LandingPage = ({ user, isAdmin, customers, onSelectCustomer, onAddCustomer
             </div>
 
             {/* Block 1: Horizontal Scrolling Cards - Conditionally visible */}
-            {block1Visible && <Block1 />}
+            {block1Visible === true && <Block1 />}
 
             {/* PAGE BODY: constrained width and centered */}
             <main className="page-body">

@@ -4,7 +4,7 @@ import CalendarSwitchConfirmation from './CalendarSwitchConfirmation';
 import { useUserPermissions } from '../hooks/usePermissions';
 import { PERMISSIONS } from '../constants/roles';
 
-const SettingsMenu = ({ user, onSignOut, isAdmin, onAdminEditCards, onAdminManagement }) => {
+const SettingsMenu = ({ user, onSignOut, isAdmin, onAdminEditCards, onAdminManagement, onUserManagement }) => {
     const [isOpen, setIsOpen] = useState(false);
     const [showConfirmation, setShowConfirmation] = useState(false);
     const { isNepaliCalendar, toggleCalendarLanguage, isEditMode, toggleEditMode } = useSettings();
@@ -120,6 +120,24 @@ const SettingsMenu = ({ user, onSignOut, isAdmin, onAdminEditCards, onAdminManag
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                                     </svg>
                                     <span>Admin Management</span>
+                                </button>
+                            )}
+
+                            {/* User Management now a top-level settings item (not nested under Admin Management) */}
+                            {(isAdmin || hasPermission(PERMISSIONS.MANAGE_USERS)) && (
+                                <button
+                                    onClick={() => {
+                                        if (onUserManagement) onUserManagement();
+                                        setIsOpen(false);
+                                    }}
+                                    className="w-full text-left px-2 py-2 text-sm text-green-600 hover:bg-green-50 rounded-lg transition-colors flex items-center space-x-2 mt-1"
+                                >
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-3-3h-2" />
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20H4v-2a3 3 0 013-3h2" />
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 10a4 4 0 108 0 4 4 0 00-8 0z" />
+                                    </svg>
+                                    <span>User Management</span>
                                 </button>
                             )}
                             

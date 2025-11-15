@@ -282,18 +282,20 @@ const AdminEditCards = ({ user, isAdmin, onBack }) => {
                     <h1>Manage Home Cards</h1>
                 </div>
                 <div className="admin-header-right">
-                    <div className="block1-visibility-toggle">
-                        <label className="toggle-label">
-                            <span>Show Block 1 on Homepage:</span>
-                            <button
-                                onClick={toggleBlock1Visibility}
-                                className={`toggle-switch ${block1Visible ? 'active' : ''}`}
-                            >
-                                <span className="toggle-slider"></span>
-                            </button>
-                            <span className="toggle-status">{block1Visible ? 'Visible' : 'Hidden'}</span>
-                        </label>
-                    </div>
+                        {isAdmin && (
+                        <div className="block1-visibility-toggle">
+                            <label className="toggle-label">
+                                <span>Show Block 1 on Homepage:</span>
+                                <button
+                                    onClick={toggleBlock1Visibility}
+                                    className={`toggle-switch ${block1Visible ? 'active' : ''}`}
+                                >
+                                    <span className="toggle-slider"></span>
+                                </button>
+                                <span className="toggle-status">{block1Visible ? 'Visible' : 'Hidden'}</span>
+                            </label>
+                        </div>
+                        )}
                     <button onClick={handleAddNew} className="admin-add-btn">
                         + Add New Card
                     </button>
