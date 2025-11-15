@@ -5,7 +5,6 @@ import * as XLSX from 'xlsx';
 import './AdminManagement.css';
 import NepaliDatePicker from './NepaliDatePicker';
 import { convertAdToBs, toNepaliNumber, nepaliMonths, parseNepaliDate, formatAdDateToNepaliStringWithNumerals } from '../utils/nepaliDateUtils';
-import UserManagement from './UserManagement';
 import { useUserPermissions } from '../hooks/usePermissions';
 import { PERMISSIONS } from '../constants/roles';
 
@@ -24,26 +23,11 @@ function formatTime12Hour(time24) {
   return `${hours12}:${String(minutes).padStart(2, '0')} ${period}`;
 }
 
-// Convert 12-hour time with AM/PM to 24-hour format (HH:MM)
-function formatTime24Hour(time12) {
-  if (!time12) return '';
-  const match = time12.match(/(\d+):(\d+)\s*(AM|PM)/i);
-  if (!match) return time12; // Return as-is if format doesn't match
-  let hours = parseInt(match[1]);
-  const minutes = match[2];
-  const period = match[3].toUpperCase();
-  
-  if (period === 'PM' && hours !== 12) hours += 12;
-  if (period === 'AM' && hours === 12) hours = 0;
-  
-  return `${String(hours).padStart(2, '0')}:${minutes}`;
-}
-
 export default function AdminManagement({ user, isAdmin, onBack }) {
   console.log('AdminManagement loaded - version 2025-11-14-v4', { isAdmin });
   
   // Get user permissions using the new hook
-  const { hasPermission, isSuperUser, role, loading: permsLoading } = useUserPermissions(user);
+  const { hasPermission, loading: permsLoading } = useUserPermissions(user);
 
   // Determine whether the current user can access admin management features
   const canAccessAdminPage = isAdmin ||
@@ -1082,6 +1066,8 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
     }
   }
 
+  // Delete all test data from collections
+  // eslint-disable-next-line no-unused-vars
   async function deleteTestData() {
     // This function has been replaced by a two-step flow: requestDeleteTestData
     // triggers confirmation modal; performDeleteTestData executes the deletion.
@@ -1283,20 +1269,9 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
         >
           🗂️ Data Management
         </button>
-        {isAdmin && (
-          <button 
-            className={`admin-tab ${activeTab === 'userManagement' ? 'active' : ''}`}
-            onClick={() => setActiveTab('userManagement')}
-          >
-            👥 User Management
-          </button>
-        )}
       </div>
 
-      {/* User Management Tab - Admin Only */}
-      {activeTab === 'userManagement' && isAdmin && (
-        <UserManagement currentUser={user} onBack={() => setActiveTab('tithis')} />
-      )}
+      {/* User Management moved to Settings -> User Management (top-level). */}
 
       {/* Data Management Tab */}
       {activeTab === 'dataManagement' && (

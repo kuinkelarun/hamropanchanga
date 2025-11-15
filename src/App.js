@@ -10,6 +10,7 @@ import AddCustomerForm from './components/AddCustomerForm';
 import LandingPage from './components/LandingPage';
 import AdminEditCards from './components/AdminEditCards';
 import AdminManagement from './components/AdminManagement';
+import UserManagement from './components/UserManagement';
 import { useUserPermissions } from './hooks/usePermissions';
 import { PERMISSIONS } from './constants/roles';
 
@@ -25,10 +26,7 @@ export default function App() {
 
     // Use the new permissions hook
     const { 
-        hasPermission, 
-        isAdmin: isAdminFromHook, 
-        isSuperUser,
-        loading: permissionsLoading 
+        hasPermission
     } = useUserPermissions(user);
 
     // --- HOOKS ---
@@ -289,6 +287,10 @@ export default function App() {
         setView('adminManagement');
     };
 
+    const handleUserManagement = () => {
+        setView('userManagement');
+    };
+
     // --- RENDER ---
     if (isLoading) {
         return <div className="min-h-screen flex items-center justify-center bg-gray-100">
@@ -328,6 +330,7 @@ export default function App() {
                                 isAdmin={isAdmin}
                                 onAdminEditCards={handleAdminEditCards}
                                 onAdminManagement={handleAdminManagement}
+                                onUserManagement={handleUserManagement}
                             />
                         ) : (
                             <button
@@ -393,6 +396,12 @@ export default function App() {
                         <AdminManagement
                             user={user}
                             isAdmin={isAdmin}
+                            onBack={handleBackToList}
+                        />
+                    )}
+                    {view === 'userManagement' && (
+                        <UserManagement
+                            currentUser={user}
                             onBack={handleBackToList}
                         />
                     )}

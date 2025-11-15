@@ -164,7 +164,7 @@ export default function NepaliCalendar({ user: propUser, isAdmin }) {
   const [activeDate, setActiveDate] = useState(null);
 
   // Permissions
-  const { hasPermission, loading: permsLoading } = useUserPermissions(user);
+  const { hasPermission, loading: permsLoading, isSuperUser } = useUserPermissions(user);
   const canManageTithis = isAdmin || (!permsLoading && hasPermission(PERMISSIONS.MANAGE_TITHIS));
   const canManageEvents = isAdmin || (!permsLoading && hasPermission(PERMISSIONS.MANAGE_EVENTS));
 
@@ -1548,7 +1548,7 @@ export default function NepaliCalendar({ user: propUser, isAdmin }) {
                 </button>
               )}
               
-              {/* For Logged-in Users: Show "Add Event" button */}
+              {/* For Logged-in Users: Show "Add Event" button (single shared button for all users) */}
               {user && !showAddEventForm && (
                 <button 
                   onClick={() => setShowAddEventForm(true)}
@@ -1558,36 +1558,23 @@ export default function NepaliCalendar({ user: propUser, isAdmin }) {
                   Add Event
                 </button>
               )}
-              
-              {/* For Admins: Show both "Add Event" and "Add Tithi" (if edit mode) */}
-              {isAdmin && (
-                <>
-                  {!showAddEventForm && (
-                    <button 
-                      onClick={() => setShowAddEventForm(true)}
-                      className="nc-add-btn"
-                      style={{ flex: '1 1 auto' }}
-                    >
-                      Add Event
-                    </button>
-                  )}
-                  {isEditMode && !showAddEventForm && canManageTithis && (
-                    <button 
-                      onClick={() => {
-                        if (!activeDate) return;
-                        const parts = activeDate.split('-').map(p=>+p);
-                        const adYear = parts[0];
-                        const adMonthZeroBased = parts[1]-1;
-                        const adDay = parts[2];
-                        openAddTithiModalForDate(adYear, adMonthZeroBased, adDay, 'tithi');
-                      }}
-                      className="nc-add-btn"
-                      style={{ flex: '1 1 auto', background: '#f97316' }}
-                    >
-                      Add Tithi
-                    </button>
-                  )}
-                </>
+
+              {/* For Admins and Super Users with tithi permission: Show "Add Tithi" when in edit mode */}
+              {(isAdmin || (isSuperUser && !permsLoading && hasPermission(PERMISSIONS.MANAGE_TITHIS))) && isEditMode && !showAddEventForm && (
+                <button 
+                  onClick={() => {
+                    if (!activeDate) return;
+                    const parts = activeDate.split('-').map(p=>+p);
+                    const adYear = parts[0];
+                    const adMonthZeroBased = parts[1]-1;
+                    const adDay = parts[2];
+                    openAddTithiModalForDate(adYear, adMonthZeroBased, adDay, 'tithi');
+                  }}
+                  className="nc-add-btn"
+                  style={{ flex: '1 1 auto', background: '#f97316' }}
+                >
+                  Add Tithi
+                </button>
               )}
               
               <button onClick={()=> setDetailsModalOpen(false)} style={{ flex: '1 1 auto' }}>Close</button>

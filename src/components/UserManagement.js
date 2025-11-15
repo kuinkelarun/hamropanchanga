@@ -1,9 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { collection, getDocs, doc, setDoc, deleteDoc } from 'firebase/firestore';
-import { db, auth } from '../firebase';
+import { db } from '../firebase';
 import { 
   getAllUsers, 
-  createOrUpdateUser, 
   updateUserRole, 
   updateUserPermissions,
   toggleUserActive,
@@ -14,7 +13,6 @@ import {
   ROLE_LABELS, 
   PERMISSIONS, 
   PERMISSION_LABELS,
-  CONFIGURABLE_SUPERUSER_PERMISSIONS,
   DEFAULT_ROLE_PERMISSIONS 
 } from '../constants/roles';
 import { useUserPermissions } from '../hooks/usePermissions';
@@ -34,15 +32,18 @@ export default function UserManagement({ currentUser, onBack }) {
   const [newUserEmail, setNewUserEmail] = useState('');
   const [newUserDisplayName, setNewUserDisplayName] = useState('');
   const [newUserRole, setNewUserRole] = useState(USER_ROLES.USER);
+  const [newUserPermissions, setNewUserPermissions] = useState({
+    [PERMISSIONS.MANAGE_HOME_CARDS]: false,
+    [PERMISSIONS.MANAGE_TITHIS]: false,
+    [PERMISSIONS.MANAGE_EVENTS]: false,
+    [PERMISSIONS.BULK_UPLOAD]: false
+  });
+  const [showAdminManagementPerms, setShowAdminManagementPerms] = useState(false);
 
   // Permission hook to check admin status
-  const { isAdmin: isAdminFromHook, loading: permsLoading } = useUserPermissions(currentUser);
+  const { isAdmin: isAdminFromHook } = useUserPermissions(currentUser);
 
-  useEffect(() => {
-    loadUsers();
-  }, []);
-
-  const loadUsers = async () => {
+  const loadUsers = useCallback(async () => {
     try {
       setLoading(true);
       setError('');
@@ -189,7 +190,11 @@ export default function UserManagement({ currentUser, onBack }) {
       setError('Failed to load users: ' + err.message);
       setLoading(false);
     }
-  };
+  }, [currentUser]);
+
+  useEffect(() => {
+    loadUsers();
+  }, [loadUsers]);
 
   const handleAddUser = async () => {
     if (!newUserEmail.trim()) {
@@ -205,12 +210,17 @@ export default function UserManagement({ currentUser, onBack }) {
       // This ensures the user document is created with the correct Firebase Auth UID
       const invitationRef = doc(db, 'userInvitations', newUserEmail.trim().toLowerCase());
       
+      // Determine permissions to store on invitation
+      const invitePermissions = newUserRole === USER_ROLES.ADMIN
+        ? DEFAULT_ROLE_PERMISSIONS[USER_ROLES.ADMIN]
+        : { ...DEFAULT_ROLE_PERMISSIONS[newUserRole], ...newUserPermissions };
+
       await setDoc(invitationRef, {
         email: newUserEmail.trim(),
         emailLower: newUserEmail.trim().toLowerCase(),
         displayName: newUserDisplayName.trim(),
         role: newUserRole,
-        permissions: DEFAULT_ROLE_PERMISSIONS[newUserRole],
+        permissions: invitePermissions,
         createdAt: new Date().toISOString(),
         createdBy: currentUser.uid,
         processed: false
@@ -221,6 +231,13 @@ export default function UserManagement({ currentUser, onBack }) {
       setNewUserEmail('');
       setNewUserDisplayName('');
       setNewUserRole(USER_ROLES.USER);
+      setNewUserPermissions({
+        [PERMISSIONS.MANAGE_HOME_CARDS]: false,
+        [PERMISSIONS.MANAGE_TITHIS]: false,
+        [PERMISSIONS.MANAGE_EVENTS]: false,
+        [PERMISSIONS.BULK_UPLOAD]: false
+      });
+      setShowAdminManagementPerms(false);
       
       await loadUsers();
       setLoading(false);
@@ -273,30 +290,6 @@ export default function UserManagement({ currentUser, onBack }) {
     } catch (err) {
       console.error('Error deleting user:', err);
       setError('Failed to delete user: ' + err.message);
-    }
-  };
-
-  const handleUpdateUserInfo = async (uid, email, displayName) => {
-    try {
-      setError('');
-      
-      const user = users.find(u => u.uid === uid);
-      if (!user) return;
-      
-      await createOrUpdateUser(uid, {
-        email: email.trim(),
-        displayName: displayName.trim(),
-        role: user.role,
-        permissions: user.permissions,
-        active: user.active
-      });
-      
-      setSuccess('User information updated successfully!');
-      await loadUsers();
-      setTimeout(() => setSuccess(''), 3000);
-    } catch (err) {
-      console.error('Error updating user info:', err);
-      setError('Failed to update user information: ' + err.message);
     }
   };
 
@@ -452,11 +445,97 @@ export default function UserManagement({ currentUser, onBack }) {
             </select>
           </div>
 
+          {/* Permissions for non-admin roles (selectable when creating user) */}
+          {newUserRole === USER_ROLES.SUPER_USER && (
+            <div className="form-group">
+              <label>Permissions</label>
+              <div style={{ paddingLeft: '8px' }}>
+                <div>
+                  <label>
+                    <input
+                      type="checkbox"
+                      checked={!!newUserPermissions[PERMISSIONS.MANAGE_HOME_CARDS]}
+                      onChange={() => setNewUserPermissions(prev => ({ ...prev, [PERMISSIONS.MANAGE_HOME_CARDS]: !prev[PERMISSIONS.MANAGE_HOME_CARDS] }))}
+                    />
+                    <span style={{ marginLeft: 8 }}>{PERMISSION_LABELS[PERMISSIONS.MANAGE_HOME_CARDS] || 'Manage Home Cards'}</span>
+                  </label>
+                </div>
+
+                <div style={{ marginTop: 10 }}>
+                  <label>
+                    <input
+                      type="checkbox"
+                      checked={showAdminManagementPerms}
+                      onChange={(e) => {
+                        const isChecked = e.target.checked;
+                        setShowAdminManagementPerms(isChecked);
+                        // If unchecking, clear all admin management permissions
+                        if (!isChecked) {
+                          setNewUserPermissions(prev => ({
+                            ...prev,
+                            [PERMISSIONS.MANAGE_TITHIS]: false,
+                            [PERMISSIONS.MANAGE_EVENTS]: false,
+                            [PERMISSIONS.BULK_UPLOAD]: false
+                          }));
+                        }
+                      }}
+                    />
+                    <span style={{ marginLeft: 8, fontWeight: 600 }}>Admin Management</span>
+                  </label>
+                  
+                  {/* Show dependent permissions when Admin Management is checked */}
+                  {showAdminManagementPerms && (
+                    <div style={{ paddingLeft: 28, marginTop: 6 }}>
+                      <label>
+                        <input
+                          type="checkbox"
+                          checked={!!newUserPermissions[PERMISSIONS.MANAGE_TITHIS]}
+                          onChange={() => setNewUserPermissions(prev => ({ ...prev, [PERMISSIONS.MANAGE_TITHIS]: !prev[PERMISSIONS.MANAGE_TITHIS] }))}
+                        />
+                        <span style={{ marginLeft: 8 }}>{PERMISSION_LABELS[PERMISSIONS.MANAGE_TITHIS] || 'Manage Tithis'}</span>
+                      </label>
+                      <div style={{ height: 6 }} />
+                      <label>
+                        <input
+                          type="checkbox"
+                          checked={!!newUserPermissions[PERMISSIONS.MANAGE_EVENTS]}
+                          onChange={() => setNewUserPermissions(prev => ({ ...prev, [PERMISSIONS.MANAGE_EVENTS]: !prev[PERMISSIONS.MANAGE_EVENTS] }))}
+                        />
+                        <span style={{ marginLeft: 8 }}>{PERMISSION_LABELS[PERMISSIONS.MANAGE_EVENTS] || 'Manage Events'}</span>
+                      </label>
+                      <div style={{ height: 6 }} />
+                      <label>
+                        <input
+                          type="checkbox"
+                          checked={!!newUserPermissions[PERMISSIONS.BULK_UPLOAD]}
+                          onChange={() => setNewUserPermissions(prev => ({ ...prev, [PERMISSIONS.BULK_UPLOAD]: !prev[PERMISSIONS.BULK_UPLOAD] }))}
+                        />
+                        <span style={{ marginLeft: 8 }}>Data Management</span>
+                      </label>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
           <div className="form-actions">
             <button onClick={handleAddUser} className="submit-button">
               Add User
             </button>
-            <button onClick={() => setShowAddUser(false)} className="cancel-button">
+            <button onClick={() => {
+              setShowAddUser(false);
+              setNewUserEmail('');
+              setNewUserDisplayName('');
+              setNewUserRole(USER_ROLES.USER);
+              setNewUserPermissions({
+                [PERMISSIONS.MANAGE_HOME_CARDS]: false,
+                [PERMISSIONS.MANAGE_TITHIS]: false,
+                [PERMISSIONS.MANAGE_EVENTS]: false,
+                [PERMISSIONS.BULK_UPLOAD]: false
+              });
+              setShowAdminManagementPerms(false);
+            }} className="cancel-button">
               Cancel
             </button>
           </div>
@@ -568,30 +647,54 @@ export default function UserManagement({ currentUser, onBack }) {
 
                   {user.role === USER_ROLES.SUPER_USER && (
                     <div className="permissions-section">
-                      <h4>Configurable Permissions</h4>
-                      <p className="permissions-note">
-                        Toggle specific permissions for this Super User. 
-                        Super Users cannot access other users' customer data or manage users.
-                      </p>
-                      
-                      <div className="permissions-grid">
-                        {CONFIGURABLE_SUPERUSER_PERMISSIONS.map(permission => (
-                          <div key={permission} className="permission-item">
-                            <label className="permission-label">
+                      <h4>Permissions</h4>
+                      <p className="permissions-note">Toggle permissions for this Super User. Super Users cannot manage other users.</p>
+
+                      <div style={{ paddingLeft: 8 }}>
+                        <div style={{ marginBottom: 8 }}>
+                          <label>
+                            <input
+                              type="checkbox"
+                              checked={user.permissions?.[PERMISSIONS.MANAGE_HOME_CARDS] === true}
+                              onChange={() => handlePermissionToggle(user.uid, PERMISSIONS.MANAGE_HOME_CARDS, user.permissions?.[PERMISSIONS.MANAGE_HOME_CARDS])}
+                            />
+                            <span style={{ marginLeft: 8 }}>{PERMISSION_LABELS[PERMISSIONS.MANAGE_HOME_CARDS] || 'Manage Home Cards'}</span>
+                          </label>
+                        </div>
+
+                        <div style={{ fontWeight: 600, marginBottom: 6 }}>Admin Management</div>
+                        <div style={{ paddingLeft: 12 }}>
+                          <div style={{ marginBottom: 6 }}>
+                            <label>
                               <input
                                 type="checkbox"
-                                checked={user.permissions?.[permission] === true}
-                                onChange={() => handlePermissionToggle(
-                                  user.uid, 
-                                  permission, 
-                                  user.permissions?.[permission]
-                                )}
-                                className="permission-checkbox"
+                                checked={user.permissions?.[PERMISSIONS.MANAGE_TITHIS] === true}
+                                onChange={() => handlePermissionToggle(user.uid, PERMISSIONS.MANAGE_TITHIS, user.permissions?.[PERMISSIONS.MANAGE_TITHIS])}
                               />
-                              <span>{PERMISSION_LABELS[permission]}</span>
+                              <span style={{ marginLeft: 8 }}>{PERMISSION_LABELS[PERMISSIONS.MANAGE_TITHIS] || 'Manage Tithis'}</span>
                             </label>
                           </div>
-                        ))}
+                          <div style={{ marginBottom: 6 }}>
+                            <label>
+                              <input
+                                type="checkbox"
+                                checked={user.permissions?.[PERMISSIONS.MANAGE_EVENTS] === true}
+                                onChange={() => handlePermissionToggle(user.uid, PERMISSIONS.MANAGE_EVENTS, user.permissions?.[PERMISSIONS.MANAGE_EVENTS])}
+                              />
+                              <span style={{ marginLeft: 8 }}>{PERMISSION_LABELS[PERMISSIONS.MANAGE_EVENTS] || 'Manage Events'}</span>
+                            </label>
+                          </div>
+                          <div>
+                            <label>
+                              <input
+                                type="checkbox"
+                                checked={user.permissions?.[PERMISSIONS.BULK_UPLOAD] === true}
+                                onChange={() => handlePermissionToggle(user.uid, PERMISSIONS.BULK_UPLOAD, user.permissions?.[PERMISSIONS.BULK_UPLOAD])}
+                              />
+                              <span style={{ marginLeft: 8 }}>Data Management</span>
+                            </label>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   )}
