@@ -1,0 +1,18 @@
+.tc-root{
+  border: 1px solid #e5e7eb;
+  padding: 12px;
+  border-radius: 8px;
+  background: #ffffff;
+  max-width: 420px;
+}
+.tc-title{ margin: 0 0 6px 0; font-size: 1.05rem; }
+.tc-desc{ margin: 0 0 10px 0; color:#6b7280; font-size:0.9rem }
+.tc-form{ display:flex; flex-direction:column; gap:8px }
+.tc-label{ font-size:0.85rem; color:#374151 }
+.tc-input{ padding:8px; border-radius:6px; border:1px solid #d1d5db }
+.tc-actions{ display:flex; gap:8px; margin-top:6px }
+.tc-btn{ padding:8px 12px; background:#2563eb; color:white; border-radius:6px; border:none; cursor:pointer }
+.tc-btn-muted{ background:#6b7280 }
+.tc-output{ margin-top:10px; padding:8px; background:#f8fafc; border-radius:6px; border:1px solid #e6eefc }
+.tc-error{ margin-top:8px; color:#b91c1c }
+.tc-note{ margin-top:10px; font-size:0.85rem; color:#6b7280 }

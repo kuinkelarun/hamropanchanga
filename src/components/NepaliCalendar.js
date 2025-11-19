@@ -1392,6 +1392,8 @@ export default function NepaliCalendar({ user: propUser, isAdmin }) {
         {renderDayTiles()}
       </div>
 
+      {/* Tithi Calculator removed from inline calendar; now available as separate block component */}
+
       {/* Details Modal - shows existing tithis and events with role-based visibility */}
       {detailsModalOpen && (
         <div className="nc-modal-backdrop" onClick={()=> setDetailsModalOpen(false)}>
