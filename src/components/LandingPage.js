@@ -7,6 +7,7 @@ import './LandingPage.css';
 import heroAnimation from './hero-image.png';
 import NepaliCalendar from './NepaliCalendar';
 import Block1 from './Block1';
+import BlockTithi from './BlockTithi';
 import Footer from './Footer';
 import { signInWithGoogle } from '../firebase';
 
@@ -31,33 +32,38 @@ const LandingPage = ({ user, isAdmin, customers, onSelectCustomer, onAddCustomer
             }
         };
         
-        fetchBlock1Visibility();
-    }, []);
+            fetchBlock1Visibility();
+        }, []);
 
-    return (
-        <div className="landing-container">
-            {/* HERO: full-width container - visible to all users */}
-            <div className="hero-full">
-                <div className="hero-section">
-                    <div className="hero-content">
-                        <h1 className="app-name">My Family Tree</h1>
-                        <p className="tagline">Connect your past. Branch out your future.</p>
-                        <button className="cta-button" onClick={onAddCustomer}>
-                            Start Your Tree
-                        </button>
-                    </div>
-                    <div className="hero-illustration">
-                        <img
-                            src={heroAnimation}
-                            alt="Family tree illustration"
-                            className="hero-images"
-                        />
-                    </div>
-                </div>
-            </div>
+        // Note: BlockTithi has its own visibility loader; we render it alongside Block1
+    
+        return (
+            <div className="landing-container">
+                {/* HERO: full-width container - visible to all users */}
+                <div className="hero-full">
+                    <div className="hero-section">
+                        <div className="hero-content">
+                            <h1 className="app-name">My Family Tree</h1>
+                            <p className="tagline">Connect your past. Branch out your future.</p>
+                            <button className="cta-button" onClick={onAddCustomer}>
+                                Start Your Tree
+                            </button>
+                        </div>
+                        <div className="hero-illustration">
+                            <img
+                                src={heroAnimation}
+                                alt="Family tree illustration"
+                                className="hero-images"
+                            />
+                        </div>
+                            </div>
+                        </div>
 
-            {/* Block 1: Horizontal Scrolling Cards - Conditionally visible */}
+                {/* Block 1: Horizontal Scrolling Cards - Conditionally visible */}
             {block1Visible === true && <Block1 />}
+
+            {/* Tithi Calculator block (visibility controlled by siteSettings/blockTithi) */}
+            <BlockTithi />
 
             {/* PAGE BODY: constrained width and centered */}
             <main className="page-body">
