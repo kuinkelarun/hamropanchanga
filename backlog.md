@@ -1,3 +1,27 @@
+What I added now
+
+    New script: compute_tithi.py
+    Uses Skyfield to compute geocentric (or topocentric if lat/lon provided) ecliptic longitudes for Sun & Moon, then computes tithi with the canonical formula.
+    Outputs JSON with: moon_lon_deg, sun_lon_deg, Dnorm_deg, tithi, paksha, progress, etc.
+    How to run the Python script locally
+
+    Install Skyfield:
+
+        pip install skyfield
+
+    Run the script (examples):
+    # Geocentric (UTC time)
+    python tools/compute_tithi.py --datetime "2025-11-18T12:00:00Z"
+
+    # Topocentric (give observer location, e.g., Kathmandu)
+    python tools/compute_tithi.py --datetime "2025-11-18T18:30:00" --lat 27.7172 --lon 85.3240
+
+    Take moon_lon_deg and sun_lon_deg from the script output and paste them into the Tithi Calculator block (we added earlier) to see the computed tithi in the app immediately.
+
+
+
+Backlogs:
+
 Why I added the Python script first
 
     Skyfield with JPL ephemerides (DE421/DE430) gives high precision and is straightforward to package as a small script. It’s ideal for a robust server-side or local calculation.
