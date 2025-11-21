@@ -83,10 +83,12 @@ def main():
 
     # ecliptic longitude (true ecliptic of date)
     try:
-        moon_lon, moon_lat, moon_distance = moon_apparent.ecliptic_latlon()
-        sun_lon, sun_lat, sun_distance = sun_apparent.ecliptic_latlon()
+        moon_lat, moon_lon, moon_distance = moon_apparent.ecliptic_latlon()
+        sun_lat, sun_lon, sun_distance = sun_apparent.ecliptic_latlon()
         moon_lon_deg = moon_lon.degrees
         sun_lon_deg = sun_lon.degrees
+        moon_lat_deg = moon_lat.degrees
+        sun_lat_deg = sun_lat.degrees
     except Exception:
         # Fallback: use equatorial RA/Dec and convert approx to ecliptic
         raise SystemExit('Unable to compute ecliptic longitudes with the installed Skyfield version')
@@ -98,7 +100,9 @@ def main():
         'observer_lat': args.lat,
         'observer_lon': args.lon,
         'moon_lon_deg': moon_lon_deg,
+        'moon_lat_deg': moon_lat_deg,
         'sun_lon_deg': sun_lon_deg,
+        'sun_lat_deg': sun_lat_deg,
         **tithi_info
     }
 
