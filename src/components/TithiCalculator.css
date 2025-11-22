@@ -16,3 +16,53 @@
 .tc-output{ margin-top:10px; padding:8px; background:#f8fafc; border-radius:6px; border:1px solid #e6eefc }
 .tc-error{ margin-top:8px; color:#b91c1c }
 .tc-note{ margin-top:10px; font-size:0.85rem; color:#6b7280 }
+
+.tc-mode-switch {
+  display: flex;
+  gap: 0;
+  margin-bottom: 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.tc-mode-btn {
+  flex: 1;
+  padding: 8px;
+  border: none;
+  background: #f3f4f6;
+  cursor: pointer;
+  font-size: 0.9rem;
+  color: #4b5563;
+  transition: all 0.2s;
+}
+
+.tc-mode-btn.active {
+  background: #2563eb;
+  color: white;
+  font-weight: 500;
+}
+
+.tc-datetime-group {
+  display: flex;
+  gap: 12px;
+}
+
+.tc-field {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.tc-calc-details {
+  margin-bottom: 8px;
+  font-size: 0.9rem;
+  color: #4b5563;
+}
+
+.tc-divider {
+  border: 0;
+  border-top: 1px solid #e5e7eb;
+  margin: 8px 0;
+}
