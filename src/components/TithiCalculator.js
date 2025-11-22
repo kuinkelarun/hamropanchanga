@@ -1,56 +1,137 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import './TithiCalculator.css';
-
-function normalizeDeg(d) {
-  return ((d % 360) + 360) % 360;
-}
-
-function computeFromLongitudes(moonLon, sunLon) {
-  const D = moonLon - sunLon;
-  const Dnorm = normalizeDeg(D);
-  const t_frac = Dnorm / 12.0;
-  const t_index0 = Math.floor(t_frac); // 0..29
-  const tithi = t_index0 + 1; // 1..30
-  const progress = t_frac - t_index0;
-  const paksha = Dnorm < 180 ? 'Shukla' : 'Krishna';
-  const pakshaIndex = Dnorm < 180 ? tithi : tithi - 15;
-  return { Dnorm, t_frac, tithi, progress, progress_percent: progress * 100, paksha, pakshaIndex };
-}
+import { computeTithiFromLongitudes, getEphemerisData } from '../utils/ephemeris';
 
 export default function TithiCalculator() {
+  const [mode, setMode] = useState('auto'); // 'auto' or 'manual'
   const [moonLon, setMoonLon] = useState('');
   const [sunLon, setSunLon] = useState('');
+  const [dateStr, setDateStr] = useState('');
+  const [timeStr, setTimeStr] = useState('');
   const [result, setResult] = useState(null);
   const [error, setError] = useState('');
+
+  // Initialize date/time to now
+  useEffect(() => {
+    const now = new Date();
+    setDateStr(now.toISOString().split('T')[0]);
+    // Format time as HH:MM
+    const hh = String(now.getHours()).padStart(2, '0');
+    const mm = String(now.getMinutes()).padStart(2, '0');
+    setTimeStr(`${hh}:${mm}`);
+  }, []);
 
   function onCompute(e) {
     e && e.preventDefault();
     setError('');
-    const m = parseFloat(String(moonLon).trim());
-    const s = parseFloat(String(sunLon).trim());
-    if (Number.isNaN(m) || Number.isNaN(s)) {
-      setError('Please enter numeric Moon and Sun longitudes in degrees (0-360).');
-      setResult(null);
-      return;
+    setResult(null);
+
+    let m, s;
+
+    if (mode === 'manual') {
+      m = parseFloat(String(moonLon).trim());
+      s = parseFloat(String(sunLon).trim());
+      if (Number.isNaN(m) || Number.isNaN(s)) {
+        setError('Please enter numeric Moon and Sun longitudes in degrees (0-360).');
+        return;
+      }
+    } else {
+      // Auto mode
+      if (!dateStr || !timeStr) {
+        setError('Please select a valid date and time.');
+        return;
+      }
+      try {
+        const dt = new Date(`${dateStr}T${timeStr}:00`);
+        const eph = getEphemerisData(dt);
+        m = eph.moonLon;
+        s = eph.sunLon;
+        // Update the manual fields to show what was calculated
+        setMoonLon(m.toFixed(6));
+        setSunLon(s.toFixed(6));
+      } catch (err) {
+        console.error(err);
+        setError('Failed to calculate ephemeris data.');
+        return;
+      }
     }
-    const res = computeFromLongitudes(m, s);
+
+    const res = computeTithiFromLongitudes(m, s);
     setResult(res);
   }
 
   function onClear() {
-    setMoonLon(''); setSunLon(''); setResult(null); setError('');
+    setMoonLon(''); 
+    setSunLon(''); 
+    setResult(null); 
+    setError('');
+    if (mode === 'auto') {
+      const now = new Date();
+      setDateStr(now.toISOString().split('T')[0]);
+      const hh = String(now.getHours()).padStart(2, '0');
+      const mm = String(now.getMinutes()).padStart(2, '0');
+      setTimeStr(`${hh}:${mm}`);
+    }
   }
 
   return (
     <div className="tc-root">
       <h3 className="tc-title">Tithi Calculator</h3>
-      <p className="tc-desc">Enter geocentric ecliptic longitudes (degrees) for Moon and Sun, then click Compute.</p>
-      <form className="tc-form" onSubmit={onCompute}>
-        <label className="tc-label">Moon Longitude (°)</label>
-        <input className="tc-input" value={moonLon} onChange={e=>setMoonLon(e.target.value)} placeholder="e.g. 130.1234" />
+      
+      <div className="tc-mode-switch">
+        <button 
+          className={`tc-mode-btn ${mode === 'auto' ? 'active' : ''}`}
+          onClick={() => { setMode('auto'); setError(''); setResult(null); }}
+        >
+          Automatic (Date/Time)
+        </button>
+        <button 
+          className={`tc-mode-btn ${mode === 'manual' ? 'active' : ''}`}
+          onClick={() => { setMode('manual'); setError(''); setResult(null); }}
+        >
+          Manual (Longitudes)
+        </button>
+      </div>
 
-        <label className="tc-label">Sun Longitude (°)</label>
-        <input className="tc-input" value={sunLon} onChange={e=>setSunLon(e.target.value)} placeholder="e.g. 100.5678" />
+      <p className="tc-desc">
+        {mode === 'auto' 
+          ? 'Select a date and time to automatically calculate Tithi.' 
+          : 'Enter geocentric ecliptic longitudes (degrees) for Moon and Sun.'}
+      </p>
+
+      <form className="tc-form" onSubmit={onCompute}>
+        {mode === 'auto' && (
+          <div className="tc-datetime-group">
+            <div className="tc-field">
+              <label className="tc-label">Date</label>
+              <input 
+                type="date" 
+                className="tc-input" 
+                value={dateStr} 
+                onChange={e => setDateStr(e.target.value)} 
+              />
+            </div>
+            <div className="tc-field">
+              <label className="tc-label">Time</label>
+              <input 
+                type="time" 
+                className="tc-input" 
+                value={timeStr} 
+                onChange={e => setTimeStr(e.target.value)} 
+              />
+            </div>
+          </div>
+        )}
+
+        {mode === 'manual' && (
+          <>
+            <label className="tc-label">Moon Longitude (°)</label>
+            <input className="tc-input" value={moonLon} onChange={e=>setMoonLon(e.target.value)} placeholder="e.g. 130.1234" />
+
+            <label className="tc-label">Sun Longitude (°)</label>
+            <input className="tc-input" value={sunLon} onChange={e=>setSunLon(e.target.value)} placeholder="e.g. 100.5678" />
+          </>
+        )}
 
         <div className="tc-actions">
           <button type="submit" className="tc-btn">Compute</button>
@@ -62,6 +143,13 @@ export default function TithiCalculator() {
 
       {result && (
         <div className="tc-output">
+          {mode === 'auto' && (
+            <div className="tc-calc-details">
+              <div><strong>Calculated Moon Lon:</strong> {parseFloat(moonLon).toFixed(4)}°</div>
+              <div><strong>Calculated Sun Lon:</strong> {parseFloat(sunLon).toFixed(4)}°</div>
+              <hr className="tc-divider"/>
+            </div>
+          )}
           <div><strong>Normalized difference (°):</strong> {result.Dnorm.toFixed(6)}</div>
           <div><strong>Fractional tithi (0..30):</strong> {result.t_frac.toFixed(6)}</div>
           <div><strong>Tithi (1..30):</strong> {result.tithi} ({result.paksha} {result.pakshaIndex})</div>
@@ -70,9 +158,9 @@ export default function TithiCalculator() {
       )}
 
       <div className="tc-note">
-        Note: For accurate automatic tithi calculation from a date/time, you need ephemeris-derived
-        Sun and Moon ecliptic longitudes (e.g. from Swiss Ephemeris or JPL). This tool accepts
-        longitudes directly and applies the canonical tithi formula: (MoonLon − SunLon)/12°.
+        Note: {mode === 'auto' 
+          ? 'Calculations use the "astronomy-engine" library for high-precision ephemeris data (Apparent Geocentric Ecliptic of Date).' 
+          : 'This tool accepts longitudes directly and applies the canonical tithi formula: (MoonLon − SunLon)/12°.'}
       </div>
     </div>
   );
