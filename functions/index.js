@@ -225,7 +225,9 @@ exports.computeEphemeris = functions.https.onCall(async (data, context) => {
             sunLon: result.sun_lon_deg,
             moonLon: result.moon_lon_deg,
             sunLat: result.sun_lat_deg || 0,
-            moonLat: result.moon_lat_deg || 0
+            moonLat: result.moon_lat_deg || 0,
+            tithiStart: result.tithi_start_utc,
+            tithiEnd: result.tithi_end_utc
           });
         } catch (e) {
           console.log('JSON parse error:', e, 'stdout:', stdout);

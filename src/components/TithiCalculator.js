@@ -62,6 +62,7 @@ export default function TithiCalculator() {
     setResult(null);
 
     let m, s;
+    let eph = null;
 
     if (mode === 'manual') {
       m = parseFloat(String(moonLon).trim());
@@ -78,7 +79,7 @@ export default function TithiCalculator() {
       }
       try {
         const dt = new Date(`${dateStr}T${timeStr}:00`);
-        const eph = await getEphemerisData(dt, userLat, userLon);
+        eph = await getEphemerisData(dt, userLat, userLon);
         m = eph.moonLon;
         s = eph.sunLon;
         // Update the manual fields to show what was calculated
@@ -92,6 +93,10 @@ export default function TithiCalculator() {
     }
 
     const res = computeTithiFromLongitudes(m, s);
+    if (mode === 'auto' && eph) {
+      res.startTime = eph.tithiStart;
+      res.endTime = eph.tithiEnd;
+    }
     setResult(res);
   }
 
@@ -239,6 +244,8 @@ export default function TithiCalculator() {
           <div><strong>Tithi (1..30):</strong> {result.tithi} ({result.paksha} {result.pakshaIndex})</div>
           <div><strong>Tithi (१..३०):</strong> {toDevanagari(result.tithi)} ({result.paksha === 'Shukla' ? 'शुक्लपक्ष' : 'कृष्णपक्ष'} {(result.paksha === 'Shukla' ? shuklaNames : krishnaNames)[result.pakshaIndex - 1]})</div>
           <div><strong>Progress through tithi:</strong> {(result.progress * 100).toFixed(2)}%</div>
+          <div><strong>Tithi start:</strong> {result.startTime ? new Date(result.startTime).toLocaleString() : 'N/A'}</div>
+          <div><strong>Tithi end:</strong> {result.endTime ? new Date(result.endTime).toLocaleString() : 'N/A'}</div>
         </div>
       )}
 
