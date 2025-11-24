@@ -8,10 +8,13 @@ export default function TithiCalculator() {
   const [sunLon, setSunLon] = useState('');
   const [dateStr, setDateStr] = useState('');
   const [timeStr, setTimeStr] = useState('');
-  const [result, setResult] = useState(null);
   const [error, setError] = useState('');
+  const [userLat, setUserLat] = useState(null);
+  const [userLon, setUserLon] = useState(null);
+  const [locationStatus, setLocationStatus] = useState('detecting');
+  const [showInfo, setShowInfo] = useState(false);
 
-  // Initialize date/time to now
+  // Initialize date/time to now and detect location
   useEffect(() => {
     const now = new Date();
     setDateStr(now.toISOString().split('T')[0]);
@@ -19,6 +22,28 @@ export default function TithiCalculator() {
     const hh = String(now.getHours()).padStart(2, '0');
     const mm = String(now.getMinutes()).padStart(2, '0');
     setTimeStr(`${hh}:${mm}`);
+
+    // Detect user location
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setUserLat(position.coords.latitude);
+          setUserLon(position.coords.longitude);
+          setLocationStatus('detected');
+        },
+        (err) => {
+          console.error('Geolocation error:', err);
+          if (err.code === err.PERMISSION_DENIED) {
+            setLocationStatus('denied');
+          } else {
+            setLocationStatus('error');
+          }
+        },
+        { enableHighAccuracy: true, timeout: 10000 }
+      );
+    } else {
+      setLocationStatus('not supported');
+    }
   }, []);
 
   async function onCompute(e) {
@@ -43,7 +68,7 @@ export default function TithiCalculator() {
       }
       try {
         const dt = new Date(`${dateStr}T${timeStr}:00`);
-        const eph = await getEphemerisData(dt);
+        const eph = await getEphemerisData(dt, userLat, userLon);
         m = eph.moonLon;
         s = eph.sunLon;
         // Update the manual fields to show what was calculated
@@ -76,7 +101,45 @@ export default function TithiCalculator() {
 
   return (
     <div className="tc-root">
-      <h3 className="tc-title">Tithi Calculator</h3>
+      <div className="tc-header">
+        <h3 className="tc-title">Tithi Calculator</h3>
+        <button className="tc-info-btn" onClick={() => setShowInfo(!showInfo)} title="Click for more information about Tithi Calculator">
+          ℹ️
+        </button>
+      </div>
+      
+      {showInfo && (
+        <div className="tc-modal-overlay" onClick={() => setShowInfo(false)}>
+          <div className="tc-modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="tc-modal-header">
+              <h4>About Tithi Calculator</h4>
+              <button className="tc-modal-close" onClick={() => setShowInfo(false)}>×</button>
+            </div>
+            <div className="tc-modal-body">
+              <p>
+                The Tithi Calculator computes the lunar day (Tithi) in the Hindu calendar, which is essential for religious and cultural events. 
+                Tithi is determined by the angular distance between the Moon and Sun in the ecliptic plane.
+              </p>
+              <p>
+                <strong>Automatic Mode:</strong> Enter a date and time to automatically calculate Sun and Moon ecliptic longitudes using 
+                high-precision astronomical data. This mode uses your device's location for topocentric calculations, providing more accurate 
+                results by accounting for your position on Earth. If location access is denied, it defaults to Kathmandu, Nepal coordinates.
+              </p>
+              <p>
+                <strong>Manual Mode:</strong> Directly input Moon and Sun longitudes to compute Tithi using the formula: 
+                Tithi = floor((Moon Longitude - Sun Longitude) / 12°) + 1.
+              </p>
+              <p>
+                <strong>Location Data Usage:</strong> Your location (latitude and longitude) is used only for astronomical calculations 
+                and is not stored or shared. It helps generate precise Tithi values for your specific geographic position.
+              </p>
+              <p>
+                This tool helps users determine auspicious times for festivals, ceremonies, and daily activities based on lunar cycles.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
       
       <div className="tc-mode-switch">
         <button 
@@ -98,6 +161,17 @@ export default function TithiCalculator() {
           ? 'Select a date and time to automatically calculate Tithi.' 
           : 'Enter geocentric ecliptic longitudes (degrees) for Moon and Sun.'}
       </p>
+
+      {mode === 'auto' && (
+        <div className="tc-location-status">
+          <strong>Location:</strong> 
+          {locationStatus === 'detecting' && ' Detecting...'}
+          {locationStatus === 'detected' && ` Detected (${userLat?.toFixed(4)}, ${userLon?.toFixed(4)})`}
+          {locationStatus === 'denied' && ' Permission denied. Using default location (Kathmandu).'}
+          {locationStatus === 'error' && ' Error detecting location. Using default location (Kathmandu).'}
+          {locationStatus === 'not supported' && ' Geolocation not supported. Using default location (Kathmandu).'}
+        </div>
+      )}
 
       <form className="tc-form" onSubmit={onCompute}>
         {mode === 'auto' && (
