@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import './TithiCalculator.css';
 import { computeTithiFromLongitudes, getEphemerisData } from '../utils/ephemeris';
+import { convertAdToBs, nepaliMonths, toNepaliNumber } from '../utils/nepaliDateUtils';
 
 // Nepali Tithi names
 const shuklaNames = ["प्रतिपदा", "द्वितीया", "तृतीया", "चतुर्थी", "पञ्चमी", "षष्ठी", "सप्तमी", "अष्टमी", "नवमी", "दशमी", "एकादशी", "द्वादशी", "त्रयोदशी", "चतुर्दशी", "पूर्णिमा"];
@@ -9,6 +10,57 @@ const krishnaNames = ["प्रतिपदा", "द्वितीया", "�
 // Convert number to Devanagari numerals
 function toDevanagari(num) {
   return num.toString().replace(/\d/g, d => '०१२३४५६७८९'[d]);
+}
+
+// Convert 24-hour time (HH:MM:SS) to 12-hour format with AM/PM
+function formatTime12Hour(time24) {
+  if (!time24) return '';
+  const [hours, minutes, seconds] = time24.split(':').map(Number);
+  const period = hours >= 12 ? 'PM' : 'AM';
+  const hours12 = hours % 12 || 12;
+  return `${hours12}:${String(minutes).padStart(2, '0')}:${String(seconds || 0).padStart(2, '0')} ${period}`;
+}
+
+// Format UTC datetime string to Nepali date and time relative to user's local timezone
+function formatNepaliDateTime(utcDateTimeStr) {
+  if (!utcDateTimeStr) return 'N/A';
+  
+  const utcDate = new Date(utcDateTimeStr);
+  
+  // Get user's local timezone offset in hours (positive means ahead of UTC)
+  const localOffsetMinutes = utcDate.getTimezoneOffset();
+  const localOffsetHours = -localOffsetMinutes / 60;
+  
+  // Nepal offset is +5.75 hours from UTC
+  const nepalOffsetHours = 5.75;
+  
+  // Calculate time difference between user's local time and Nepal time
+  const timeDiffHours = nepalOffsetHours - localOffsetHours;
+  
+  // Convert UTC to Nepal time
+  const nepalTimestamp = utcDate.getTime() + (timeDiffHours * 60 * 60 * 1000);
+  const nepalDate = new Date(nepalTimestamp);
+  
+  // Use Nepal local date/time components
+  const year = nepalDate.getFullYear();
+  const month = nepalDate.getMonth(); // 0-based
+  const day = nepalDate.getDate();
+  const hours = nepalDate.getHours();
+  const minutes = nepalDate.getMinutes();
+  const seconds = nepalDate.getSeconds();
+  
+  // Convert AD date to BS date
+  const bsDate = convertAdToBs(year, month, day);
+  if (!bsDate) return 'N/A';
+  
+  // Format Nepali date
+  const nepaliDateStr = `${nepaliMonths[bsDate.month - 1]} ${toNepaliNumber(bsDate.day)}, ${toNepaliNumber(bsDate.year)}`;
+  
+  // Format Nepal local time in 12-hour format with seconds
+  const time24 = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+  const time12 = formatTime12Hour(time24);
+  
+  return `${nepaliDateStr}, ${time12}`;
 }
 
 export default function TithiCalculator() {
@@ -246,6 +298,12 @@ export default function TithiCalculator() {
           <div><strong>Progress through tithi:</strong> {(result.progress * 100).toFixed(2)}%</div>
           <div><strong>Tithi start:</strong> {result.startTime ? new Date(result.startTime).toLocaleString() : 'N/A'}</div>
           <div><strong>Tithi end:</strong> {result.endTime ? new Date(result.endTime).toLocaleString() : 'N/A'}</div>
+          {result.startTime && result.endTime && (
+            <>
+              <div><strong>आरम्भ मिति/काल (Start Date/Time):</strong> {formatNepaliDateTime(result.startTime)}</div>
+              <div><strong>समाप्ति मिति/काल (End Date/Time):</strong> {formatNepaliDateTime(result.endTime)}</div>
+            </>
+          )}
         </div>
       )}
 

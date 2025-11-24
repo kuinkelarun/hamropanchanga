@@ -10,6 +10,7 @@ The Tithi Calculator is a component in the Family Tree App that computes the lun
 - Automatically detects the user's location for topocentric calculations (more accurate).
 - Falls back to default location (Kathmandu, Nepal) if geolocation is unavailable or denied.
 - **Displays exact Tithi start and end times** that are fixed for each Tithi period, calculated using binary search for precision.
+- **Shows Nepali date and time format** alongside English format for cultural relevance.
 - **Process Explanation**: Since the React app runs in the browser (client-side JavaScript), it cannot execute Python scripts directly. The automatic mode calls a Firebase Cloud Function (server-side), which spawns the local Python script with Skyfield to compute accurate ecliptic longitudes. The results are returned to the browser, where JavaScript calculates the final Tithi using the standard formula. This architecture ensures high precision while keeping the UI responsive.
 
 ### Manual Mode (Longitudes)
@@ -22,11 +23,15 @@ The Tithi Calculator is a component in the Family Tree App that computes the lun
 - Coordinates are in decimal degrees (latitude, longitude).
 - Example: "Detected (40.7086, -74.0617)" means latitude 40.7086° N, longitude -74.0617° W (New York City area).
 
-### Nepali Script Display
-- Displays the Tithi number in Devanagari numerals (१..३०) along with the Paksha and Tithi name in Nepali script.
-- For Shukla Paksha (1-15): Names from प्रतिपदा to पूर्णिमा.
-- For Krishna Paksha (16-30): Names from प्रतिपदा to औंसी.
-- Example: "१ (शुक्लपक्ष प्रतिपदा)" for Tithi 1, or "२२ (कृष्णपक्ष सप्तमी)" for Tithi 22.
+### Nepali Date and Time Display
+- In automatic mode, displays the Tithi start and end times in both English and Nepali formats.
+- Nepali date format: "मंसिर १०, २०८२, 6:00:01 AM" (Month Day, Year, Time with seconds)
+- Time conversion accounts for user's local timezone and Nepal Standard Time (NPT = UTC+5:45).
+- Automatically adjusts for daylight saving time differences between user location and Nepal.
+- Shows both Gregorian and Nepali calendar dates for cultural relevance.
+- Example: 
+  - English: "11/24/2025, 9:36:01 AM" (user's local time)
+  - Nepali: "मंसिर ८, २०८२, 8:21:01 PM" (corresponding Nepal time)
 
 ### Tithi Duration and Timing
 - In automatic mode, displays the exact start and end date/time of the current Tithi.
@@ -90,6 +95,8 @@ The Tithi Calculator is a component in the Family Tree App that computes the lun
 - **Paksha**: Shukla (waxing) if difference < 180°, Krishna (waning) otherwise.
 - **Progress**: Fractional progress through the current Tithi (0-1).
 - **Tithi Boundaries**: Uses binary search algorithm to find exact start/end times when Tithi transitions occur, ensuring precise timing independent of query time.
+- **Timezone Handling**: Nepali date/time display accounts for user's local timezone offset and converts to Nepal Standard Time (UTC+5:45) for accurate cultural time representation.
+- **Time Precision**: Displays time with seconds precision (HH:MM:SS format) for both English and Nepali time displays.
 
 ### Location Impact
 - **Geocentric**: Uses Earth's center as reference (default if no location).
@@ -102,10 +109,11 @@ The Tithi Calculator is a component in the Family Tree App that computes the lun
 - Invalid inputs: Shows validation messages.
 
 ## Files Involved
-- `src/components/TithiCalculator.js`: Main UI component.
+- `src/components/TithiCalculator.js`: Main UI component with Nepali date/time formatting and timezone conversion.
 - `src/utils/ephemeris.js`: Handles API calls to Firebase function.
 - `functions/index.js`: Firebase function that spawns Python script.
 - `tools/compute_tithi.py`: Python script using Skyfield for calculations.
+- `src/utils/nepaliDateUtils.js`: Nepali calendar conversion utilities.
 - `src/components/TithiCalculator.css`: Styling.
 
 ## Troubleshooting
