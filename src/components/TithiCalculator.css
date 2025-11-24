@@ -5,7 +5,99 @@
   background: #ffffff;
   max-width: 420px;
 }
-.tc-title{ margin: 0 0 6px 0; font-size: 1.05rem; }
+.tc-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+.tc-title{ margin: 0; font-size: 1.05rem; }
+.tc-info-btn {
+  background: #e0f2fe;
+  border: 1px solid #0ea5e9;
+  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  font-size: 1rem;
+  cursor: pointer;
+  color: #0ea5e9;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s;
+}
+.tc-info-btn:hover {
+  background: #bae6fd;
+}
+.tc-info-panel {
+  margin-bottom: 12px;
+  padding: 10px;
+  background: #f0f9ff;
+  border: 1px solid #bae6fd;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  line-height: 1.4;
+}
+.tc-info-panel h4 {
+  margin: 0 0 8px 0;
+  font-size: 1rem;
+  color: #1e40af;
+}
+.tc-info-panel p {
+  margin: 0 0 8px 0;
+  color: #374151;
+}
+
+.tc-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+.tc-modal-content {
+  background: white;
+  border-radius: 8px;
+  max-width: 500px;
+  width: 90%;
+  max-height: 80vh;
+  overflow-y: auto;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+.tc-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px;
+  border-bottom: 1px solid #e5e7eb;
+}
+.tc-modal-header h4 {
+  margin: 0;
+  font-size: 1.1rem;
+  color: #1e40af;
+}
+.tc-modal-close {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: #6b7280;
+}
+.tc-modal-body {
+  padding: 16px;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: #374151;
+}
+.tc-modal-body p {
+  margin: 0 0 12px 0;
+}
+.tc-desc{ margin: 0 0 10px 0; color:#6b7280; font-size:0.9rem }
 .tc-desc{ margin: 0 0 10px 0; color:#6b7280; font-size:0.9rem }
 .tc-form{ display:flex; flex-direction:column; gap:8px }
 .tc-label{ font-size:0.85rem; color:#374151 }
@@ -43,9 +135,14 @@
   font-weight: 500;
 }
 
-.tc-datetime-group {
-  display: flex;
-  gap: 12px;
+.tc-location-status {
+  margin: 0 0 10px 0;
+  font-size: 0.85rem;
+  color: #374151;
+  padding: 6px;
+  background: #f0f9ff;
+  border: 1px solid #bae6fd;
+  border-radius: 4px;
 }
 
 .tc-field {
