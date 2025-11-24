@@ -9,6 +9,7 @@ The Tithi Calculator is a component in the Family Tree App that computes the lun
 - Uses high-precision astronomical calculations via a Python script (Skyfield library) running on Firebase Cloud Functions.
 - Automatically detects the user's location for topocentric calculations (more accurate).
 - Falls back to default location (Kathmandu, Nepal) if geolocation is unavailable or denied.
+- **Displays exact Tithi start and end times** that are fixed for each Tithi period, calculated using binary search for precision.
 - **Process Explanation**: Since the React app runs in the browser (client-side JavaScript), it cannot execute Python scripts directly. The automatic mode calls a Firebase Cloud Function (server-side), which spawns the local Python script with Skyfield to compute accurate ecliptic longitudes. The results are returned to the browser, where JavaScript calculates the final Tithi using the standard formula. This architecture ensures high precision while keeping the UI responsive.
 
 ### Manual Mode (Longitudes)
@@ -26,6 +27,13 @@ The Tithi Calculator is a component in the Family Tree App that computes the lun
 - For Shukla Paksha (1-15): Names from प्रतिपदा to पूर्णिमा.
 - For Krishna Paksha (16-30): Names from प्रतिपदा to औंसी.
 - Example: "१ (शुक्लपक्ष प्रतिपदा)" for Tithi 1, or "२२ (कृष्णपक्ष सप्तमी)" for Tithi 22.
+
+### Tithi Duration and Timing
+- In automatic mode, displays the exact start and end date/time of the current Tithi.
+- Times are calculated using precise astronomical ephemeris with binary search algorithm to find exact Tithi boundaries.
+- Start and end times are absolute for each Tithi period and remain consistent regardless of the input query time.
+- Shows local date/time format for readability.
+- Manual mode shows "N/A" since times depend on real astronomical data.
 
 ## Setup and Usage
 
@@ -81,6 +89,7 @@ The Tithi Calculator is a component in the Family Tree App that computes the lun
 - **Tithi Index**: `floor((MoonLon - SunLon) / 12°) + 1`
 - **Paksha**: Shukla (waxing) if difference < 180°, Krishna (waning) otherwise.
 - **Progress**: Fractional progress through the current Tithi (0-1).
+- **Tithi Boundaries**: Uses binary search algorithm to find exact start/end times when Tithi transitions occur, ensuring precise timing independent of query time.
 
 ### Location Impact
 - **Geocentric**: Uses Earth's center as reference (default if no location).
