@@ -23,15 +23,24 @@ The Tithi Calculator is a component in the Family Tree App that computes the lun
 - Coordinates are in decimal degrees (latitude, longitude).
 - Example: "Detected (40.7086, -74.0617)" means latitude 40.7086° N, longitude -74.0617° W (New York City area).
 
-### Nepali Date and Time Display
-- In automatic mode, displays the Tithi start and end times in both English and Nepali formats.
-- Nepali date format: "मंसिर १०, २०८२, 6:00:01 AM" (Month Day, Year, Time with seconds)
-- Time conversion accounts for user's local timezone and Nepal Standard Time (NPT = UTC+5:45).
-- Automatically adjusts for daylight saving time differences between user location and Nepal.
-- Shows both Gregorian and Nepali calendar dates for cultural relevance.
-- Example: 
-  - English: "11/24/2025, 9:36:01 AM" (user's local time)
-  - Nepali: "मंसिर ८, २०८२, 8:21:01 PM" (corresponding Nepal time)
+### Automated Excel Generation (Admin Feature)
+- **Location**: Admin Management → Tithis tab → Auto Management section
+- **Purpose**: Automatically calculate Tithis for a date range and generate Excel file for bulk upload
+- **Process**: 
+  1. Select start and end dates using date pickers
+  2. Click "Generate Tithi Excel" button
+  3. System calculates astronomical data for each day in the range
+  4. Converts UTC times to Nepal Standard Time (UTC+5:45)
+  5. Formats dates in Nepali calendar format (MM-DD-YYYY with Nepali numerals)
+  6. Generates Excel file with proper bulk upload template format
+  7. Downloads file automatically with naming convention: `Tithis_Auto_YYYYMMDD_to_YYYYMMDD.xlsx`
+- **Features**:
+  - Progress indicator shows calculation progress
+  - Handles multi-day Tithis that span across date boundaries
+  - Includes data validation dropdowns for Pakshya and AddOrReplace columns
+  - Uses same astronomical precision as manual Tithi Calculator
+  - Automatic timezone conversion to Nepal time for cultural accuracy
+- **Technical Details**: Calls Firebase Cloud Functions for ephemeris calculations, processes results in JavaScript, formats using XLSX library with Nepali date utilities
 
 ### Tithi Duration and Timing
 - In automatic mode, displays the exact start and end date/time of the current Tithi.
