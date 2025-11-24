@@ -1,0 +1,45 @@
+[debug] [2025-11-24T14:04:15.195Z] ----------------------------------------------------------------------
+[debug] [2025-11-24T14:04:15.199Z] Command:       C:\Program Files\nodejs\node.exe C:\Users\User\AppData\Roaming\npm\node_modules\firebase-tools\lib\bin\firebase.js emulators:start
+[debug] [2025-11-24T14:04:15.200Z] CLI Version:   14.12.1
+[debug] [2025-11-24T14:04:15.200Z] Platform:      win32
+[debug] [2025-11-24T14:04:15.201Z] Node Version:  v22.18.0
+[debug] [2025-11-24T14:04:15.202Z] Time:          Mon Nov 24 2025 09:04:15 GMT-0500 (Eastern Standard Time)
+[debug] [2025-11-24T14:04:15.202Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2025-11-24T14:04:15.599Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2025-11-24T14:04:15.600Z] > authorizing via signed-in user (kuinkelarun@gmail.com)
+[debug] [2025-11-24T14:04:15.697Z] java version "25.0.1" 2025-10-21 LTS
+
+[debug] [2025-11-24T14:04:15.698Z] Java(TM) SE Runtime Environment (build 25.0.1+8-LTS-27)
+Java HotSpot(TM) 64-Bit Server VM (build 25.0.1+8-LTS-27, mixed mode, sharing)
+
+[debug] [2025-11-24T14:04:15.739Z] Parsed Java major version: 25
+[info] i  emulators: Starting emulators: functions, firestore, hosting, extensions {"metadata":{"emulator":{"name":"hub"},"message":"Starting emulators: functions, firestore, hosting, extensions"}}
+[debug] [2025-11-24T14:04:15.742Z] Checked if tokens are valid: true, expires at: 1763995840757
+[debug] [2025-11-24T14:04:15.743Z] Checked if tokens are valid: true, expires at: 1763995840757
+[debug] [2025-11-24T14:04:15.744Z] >>> [apiv2][query] GET https://cloudresourcemanager.googleapis.com/v1/projects/family-tree-crm [none]
+[debug] [2025-11-24T14:04:16.010Z] <<< [apiv2][status] GET https://cloudresourcemanager.googleapis.com/v1/projects/family-tree-crm 200
+[debug] [2025-11-24T14:04:16.010Z] <<< [apiv2][body] GET https://cloudresourcemanager.googleapis.com/v1/projects/family-tree-crm {"projectNumber":"598903597042","projectId":"family-tree-crm","lifecycleState":"ACTIVE","name":"family-tree-crm","labels":{"firebase":"enabled","firebase-core":"disabled"},"createTime":"2025-08-20T01:55:33.775809Z"}
+[debug] [2025-11-24T14:04:16.028Z] [logging] Logging Emulator only supports listening on one address (127.0.0.1). Not listening on ::1
+[debug] [2025-11-24T14:04:16.028Z] [firestore] Firestore Emulator only supports listening on one address (127.0.0.1). Not listening on ::1
+[debug] [2025-11-24T14:04:16.028Z] [firestore.websocket] websocket server for firestore only supports listening on one address (127.0.0.1). Not listening on ::1
+[debug] [2025-11-24T14:04:16.028Z] [hosting] Hosting Emulator only supports listening on one address (127.0.0.1). Not listening on ::1
+[debug] [2025-11-24T14:04:16.029Z] assigned listening specs for emulators {"user":{"hub":[{"address":"127.0.0.1","family":"IPv4","port":4400},{"address":"::1","family":"IPv6","port":4400}],"ui":[{"address":"127.0.0.1","family":"IPv4","port":4000},{"address":"::1","family":"IPv6","port":4000}],"logging":[{"address":"127.0.0.1","family":"IPv4","port":4500}],"firestore":[{"address":"127.0.0.1","family":"IPv4","port":8080}],"firestore.websocket":[{"address":"127.0.0.1","family":"IPv4","port":9150}],"hosting":[{"address":"127.0.0.1","family":"IPv4","port":5000}]},"metadata":{"message":"assigned listening specs for emulators"}}
+[debug] [2025-11-24T14:04:16.036Z] [hub] writing locator at C:\Users\User\AppData\Local\Temp\hub-family-tree-crm.json
+[debug] [2025-11-24T14:04:16.045Z] [Extensions] Started Extensions emulator, this is a noop.
+[debug] [2025-11-24T14:04:16.052Z] [functions] Functions Emulator only supports listening on one address (127.0.0.1). Not listening on ::1
+[debug] [2025-11-24T14:04:16.052Z] [eventarc] Eventarc Emulator only supports listening on one address (127.0.0.1). Not listening on ::1
+[debug] [2025-11-24T14:04:16.052Z] [tasks] Cloud Tasks Emulator only supports listening on one address (127.0.0.1). Not listening on ::1
+[debug] [2025-11-24T14:04:16.052Z] late-assigned ports for functions and eventarc emulators {"user":{"hub":[{"address":"127.0.0.1","family":"IPv4","port":4400},{"address":"::1","family":"IPv6","port":4400}],"ui":[{"address":"127.0.0.1","family":"IPv4","port":4000},{"address":"::1","family":"IPv6","port":4000}],"logging":[{"address":"127.0.0.1","family":"IPv4","port":4500}],"firestore":[{"address":"127.0.0.1","family":"IPv4","port":8080}],"firestore.websocket":[{"address":"127.0.0.1","family":"IPv4","port":9150}],"hosting":[{"address":"127.0.0.1","family":"IPv4","port":5000}],"functions":[{"address":"127.0.0.1","family":"IPv4","port":5001}],"eventarc":[{"address":"127.0.0.1","family":"IPv4","port":9299}],"tasks":[{"address":"127.0.0.1","family":"IPv4","port":9499}]},"metadata":{"message":"late-assigned ports for functions and eventarc emulators"}}
+[warn] !  functions: The following emulators are not running, calls to these services from the Functions emulator will affect production: apphosting, auth, database, pubsub, storage, dataconnect {"metadata":{"emulator":{"name":"functions"},"message":"The following emulators are not running, calls to these services from the Functions emulator will affect production: \u001b[1mapphosting, auth, database, pubsub, storage, dataconnect\u001b[22m"}}
+[debug] [2025-11-24T14:04:16.070Z] defaultcredentials: writing to file C:\Users\User\AppData\Roaming\firebase\kuinkelarun_gmail_com_application_default_credentials.json
+[debug] [2025-11-24T14:04:16.072Z] Setting GAC to C:\Users\User\AppData\Roaming\firebase\kuinkelarun_gmail_com_application_default_credentials.json {"metadata":{"emulator":{"name":"functions"},"message":"Setting GAC to C:\\Users\\User\\AppData\\Roaming\\firebase\\kuinkelarun_gmail_com_application_default_credentials.json"}}
+[debug] [2025-11-24T14:04:16.072Z] Checked if tokens are valid: true, expires at: 1763995840757
+[debug] [2025-11-24T14:04:16.073Z] Checked if tokens are valid: true, expires at: 1763995840757
+[debug] [2025-11-24T14:04:16.073Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects/family-tree-crm/adminSdkConfig [none]
+[debug] [2025-11-24T14:04:16.565Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects/family-tree-crm/adminSdkConfig 200
+[debug] [2025-11-24T14:04:16.565Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects/family-tree-crm/adminSdkConfig {"projectId":"family-tree-crm","storageBucket":"family-tree-crm.firebasestorage.app"}
+[debug] [2025-11-24T14:04:16.585Z] Ignoring unsupported arg: auto_download {"metadata":{"emulator":{"name":"firestore"},"message":"Ignoring unsupported arg: auto_download"}}
+[debug] [2025-11-24T14:04:16.585Z] Ignoring unsupported arg: single_project_mode_error {"metadata":{"emulator":{"name":"firestore"},"message":"Ignoring unsupported arg: single_project_mode_error"}}
+[debug] [2025-11-24T14:04:16.585Z] Starting Firestore Emulator with command {"binary":"java","args":["-Dgoogle.cloud_firestore.debug_log_level=FINE","-Duser.language=en","-jar","C:\\Users\\User\\.cache\\firebase\\emulators\\cloud-firestore-emulator-v1.19.8.jar","--host","127.0.0.1","--port",8080,"--websocket_port",9150,"--project_id","family-tree-crm","--rules","E:\\Arun\\Side - Projects\\Family Tree\\family-tree-app\\firestore.rules","--single_project_mode",true,"--functions_emulator","127.0.0.1:5001"],"optionalArgs":["port","webchannel_port","host","rules","websocket_port","functions_emulator","seed_from_export","project_id","single_project_mode"],"joinArgs":false,"shell":false,"port":8080} {"metadata":{"emulator":{"name":"firestore"},"message":"Starting Firestore Emulator with command {\"binary\":\"java\",\"args\":[\"-Dgoogle.cloud_firestore.debug_log_level=FINE\",\"-Duser.language=en\",\"-jar\",\"C:\\\\Users\\\\User\\\\.cache\\\\firebase\\\\emulators\\\\cloud-firestore-emulator-v1.19.8.jar\",\"--host\",\"127.0.0.1\",\"--port\",8080,\"--websocket_port\",9150,\"--project_id\",\"family-tree-crm\",\"--rules\",\"E:\\\\Arun\\\\Side - Projects\\\\Family Tree\\\\family-tree-app\\\\firestore.rules\",\"--single_project_mode\",true,\"--functions_emulator\",\"127.0.0.1:5001\"],\"optionalArgs\":[\"port\",\"webchannel_port\",\"host\",\"rules\",\"websocket_port\",\"functions_emulator\",\"seed_from_export\",\"project_id\",\"single_project_mode\"],\"joinArgs\":false,\"shell\":false,\"port\":8080}"}}
+[info] i  firestore: Firestore Emulator logging to firestore-debug.log {"metadata":{"emulator":{"name":"firestore"},"message":"Firestore Emulator logging to \u001b[1mfirestore-debug.log\u001b[22m"}}
