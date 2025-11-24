@@ -21,7 +21,7 @@ export default function TithiCalculator() {
     setTimeStr(`${hh}:${mm}`);
   }, []);
 
-  function onCompute(e) {
+  async function onCompute(e) {
     e && e.preventDefault();
     setError('');
     setResult(null);
@@ -43,7 +43,7 @@ export default function TithiCalculator() {
       }
       try {
         const dt = new Date(`${dateStr}T${timeStr}:00`);
-        const eph = getEphemerisData(dt);
+        const eph = await getEphemerisData(dt);
         m = eph.moonLon;
         s = eph.sunLon;
         // Update the manual fields to show what was calculated

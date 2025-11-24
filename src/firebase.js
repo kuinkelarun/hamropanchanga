@@ -3,7 +3,7 @@ import { initializeApp } from "firebase/app";
 import { getAuth, GoogleAuthProvider, signInWithPopup } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
-import { getFunctions } from "firebase/functions";
+import { getFunctions, connectFunctionsEmulator } from "firebase/functions";
 
 // Your web app's Firebase configuration
 const firebaseConfig = {
@@ -23,6 +23,11 @@ export const auth = getAuth(app);
 export const db = getFirestore(app);
 export const storage = getStorage(app);
 export const functions = getFunctions(app);
+
+// Connect to emulators in development
+if (process.env.NODE_ENV === 'development') {
+  connectFunctionsEmulator(functions, "localhost", 5001);
+}
 
 // Helper: sign in with Google popup — exported so other components can reuse the same logic
 export async function signInWithGoogle() {

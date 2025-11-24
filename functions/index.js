@@ -1,5 +1,7 @@
 const functions = require('firebase-functions');
 const admin = require('firebase-admin');
+const path = require('path');
+const { spawn } = require('child_process');
 
 // Initialize admin SDK (Cloud Functions provide credentials automatically)
 admin.initializeApp();
@@ -167,4 +169,69 @@ exports.syncAuthUsersToFirestore = functions.https.onCall(async (data, context) 
     console.error('syncAuthUsersToFirestore error:', err);
     throw new functions.https.HttpsError('internal', err.message);
   }
+});
+
+/**
+ * Callable function to compute Sun and Moon ecliptic longitudes using Python Skyfield.
+ * Input: { date: string (ISO datetime), lat?: number, lon?: number }
+ * Returns: { sunLon: number, moonLon: number, sunLat: number, moonLat: number }
+ */
+exports.computeEphemeris = functions.https.onCall(async (data, context) => {
+  const { date, lat, lon } = data;
+  if (!date || typeof date !== 'string') {
+    throw new functions.https.HttpsError('invalid-argument', 'Date (ISO string) is required');
+  }
+
+  const latitude = lat != null ? lat : 27.7172;
+  const longitude = lon != null ? lon : 85.3240;
+
+  const scriptPath = path.join(__dirname, '..', 'tools', 'compute_tithi.py');
+  const args = ['--datetime', date, '--lat', latitude.toString(), '--lon', longitude.toString()];
+
+  console.log('computeEphemeris called with:', { date, lat, lon });
+  console.log('scriptPath:', scriptPath);
+  console.log('args:', args);
+
+  return new Promise((resolve, reject) => {
+    const pythonProcess = spawn('python', [scriptPath, ...args], { cwd: path.dirname(scriptPath) });
+
+    let stdout = '';
+    let stderr = '';
+
+    pythonProcess.stdout.on('data', (data) => {
+      stdout += data.toString();
+      console.log('Python stdout:', data.toString());
+    });
+
+    pythonProcess.stderr.on('data', (data) => {
+      stderr += data.toString();
+      console.log('Python stderr:', data.toString());
+    });
+
+    pythonProcess.on('error', (err) => {
+      console.log('Spawn error:', err);
+      reject(new functions.https.HttpsError('internal', `Failed to spawn Python: ${err.message}`));
+    });
+
+    pythonProcess.on('close', (code) => {
+      console.log('Python process closed with code:', code);
+      if (code !== 0) {
+        reject(new functions.https.HttpsError('internal', `Python script failed with code ${code}: ${stderr}`));
+      } else {
+        try {
+          const result = JSON.parse(stdout.trim());
+          console.log('Parsed result:', result);
+          resolve({
+            sunLon: result.sun_lon_deg,
+            moonLon: result.moon_lon_deg,
+            sunLat: result.sun_lat_deg || 0,
+            moonLat: result.moon_lat_deg || 0
+          });
+        } catch (e) {
+          console.log('JSON parse error:', e, 'stdout:', stdout);
+          reject(new functions.https.HttpsError('internal', `Failed to parse output: ${stdout}`));
+        }
+      }
+    });
+  });
 });
