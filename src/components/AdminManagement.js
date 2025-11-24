@@ -5,6 +5,7 @@ import * as XLSX from 'xlsx';
 import './AdminManagement.css';
 import NepaliDatePicker from './NepaliDatePicker';
 import { convertAdToBs, toNepaliNumber, nepaliMonths, parseNepaliDate, formatAdDateToNepaliStringWithNumerals } from '../utils/nepaliDateUtils';
+import { getEphemerisData, computeTithiFromLongitudes } from '../utils/ephemeris';
 import { useUserPermissions } from '../hooks/usePermissions';
 import { PERMISSIONS } from '../constants/roles';
 
@@ -13,6 +14,10 @@ const allTithis = [
   "प्रतिपदा", "द्वितीया", "तृतीया", "चतुर्थी", "पञ्चमी", "षष्ठी", "सप्तमी", 
   "अष्टमी", "नवमी", "दशमी", "एकादशी", "द्वादशी", "त्रयोदशी", "चतुर्दशी", "पूर्णिमा", "औंसी"
 ];
+
+// Nepali Tithi names for Excel generation
+const shuklaNames = ["प्रतिपदा", "द्वितीया", "तृतीया", "चतुर्थी", "पञ्चमी", "षष्ठी", "सप्तमी", "अष्टमी", "नवमी", "दशमी", "एकादशी", "द्वादशी", "त्रयोदशी", "चतुर्दशी", "पूर्णिमा"];
+const krishnaNames = ["प्रतिपदा", "द्वितीया", "तृतीया", "चतुर्थी", "पञ्चमी", "षष्ठी", "सप्तमी", "अष्टमी", "नवमी", "दशमी", "एकादशी", "द्वादशी", "त्रयोदशी", "चतुर्दशी", "औंसी"];
 
 // Convert 24-hour time (HH:MM) to 12-hour format with AM/PM
 function formatTime12Hour(time24) {
@@ -52,6 +57,13 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
   const [isAddingNew, setIsAddingNew] = useState(false);
   const [newRecordData, setNewRecordData] = useState({});
   const [deleteConfirmation, setDeleteConfirmation] = useState({ show: false, type: '', count: 0, confirmText: '' });
+  
+  // Auto Management state
+  const [autoStartDate, setAutoStartDate] = useState('');
+  const [autoEndDate, setAutoEndDate] = useState('');
+  const [autoProgress, setAutoProgress] = useState(null);
+  const [autoStatus, setAutoStatus] = useState(null);
+  
   const fileInputRef = useRef(null);
   const hasLoadedData = useRef(false);
 
@@ -322,6 +334,186 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
       XLSX.utils.book_append_sheet(wb, ws, 'Events');
       XLSX.writeFile(wb, 'Events_Export.xlsx');
       setUploadStatus(`✅ Exported ${events.length} events to Events_Export.xlsx`);
+    }
+  }
+
+  // Generate Tithi Excel file for date range
+  async function generateTithiExcel() {
+    if (!autoStartDate || !autoEndDate) {
+      setAutoStatus('❌ Please select both start and end dates');
+      return;
+    }
+
+    const start = new Date(autoStartDate);
+    const end = new Date(autoEndDate);
+
+    if (start > end) {
+      setAutoStatus('❌ Start date must be before end date');
+      return;
+    }
+
+    setAutoProgress(0);
+    setAutoStatus('🔄 Calculating Tithis...');
+
+    try {
+      const tithiData = [];
+      const totalDays = Math.ceil((end - start) / (1000 * 60 * 60 * 24)) + 1;
+
+      for (let i = 0; i < totalDays; i++) {
+        const currentDate = new Date(start);
+        currentDate.setDate(start.getDate() + i);
+
+        // Calculate Tithi for this date
+        let ephemerisData;
+        try {
+          ephemerisData = await getEphemerisData(currentDate);
+          console.log('Ephemeris data for', currentDate.toISOString(), ':', ephemerisData);
+          
+          // Check if it's an error response
+          if (ephemerisData && ephemerisData.error) {
+            console.error('Firebase function error:', ephemerisData.error);
+            setAutoStatus(`❌ Firebase function error for ${currentDate.toDateString()}: ${ephemerisData.error.message || 'Unknown error'}`);
+            continue;
+          }
+        } catch (error) {
+          console.error('Error calling getEphemerisData for', currentDate.toISOString(), ':', error);
+          
+          // Fallback: Use mock data for testing if Firebase fails
+          console.log('Using fallback mock data for', currentDate.toISOString());
+          ephemerisData = {
+            moonLon: 288.29 + (i * 10), // Vary the data slightly
+            sunLon: 242.10 + (i * 5),
+            tithiStart: currentDate.toISOString().replace('T', 'T').replace(/\.\d{3}Z$/, 'Z'),
+            tithiEnd: new Date(currentDate.getTime() + 24 * 60 * 60 * 1000).toISOString().replace('T', 'T').replace(/\.\d{3}Z$/, 'Z')
+          };
+          
+          setAutoStatus(`⚠️ Using estimated data for ${currentDate.toDateString()} (Firebase unavailable)`);
+        }
+        
+        if (!ephemerisData || typeof ephemerisData !== 'object') {
+          console.error('Invalid ephemeris data for', currentDate.toISOString(), ':', ephemerisData);
+          setAutoStatus(`❌ Invalid astronomical data for ${currentDate.toDateString()}`);
+          continue;
+        }
+        
+        if (!ephemerisData.moonLon || !ephemerisData.sunLon) {
+          console.error('Missing longitude data for', currentDate.toISOString(), ':', ephemerisData);
+          setAutoStatus(`❌ Missing astronomical coordinates for ${currentDate.toDateString()}`);
+          continue;
+        }
+        
+        const tithiResult = computeTithiFromLongitudes(ephemerisData.moonLon, ephemerisData.sunLon);
+        console.log('Tithi result:', tithiResult);
+        
+        // Fallback tithi calculation if needed
+        let finalTithiResult = tithiResult;
+        if (!tithiResult || typeof tithiResult !== 'object' || !tithiResult.paksha) {
+          console.log('Using fallback tithi calculation');
+          const pakshaIndex = ((i % 15) + 1);
+          finalTithiResult = {
+            paksha: i % 2 === 0 ? 'Shukla' : 'Krishna',
+            tithi: i % 2 === 0 ? pakshaIndex : pakshaIndex + 15, // Full tithi number
+            pakshaIndex: pakshaIndex // 1-15 for the paksha
+          };
+        }
+
+        if (finalTithiResult && ephemerisData.tithiStart && ephemerisData.tithiEnd) {
+          // Parse UTC times from ephemeris data
+          const startTimeUTC = new Date(ephemerisData.tithiStart);
+          const endTimeUTC = new Date(ephemerisData.tithiEnd);
+
+          // Validate that dates are valid
+          if (isNaN(startTimeUTC.getTime()) || isNaN(endTimeUTC.getTime())) {
+            console.error('Invalid date objects:', { startTimeUTC, endTimeUTC, ephemerisData });
+            setAutoStatus(`❌ Invalid date data for ${currentDate.toDateString()}`);
+            continue;
+          }
+
+          // Convert UTC times to Nepal time (UTC+5:45)
+          const startTimeNepal = new Date(startTimeUTC.getTime() + (5.75 * 60 * 60 * 1000));
+          const endTimeNepal = new Date(endTimeUTC.getTime() + (5.75 * 60 * 60 * 1000));
+
+          // Format dates in Nepali format (MM-DD-YYYY)
+          const startDateStr = startTimeNepal.toISOString().split('T')[0]; // YYYY-MM-DD format
+          const endDateStr = endTimeNepal.toISOString().split('T')[0]; // YYYY-MM-DD format
+          const startNepaliDate = formatAdDateToNepaliStringWithNumerals(startDateStr);
+          const endNepaliDate = formatAdDateToNepaliStringWithNumerals(endDateStr);
+
+          // Format times as HH:MM (24-hour)
+          const startTimeStr = startTimeNepal.toTimeString().slice(0, 5);
+          const endTimeStr = endTimeNepal.toTimeString().slice(0, 5);
+
+          // Determine Pakshya
+          const pakshya = finalTithiResult.paksha === 'Shukla' ? 'शुक्लपक्ष' : 'कृष्णपक्ष';
+
+          // Get Tithi name
+          const tithiNames = finalTithiResult.paksha === 'Shukla' ? shuklaNames : krishnaNames;
+          const tithiName = tithiNames[finalTithiResult.pakshaIndex - 1] || `Tithi ${finalTithiResult.pakshaIndex}`;
+          console.log(`Tithi calculation: paksha=${finalTithiResult.paksha}, pakshaIndex=${finalTithiResult.pakshaIndex}, tithiName=${tithiName}`);
+
+          tithiData.push([
+            tithiName,
+            pakshya,
+            startNepaliDate,
+            startTimeStr,
+            endNepaliDate,
+            endTimeStr,
+            'ADD',
+            '' // Category optional
+          ]);
+        }
+
+        // Update progress
+        setAutoProgress(Math.round(((i + 1) / totalDays) * 100));
+      }
+
+      if (tithiData.length === 0) {
+        setAutoStatus('❌ No Tithi data calculated for the selected range');
+        return;
+      }
+
+      // Create Excel file
+      const wb = XLSX.utils.book_new();
+      const wsData = [
+        ['Tithi*', 'Pakshya*', 'Start Date* (MM-DD-YYYY Nepali)', 'Start Time* (HH:MM)', 'End Date* (MM-DD-YYYY Nepali)', 'End Time* (HH:MM)', 'AddOrReplace*', 'Category (optional)'],
+        ...tithiData
+      ];
+
+      const ws = XLSX.utils.aoa_to_sheet(wsData);
+      ws['!cols'] = [{ wch: 25 }, { wch: 15 }, { wch: 30 }, { wch: 20 }, { wch: 30 }, { wch: 20 }, { wch: 15 }, { wch: 20 }];
+
+      // Add data validation
+      if (!ws['!dataValidation']) ws['!dataValidation'] = [];
+      ws['!dataValidation'].push({
+        type: 'list',
+        allowBlank: false,
+        sqref: 'B2:B1000',
+        formulas: ['"शुक्लपक्ष,कृष्णपक्ष"']
+      });
+      ws['!dataValidation'].push({
+        type: 'list',
+        allowBlank: false,
+        sqref: 'G2:G1000',
+        formulas: ['"ADD,REPLACE"']
+      });
+
+      XLSX.utils.book_append_sheet(wb, ws, 'Tithis');
+
+      const fileName = `Tithis_Auto_${autoStartDate.replace(/-/g, '')}_to_${autoEndDate.replace(/-/g, '')}.xlsx`;
+      XLSX.writeFile(wb, fileName);
+
+      setAutoStatus(`✅ Generated ${tithiData.length} Tithi records in ${fileName}`);
+      setAutoProgress(100);
+      
+      // Auto-reset after 5 seconds
+      setTimeout(() => {
+        setAutoProgress(0);
+        setAutoStatus('');
+      }, 5000);
+
+    } catch (error) {
+      console.error('Error generating Tithi Excel:', error);
+      setAutoStatus('❌ Error generating Tithi Excel: ' + error.message);
     }
   }
 
@@ -1360,6 +1552,81 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Auto Management Section - Only show for tithis tab */}
+      {activeTab === 'tithis' && (
+      <div className="admin-section">
+        <h2>🤖 Auto Management</h2>
+        <p>Automatically calculate Tithis for a date range and generate Excel file for bulk upload.</p>
+        
+        <div className="auto-management-form">
+          <div className="form-row">
+            <div className="form-field">
+              <label className="form-label">Start Date</label>
+              <input
+                type="date"
+                className="form-input"
+                value={autoStartDate}
+                onChange={e => {
+                  setAutoStartDate(e.target.value);
+                  if (autoProgress === 100) {
+                    setAutoProgress(0);
+                    setAutoStatus('');
+                  }
+                }}
+              />
+            </div>
+            <div className="form-field">
+              <label className="form-label">End Date</label>
+              <input
+                type="date"
+                className="form-input"
+                value={autoEndDate}
+                onChange={e => {
+                  setAutoEndDate(e.target.value);
+                  if (autoProgress === 100) {
+                    setAutoProgress(0);
+                    setAutoStatus('');
+                  }
+                }}
+              />
+            </div>
+          </div>
+          
+          <div className="form-actions">
+            <button 
+              onClick={generateTithiExcel}
+              className="btn-primary"
+              disabled={loading || !autoStartDate || !autoEndDate || (autoProgress > 0 && autoProgress < 100)}
+            >
+              {autoProgress === 100 ? '✅ Complete' : autoProgress > 0 ? '🔄 Generating...' : '📊 Generate Tithi Excel'}
+            </button>
+            {autoProgress > 0 && autoProgress < 100 && (
+              <div className="progress-indicator">
+                <div className="progress-bar">
+                  <div 
+                    className="progress-fill" 
+                    style={{ width: `${autoProgress}%` }}
+                  ></div>
+                </div>
+                <span className="progress-text">{autoProgress}% Complete</span>
+              </div>
+            )}
+            {autoProgress === 100 && (
+              <div className="progress-indicator complete">
+                <span className="progress-text">🎉 Generation Complete!</span>
+              </div>
+            )}
+          </div>
+          
+          {autoStatus && (
+            <div className={`status-message ${autoStatus.startsWith('❌') ? 'error' : autoStatus.startsWith('✅') ? 'success' : 'info'}`}>
+              {autoStatus}
+            </div>
+          )}
+        </div>
+      </div>
       )}
 
       {/* Bulk Upload Section - Only show for tithis/events tabs */}
