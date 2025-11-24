@@ -21,6 +21,12 @@ The Tithi Calculator is a component in the Family Tree App that computes the lun
 - Coordinates are in decimal degrees (latitude, longitude).
 - Example: "Detected (40.7086, -74.0617)" means latitude 40.7086° N, longitude -74.0617° W (New York City area).
 
+### Nepali Script Display
+- Displays the Tithi number in Devanagari numerals (१..३०) along with the Paksha and Tithi name in Nepali script.
+- For Shukla Paksha (1-15): Names from प्रतिपदा to पूर्णिमा.
+- For Krishna Paksha (16-30): Names from प्रतिपदा to औंसी.
+- Example: "१ (शुक्लपक्ष प्रतिपदा)" for Tithi 1, or "२२ (कृष्णपक्ष सप्तमी)" for Tithi 22.
+
 ## Setup and Usage
 
 ### Prerequisites

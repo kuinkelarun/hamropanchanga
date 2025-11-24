@@ -2,6 +2,15 @@ import React, { useState, useEffect } from 'react';
 import './TithiCalculator.css';
 import { computeTithiFromLongitudes, getEphemerisData } from '../utils/ephemeris';
 
+// Nepali Tithi names
+const shuklaNames = ["प्रतिपदा", "द्वितीया", "तृतीया", "चतुर्थी", "पञ्चमी", "षष्ठी", "सप्तमी", "अष्टमी", "नवमी", "दशमी", "एकादशी", "द्वादशी", "त्रयोदशी", "चतुर्दशी", "पूर्णिमा"];
+const krishnaNames = ["प्रतिपदा", "द्वितीया", "तृतीया", "चतुर्थी", "पञ्चमी", "षष्ठी", "सप्तमी", "अष्टमी", "नवमी", "दशमी", "एकादशी", "द्वादशी", "त्रयोदशी", "चतुर्दशी", "औंसी"];
+
+// Convert number to Devanagari numerals
+function toDevanagari(num) {
+  return num.toString().replace(/\d/g, d => '०१२३४५६७८९'[d]);
+}
+
 export default function TithiCalculator() {
   const [mode, setMode] = useState('auto'); // 'auto' or 'manual'
   const [moonLon, setMoonLon] = useState('');
@@ -9,6 +18,7 @@ export default function TithiCalculator() {
   const [dateStr, setDateStr] = useState('');
   const [timeStr, setTimeStr] = useState('');
   const [error, setError] = useState('');
+  const [result, setResult] = useState(null);
   const [userLat, setUserLat] = useState(null);
   const [userLon, setUserLon] = useState(null);
   const [locationStatus, setLocationStatus] = useState('detecting');
@@ -227,6 +237,7 @@ export default function TithiCalculator() {
           <div><strong>Normalized difference (°):</strong> {result.Dnorm.toFixed(6)}</div>
           <div><strong>Fractional tithi (0..30):</strong> {result.t_frac.toFixed(6)}</div>
           <div><strong>Tithi (1..30):</strong> {result.tithi} ({result.paksha} {result.pakshaIndex})</div>
+          <div><strong>Tithi (१..३०):</strong> {toDevanagari(result.tithi)} ({result.paksha === 'Shukla' ? 'शुक्लपक्ष' : 'कृष्णपक्ष'} {(result.paksha === 'Shukla' ? shuklaNames : krishnaNames)[result.pakshaIndex - 1]})</div>
           <div><strong>Progress through tithi:</strong> {(result.progress * 100).toFixed(2)}%</div>
         </div>
       )}
