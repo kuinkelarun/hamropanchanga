@@ -21,45 +21,37 @@ function formatTime12Hour(time24) {
   return `${hours12}:${String(minutes).padStart(2, '0')}:${String(seconds || 0).padStart(2, '0')} ${period}`;
 }
 
-// Format UTC datetime string to Nepali date and time relative to user's local timezone
+// Format UTC datetime string to Nepali date and time in user's local timezone
 function formatNepaliDateTime(utcDateTimeStr) {
   if (!utcDateTimeStr) return 'N/A';
   
   const utcDate = new Date(utcDateTimeStr);
-  
-  // Get user's local timezone offset in hours (positive means ahead of UTC)
-  const localOffsetMinutes = utcDate.getTimezoneOffset();
-  const localOffsetHours = -localOffsetMinutes / 60;
-  
-  // Nepal offset is +5.75 hours from UTC
-  const nepalOffsetHours = 5.75;
-  
-  // Calculate time difference between user's local time and Nepal time
-  const timeDiffHours = nepalOffsetHours - localOffsetHours;
-  
-  // Convert UTC to Nepal time
-  const nepalTimestamp = utcDate.getTime() + (timeDiffHours * 60 * 60 * 1000);
-  const nepalDate = new Date(nepalTimestamp);
-  
-  // Use Nepal local date/time components
-  const year = nepalDate.getFullYear();
-  const month = nepalDate.getMonth(); // 0-based
-  const day = nepalDate.getDate();
-  const hours = nepalDate.getHours();
-  const minutes = nepalDate.getMinutes();
-  const seconds = nepalDate.getSeconds();
-  
-  // Convert AD date to BS date
-  const bsDate = convertAdToBs(year, month, day);
-  if (!bsDate) return 'N/A';
-  
-  // Format Nepali date
-  const nepaliDateStr = `${nepaliMonths[bsDate.month - 1]} ${toNepaliNumber(bsDate.day)}, ${toNepaliNumber(bsDate.year)}`;
-  
-  // Format Nepal local time in 12-hour format with seconds
+  if (Number.isNaN(utcDate.getTime())) return 'N/A';
+
+  const utcMs = utcDate.getTime();
+
+  // Local time display (user's local timezone)
+  const localDate = new Date(utcMs);
+  const hours = localDate.getHours();
+  const minutes = localDate.getMinutes();
+  const seconds = localDate.getSeconds();
   const time24 = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
   const time12 = formatTime12Hour(time24);
-  
+
+  // For Nepali (BS) date mapping we must use Nepal Time (NPT = UTC+5:45).
+  // Shift the UTC instant by the NPT offset then read UTC components from that shifted instant
+  // (reading UTC components after shifting gives the NPT Y/M/D values reliably).
+  const nptOffsetMs = 5.75 * 3600000; // 5 hours 45 minutes
+  const nptShifted = new Date(utcMs + nptOffsetMs);
+  const nptYear = nptShifted.getUTCFullYear();
+  const nptMonth = nptShifted.getUTCMonth(); // 0-based
+  const nptDay = nptShifted.getUTCDate();
+
+  const bsDate = convertAdToBs(nptYear, nptMonth, nptDay);
+  if (!bsDate) return `N/A`;
+
+  const nepaliDateStr = `${nepaliMonths[bsDate.month - 1]} ${toNepaliNumber(bsDate.day)}, ${toNepaliNumber(bsDate.year)}`;
+
   return `${nepaliDateStr}, ${time12}`;
 }
 
