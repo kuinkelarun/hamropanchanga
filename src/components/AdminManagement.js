@@ -4,7 +4,7 @@ import { db } from '../firebase';
 import * as XLSX from 'xlsx';
 import './AdminManagement.css';
 import NepaliDatePicker from './NepaliDatePicker';
-import { convertAdToBs, toNepaliNumber, nepaliMonths, parseNepaliDate, formatAdDateToNepaliStringWithNumerals } from '../utils/nepaliDateUtils';
+import { convertAdToBs, toNepaliNumber, nepaliMonths, parseNepaliDate, formatAdDateToNepaliStringWithNumerals, formatNepaliDateTime } from '../utils/nepaliDateUtils';
 import { getEphemerisData, computeTithiFromLongitudes } from '../utils/ephemeris';
 import { useUserPermissions } from '../hooks/usePermissions';
 import { PERMISSIONS } from '../constants/roles';
@@ -27,6 +27,63 @@ function formatTime12Hour(time24) {
   const hours12 = hours % 12 || 12;
   return `${hours12}:${String(minutes).padStart(2, '0')} ${period}`;
 }
+
+// Helper to compute start milliseconds for tithi entries (used for sorting)
+function getTithiStartMillis_Admin(tithi) {
+  try {
+    if (!tithi) return Infinity;
+    if (tithi.startDate && tithi.startTime) {
+      const ts = String(tithi.startTime).trim();
+      const m24 = ts.match(/^([01]?\d|2[0-3]):([0-5]\d)$/);
+      if (m24) return new Date(`${tithi.startDate}T${m24[1].padStart(2,'0')}:${m24[2]}:00`).getTime();
+      const m12 = ts.match(/^(\d{1,2}):(\d{2})\s*([AaPp][Mm])$/);
+      if (m12) {
+        let h = parseInt(m12[1],10);
+        const mm = m12[2];
+        const ampm = m12[3].toUpperCase();
+        if (ampm === 'PM' && h !== 12) h += 12;
+        if (ampm === 'AM' && h === 12) h = 0;
+        return new Date(`${tithi.startDate}T${String(h).padStart(2,'0')}:${mm}:00`).getTime();
+      }
+      const dt = new Date(`${tithi.startDate} ${tithi.startTime}`);
+      const ms = dt.getTime();
+      return Number.isFinite(ms) ? ms : Infinity;
+    }
+    if (tithi.startDate) return new Date(`${tithi.startDate}T00:00:00`).getTime();
+    return Infinity;
+  } catch (e) {
+    return Infinity;
+  }
+}
+
+// Helper to compute end milliseconds for tithi entries (used for anomaly detection)
+function getTithiEndMillis_Admin(tithi) {
+  try {
+    if (!tithi) return -Infinity;
+    if (tithi.endDate && tithi.endTime) {
+      const ts = String(tithi.endTime).trim();
+      const m24 = ts.match(/^([01]?\d|2[0-3]):([0-5]\d)$/);
+      if (m24) return new Date(`${tithi.endDate}T${m24[1].padStart(2,'0')}:${m24[2]}:00`).getTime();
+      const m12 = ts.match(/^(\d{1,2}):(\d{2})\s*([AaPp][Mm])$/);
+      if (m12) {
+        let h = parseInt(m12[1],10);
+        const mm = m12[2];
+        const ampm = m12[3].toUpperCase();
+        if (ampm === 'PM' && h !== 12) h += 12;
+        if (ampm === 'AM' && h === 12) h = 0;
+        return new Date(`${tithi.endDate}T${String(h).padStart(2,'0')}:${mm}:00`).getTime();
+      }
+      const dt = new Date(`${tithi.endDate} ${tithi.endTime}`);
+      const ms = dt.getTime();
+      return Number.isFinite(ms) ? ms : -Infinity;
+    }
+    if (tithi.endDate) return new Date(`${tithi.endDate}T23:59:59`).getTime();
+    return -Infinity;
+  } catch (e) {
+    return -Infinity;
+  }
+}
+
 
 export default function AdminManagement({ user, isAdmin, onBack }) {
   console.log('AdminManagement loaded - version 2025-11-14-v4', { isAdmin });
@@ -67,6 +124,79 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
   const fileInputRef = useRef(null);
   const hasLoadedData = useRef(false);
 
+  // Admin-only scan state for detecting tithis where end < start
+  const [scanResults, setScanResults] = useState([]);
+  const [scanning, setScanning] = useState(false);
+
+  // Scan all tithis in Firestore and find records where end < start
+  async function scanTithisForBoundaryErrors() {
+    setScanning(true);
+    setUploadStatus('🔎 Scanning tithis for boundary anomalies...');
+    try {
+      const collectionRef = collection(db, 'tithis');
+      const snapshot = await getDocs(collectionRef);
+      const anomalies = [];
+      snapshot.docs.forEach(d => {
+        const data = d.data() || {};
+        const startMs = getTithiStartMillis_Admin(data);
+        const endMs = getTithiEndMillis_Admin(data);
+        if (Number.isFinite(startMs) && Number.isFinite(endMs) && endMs < startMs) {
+          anomalies.push({
+            docId: d.id,
+            embeddedId: data.id || null,
+            name: data.name || '',
+            startDate: data.startDate || '',
+            startTime: data.startTime || '',
+            endDate: data.endDate || '',
+            endTime: data.endTime || '',
+            startIso: isFinite(startMs) ? new Date(startMs).toISOString() : '',
+            endIso: isFinite(endMs) ? new Date(endMs).toISOString() : ''
+          });
+        }
+      });
+      setScanResults(anomalies);
+      setUploadStatus(`🔎 Scan complete: ${anomalies.length} anomalies found`);
+    } catch (error) {
+      console.error('Error scanning tithis:', error);
+      setUploadStatus('❌ Error scanning tithis: ' + error.message);
+    } finally {
+      setScanning(false);
+    }
+  }
+
+  // Fix a tithi by swapping its start/end fields when end < start
+  async function fixTithiSwap(docId) {
+    if (!docId) return;
+    if (!window.confirm(`Swap start/end for tithi document ${docId}?`)) return;
+    setLoading(true);
+    try {
+      const docRef = doc(db, 'tithis', docId);
+      const snap = await getDoc(docRef);
+      if (!snap.exists()) {
+        setUploadStatus('❌ Document not found: ' + docId);
+        return;
+      }
+      const data = snap.data() || {};
+      const updated = {
+        startDate: data.endDate || data.startDate,
+        startTime: data.endTime || data.startTime,
+        endDate: data.startDate || data.endDate,
+        endTime: data.startTime || data.endTime,
+        updatedAt: new Date().toISOString()
+      };
+      await updateDoc(docRef, updated);
+      setUploadStatus(`✅ Swapped start/end for ${docId}`);
+      // Refresh list and scan results
+      await loadTithis();
+      await scanTithisForBoundaryErrors();
+    } catch (error) {
+      console.error('Error fixing tithi swap:', error);
+      setUploadStatus('❌ Error fixing tithi: ' + error.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
   // Define load functions with useCallback
   const loadTithis = useCallback(async () => {
     try {
@@ -81,12 +211,11 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
       
       // Sort in JavaScript (handles missing fields gracefully)
       tithisData.sort((a, b) => {
-        // Primary sort by startDate
-        const dateCompare = (a.startDate || '').localeCompare(b.startDate || '');
-        if (dateCompare !== 0) return dateCompare;
-        
-        // Secondary sort by startTime
-        return (a.startTime || '').localeCompare(b.startTime || '');
+        const sa = getTithiStartMillis_Admin(a);
+        const sb = getTithiStartMillis_Admin(b);
+        if (sa !== sb) return sa - sb;
+        // Fallback to lexical compare on name
+        return (a.name || '').localeCompare(b.name || '');
       });
       
       setTithis(tithisData);
@@ -293,29 +422,40 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
     const wb = XLSX.utils.book_new();
     
     if (activeTab === 'tithis') {
+      // Deduplicate exported rows by composite key to avoid exact duplicates in Excel
+      const seen = new Set();
+      const uniqueRows = [];
+      tithis.forEach(t => {
+        const nameParts = (t.name || '').split(' ');
+        const pakshya = nameParts[0] || '';
+        const tithi = nameParts.slice(1).join(' ') || t.name || '';
+        const row = [
+          t.id,
+          tithi,
+          pakshya,
+          formatAdDateToNepaliStringWithNumerals(t.startDate),
+          t.startTime || '',
+          formatAdDateToNepaliStringWithNumerals(t.endDate),
+          t.endTime || '',
+          t.createdAt || ''
+        ];
+        const key = `${tithi}|${pakshya}|${t.startDate || ''}|${t.startTime || ''}|${t.endDate || ''}|${t.endTime || ''}`;
+        if (!seen.has(key)) {
+          seen.add(key);
+          uniqueRows.push(row);
+        }
+      });
+
       const wsData = [
         ['ID', 'Tithi', 'Pakshya', 'Start Date (Nepali)', 'Start Time', 'End Date (Nepali)', 'End Time', 'Created At'],
-        ...tithis.map(t => {
-          const nameParts = (t.name || '').split(' ');
-          const pakshya = nameParts[0] || '';
-          const tithi = nameParts.slice(1).join(' ') || t.name || '';
-          return [
-            t.id,
-            tithi,
-            pakshya,
-            formatAdDateToNepaliStringWithNumerals(t.startDate),
-            t.startTime || '',
-            formatAdDateToNepaliStringWithNumerals(t.endDate),
-            t.endTime || '',
-            t.createdAt || ''
-          ];
-        })
+        ...uniqueRows
       ];
       const ws = XLSX.utils.aoa_to_sheet(wsData);
       ws['!cols'] = [{ wch: 25 }, { wch: 20 }, { wch: 15 }, { wch: 20 }, { wch: 15 }, { wch: 20 }, { wch: 15 }, { wch: 25 }];
       XLSX.utils.book_append_sheet(wb, ws, 'Tithis');
       XLSX.writeFile(wb, 'Tithis_Export.xlsx');
-      setUploadStatus(`✅ Exported ${tithis.length} tithis to Tithis_Export.xlsx`);
+      const removed = tithis.length - uniqueRows.length;
+      setUploadStatus(`✅ Exported ${uniqueRows.length} tithis to Tithis_Export.xlsx${removed > 0 ? ` (removed ${removed} duplicate rows)` : ''}`);
     } else {
       const wsData = [
         ['ID', 'Title', 'Description', 'Date (Nepali)', 'Is Public', 'Created By Admin', 'Created At'],
@@ -337,6 +477,42 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
     }
   }
 
+  // Export problematic rows (from validationResults.problematic) to Excel for audit
+  function exportProblematicRows() {
+    if (!validationResults || !validationResults.problematic || validationResults.problematic.length === 0) {
+      setUploadStatus('❌ No problematic rows to export');
+      return;
+    }
+
+    const wb = XLSX.utils.book_new();
+    const header = ['Row', 'Tithi', 'Pakshya', 'Start Date (Nepali)', 'Start Time', 'End Date (Nepali)', 'End Time', 'AddOrReplace', 'Category', 'Reason'];
+    const wsData = [header];
+
+    validationResults.problematic.forEach(item => {
+      const row = item.data || {};
+      wsData.push([
+        item.row || '',
+        row['Tithi*'] || row['Tithi'] || '',
+        row['Pakshya*'] || row['Pakshya'] || '',
+        row['Start Date* (MM-DD-YYYY Nepali)'] || row['Start Date'] || '',
+        row['Start Time* (HH:MM)'] || row['Start Time'] || '',
+        row['End Date* (MM-DD-YYYY Nepali)'] || row['End Date'] || '',
+        row['End Time* (HH:MM)'] || row['End Time'] || '',
+        row['AddOrReplace*'] || row['AddOrReplace'] || '',
+        row['Category (optional)'] || '',
+        item.reason || ''
+      ]);
+    });
+
+    const ws = XLSX.utils.aoa_to_sheet(wsData);
+    ws['!cols'] = [{ wch: 8 }, { wch: 25 }, { wch: 15 }, { wch: 20 }, { wch: 12 }, { wch: 20 }, { wch: 12 }, { wch: 12 }, { wch: 20 }, { wch: 40 }];
+    XLSX.utils.book_append_sheet(wb, ws, 'Problematic Rows');
+
+    const fileName = `Problematic_Rows_${new Date().toISOString().slice(0,19).replace(/[:T]/g,'')}.xlsx`;
+    XLSX.writeFile(wb, fileName);
+    setUploadStatus(`✅ Exported ${validationResults.problematic.length} problematic rows to ${fileName}`);
+  }
+
   // Generate Tithi Excel file for date range
   async function generateTithiExcel() {
     if (!autoStartDate || !autoEndDate) {
@@ -344,8 +520,12 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
       return;
     }
 
-    const start = new Date(autoStartDate);
-    const end = new Date(autoEndDate);
+    // Parse the date input as UTC midnight to avoid local timezone ambiguities
+    // Input `autoStartDate` and `autoEndDate` come from <input type="date" /> which yields
+    // a YYYY-MM-DD string. Construct an explicit UTC instant to ensure consistent behavior
+    // across client timezones when calling the ephemeris function.
+    const start = new Date(`${autoStartDate}T00:00:00Z`);
+    const end = new Date(`${autoEndDate}T00:00:00Z`);
 
     if (start > end) {
       setAutoStatus('❌ Start date must be before end date');
@@ -356,127 +536,122 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
     setAutoStatus('🔄 Calculating Tithis...');
 
     try {
-      const tithiData = [];
+      // We'll collect candidate rows with parsed UTC instants and epoch ms,
+      // then sort them chronologically before exporting.
+      const candidateRows = []; // { startIsoUtc, endIsoUtc, startEpoch, row }
+      const seenStartIsos = new Set();
+      let duplicatesSkipped = 0;
+      let outOfRangeSkipped = 0;
       const totalDays = Math.ceil((end - start) / (1000 * 60 * 60 * 24)) + 1;
+      const rangeStartEpoch = start.getTime();
+      const rangeEndExclusive = end.getTime() + 24 * 60 * 60 * 1000; // endUTC + 24h (exclusive)
 
-      for (let i = 0; i < totalDays; i++) {
-        const currentDate = new Date(start);
-        currentDate.setDate(start.getDate() + i);
-
-        // Calculate Tithi for this date
+      const diagnostics = []; // per-seed diagnostics for debugging and audit
+      // Instead of sampling once per UTC day, iterate by tithi boundaries to ensure
+      // every tithi start is captured. Start at the beginning of the requested UTC window
+      // and repeatedly ask the ephemeris for the tithi at `current`. Advance `current` to
+      // the reported tithi end + 1s and repeat until past the requested range.
+      let current = new Date(rangeStartEpoch);
+      const maxIterations = 1000;
+      let iter = 0;
+      while (current.getTime() < rangeEndExclusive && iter < maxIterations) {
+        iter++;
         let ephemerisData;
         try {
-          ephemerisData = await getEphemerisData(currentDate);
-          console.log('Ephemeris data for', currentDate.toISOString(), ':', ephemerisData);
-          
-          // Check if it's an error response
+          ephemerisData = await getEphemerisData(current);
+          console.log('Ephemeris data for', current.toISOString(), ':', ephemerisData);
           if (ephemerisData && ephemerisData.error) {
             console.error('Firebase function error:', ephemerisData.error);
-            setAutoStatus(`❌ Firebase function error for ${currentDate.toDateString()}: ${ephemerisData.error.message || 'Unknown error'}`);
-            continue;
+            setAutoStatus(`❌ Firebase function error for ${current.toDateString()}: ${ephemerisData.error.message || 'Unknown error'}`);
+            break;
           }
         } catch (error) {
-          console.error('Error calling getEphemerisData for', currentDate.toISOString(), ':', error);
-          
-          // Fallback: Use mock data for testing if Firebase fails
-          console.log('Using fallback mock data for', currentDate.toISOString());
+          console.error('Error calling getEphemerisData for', current.toISOString(), ':', error);
+          // Fallback: create a synthetic ephemeris window to avoid infinite loop
           ephemerisData = {
-            moonLon: 288.29 + (i * 10), // Vary the data slightly
-            sunLon: 242.10 + (i * 5),
-            tithiStart: currentDate.toISOString().replace('T', 'T').replace(/\.\d{3}Z$/, 'Z'),
-            tithiEnd: new Date(currentDate.getTime() + 24 * 60 * 60 * 1000).toISOString().replace('T', 'T').replace(/\.\d{3}Z$/, 'Z')
+            moonLon: 0,
+            sunLon: 0,
+            tithiStart: current.toISOString().replace(/\.\d{3}Z$/, 'Z'),
+            tithiEnd: new Date(current.getTime() + 12 * 60 * 60 * 1000).toISOString().replace(/\.\d{3}Z$/, 'Z')
           };
-          
-          setAutoStatus(`⚠️ Using estimated data for ${currentDate.toDateString()} (Firebase unavailable)`);
+          setAutoStatus(`⚠️ Using estimated data for ${current.toDateString()} (Firebase unavailable)`);
         }
-        
-        if (!ephemerisData || typeof ephemerisData !== 'object') {
-          console.error('Invalid ephemeris data for', currentDate.toISOString(), ':', ephemerisData);
-          setAutoStatus(`❌ Invalid astronomical data for ${currentDate.toDateString()}`);
+
+        if (!ephemerisData || typeof ephemerisData !== 'object' || !ephemerisData.tithiStart || !ephemerisData.tithiEnd) {
+          console.error('Invalid ephemeris data for', current.toISOString(), ephemerisData);
+          // Advance by 12 hours to avoid stalling
+          current = new Date(current.getTime() + 12 * 60 * 60 * 1000);
           continue;
         }
-        
-        if (!ephemerisData.moonLon || !ephemerisData.sunLon) {
-          console.error('Missing longitude data for', currentDate.toISOString(), ':', ephemerisData);
-          setAutoStatus(`❌ Missing astronomical coordinates for ${currentDate.toDateString()}`);
-          continue;
-        }
-        
+
         const tithiResult = computeTithiFromLongitudes(ephemerisData.moonLon, ephemerisData.sunLon);
-        console.log('Tithi result:', tithiResult);
-        
-        // Fallback tithi calculation if needed
         let finalTithiResult = tithiResult;
         if (!tithiResult || typeof tithiResult !== 'object' || !tithiResult.paksha) {
-          console.log('Using fallback tithi calculation');
-          const pakshaIndex = ((i % 15) + 1);
-          finalTithiResult = {
-            paksha: i % 2 === 0 ? 'Shukla' : 'Krishna',
-            tithi: i % 2 === 0 ? pakshaIndex : pakshaIndex + 15, // Full tithi number
-            pakshaIndex: pakshaIndex // 1-15 for the paksha
-          };
+          finalTithiResult = { paksha: 'Shukla', pakshaIndex: 1 };
         }
 
-        if (finalTithiResult && ephemerisData.tithiStart && ephemerisData.tithiEnd) {
-          // Parse UTC times from ephemeris data
-          const startTimeUTC = new Date(ephemerisData.tithiStart);
-          const endTimeUTC = new Date(ephemerisData.tithiEnd);
-
-          // Validate that dates are valid
-          if (isNaN(startTimeUTC.getTime()) || isNaN(endTimeUTC.getTime())) {
-            console.error('Invalid date objects:', { startTimeUTC, endTimeUTC, ephemerisData });
-            setAutoStatus(`❌ Invalid date data for ${currentDate.toDateString()}`);
-            continue;
-          }
-
-          // Convert UTC times to Nepal time (UTC+5:45)
-          const startTimeNepal = new Date(startTimeUTC.getTime() + (5.75 * 60 * 60 * 1000));
-          const endTimeNepal = new Date(endTimeUTC.getTime() + (5.75 * 60 * 60 * 1000));
-
-          // Format dates in Nepali format (MM-DD-YYYY)
-          const startDateStr = startTimeNepal.toISOString().split('T')[0]; // YYYY-MM-DD format
-          const endDateStr = endTimeNepal.toISOString().split('T')[0]; // YYYY-MM-DD format
-          const startNepaliDate = formatAdDateToNepaliStringWithNumerals(startDateStr);
-          const endNepaliDate = formatAdDateToNepaliStringWithNumerals(endDateStr);
-
-          // Format times as HH:MM (24-hour)
-          const startTimeStr = startTimeNepal.toTimeString().slice(0, 5);
-          const endTimeStr = endTimeNepal.toTimeString().slice(0, 5);
-
-          // Determine Pakshya
-          const pakshya = finalTithiResult.paksha === 'Shukla' ? 'शुक्लपक्ष' : 'कृष्णपक्ष';
-
-          // Get Tithi name
-          const tithiNames = finalTithiResult.paksha === 'Shukla' ? shuklaNames : krishnaNames;
-          const tithiName = tithiNames[finalTithiResult.pakshaIndex - 1] || `Tithi ${finalTithiResult.pakshaIndex}`;
-          console.log(`Tithi calculation: paksha=${finalTithiResult.paksha}, pakshaIndex=${finalTithiResult.pakshaIndex}, tithiName=${tithiName}`);
-
-          tithiData.push([
-            tithiName,
-            pakshya,
-            startNepaliDate,
-            startTimeStr,
-            endNepaliDate,
-            endTimeStr,
-            'ADD',
-            '' // Category optional
-          ]);
+        // Parse UTC times
+        let startTimeUTC = new Date(ephemerisData.tithiStart);
+        let endTimeUTC = new Date(ephemerisData.tithiEnd);
+        if (!isNaN(startTimeUTC.getTime()) && !isNaN(endTimeUTC.getTime()) && endTimeUTC.getTime() < startTimeUTC.getTime()) {
+          const tmp = startTimeUTC; startTimeUTC = endTimeUTC; endTimeUTC = tmp;
         }
 
-        // Update progress
-        setAutoProgress(Math.round(((i + 1) / totalDays) * 100));
+        if (isNaN(startTimeUTC.getTime()) || isNaN(endTimeUTC.getTime())) {
+          console.error('Invalid tithi start/end for', current.toISOString(), ephemerisData);
+          current = new Date(current.getTime() + 12 * 60 * 60 * 1000);
+          continue;
+        }
+
+        // Formatting
+        const startFmt = formatNepaliDateTime(startTimeUTC);
+        const endFmt = formatNepaliDateTime(endTimeUTC);
+        const startNepaliDate = formatAdDateToNepaliStringWithNumerals(startFmt.adDateIso);
+        const endNepaliDate = formatAdDateToNepaliStringWithNumerals(endFmt.adDateIso);
+        const startTimeStr = startFmt.time24;
+        const endTimeStr = endFmt.time24;
+
+        const pakshya = finalTithiResult.paksha === 'Shukla' ? 'शुक्लपक्ष' : 'कृष्णपक्ष';
+        const tithiNames = finalTithiResult.paksha === 'Shukla' ? shuklaNames : krishnaNames;
+        const tithiName = tithiNames[finalTithiResult.pakshaIndex - 1] || `Tithi ${finalTithiResult.pakshaIndex}`;
+
+        const startIso = startTimeUTC.toISOString();
+        const endIso = endTimeUTC.toISOString();
+        const startEpoch = startTimeUTC.getTime();
+
+        const inRange = (startEpoch >= rangeStartEpoch && startEpoch < rangeEndExclusive);
+        const isDuplicate = seenStartIsos.has(startIso);
+
+        diagnostics.push({ seedDateUtc: current.toISOString(), tithiStartUtc: startIso, tithiEndUtc: endIso, startEpoch, paksha: finalTithiResult.paksha, pakshaIndex: finalTithiResult.pakshaIndex, tithiName, inRange, isDuplicate });
+
+        if (!inRange) {
+          outOfRangeSkipped++;
+        } else if (isDuplicate) {
+          duplicatesSkipped++;
+        } else {
+          seenStartIsos.add(startIso);
+          candidateRows.push({ startIsoUtc: startIso, endIsoUtc: endIso, startEpoch, row: [tithiName, pakshya, startNepaliDate, startTimeStr, endNepaliDate, endTimeStr, 'ADD', ''] });
+        }
+
+        // Advance current to just after this tithi's end to find the next tithi
+        current = new Date(endTimeUTC.getTime() + 1000);
+        // Update progress relative to the requested UTC window
+        const progress = Math.min(100, Math.round(((current.getTime() - rangeStartEpoch) / (rangeEndExclusive - rangeStartEpoch)) * 100));
+        setAutoProgress(progress);
       }
 
-      if (tithiData.length === 0) {
+      // Sort and export candidate rows
+      if (candidateRows.length === 0) {
         setAutoStatus('❌ No Tithi data calculated for the selected range');
         return;
       }
 
-      // Create Excel file
+      candidateRows.sort((a, b) => a.startEpoch - b.startEpoch);
+
       const wb = XLSX.utils.book_new();
       const wsData = [
         ['Tithi*', 'Pakshya*', 'Start Date* (MM-DD-YYYY Nepali)', 'Start Time* (HH:MM)', 'End Date* (MM-DD-YYYY Nepali)', 'End Time* (HH:MM)', 'AddOrReplace*', 'Category (optional)'],
-        ...tithiData
+        ...candidateRows.map(c => c.row)
       ];
 
       const ws = XLSX.utils.aoa_to_sheet(wsData);
@@ -498,11 +673,33 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
       });
 
       XLSX.utils.book_append_sheet(wb, ws, 'Tithis');
-
+      // If duplicates were skipped earlier, report count; otherwise report generated count
       const fileName = `Tithis_Auto_${autoStartDate.replace(/-/g, '')}_to_${autoEndDate.replace(/-/g, '')}.xlsx`;
-      XLSX.writeFile(wb, fileName);
+      // Also append diagnostics sheet to the workbook for auditing
+      try {
+        const diagWs = XLSX.utils.json_to_sheet(diagnostics.map(d => ({
+          seedDateUtc: d.seedDateUtc,
+          tithiStartUtc: d.tithiStartUtc,
+          tithiEndUtc: d.tithiEndUtc,
+          startEpoch: d.startEpoch,
+          paksha: d.paksha,
+          pakshaIndex: d.pakshaIndex,
+          tithiName: d.tithiName,
+          inRange: d.inRange ? 'YES' : 'NO',
+          isDuplicate: d.isDuplicate ? 'YES' : 'NO'
+        })));
+        XLSX.utils.book_append_sheet(wb, diagWs, 'Diagnostics');
+      } catch (diagErr) {
+        console.warn('Failed to append diagnostics sheet:', diagErr);
+      }
 
-      setAutoStatus(`✅ Generated ${tithiData.length} Tithi records in ${fileName}`);
+      XLSX.writeFile(wb, fileName);
+      const generated = candidateRows.length;
+      const removedMsgParts = [];
+      if (duplicatesSkipped > 0) removedMsgParts.push(`${duplicatesSkipped} duplicate` + (duplicatesSkipped > 1 ? 's' : '') + ' skipped');
+      if (outOfRangeSkipped > 0) removedMsgParts.push(`${outOfRangeSkipped} out-of-range` + (outOfRangeSkipped > 1 ? ' rows' : ' row') + ' skipped');
+      const removedMsg = removedMsgParts.length > 0 ? ` (${removedMsgParts.join(', ')})` : '';
+      setAutoStatus(`✅ Generated ${generated} Tithi records in ${fileName}${removedMsg}`);
       setAutoProgress(100);
       
       // Auto-reset after 5 seconds
@@ -568,6 +765,7 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
       const results = {
         valid: [],
         invalid: [],
+        problematic: [],
         toAdd: [],
         toUpdate: []
       };
@@ -587,6 +785,7 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
         • ${results.toAdd.length} new records to add
         • ${results.toUpdate.length} existing records to update
         • ${results.invalid.length} invalid records (see errors below)
+        • ${results.problematic.length} problematic records (exportable)
       `;
       setUploadStatus(summary);
     } catch (error) {
@@ -640,22 +839,63 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
         errors.push('End Date must be in MM-DD-YYYY format (Nepali)');
       }
 
-      // Validate time format
-      const timeRegex = /^\d{2}:\d{2}$/;
-      if (startTime && !timeRegex.test(startTime)) {
-        errors.push('Start Time must be in HH:MM format');
+      // Normalize and validate time formats. Accept both 24-hour (HH:MM) and 12-hour with AM/PM.
+      function normalizeTimeTo24(ts) {
+        if (!ts) return null;
+        const s = String(ts).trim();
+        // 24-hour e.g., 05:05 or 17:30
+        const m24 = s.match(/^([01]?\d|2[0-3]):([0-5]\d)$/);
+        if (m24) return `${m24[1].padStart(2,'0')}:${m24[2]}`;
+        // 12-hour with AM/PM e.g., 5:05 AM, 05:05PM
+        const m12 = s.match(/^(1[0-2]|0?\d):([0-5]\d)\s*([AaPp][Mm])$/);
+        if (m12) {
+          let h = parseInt(m12[1], 10);
+          const mm = m12[2];
+          const ampm = m12[3].toUpperCase();
+          if (ampm === 'PM' && h !== 12) h += 12;
+          if (ampm === 'AM' && h === 12) h = 0;
+          return `${String(h).padStart(2,'0')}:${mm}`;
+        }
+        // Try to parse loose formats like '5:05AM' or '5:05am'
+        const m12b = s.match(/^(1[0-2]|0?\d):([0-5]\d)([AaPp][Mm])$/);
+        if (m12b) {
+          let h = parseInt(m12b[1], 10);
+          const mm = m12b[2];
+          const ampm = m12b[3].toUpperCase();
+          if (ampm === 'PM' && h !== 12) h += 12;
+          if (ampm === 'AM' && h === 12) h = 0;
+          return `${String(h).padStart(2,'0')}:${mm}`;
+        }
+        return null;
       }
-      if (endTime && !timeRegex.test(endTime)) {
-        errors.push('End Time must be in HH:MM format');
-      }
+
+      const parsedStartTime = normalizeTimeTo24(startTime);
+      const parsedEndTime = normalizeTimeTo24(endTime);
+      if (!parsedStartTime) errors.push('Start Time must be in HH:MM (24h) or h:MM AM/PM format');
+      if (!parsedEndTime) errors.push('End Time must be in HH:MM (24h) or h:MM AM/PM format');
 
       // Validate date range (only if both dates are valid)
       if (startDate && endDate && new Date(endDate) < new Date(startDate)) {
         errors.push('End Date cannot be before Start Date');
       }
 
+      // If dates are equal, check time ordering. If end time is earlier than start time
+      // on the same AD date, treat this row as problematic (don't accept automatically).
+      let isProblematic = false;
+      if (startDate && endDate && startDate === endDate && parsedStartTime && parsedEndTime) {
+        const startMs = new Date(`${startDate}T${parsedStartTime}:00`).getTime();
+        const endMs = new Date(`${endDate}T${parsedEndTime}:00`).getTime();
+        if (Number.isFinite(startMs) && Number.isFinite(endMs) && endMs < startMs) {
+          // Mark as problematic (separate list) rather than invalid; admin can review.
+          isProblematic = true;
+        }
+      }
+
       if (errors.length > 0) {
         results.invalid.push({ row: rowNum, data: row, errors });
+      } else if (isProblematic) {
+        // Add to problematic list with a helpful message
+        results.problematic.push({ row: rowNum, data: row, reason: 'End time is earlier than start time on the same date' });
       } else {
         // Combine pakshya and tithi for storage
         const fullName = `${pakshya} ${tithi}`;
@@ -663,9 +903,9 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
         const tithiData = {
           name: fullName,
           startDate,
-          startTime,
+          startTime: parsedStartTime || startTime,
           endDate,
-          endTime,
+          endTime: parsedEndTime || endTime,
           addOrReplace
         };
         
@@ -770,6 +1010,7 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
 
       let addCount = 0;
       let replaceCount = 0;
+      let updateCount = 0;
 
       // Group items by AddOrReplace mode
       const itemsToReplace = validationResults.valid.filter(item => item.addOrReplace === 'REPLACE');
@@ -827,31 +1068,59 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
 
       // Now add all records (both REPLACE and ADD)
       const batch = writeBatch(db);
-      
+      const keysAdded = new Set();
+
       for (const item of validationResults.valid) {
-        const newDocRef = doc(collectionRef);
+        // Build a composite key for this item to avoid duplicate insertion within this publish run
+        const key = `${item.name || ''}|${item.startDate || ''}|${item.startTime || ''}|${item.endDate || ''}|${item.endTime || ''}`;
+        if (keysAdded.has(key)) {
+          // Skip duplicate row within the upload file
+          continue;
+        }
+
+        // Before creating a new doc, check if an exact document already exists in Firestore
+        // Matching by name + startDate + startTime (this is the most specific match)
+        let existingDocId = null;
+        try {
+          const q = query(collectionRef, where('name', '==', item.name || ''), where('startDate', '==', item.startDate || ''), where('startTime', '==', item.startTime || ''));
+          const snap = await getDocs(q);
+          if (!snap.empty) {
+            // Prefer the first matching document
+            existingDocId = snap.docs[0].id;
+          }
+        } catch (qerr) {
+          // Ignore query errors here and fall back to creating a new doc
+          console.warn('Error querying for existing tithi during publish:', qerr);
+        }
+
         const newData = { ...item };
         delete newData.row;
         delete newData.id;
         delete newData.addOrReplace; // Don't store this field in Firestore
-        newData.createdAt = new Date().toISOString();
+        newData.updatedAt = new Date().toISOString();
         newData.createdBy = user.uid;
         newData.createdByAdmin = true;
-        batch.set(newDocRef, newData);
-        
-        if (item.addOrReplace === 'REPLACE') {
-          // Count as both replace and add
-          addCount++;
+
+        if (existingDocId) {
+          // Update existing document instead of creating a duplicate
+          const existingRef = doc(db, collectionName, existingDocId);
+          // Use set with merge to update fields safely
+          batch.set(existingRef, newData, { merge: true });
+          updateCount++;
         } else {
+          const newDocRef = doc(collectionRef);
+          batch.set(newDocRef, newData);
           addCount++;
         }
+
+        keysAdded.add(key);
       }
 
       await batch.commit();
 
       const summary = itemsToReplace.length > 0
-        ? `✅ Successfully published: ${addCount} added, ${replaceCount} existing deleted (replaced)`
-        : `✅ Successfully published: ${addCount} added`;
+        ? `✅ Successfully published: ${addCount} added, ${replaceCount} existing deleted (replaced), ${updateCount} updated`
+        : `✅ Successfully published: ${addCount} added, ${updateCount} updated`;
       
       setUploadStatus(summary);
       setValidationResults(null);
@@ -1432,8 +1701,8 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
             <h1>📊 Admin Management</h1>
             <p>Bulk upload and manage Tithis & Events</p>
           </div>
+          </div>
         </div>
-      </div>
 
       {/* Tabs */}
       <div className="admin-tabs">
@@ -1549,6 +1818,58 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
                   Delete Recent Test Data
                 </button>
               </div>
+            </div>
+
+            <div className="admin-section scan-anomalies-section" style={{ marginTop: '1rem' }}>
+              <h3>🔎 Scan Tithi Boundary Anomalies</h3>
+              <p>Detect tithis where the recorded end is earlier than the start. Only visible to admins.</p>
+              <div style={{ marginBottom: '0.5rem' }}>
+                <button
+                  onClick={scanTithisForBoundaryErrors}
+                  className="btn-secondary"
+                  disabled={scanning || loading}
+                >
+                  {scanning ? 'Scanning…' : 'Scan Tithis for Boundary Anomalies'}
+                </button>
+              </div>
+
+              {scanning && <div className="status-message info">Scanning all tithis. This may take a moment...</div>}
+
+              {scanResults && scanResults.length > 0 && (
+                <div className="scan-results" style={{ marginTop: '1rem' }}>
+                  <h4>Found {scanResults.length} anomalies</h4>
+                  <div className="preview-table-container">
+                    <table className="data-table">
+                      <thead>
+                        <tr>
+                          <th>DocId</th>
+                          <th>Name</th>
+                          <th>Start (ISO / displayed)</th>
+                          <th>End (ISO / displayed)</th>
+                          <th>Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {scanResults.map(r => (
+                          <tr key={r.docId}>
+                            <td><code style={{ whiteSpace: 'nowrap' }}>{r.docId}</code></td>
+                            <td>{r.name}</td>
+                            <td style={{ whiteSpace: 'nowrap' }}>{r.startIso}<br/>{r.startDate} {r.startTime}</td>
+                            <td style={{ whiteSpace: 'nowrap' }}>{r.endIso}<br/>{r.endDate} {r.endTime}</td>
+                            <td>
+                              <button onClick={() => fixTithiSwap(r.docId)} className="btn-primary">Swap Start/End</button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {scanResults && scanResults.length === 0 && !scanning && (
+                <div className="status-message success">No anomalies found.</div>
+              )}
             </div>
           </div>
         </div>
@@ -1703,6 +2024,53 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
                   </ul>
                 </div>
               ))}
+            </div>
+          </div>
+        )}
+
+        {/* Problematic Records (end < start on same date) */}
+        {validationResults && validationResults.problematic && validationResults.problematic.length > 0 && (
+          <div className="problematic-records">
+            <h3>⚠️ Problematic Records ({validationResults.problematic.length})</h3>
+            <p>
+              These rows have an end time earlier than the start time on the same AD date.
+              They are not auto-published — please review and fix or export for audit.
+            </p>
+            <div className="problematic-list">
+              <table className="problematic-table">
+                <thead>
+                  <tr>
+                    <th>Row</th>
+                    <th>Tithi</th>
+                    <th>Pakshya</th>
+                    <th>Start Date</th>
+                    <th>Start Time</th>
+                    <th>End Date</th>
+                    <th>End Time</th>
+                    <th>Reason</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {validationResults.problematic.slice(0, 50).map((item, idx) => (
+                    <tr key={idx}>
+                      <td>{item.row}</td>
+                      <td>{item.data?.['Tithi*'] || item.data?.['Tithi'] || ''}</td>
+                      <td>{item.data?.['Pakshya*'] || item.data?.['Pakshya'] || ''}</td>
+                      <td>{item.data?.['Start Date* (MM-DD-YYYY Nepali)'] || item.data?.['Start Date'] || ''}</td>
+                      <td>{item.data?.['Start Time* (HH:MM)'] || item.data?.['Start Time'] || ''}</td>
+                      <td>{item.data?.['End Date* (MM-DD-YYYY Nepali)'] || item.data?.['End Date'] || ''}</td>
+                      <td>{item.data?.['End Time* (HH:MM)'] || item.data?.['End Time'] || ''}</td>
+                      <td>{item.reason}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {validationResults.problematic.length > 50 && (
+                <p className="preview-note">Showing first 50 of {validationResults.problematic.length} problematic rows</p>
+              )}
+            </div>
+            <div style={{ marginTop: '0.5rem' }}>
+              <button onClick={exportProblematicRows} className="btn-secondary">⬇️ Export Problematic Rows</button>
             </div>
           </div>
         )}

@@ -220,7 +220,7 @@ export default function NepaliCalendar({ user: propUser, isAdmin }) {
             const year = currentDate.getFullYear();
             const month = currentDate.getMonth() + 1; // 1-12
             const day = currentDate.getDate();
-            const dateKey = `${year}-${month}-${day}`;
+            const dateKey = padDateKey(year, month, day);
             
             if (!tithisData[dateKey]) {
               tithisData[dateKey] = [];
@@ -453,6 +453,11 @@ export default function NepaliCalendar({ user: propUser, isAdmin }) {
     return `${ad.year}-${String(ad.month+1).padStart(2, '0')}-${String(ad.day).padStart(2, '0')}`; 
   }
 
+  // Helper to create a zero-padded date key from numeric year, month(1-12), day
+  function padDateKey(year, month, day){
+    return `${year}-${String(month).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+  }
+
   // Robust lookup for tithis: try common dateKey formats (no padding and zero-padded)
   const findTithisForAdDate = useCallback((adYear, adMonthZeroBased, adDay) => {
     const y = adYear;
@@ -493,7 +498,7 @@ export default function NepaliCalendar({ user: propUser, isAdmin }) {
             const year = currentDate.getFullYear();
             const month = currentDate.getMonth() + 1;
             const day = currentDate.getDate();
-            const dateKey = `${year}-${month}-${day}`;
+            const dateKey = padDateKey(year, month, day);
             
             if (!tithisData[dateKey]) {
               tithisData[dateKey] = [];
@@ -1051,8 +1056,7 @@ export default function NepaliCalendar({ user: propUser, isAdmin }) {
 
   // Helper function to format tithi datetime display
   const formatTithiDateTime = (tithi) => {
-    if (!tithi.startDate || !tithi.endDate) {
-      // Legacy format - just show times with AM/PM
+    if (!tithi.startDate && !tithi.endDate) {
       return `${formatTime12Hour(tithi.startTime)} — ${formatTime12Hour(tithi.endTime)}`;
     }
 
@@ -1071,8 +1075,82 @@ export default function NepaliCalendar({ user: propUser, isAdmin }) {
     // Always show full date-time format for consistency with 12-hour time
     // Format: "कात्तिक २७, २०८२, 6:00 AM — कात्तिक २८, २०८२, 6:00 PM"
     return `${startDateStr}, ${formatTime12Hour(tithi.startTime)} — ${endDateStr}, ${formatTime12Hour(tithi.endTime)}`;
-  };
+}
 
+// Helpers to compute millisecond timestamps for tithi start/end for robust ordering
+// Normalize time strings: accept 'HH:MM', 'H:MM', or 'H:MM AM/PM' variations and return 'HH:MM' 24-hour or null
+function normalizeTimeTo24(timeStr){
+  if (!timeStr) return null;
+  timeStr = String(timeStr).trim();
+  // If already in 24-hour 'HH:MM' format
+  const m24 = timeStr.match(/^([01]?\d|2[0-3]):([0-5]\d)$/);
+  if (m24) return `${m24[1].padStart(2,'0')}:${m24[2]}`;
+  // Match 12-hour with AM/PM e.g., '3:06 PM' or '03:06AM'
+  const m12 = timeStr.match(/^(\d{1,2}):(\d{2})\s*([AaPp][Mm])$/);
+  if (m12) {
+    let h = parseInt(m12[1],10);
+    const mm = m12[2];
+    const ampm = m12[3].toUpperCase();
+    if (ampm === 'PM' && h !== 12) h += 12;
+    if (ampm === 'AM' && h === 12) h = 0;
+    return `${String(h).padStart(2,'0')}:${mm}`;
+  }
+  return null;
+}
+
+function getTithiStartMillis(tithi){
+  try{
+    if (!tithi) return Infinity;
+    if (tithi.startDate && tithi.startTime) {
+      const t24 = normalizeTimeTo24(tithi.startTime) || tithi.startTime;
+      // If normalization failed and t24 contains AM/PM, attempt Date parse fallback
+      if (!t24 || !/^\d{2}:\d{2}$/.test(t24)) {
+        const dt = new Date(`${tithi.startDate} ${tithi.startTime}`);
+        const ms = dt.getTime();
+        return Number.isFinite(ms) ? ms : Infinity;
+      }
+      return new Date(`${tithi.startDate}T${t24}:00`).getTime();
+    }
+    if (tithi.startDate) {
+      return new Date(`${tithi.startDate}T00:00:00`).getTime();
+    }
+    return Infinity;
+  }catch(e){
+    return Infinity;
+  }
+}
+
+function getTithiEndMillis(tithi){
+  try{
+    if (!tithi) return Infinity;
+    if (tithi.endDate && tithi.endTime) {
+      const t24 = normalizeTimeTo24(tithi.endTime) || tithi.endTime;
+      if (!t24 || !/^\d{2}:\d{2}$/.test(t24)) {
+        const dt = new Date(`${tithi.endDate} ${tithi.endTime}`);
+        const ms = dt.getTime();
+        return Number.isFinite(ms) ? ms : Infinity;
+      }
+      return new Date(`${tithi.endDate}T${t24}:00`).getTime();
+    }
+    if (tithi.endDate) {
+      return new Date(`${tithi.endDate}T23:59:59`).getTime();
+    }
+    return Infinity;
+  }catch(e){
+    return Infinity;
+  }
+}
+
+function compareTithisByStart(a,b){
+  const sa = getTithiStartMillis(a);
+  const sb = getTithiStartMillis(b);
+  if (sa !== sb) return sa - sb;
+  const ea = getTithiEndMillis(a);
+  const eb = getTithiEndMillis(b);
+  if (ea !== eb) return ea - eb;
+  return (a.name || '').localeCompare(b.name || '');
+}
+ 
   function renderDayTiles(){
     const tiles = [];
 
@@ -1118,7 +1196,7 @@ export default function NepaliCalendar({ user: propUser, isAdmin }) {
             {parsedTithis.length > 0 && (
               <div className="nt-tithi-bottom" aria-hidden>
                 {parsedTithis
-                  .sort((a,b)=> a.startTime.localeCompare(b.startTime))
+                  .sort(compareTithisByStart)
                   .map(t => t.tithi)
                   .join(' / ')
                 }
@@ -1189,7 +1267,7 @@ export default function NepaliCalendar({ user: propUser, isAdmin }) {
           {parsedTithis.length > 0 && (
             <div className="nt-tithi-bottom" aria-hidden>
               {parsedTithis
-                .sort((a, b) => a.startTime.localeCompare(b.startTime))
+                .sort(compareTithisByStart)
                 .map(t => t.tithi)
                 .join(' / ')
               }
@@ -1241,7 +1319,7 @@ export default function NepaliCalendar({ user: propUser, isAdmin }) {
           {parsedTithis.length > 0 && (
             <div className="nt-tithi-bottom" aria-hidden>
               {parsedTithis
-                .sort((a,b)=> a.startTime.localeCompare(b.startTime))
+                .sort(compareTithisByStart)
                 .map(t => t.tithi)
                 .join(' / ')
               }
@@ -1274,14 +1352,55 @@ export default function NepaliCalendar({ user: propUser, isAdmin }) {
     if (typeof window !== 'undefined') {
       window.refreshTithis = refreshTithis;
       window.debugFirestore = debugFirestore;
+      // Temporary debug helper: get tithis for a specific AD date key (try both padded and unpadded keys)
+      window.getTithisForDate = (dateKey) => {
+        console.log('Requested dateKey:', dateKey);
+        const k1 = dateKey;
+        const k2 = (() => {
+          const parts = String(dateKey).split('-').map(p => p.padStart(2,'0'));
+          if (parts.length === 3) return `${parts[0]}-${parts[1]}-${parts[2]}`;
+          return dateKey;
+        })();
+        const result = tithisByDate[k1] || tithisByDate[k2] || tithisByDate[dateKey] || null;
+        console.log('Found tithis:', result);
+        return result;
+      };
+      window.listTithisKeys = () => {
+        const keys = Object.keys(tithisByDate || {});
+        console.log('tithisByDate keys count:', keys.length);
+        console.log(keys.slice(0,200));
+        return keys;
+      };
+      window.getTithisForDateLoose = (dateKey) => {
+        // Try multiple common formats and substring matches
+        const candidates = [];
+        const asParts = String(dateKey).split('-').map(p => p.replace(/^0+/, ''));
+        const variants = [
+          `${asParts[0]}-${asParts[1]}-${asParts[2]}`,
+          `${asParts[0]}-${String(asParts[1]).padStart(2,'0')}-${String(asParts[2]).padStart(2,'0')}`,
+          `${asParts[0]}-${String(asParts[1])}-${String(asParts[2]).padStart(2,'0')}`,
+          `${asParts[0]}-${String(asParts[1]).padStart(2,'0')}-${asParts[2]}`
+        ];
+        const keys = Object.keys(tithisByDate || {});
+        for (const k of keys) {
+          if (variants.includes(k)) candidates.push({ key: k, tithis: tithisByDate[k] });
+          if (k.includes(dateKey) || k.includes(dateKey.replace(/0/g, ''))) candidates.push({ key: k, tithis: tithisByDate[k] });
+        }
+        console.log('Loose search candidates:', candidates.slice(0,50));
+        return candidates;
+      };
     }
     return () => {
       if (typeof window !== 'undefined') {
         try { delete window.refreshTithis; } catch (e) { window.refreshTithis = undefined; }
         try { delete window.debugFirestore; } catch (e) { window.debugFirestore = undefined; }
+        try { delete window.getTithisForDate; } catch (e) { window.getTithisForDate = undefined; }
+        try { delete window.listTithisKeys; } catch (e) { window.listTithisKeys = undefined; }
+        try { delete window.getTithisForDateLoose; } catch (e) { window.getTithisForDateLoose = undefined; }
       }
     };
-  }, [refreshTithis, debugFirestore]);
+  }, [refreshTithis, debugFirestore, tithisByDate]);
+  
   
   // Debug: Log when tithisByDate state changes
   useEffect(() => {
@@ -1418,14 +1537,7 @@ export default function NepaliCalendar({ user: propUser, isAdmin }) {
               <h4>Tithis</h4>
               {modalTithis.length===0 && <div className="muted">✨ Tithis will be added soon for this date</div>}
               {modalTithis
-                .sort((a, b) => {
-                  // Sort by start date first, then start time
-                  if (a.startDate && b.startDate) {
-                    const dateCompare = a.startDate.localeCompare(b.startDate);
-                    if (dateCompare !== 0) return dateCompare;
-                  }
-                  return (a.startTime || '').localeCompare(b.startTime || '');
-                })
+                .sort(compareTithisByStart)
                 .map(t => (
                 <div key={t.id} className="nc-item">
                   <div>

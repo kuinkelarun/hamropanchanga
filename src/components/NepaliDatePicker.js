@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { convertAdToBs, convertBsToAd, toNepaliNumber, getNepalDate } from '../utils/nepaliDateUtils';
+import { convertAdToBs, convertBsToAd, toNepaliNumber, getNepalDate, minBsYear, maxBsYear } from '../utils/nepaliDateUtils';
 import './NepaliDatePicker.css';
 
 const nepaliMonths = [
@@ -8,25 +8,22 @@ const nepaliMonths = [
 ];
 
 const NepaliDatePicker = ({ value, onChange, label, required = false }) => {
-  const [bsDate, setBsDate] = useState({ year: 2081, month: 1, day: 1 });
+  // Default to current Nepali date
+  const nptNow = getNepalDate();
+  const todayBs = convertAdToBs(nptNow.getFullYear(), nptNow.getMonth(), nptNow.getDate());
+  const [bsDate, setBsDate] = useState(todayBs);
   const [adValue, setAdValue] = useState(value || '');
 
   // Initialize from AD value
   useEffect(() => {
     if (value) {
-      console.log('NepaliDatePicker: Initializing with value:', value);
       const [y, m, d] = value.split('-').map(Number);
-      console.log('NepaliDatePicker: Parsed AD:', { y, m, d });
       const bs = convertAdToBs(y, m - 1, d); // m-1 because convertAdToBs expects 0-indexed month
-      console.log('NepaliDatePicker: Converted to BS:', bs);
       setBsDate(bs);
       setAdValue(value);
     } else {
-      console.log('NepaliDatePicker: No value provided, deriving default BS date from current Nepal date');
-      // Default to today's date in Nepal (NPT), but do not invoke onChange
-      const nptNow = getNepalDate();
-      const bs = convertAdToBs(nptNow.getFullYear(), nptNow.getMonth(), nptNow.getDate());
-      setBsDate(bs);
+      // Default to today's date in Nepal (NPT)
+      setBsDate(todayBs);
       setAdValue('');
     }
   }, [value]);
@@ -55,8 +52,8 @@ const NepaliDatePicker = ({ value, onChange, label, required = false }) => {
       {label && <label>{label}{required && ' *'}</label>}
       <div className="nepali-date-inputs">
         <select value={bsDate.year} onChange={(e) => handleChange('year', e.target.value)}>
-          {[...Array(16)].map((_, i) => {
-            const year = 2070 + i;
+          {Array.from({ length: maxBsYear - minBsYear + 1 }, (_, i) => {
+            const year = minBsYear + i;
             return <option key={year} value={year}>{toNepaliNumber(year)}</option>;
           })}
         </select>
