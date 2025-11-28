@@ -1,4 +1,6 @@
 // Nepali Calendar utilities
+import bsCalendarData from '../data/bsCalendarData';
+
 const nepaliMonths = [
   "वैशाख", "जेठ", "असार", "साउन", "भदौ", "असोज",
   "कात्तिक", "मंसिर", "पुस", "माघ", "फागुन", "चैत"
@@ -18,26 +20,6 @@ const englishWeekdays = [
 ];
 
 const nepaliNumbers = ["०","१","२","३","४","५","६","७","८","९"];
-
-const bsCalendarData = {
-  2070: { startAdDate: new Date(2013,3,14), daysInMonths:[31,31,32,31,30,30,30,29,29,29,30,31] },
-  2071: { startAdDate: new Date(2014,3,14), daysInMonths:[31,31,32,31,31,30,30,29,29,30,29,31] },
-  2072: { startAdDate: new Date(2015,3,14), daysInMonths:[31,32,31,31,30,30,30,29,29,29,30,31] },
-  2073: { startAdDate: new Date(2016,3,13), daysInMonths:[31,31,32,31,31,30,30,29,29,29,30,31] },
-  2074: { startAdDate: new Date(2017,3,14), daysInMonths:[31,31,32,31,31,30,30,29,29,29,30,31] },
-  2075: { startAdDate: new Date(2018,3,14), daysInMonths:[31,31,32,31,31,30,30,29,29,29,30,31] },
-  2076: { startAdDate: new Date(2019,3,14), daysInMonths:[31,32,31,31,30,30,30,29,29,29,30,31] },
-  2077: { startAdDate: new Date(2020,3,13), daysInMonths:[31,32,31,31,30,30,30,29,29,29,30,31] },
-  2078: { startAdDate: new Date(2021,3,14), daysInMonths:[31,31,32,31,31,30,30,29,29,29,30,31] },
-  2079: { startAdDate: new Date(2022,3,14), daysInMonths:[31,31,32,31,31,30,30,29,29,29,30,31] },
-  2080: { startAdDate: new Date(2023,3,14), daysInMonths:[31,32,31,31,30,30,30,29,29,29,30,31] },
-  2081: { startAdDate: new Date(2024,3,13), daysInMonths:[31,32,31,31,30,30,30,29,29,29,30,31] },
-  // NOTE: Adjusted startAdDate by +1 day to align BS 2082 mappings with expected AD dates
-  2082: { startAdDate: new Date(2025,3,15), daysInMonths:[31,31,32,31,31,30,30,29,29,30,29,31] },
-  2083: { startAdDate: new Date(2026,3,14), daysInMonths:[31,32,31,31,30,30,30,29,29,29,30,31] },
-  2084: { startAdDate: new Date(2027,3,14), daysInMonths:[31,31,32,31,31,30,30,29,29,29,30,31] },
-  2085: { startAdDate: new Date(2028,3,13), daysInMonths:[31,32,31,31,30,30,30,29,29,29,30,31] }
-};
 
 const minBsYear = Math.min(...Object.keys(bsCalendarData).map(n=>+n));
 const maxBsYear = Math.max(...Object.keys(bsCalendarData).map(n=>+n));
