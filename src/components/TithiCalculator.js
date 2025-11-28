@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import './TithiCalculator.css';
 import { computeTithiFromLongitudes, getEphemerisData } from '../utils/ephemeris';
-import { convertAdToBs, nepaliMonths, toNepaliNumber } from '../utils/nepaliDateUtils';
+import { convertAdToBs, nepaliMonths, toNepaliNumber, formatNepaliDateTime } from '../utils/nepaliDateUtils';
 
 // Nepali Tithi names
 const shuklaNames = ["प्रतिपदा", "द्वितीया", "तृतीया", "चतुर्थी", "पञ्चमी", "षष्ठी", "सप्तमी", "अष्टमी", "नवमी", "दशमी", "एकादशी", "द्वादशी", "त्रयोदशी", "चतुर्दशी", "पूर्णिमा"];
@@ -21,39 +21,8 @@ function formatTime12Hour(time24) {
   return `${hours12}:${String(minutes).padStart(2, '0')}:${String(seconds || 0).padStart(2, '0')} ${period}`;
 }
 
-// Format UTC datetime string to Nepali date and time in user's local timezone
-function formatNepaliDateTime(utcDateTimeStr) {
-  if (!utcDateTimeStr) return 'N/A';
-  
-  const utcDate = new Date(utcDateTimeStr);
-  if (Number.isNaN(utcDate.getTime())) return 'N/A';
-
-  const utcMs = utcDate.getTime();
-
-  // Local time display (user's local timezone)
-  const localDate = new Date(utcMs);
-  const hours = localDate.getHours();
-  const minutes = localDate.getMinutes();
-  const seconds = localDate.getSeconds();
-  const time24 = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
-  const time12 = formatTime12Hour(time24);
-
-  // For Nepali (BS) date mapping we must use Nepal Time (NPT = UTC+5:45).
-  // Shift the UTC instant by the NPT offset then read UTC components from that shifted instant
-  // (reading UTC components after shifting gives the NPT Y/M/D values reliably).
-  const nptOffsetMs = 5.75 * 3600000; // 5 hours 45 minutes
-  const nptShifted = new Date(utcMs + nptOffsetMs);
-  const nptYear = nptShifted.getUTCFullYear();
-  const nptMonth = nptShifted.getUTCMonth(); // 0-based
-  const nptDay = nptShifted.getUTCDate();
-
-  const bsDate = convertAdToBs(nptYear, nptMonth, nptDay);
-  if (!bsDate) return `N/A`;
-
-  const nepaliDateStr = `${nepaliMonths[bsDate.month - 1]} ${toNepaliNumber(bsDate.day)}, ${toNepaliNumber(bsDate.year)}`;
-
-  return `${nepaliDateStr}, ${time12}`;
-}
+// Use centralized helper for Nepali date/time formatting (NPT)
+// `formatNepaliDateTime` is imported from `nepaliDateUtils`.
 
 export default function TithiCalculator() {
   const [mode, setMode] = useState('auto'); // 'auto' or 'manual'
@@ -292,8 +261,8 @@ export default function TithiCalculator() {
           <div><strong>Tithi end:</strong> {result.endTime ? new Date(result.endTime).toLocaleString() : 'N/A'}</div>
           {result.startTime && result.endTime && (
             <>
-              <div><strong>आरम्भ मिति/काल (Start Date/Time):</strong> {formatNepaliDateTime(result.startTime)}</div>
-              <div><strong>समाप्ति मिति/काल (End Date/Time):</strong> {formatNepaliDateTime(result.endTime)}</div>
+              <div><strong>आरम्भ मिति/काल (Start Date/Time):</strong> {formatNepaliDateTime(result.startTime)?.formatted ?? 'N/A'}</div>
+              <div><strong>समाप्ति मिति/काल (End Date/Time):</strong> {formatNepaliDateTime(result.endTime)?.formatted ?? 'N/A'}</div>
             </>
           )}
         </div>

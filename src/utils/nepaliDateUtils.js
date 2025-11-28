@@ -126,9 +126,17 @@ export function convertBsToAd(year, month, day) {
 }
 
 export function formatNepaliDate(adDate) {
-  const bsDate = convertAdToBs(adDate.getFullYear(), adDate.getMonth(), adDate.getDate());
-  const dayOfWeek = adDate.getDay(); // 0=Sunday, 1=Monday, etc.
-  
+  // Ensure Nepali date and weekday are computed using Nepal Time (NPT = UTC+5:45)
+  const nptOffsetMs = 5.75 * 3600000;
+  const utcMs = adDate.getTime();
+  const nptShifted = new Date(utcMs + nptOffsetMs);
+  const nptYear = nptShifted.getUTCFullYear();
+  const nptMonth = nptShifted.getUTCMonth();
+  const nptDay = nptShifted.getUTCDate();
+  const dayOfWeek = nptShifted.getUTCDay(); // 0=Sunday, 1=Monday, etc.
+
+  const bsDate = convertAdToBs(nptYear, nptMonth, nptDay);
+
   return {
     nepali: `${toNepaliNumber(bsDate.year)} ${nepaliMonths[bsDate.month - 1]} ${toNepaliNumber(bsDate.day)}`,
     english: `${bsDate.year} ${nepaliMonths[bsDate.month - 1]} ${bsDate.day}`,
@@ -177,7 +185,14 @@ export function formatGregorianMonthYear(adDate) {
 }
 
 export function formatNepaliMonthYear(adDate) {
-  const bsDate = convertAdToBs(adDate.getFullYear(), adDate.getMonth(), adDate.getDate());
+  // Use Nepal Time for month/year mapping as well
+  const nptOffsetMs = 5.75 * 3600000;
+  const utcMs = adDate.getTime();
+  const nptShifted = new Date(utcMs + nptOffsetMs);
+  const nptYear = nptShifted.getUTCFullYear();
+  const nptMonth = nptShifted.getUTCMonth();
+  const nptDay = nptShifted.getUTCDate();
+  const bsDate = convertAdToBs(nptYear, nptMonth, nptDay);
   return {
     nepali: `${nepaliMonths[bsDate.month - 1]} ${toNepaliNumber(bsDate.year)}`,
     english: `${nepaliMonths[bsDate.month - 1]} ${bsDate.year}`
@@ -247,6 +262,52 @@ export function formatAdDateToNepaliStringWithNumerals(adDateStr) {
     const num = parseInt(char);
     return isNaN(num) ? char : nepaliNumbers[num];
   }).join('');
+}
+
+// Format a UTC instant (ISO string or Date) to Nepali date/time using Nepal Time (NPT = UTC+5:45).
+// Returns an object with useful fields:
+// - formatted: readable Nepali date + 12-hour time string (e.g. "मंसिर १२, २०८२, 2:14:27 AM")
+// - adDateIso: the NPT local AD date in ISO YYYY-MM-DD
+// - time24: time in 24-hour HH:MM format (NPT)
+// - time12: time in 12-hour h:mm:ss AM/PM format (NPT)
+// - bsDate: { year, month, day }
+export function formatNepaliDateTime(utcDateOrIso) {
+  if (!utcDateOrIso) return null;
+  const utcDate = (utcDateOrIso instanceof Date) ? utcDateOrIso : new Date(utcDateOrIso);
+  if (Number.isNaN(utcDate.getTime())) return null;
+
+  const nptOffsetMs = 5.75 * 3600000;
+  const nptShifted = new Date(utcDate.getTime() + nptOffsetMs);
+
+  const nptYear = nptShifted.getUTCFullYear();
+  const nptMonth = nptShifted.getUTCMonth();
+  const nptDay = nptShifted.getUTCDate();
+  const nptHours = nptShifted.getUTCHours();
+  const nptMinutes = nptShifted.getUTCMinutes();
+  const nptSeconds = nptShifted.getUTCSeconds();
+
+  const bsDate = convertAdToBs(nptYear, nptMonth, nptDay);
+
+  const pad = (v) => String(v).padStart(2, '0');
+  const time24 = `${pad(nptHours)}:${pad(nptMinutes)}`;
+  const time24sec = `${pad(nptHours)}:${pad(nptMinutes)}:${pad(nptSeconds)}`;
+
+  // build 12-hour time
+  const period = nptHours >= 12 ? 'PM' : 'AM';
+  const hours12 = nptHours % 12 || 12;
+  const time12 = `${hours12}:${pad(nptMinutes)}:${pad(nptSeconds)} ${period}`;
+
+  const nepaliDateStr = `${nepaliMonths[bsDate.month - 1]} ${toNepaliNumber(bsDate.day)}, ${toNepaliNumber(bsDate.year)}`;
+
+  return {
+    formatted: `${nepaliDateStr}, ${time12}`,
+    adDateIso: nptShifted.toISOString().split('T')[0],
+    time24,
+    time24sec,
+    time12,
+    bsDate,
+    nptDate: nptShifted
+  };
 }
 
 export { nepaliMonths, englishMonths, nepaliWeekdays, englishWeekdays, minBsYear, maxBsYear };

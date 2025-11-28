@@ -84,7 +84,25 @@ const bsCalendarData = {
     2079: { startAdDate: new Date(2022, 3, 14), daysInMonths: [31, 31, 32, 31, 31, 31, 30, 29, 30, 29, 30, 30] }, // Apr 14, 2022
     2080: { startAdDate: new Date(2023, 3, 14), daysInMonths: [31, 32, 31, 32, 31, 30, 30, 30, 29, 29, 30, 30] }, // Apr 14, 2023
     2081: { startAdDate: new Date(2024, 3, 13), daysInMonths: [31, 32, 31, 32, 31, 30, 30, 30, 29, 30, 29, 31] }, // Apr 13, 2024
-    2082: { startAdDate: new Date(2025, 3, 14), daysInMonths: [31, 31, 32, 31, 31, 31, 30, 29, 30, 29, 30, 30] }  // Apr 14, 2025
+    2082: { startAdDate: new Date(2025, 3, 14), daysInMonths: [31, 31, 32, 31, 31, 31, 30, 29, 30, 29, 30, 30] },  // Apr 14, 2025
+    2083: { startAdDate: new Date(2026, 3, 14), daysInMonths: [31,31,31,32,31,30,29,30,29,30,30,30] },
+    2084: { startAdDate: new Date(2027, 3, 14), daysInMonths: [31,32,30,32,31,30,29,30,29,30,30,30] },
+    2085: { startAdDate: new Date(2028, 3, 13), daysInMonths: [31,31,31,32,31,30,29,30,29,30,30,30] },
+    2086: { startAdDate: new Date(2029, 3, 14), daysInMonths: [31,31,31,32,31,30,29,30,29,30,30,30] },
+    2087: { startAdDate: new Date(2030, 3, 14), daysInMonths: [31,32,30,32,31,30,29,30,29,30,30,30] },
+    2088: { startAdDate: new Date(2031, 3, 15), daysInMonths: [31,31,31,32,31,30,29,30,29,30,30,30] },
+    2089: { startAdDate: new Date(2032, 3, 14), daysInMonths: [31,31,31,32,31,30,29,30,29,30,30,30] },
+    2090: { startAdDate: new Date(2033, 3, 14), daysInMonths: [31,32,30,32,31,30,29,30,29,30,30,30] },
+    2091: { startAdDate: new Date(2034, 3, 14), daysInMonths: [31,31,31,32,31,30,29,30,29,30,30,30] },
+    2092: { startAdDate: new Date(2035, 3, 15), daysInMonths: [31,31,31,32,31,30,29,30,29,30,30,30] },
+    2093: { startAdDate: new Date(2036, 3, 14), daysInMonths: [31,32,30,32,31,30,29,30,29,30,30,30] },
+    2094: { startAdDate: new Date(2037, 3, 14), daysInMonths: [31,31,31,32,31,30,29,30,29,30,30,30] },
+    2095: { startAdDate: new Date(2038, 3, 14), daysInMonths: [31,31,31,32,31,30,29,30,29,30,30,30] },
+    2096: { startAdDate: new Date(2039, 3, 14), daysInMonths: [31,32,30,32,31,30,29,30,29,30,30,30] },
+    2097: { startAdDate: new Date(2040, 3, 14), daysInMonths: [31,31,31,32,31,30,29,30,29,30,30,30] },
+    2098: { startAdDate: new Date(2041, 3, 14), daysInMonths: [31,31,31,32,31,30,29,30,29,30,30,30] },
+    2099: { startAdDate: new Date(2042, 3, 14), daysInMonths: [31,32,30,32,31,30,29,30,29,30,30,30] },
+    2100: { startAdDate: new Date(2043, 3, 14), daysInMonths: [31,31,31,32,31,30,29,30,29,30,30,30] }
 };
 
 export default bsCalendarData;
