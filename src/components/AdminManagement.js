@@ -542,7 +542,6 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
       const seenStartIsos = new Set();
       let duplicatesSkipped = 0;
       let outOfRangeSkipped = 0;
-      const totalDays = Math.ceil((end - start) / (1000 * 60 * 60 * 24)) + 1;
       const rangeStartEpoch = start.getTime();
       const rangeEndExclusive = end.getTime() + 24 * 60 * 60 * 1000; // endUTC + 24h (exclusive)
 
@@ -622,7 +621,21 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
         const inRange = (startEpoch >= rangeStartEpoch && startEpoch < rangeEndExclusive);
         const isDuplicate = seenStartIsos.has(startIso);
 
-        diagnostics.push({ seedDateUtc: current.toISOString(), tithiStartUtc: startIso, tithiEndUtc: endIso, startEpoch, paksha: finalTithiResult.paksha, pakshaIndex: finalTithiResult.pakshaIndex, tithiName, inRange, isDuplicate });
+        // Include Nepal local AD date and BS date in diagnostics for boundary validation
+        const startFmtLocal = formatNepaliDateTime(startTimeUTC);
+        diagnostics.push({
+          seedDateUtc: current.toISOString(),
+          tithiStartUtc: startIso,
+          tithiEndUtc: endIso,
+          startEpoch,
+          paksha: finalTithiResult.paksha,
+          pakshaIndex: finalTithiResult.pakshaIndex,
+          tithiName,
+          inRange,
+          isDuplicate,
+          startAdDateNpt: startFmtLocal ? startFmtLocal.adDateIso : null,
+          startBsDate: startFmtLocal ? startFmtLocal.bsDate : null
+        });
 
         if (!inRange) {
           outOfRangeSkipped++;
