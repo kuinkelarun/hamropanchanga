@@ -449,7 +449,7 @@
 }
 
 .nt-summary-item.event { 
-    color:#0ea5e5; 
+    color: #ef4444; /* red-500 */
     font-weight: 500;
 }
 
