@@ -1037,23 +1037,24 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
 
           if (activeTab === 'tithis') {
             // For tithis, we need to handle date ranges (startDate to endDate)
-            // Find all tithis that overlap with this date range
-            const q = query(
-              collectionRef,
-              where('startDate', '<=', item.endDate),
-              where('endDate', '>=', item.startDate)
-            );
+            // Avoid querying with multiple range filters (which requires a composite index).
+            // Instead query by a single range on 'startDate' and filter by 'endDate' client-side.
+            const q = query(collectionRef, where('startDate', '<=', item.endDate));
             const snapshot = await getDocs(q);
-            
+
             // Delete in batches (Firestore batch limit is 500)
             const deleteBatch = writeBatch(db);
             let deleteOps = 0;
-            
+
             snapshot.docs.forEach((docSnapshot) => {
-              deleteBatch.delete(docSnapshot.ref);
-              deleteOps++;
+              const data = docSnapshot.data() || {};
+              // Keep only those that actually overlap the requested range
+              if (data.endDate && data.endDate >= item.startDate) {
+                deleteBatch.delete(docSnapshot.ref);
+                deleteOps++;
+              }
             });
-            
+
             if (deleteOps > 0) {
               await deleteBatch.commit();
               replaceCount += deleteOps;
@@ -1084,26 +1085,39 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
       const keysAdded = new Set();
 
       for (const item of validationResults.valid) {
-        // Build a composite key for this item to avoid duplicate insertion within this publish run
-        const key = `${item.name || ''}|${item.startDate || ''}|${item.startTime || ''}|${item.endDate || ''}|${item.endTime || ''}`;
+        // Build a composite key and existing-doc query behavior depending on active tab
+        let key;
+        if (activeTab === 'tithis') {
+          // Use tithi identity (name + start/end timestamps)
+          key = `${item.name || ''}|${item.startDate || ''}|${item.startTime || ''}|${item.endDate || ''}|${item.endTime || ''}`;
+        } else {
+          // For events, use title + dateKey + isPublic as the uniqueness key
+          key = `${item.title || ''}|${item.dateKey || ''}|${item.isPublic ? '1' : '0'}`;
+        }
+
         if (keysAdded.has(key)) {
           // Skip duplicate row within the upload file
           continue;
         }
 
         // Before creating a new doc, check if an exact document already exists in Firestore
-        // Matching by name + startDate + startTime (this is the most specific match)
+        // Use collection-specific matching fields
         let existingDocId = null;
         try {
-          const q = query(collectionRef, where('name', '==', item.name || ''), where('startDate', '==', item.startDate || ''), where('startTime', '==', item.startTime || ''));
+          let q;
+          if (activeTab === 'tithis') {
+            q = query(collectionRef, where('name', '==', item.name || ''), where('startDate', '==', item.startDate || ''), where('startTime', '==', item.startTime || ''));
+          } else {
+            q = query(collectionRef, where('title', '==', item.title || ''), where('dateKey', '==', item.dateKey || ''));
+          }
+
           const snap = await getDocs(q);
           if (!snap.empty) {
-            // Prefer the first matching document
             existingDocId = snap.docs[0].id;
           }
         } catch (qerr) {
           // Ignore query errors here and fall back to creating a new doc
-          console.warn('Error querying for existing tithi during publish:', qerr);
+          console.warn('Error querying for existing document during publish:', qerr);
         }
 
         const newData = { ...item };
