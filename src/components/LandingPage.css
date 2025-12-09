@@ -263,3 +263,19 @@
     font-size: 1.25rem;
   }
 }
+
+/* Mobile responsive adjustments */
+@media (max-width: 768px) {
+  .section-content-centered {
+    padding: 0; /* Remove horizontal padding for edge-to-edge calendar on mobile */
+  }
+  
+  .calendar-wrapper {
+    background: transparent !important;
+    border: none !important;
+    border-radius: 0 !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+    margin-bottom: 0 !important;
+  }
+}
