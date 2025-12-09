@@ -1,401 +1,265 @@
-/* Updated Hero Section Styling */
-.hero-full {
-    width: 100%;
-    display: block; /* ensures it spans the viewport */
-}
+/* Landing Page Specific Styles - Using Shared UI Utilities */
 
-/* Force full viewport width on mobile - match header behavior */
-@media (max-width: 768px) {
-    .hero-full {
-        margin: 0 !important;
-        padding: 0 !important;
-        width: 100vw !important; /* Full viewport width */
-        position: relative;
-        left: 50%;
-        right: 50%;
-        margin-left: -50vw !important;
-        margin-right: -50vw !important;
-    }
-}
+/* Hero Section - removed .hero-full styles as we use .edgefull from ui.css */
 
-/* When hero-section is placed inside .hero-full we want it to span edge-to-edge visually */
-.hero-full .hero-section {
-    border-radius: 0;
-    box-shadow: none;
-    margin-bottom: 0; /* spacing will be handled by page body */
-}
-
-/* Constrained page body used for the rest of the site content */
-.page-body {
-    max-width: 1100px; /* adjust this to make body narrower/wider */
-    margin: 0.5rem auto 2rem auto; /* reduced top margin for tighter spacing with Block1 */
-    padding: 0 1rem; /* page body provides layout spacing but not a card */
-    box-sizing: border-box;
-    background: transparent; /* removed to avoid nested card look; single-container is the card */
-    border: none;
-    border-radius: 0;
-    box-shadow: none;
-}
-
-/* Remove padding on mobile for full-width calendar */
-@media (max-width: 768px) {
-    .page-body {
-        padding: 0 !important; /* Force remove all padding */
-        margin: 0 !important; /* Force remove all margins */
-        max-width: 100% !important; /* Ensure full width */
-        width: 100% !important;
-    }
+/* Section wrapper - centers content with max-width */
+.section-wrapper {
+  max-width: 1100px;
+  margin: 0 auto var(--space-2xl) auto;
+  padding: 0 var(--space-md);
+  box-sizing: border-box;
 }
 
 .hero-section {
-    position: relative; /* Establishes a positioning context for children */
-    display: flex; /* Use flexbox to position content horizontally */
-    align-items: center; /* Vertically aligns items in the center */
-    justify-content: space-between; /* Pushes content to the edges */
-    height: 40vh; /* Set a specific height for the banner */
-    color: white;
-    padding: 2rem 4rem;
-    /* border-radius and box-shadow removed when inside .hero-full to allow edge-to-edge appearance */
-    margin-bottom: 2rem;
-    overflow: hidden; /* Ensures image and content don't exceed the rounded corners */
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 40vh;
+  min-height: 300px;
+  color: white;
+  padding: 2rem 4rem;
+  margin-bottom: var(--space-2xl);
+  overflow: hidden;
 }
 
-/* Add a semi-transparent overlay for better text readability */
+/* Hero background overlay */
 .hero-section::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(90, 51, 86, 0.4); /* Dark overlay */
-    border-radius: 20px;
-    z-index: 1; /* Puts the overlay between the image and the content */
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: var(--hero-overlay);
+  z-index: 1;
 }
 
 .hero-content {
-    position: relative;
-    z-index: 2; /* Brings the content to the front, on top of the image and overlay */
-    max-width: 100%; /* Constrain text content to one side */
+  position: relative;
+  z-index: 2;
+  max-width: 100%;
 }
 
-/* Updated Illustration Styling */
 .hero-illustration {
-    position: absolute; /* Positions the image container relative to the hero section */
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    z-index: 0; /* Pushes the image to the back */
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
 }
 
 .hero-images {
-    width: 100%;
-    height: 100%;
-    object-fit: cover; /* Ensures the image fills the container without distortion */
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
 }
 
-/* The rest of your CSS remains unchanged */
-.landing-container {
-    background-color: #f7fafc;
-    color: #2d3748;
-    min-height: 100vh;
-    /* padding is now handled by the main element in App.js */
-}
-
-/* Remove all padding/margin from landing container on mobile */
-@media (max-width: 768px) {
-    .landing-container {
-        padding: 0;
-        margin: 0;
-    }
-}
-
-@media (max-width: 768px) {
-    .hero-section {
-        flex-direction: column;
-        height: auto;
-        padding: 1.5rem; /* Slightly reduced */
-        margin: 0 !important; /* Force remove margin for edge-to-edge */
-        border-radius: 0 !important; /* Force remove border radius for full-width */
-        width: 100% !important;
-    }
-    
-    .hero-section::before {
-        border-radius: 0 !important; /* Match hero section */
-    }
-}
-
-@media (max-width: 480px) {
-    .hero-section {
-        padding: 0.75rem; /* Reduced hero padding */
-        margin: 0 !important; /* Force remove margin */
-        border-radius: 0 !important; /* Force full-width */
-        height: auto;
-        width: 100% !important;
-    }
-    
-    .hero-section::before {
-        border-radius: 0 !important; /* Force full-width */
-    }
-}
-
-@media (max-width: 320px) {
-    .hero-section {
-        padding: 0.5rem;
-        margin: 0 !important; /* Force remove margin */
-        border-radius: 0 !important; /* Force full-width */
-        width: 100% !important;
-    }
-    
-    .hero-section::before {
-        border-radius: 0 !important; /* Force full-width */
-    }
-}
-
+/* Typography */
 .app-name {
-    font-size: 2.75rem;
-    font-weight: 800;
-    margin-bottom: 0.5rem;
-}
-
-@media (max-width: 768px) {
-    .app-name {
-        font-size: 2.25rem;
-        text-align: center;
-    }
-}
-
-@media (max-width: 480px) {
-    .app-name {
-        font-size: 1.875rem;
-        margin-bottom: 0.375rem;
-    }
-}
-
-@media (max-width: 320px) {
-    .app-name {
-        font-size: 1.625rem;
-        margin-bottom: 0.25rem;
-    }
+  font-size: 2.75rem;
+  font-weight: 800;
+  margin-bottom: var(--space-sm);
+  line-height: 1.2;
 }
 
 .tagline {
-    font-size: 1.25rem;
-    font-weight: 400;
-    opacity: 0.9;
-    margin-bottom: 1.5rem;
-    color: rgb(255, 255, 255);
+  font-size: 1.25rem;
+  font-weight: 400;
+  opacity: 0.95;
+  margin-bottom: var(--space-xl);
+  color: rgb(255, 255, 255);
+  line-height: 1.5;
 }
 
-@media (max-width: 768px) {
-    .tagline {
-        font-size: 1.125rem;
-        text-align: center;
-        margin-bottom: 1.25rem;
-    }
-}
-
-@media (max-width: 480px) {
-    .tagline {
-        font-size: 1rem;
-        margin-bottom: 1rem;
-    }
-}
-
-@media (max-width: 320px) {
-    .tagline {
-        font-size: 0.875rem;
-        margin-bottom: 0.75rem;
-    }
-}
-
+/* CTA inherits from shared .btn-primary */
 .cta-button {
-    background-color: #f6ad55;
-    color: white;
-    padding: 0.5rem 1.25rem;
-    margin-top: 0.80rem;
-    border-radius: 9999px;
-    font-weight: 600;
-    transition: background-color 0.3s ease;
+  background-color: var(--color-primary);
+  color: white;
+  padding: 0.625rem 1.5rem;
+  margin-top: var(--space-md);
+  border-radius: 9999px;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  border: none;
+  cursor: pointer;
+  display: inline-block;
 }
 
 .cta-button:hover {
-    background-color: #ed8936;
+  background-color: var(--color-primary-dark);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(246, 173, 85, 0.4);
 }
 
-/* small login button shown on the public homepage */
+/* Small login button */
 .login-small {
-    background: transparent;
-    color: #fff;
-    border: 1px solid rgba(255,255,255,0.65);
-    padding: 0.35rem 0.75rem;
-    border-radius: 8px;
-    font-size: 0.9rem;
-    cursor: pointer;
-    transition: background-color 0.15s ease, transform 0.08s ease;
+  background: transparent;
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.65);
+  padding: 0.35rem 0.75rem;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: background-color 0.15s ease, transform 0.08s ease;
 }
 
 .login-small:hover {
-    background: rgba(255,255,255,0.08);
-    transform: translateY(-1px);
+  background: rgba(255, 255, 255, 0.08);
+  transform: translateY(-1px);
 }
 
-@media (max-width: 768px) {
-    .cta-button {
-        display: block;
-        text-align: center;
-        margin: 1rem auto 0;
-        width: fit-content;
-    }
+/* Landing container */
+.landing-container {
+  background-color: #f7fafc;
+  color: #2d3748;
+  min-height: 100vh;
 }
 
-@media (max-width: 480px) {
-    .cta-button {
-        padding: 0.625rem 1.5rem;
-        font-size: 0.9rem;
-        margin-top: 1rem;
-    }
+/* Block 1 wrapper spacing */
+.block1-wrapper {
+  margin-bottom: var(--space-2xl);
 }
 
-@media (max-width: 320px) {
-    .cta-button {
-        padding: 0.5rem 1.25rem;
-        font-size: 0.85rem;
-        margin-top: 0.75rem;
-    }
+/* Content centering wrapper inside edgefull sections */
+.section-content-centered {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 0 var(--space-md);
 }
 
-.branches-section, .events-section {
-    margin-bottom: 2rem;
-    padding: 0.5rem 0; /* keep sections spaced inside the page body */
+/* Section cards - remove previous centering since it's handled by wrapper */
+.branches-section,
+.events-section,
+.calendar-wrapper {
+  margin-bottom: var(--space-2xl);
 }
 
-/* Outer layout wrapper (no card visuals) */
-.single-container { 
-    padding: 0; 
-    border: 0; 
-    background: transparent; 
-    box-shadow: none; 
+/* Section titles */
+.section-title {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: #0a3278;
+  margin-bottom: var(--space-xl);
 }
 
-/* Force full-width on mobile */
-@media (max-width: 768px) {
-    .single-container {
-        padding: 0 !important;
-        margin: 0 !important;
-        width: 100% !important;
-    }
-}
-
-/* Unified single-card style applied to each section wrapper */
-.section-card {
-    background: #ffffff;
-    border: 1px solid rgba(15,23,42,0.06);
-    border-radius: 12px;
-    padding: 1.25rem 1.25rem 1.1rem; /* consistent internal spacing */
-    box-shadow: 0 4px 12px rgba(15,23,42,0.05);
-    margin-bottom: 1.4rem;
-}
-
-/* Make calendar card full-width on mobile */
-@media (max-width: 768px) {
-    .calendar-wrapper.section-card {
-        border-radius: 0 !important; /* Remove rounded corners for edge-to-edge look */
-        border-left: none !important; /* Remove side borders */
-        border-right: none !important; /* Remove side borders */
-        padding: 0 !important; /* Remove all padding */
-        margin: 0 !important; /* Remove all margins */
-        box-shadow: none !important; /* Remove shadow for cleaner look */
-        width: 100vw !important; /* Full viewport width */
-        position: relative;
-        left: 50%;
-        right: 50%;
-        margin-left: -50vw !important;
-        margin-right: -50vw !important;
-    }
-    
-    /* Keep card styling for other sections */
-    .branches-section.section-card,
-    .events-section.section-card {
-        border-radius: 12px;
-        padding: 1rem;
-        margin: 1rem 0.5rem 1.5rem 0.5rem; /* Add horizontal margins for other sections */
-    }
-}
-
-/* Remove margin from the last section */
-.single-container .section-card:last-child { margin-bottom: 0; }
-
-/* Fine-tune heading spacing inside cards */
-.section-card .section-title { margin-bottom: 0.9rem; }
-
-/* Calendar header for unauthenticated users (login button) */
+/* Calendar card header */
 .calendar-card-header {
-    display: flex;
-    justify-content: flex-end;
-    margin-bottom: 0.5rem;
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: var(--space-sm);
 }
 
 .login-card-button {
-    background-color: #2563eb; /* blue */
-    color: #fff;
-    border: none;
-    padding: 0.45rem 0.8rem;
-    border-radius: 8px;
+  background-color: var(--color-secondary);
+  color: #fff;
+  border: none;
+  padding: 0.45rem 0.8rem;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.login-card-button:hover {
+  background-color: var(--color-secondary-dark);
+}
+
+/* ===== RESPONSIVE BREAKPOINTS ===== */
+
+/* Tablet and below */
+@media (max-width: 768px) {
+  .hero-section {
+    flex-direction: column;
+    height: auto;
+    padding: var(--space-xl);
+    text-align: center;
+  }
+
+  .app-name {
+    font-size: 2.25rem;
+  }
+
+  .tagline {
+    font-size: 1.125rem;
+    margin-bottom: var(--space-lg);
+  }
+
+  .cta-button {
+    margin: var(--space-md) auto 0;
+    display: block;
+    width: fit-content;
+  }
+
+  .section-title {
+    font-size: 1.5rem;
+    text-align: center;
+  }
+
+  .page-body {
+    padding: 0;
+    margin: 0;
+  }
+
+  .landing-container {
+    padding: 0;
+    margin: 0;
+  }
+
+  .branches-section,
+  .events-section {
+    margin: var(--space-md) var(--space-sm) var(--space-xl) var(--space-sm);
+  }
+}
+
+/* Mobile small */
+@media (max-width: 480px) {
+  .hero-section {
+    padding: var(--space-md);
+  }
+
+  .app-name {
+    font-size: 1.875rem;
+    margin-bottom: 0.375rem;
+  }
+
+  .tagline {
+    font-size: 1rem;
+    margin-bottom: var(--space-md);
+  }
+
+  .cta-button {
+    padding: 0.625rem 1.5rem;
     font-size: 0.9rem;
-    cursor: pointer;
+  }
+
+  .section-title {
+    font-size: 1.375rem;
+  }
 }
 
-.login-card-button:hover { background-color: #1e40af; }
-
-@media (max-width: 768px) {
-    .branches-section, .events-section {
-        margin-bottom: 1.5rem;
-    }
-}
-
-@media (max-width: 480px) {
-    .branches-section, .events-section {
-        margin-bottom: 1.25rem;
-        padding: 0; /* Remove any internal padding */
-        width: 100%;
-    }
-}
-
+/* Mobile extra small */
 @media (max-width: 320px) {
-    .branches-section, .events-section {
-        margin-bottom: 1rem;
-        padding: 0; /* Remove any internal padding */
-        width: 100%;
-    }
-}
+  .hero-section {
+    padding: var(--space-sm);
+  }
 
-.section-title {
-    font-size: 1.75rem;
-    font-weight: 700;
-    color: #0a3278;
-    margin-bottom: 1.5rem;
-}
+  .app-name {
+    font-size: 1.625rem;
+  }
 
-@media (max-width: 768px) {
-    .section-title {
-        font-size: 1.5rem;
-        margin-bottom: 1.25rem;
-        text-align: center;
-    }
-}
+  .tagline {
+    font-size: 0.875rem;
+  }
 
-@media (max-width: 480px) {
-    .section-title {
-        font-size: 1.375rem;
-        margin-bottom: 1rem;
-    }
-}
+  .cta-button {
+    padding: var(--space-sm) var(--space-lg);
+    font-size: 0.85rem;
+  }
 
-@media (max-width: 320px) {
-    .section-title {
-        font-size: 1.25rem;
-        margin-bottom: 0.875rem;
-    }
+  .section-title {
+    font-size: 1.25rem;
+  }
 }

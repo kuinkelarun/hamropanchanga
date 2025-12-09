@@ -1429,46 +1429,10 @@ function compareTithisByStart(a,b){
         <button
           className="nc-topbar-btn"
           onClick={handleGoToToday}
-          title={`Go to current Nepali month: ${nepaliMonths[todayBs.month-1]} ${toNepaliNumber(todayBs.year)}`}
+          title={`Go to today's date: ${toNepaliNumber(todayBs.day)} ${nepaliMonths[todayBs.month-1]} ${toNepaliNumber(todayBs.year)}, ${nepaliWeekdays[todayBs.dayOfWeek]}`}
         >
-          Nepali Calendar {toNepaliNumber(todayBs.year)} {nepaliMonths[todayBs.month-1]}
+          आज {toNepaliNumber(todayBs.day)} {nepaliMonths[todayBs.month-1]} {toNepaliNumber(todayBs.year)}, {nepaliWeekdays[todayBs.dayOfWeek]}
         </button>
-          {/* Right-aligned month/year controls (keep selects here) */}
-          <div className="nc-topbar-right">
-            <div className="nc-select-month-year" role="group" aria-label="Jump to Nepali month and year">
-              <select
-                className="nc-select-month"
-                aria-label="Select Nepali month"
-                value={currentBsMonth}
-                onChange={(e) => {
-                  const m = Number(e.target.value);
-                  triggerMonthTransition(() => { setCurrentBsMonth(m); });
-                }}
-              >
-                {nepaliMonths.map((mn, idx) => (
-                  <option key={mn} value={idx+1}>{mn}</option>
-                ))}
-              </select>
-
-              <select
-                className="nc-select-year"
-                aria-label="Select Nepali year"
-                value={currentBsYear}
-                onChange={(e) => {
-                  const y = Number(e.target.value);
-                  triggerMonthTransition(() => { setCurrentBsYear(y); });
-                }}
-              >
-                {Array.from({ length: maxBsYear - minBsYear + 1 }, (_, i) => minBsYear + i).map(y => (
-                  <option key={y} value={y}>{toNepaliNumber(y)}</option>
-                ))}
-              </select>
-            </div>
-            {/* Screen-reader announcement region: polite live updates when month/year changes */}
-            <div className="sr-only" aria-live="polite" aria-atomic="true" id="nc-month-announcement">
-              {`Nepali ${nepaliMonths[currentBsMonth-1]} ${toNepaliNumber(currentBsYear)} — ${adMonthRangeDisplay}`}
-            </div>
-          </div>
       </div>
       <div className="nc-header">
         <button
@@ -1481,11 +1445,37 @@ function compareTithisByStart(a,b){
           <span className="nc-label nc-label-hover">{getPrevMonthName()}</span>
         </button>
         <div className="nc-center">
-          {/* Restore the BS/AD display back into the calendar header (original place) */}
-          <div className="nc-header-display" aria-hidden>
-            <div className="nc-header-bs">{nepaliMonths[currentBsMonth-1]} {toNepaliNumber(currentBsYear)}</div>
-            <div className="nc-header-ad">{adMonthRangeDisplay}</div>
+          {/* Month and year dropdown selectors */}
+          <div className="nc-header-selectors" role="group" aria-label="Select Nepali month and year">
+            <select
+              className="nc-header-month-select"
+              aria-label="Select Nepali month"
+              value={currentBsMonth}
+              onChange={(e) => {
+                const m = Number(e.target.value);
+                triggerMonthTransition(() => { setCurrentBsMonth(m); });
+              }}
+            >
+              {nepaliMonths.map((mn, idx) => (
+                <option key={mn} value={idx+1}>{mn}</option>
+              ))}
+            </select>
+            <select
+              className="nc-header-year-select"
+              aria-label="Select Nepali year"
+              value={currentBsYear}
+              onChange={(e) => {
+                const y = Number(e.target.value);
+                triggerMonthTransition(() => { setCurrentBsYear(y); });
+              }}
+            >
+              {Array.from({ length: maxBsYear - minBsYear + 1 }, (_, i) => minBsYear + i).map(y => (
+                <option key={y} value={y}>{toNepaliNumber(y)}</option>
+              ))}
+            </select>
           </div>
+          {/* Keep the AD display for reference */}
+          <div className="nc-header-ad">{adMonthRangeDisplay}</div>
         </div>
         <button
           onClick={handleNext}

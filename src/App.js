@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { BrowserRouter as Router, Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import { collection, query, where, onSnapshot, doc, getDoc, setDoc, updateDoc, addDoc, deleteDoc } from 'firebase/firestore';
 import { onAuthStateChanged, signOut, getIdTokenResult } from 'firebase/auth';
 import { auth, signInWithGoogle, db } from './firebase';
@@ -11,15 +12,61 @@ import LandingPage from './components/LandingPage';
 import AdminEditCards from './components/AdminEditCards';
 import AdminManagement from './components/AdminManagement';
 import UserManagement from './components/UserManagement';
+import TithiCalculatorPage from './components/TithiCalculatorPage';
 import { useUserPermissions } from './hooks/usePermissions';
 import { PERMISSIONS } from './constants/roles';
 
+// Tithi Calculator Button Component with visibility control
+function TithiCalculatorButton({ onClick }) {
+    const [visible, setVisible] = useState(true);
+
+    useEffect(() => {
+        const fetchVisibility = async () => {
+            try {
+                const settingsDoc = await getDoc(doc(db, 'siteSettings', 'block2'));
+                if (settingsDoc.exists()) {
+                    setVisible(settingsDoc.data().visible !== false);
+                }
+            } catch (error) {
+                console.error('Error fetching Tithi Calculator menu visibility:', error);
+            }
+        };
+        fetchVisibility();
+    }, []);
+
+    if (!visible) return null;
+
+    return (
+        <button
+            onClick={onClick}
+            className="text-sm bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded-md shadow-sm transition-colors flex items-center gap-2"
+        >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+            </svg>
+            Tithi Calculator
+        </button>
+    );
+}
+
 export default function App() {
+    return (
+        <SettingsProvider>
+            <Router>
+                <AppContent />
+            </Router>
+        </SettingsProvider>
+    );
+}
+
+function AppContent() {
+    const navigate = useNavigate();
+    const location = useLocation();
+    
     // STATE MANAGEMENT
     const [user, setUser] = useState(null);
     const [customers, setCustomers] = useState([]);
     const [selectedCustomer, setSelectedCustomer] = useState(null);
-    const [view, setView] = useState('list');
     const [isLoading, setIsLoading] = useState(true);
     const [isAdmin, setIsAdmin] = useState(false);
     const [error, setError] = useState(null);
@@ -214,8 +261,10 @@ export default function App() {
     const handleSelectCustomer = async (customer) => {
         const ok = await requireAuthOrPrompt();
         if (!ok) return;
+        // Save current scroll position before navigating away
+        sessionStorage.setItem('landingPageScrollPosition', window.scrollY.toString());
         setSelectedCustomer(customer);
-        setView('details');
+        navigate(`/customer/${customer.id}`);
     };
     const requireAuthOrPrompt = async () => {
         if (!user) {
@@ -231,13 +280,13 @@ export default function App() {
 
     const handleBackToList = () => {
         setSelectedCustomer(null);
-        setView('list');
+        navigate('/');
     };
 
     const handleAddCustomer = async () => {
         const ok = await requireAuthOrPrompt();
         if (!ok) return;
-        setView('add');
+        navigate('/add-customer');
     };
 
     // Open customer details (legacy behavior)
@@ -246,7 +295,7 @@ export default function App() {
         if (!ok) return;
         // Prefer editing the basic customer fields on the AddCustomerForm page
         setSelectedCustomer(customer);
-        setView('add');
+        navigate('/add-customer');
     };
 
     const handleDeleteCustomer = async (customer) => {
@@ -264,7 +313,7 @@ export default function App() {
         try {
             const customerCollectionRef = collection(db, 'customers');
             await addDoc(customerCollectionRef, { ...newCustomerData, userId: user.uid });
-            setView('list');
+            navigate('/');
         } catch (error) {
             console.error("Error adding customer:", error);
             setError("Failed to add new customer.");
@@ -298,7 +347,7 @@ export default function App() {
             // Otherwise treat as a top-level edit (name/contact/location) and return to the list after saving
             await updateDoc(customerDocRef, { ...updatedData });
             setSelectedCustomer(null);
-            setView('list');
+            navigate('/');
         } catch (error) {
             console.error('Error updating customer', error);
             setError('Failed to update customer.');
@@ -314,15 +363,19 @@ export default function App() {
     };
 
     const handleAdminEditCards = () => {
-        setView('adminEditCards');
+        navigate('/admin/edit-cards');
     };
 
     const handleAdminManagement = () => {
-        setView('adminManagement');
+        navigate('/admin/management');
     };
 
     const handleUserManagement = () => {
-        setView('userManagement');
+        navigate('/user-management');
+    };
+
+    const handleTithiCalculator = () => {
+        navigate('/tithi-calculator');
     };
 
     // --- RENDER ---
@@ -352,12 +405,20 @@ export default function App() {
     const allFamilyMembers = customers.flatMap(customer => Object.values(customer.familyMembers || {}));
 
     return (
-        <SettingsProvider>
-            <div className="min-h-screen bg-gray-100">
-                <header className="sticky top-0 z-50 flex justify-between items-center p-4 bg-white shadow-md">
-                    <div />
-                    <div>
-                        {user ? (
+        <div className="min-h-screen bg-gray-100">
+            <header className="sticky top-0 z-50 flex justify-between items-center p-4 bg-white shadow-md" role="banner">
+                <div className="flex items-center gap-4">
+                    <button
+                        onClick={() => navigate('/')}
+                        className="text-sm font-medium bg-blue-50 hover:bg-blue-100 text-blue-700 px-3 py-1.5 rounded-md transition-colors"
+                    >
+                        Home
+                    </button>
+                </div>
+                <div className="flex items-center gap-4">
+                    {user ? (
+                        <>
+                            <TithiCalculatorButton onClick={handleTithiCalculator} />
                             <SettingsMenu 
                                 user={user} 
                                 onSignOut={handleSignOut} 
@@ -366,27 +427,29 @@ export default function App() {
                                 onAdminManagement={handleAdminManagement}
                                 onUserManagement={handleUserManagement}
                             />
-                        ) : (
-                            <button
-                                onClick={async () => {
-                                    try {
-                                        await signInWithGoogle();
-                                    } catch (err) {
-                                        // logged in helper handles logging
-                                    }
-                                }}
-                                className="text-sm bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded-md shadow-sm"
-                            >
-                                Login
-                            </button>
-                        )}
-                    </div>
-                </header>
+                        </>
+                    ) : (
+                        <button
+                            onClick={async () => {
+                                try {
+                                    await signInWithGoogle();
+                                } catch (err) {
+                                    // logged in helper handles logging
+                                }
+                            }}
+                            className="text-sm bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded-md shadow-sm"
+                        >
+                            Login
+                        </button>
+                    )}
+                </div>
+            </header>
 
-                <main className="p-4">
-                    {error && <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-xl mb-4" role="alert">{error}</div>}
+            <main role="main">
+                {error && <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-xl mb-4" role="alert">{error}</div>}
 
-                    {view === 'list' && (
+                <Routes>
+                    <Route path="/" element={
                         <LandingPage
                             user={user}
                             isAdmin={isAdmin}
@@ -399,48 +462,57 @@ export default function App() {
                             onEditCustomer={handleEditCustomer}
                             onDeleteCustomer={handleDeleteCustomer}
                         />
-                    )}
+                    } />
 
-                    {view === 'details' && selectedCustomer && (
-                        <CustomerDetail
-                            customer={customers.find(c => c.id === selectedCustomer.id) || selectedCustomer}
-                            onBack={handleBackToList}
-                            onUpdate={handleUpdateCustomer}
-                        />
-                    )}
+                    <Route path="/customer/:customerId" element={
+                        selectedCustomer && (
+                            <CustomerDetail
+                                customer={customers.find(c => c.id === selectedCustomer.id) || selectedCustomer}
+                                onBack={handleBackToList}
+                                onUpdate={handleUpdateCustomer}
+                            />
+                        )
+                    } />
 
-                    {view === 'add' && (
+                    <Route path="/add-customer" element={
                         <AddCustomerForm
                             initialData={selectedCustomer}
                             onAddSuccess={handleAddCustomerSuccess}
                             onUpdateSuccess={handleUpdateCustomer}
                             onCancel={handleBackToList}
                         />
-                    )}
+                    } />
 
-                    {view === 'adminEditCards' && (
+                    <Route path="/admin/edit-cards" element={
                         <AdminEditCards
                             user={user}
                             isAdmin={isAdmin}
                             onBack={handleBackToList}
                         />
-                    )}
+                    } />
 
-                    {view === 'adminManagement' && (
+                    <Route path="/admin/management" element={
                         <AdminManagement
                             user={user}
                             isAdmin={isAdmin}
                             onBack={handleBackToList}
                         />
-                    )}
-                    {view === 'userManagement' && (
+                    } />
+
+                    <Route path="/user-management" element={
                         <UserManagement
                             currentUser={user}
                             onBack={handleBackToList}
                         />
-                    )}
-                </main>
-            </div>
-        </SettingsProvider>
+                    } />
+
+                    <Route path="/tithi-calculator" element={
+                        <TithiCalculatorPage
+                            onBack={handleBackToList}
+                        />
+                    } />
+                </Routes>
+            </main>
+        </div>
     );
 }
