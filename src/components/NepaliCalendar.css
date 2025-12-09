@@ -3,7 +3,7 @@
     position: relative; /* allow positioning of inner elements */
     background: #cab5ef; 
     /* increase top padding to accommodate the absolute topbar so content sits below it */
-    padding: 72px 16px 16px 16px; 
+    padding: 100px 16px 16px 16px; 
     border-radius: 8px; 
     box-shadow: 0 6px 18px rgba(0,0,0,0.06); 
     margin-bottom: 18px;
@@ -102,19 +102,44 @@
 .nc-nepali { font-weight:700; font-size:18px; }
 .nc-english { color:#6b7280; font-size:13px; }
 
-/* Header display for BS/AD when shown inside the calendar header */
-.nc-header-display { text-align: center; }
-.nc-header-display { text-align: center; padding-top: 8px; }
-.nc-header-bs { font-weight:700; font-size:18px; color:#0f172a; margin-top: 2px; }
+/* Header selectors for month/year dropdowns */
+.nc-header-selectors {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    justify-content: center;
+    padding-top: 8px;
+}
+.nc-header-month-select,
+.nc-header-year-select {
+    font-weight: 700;
+    font-size: 16px;
+    color: #0f172a;
+    background: rgba(255, 255, 255, 0.9);
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    padding: 4px 8px;
+    cursor: pointer;
+    min-width: 80px;
+}
+.nc-header-month-select:focus,
+.nc-header-year-select:focus {
+    outline: 2px solid #9f7aea;
+    outline-offset: 2px;
+}
 .nc-header-ad { font-size:13px; color:#6b7280; }
 
-/* Responsive tweaks: tighten header padding on smaller viewports */
+/* Responsive tweaks: adjust header selectors on smaller viewports */
 @media (max-width: 768px) {
-    .nc-header-display { padding-top: 6px; }
+    .nc-header-selectors { padding-top: 6px; gap: 6px; }
+    .nc-header-month-select,
+    .nc-header-year-select { font-size: 14px; padding: 3px 6px; min-width: 70px; }
 }
 
 @media (max-width: 480px) {
-    .nc-header-display { padding-top: 4px; }
+    .nc-header-selectors { padding-top: 4px; gap: 4px; }
+    .nc-header-month-select,
+    .nc-header-year-select { font-size: 13px; padding: 2px 4px; min-width: 60px; }
 }
 
 /* Make the AD (English) line slightly smaller on narrower screens for better vertical rhythm */
@@ -241,13 +266,13 @@
     top: 0;
     left: 0;
     right: 0;
-    height: 72px; /* increased to accommodate larger font */
+    height: 100px; /* increased height for two-row layout */
     display:flex;
-    align-items:center;
-    justify-content:flex-start;
+    flex-direction: column; /* stack items vertically */
+    justify-content: center;
     background: #9f7aea; /* slightly darker than the calendar card */
     color: #fff;
-    padding: 14px 18px;
+    padding: 8px 18px;
     border-radius: 8px 8px 0 0; /* round top corners flush with card */
 }
 
@@ -255,7 +280,7 @@
 @media (max-width: 768px) {
     .nc-topbar {
         border-radius: 0; /* Edge-to-edge on mobile */
-        padding: 14px 8px; /* Reduce horizontal padding */
+        padding: 6px 8px; /* Reduce horizontal padding */
     }
 }
 .nc-topbar-btn {
@@ -263,16 +288,18 @@
     border: 0;
     color: #000; /* changed from white to black as requested */
     font-weight: 800;
-    font-size: 20px; /* bumped font size */
-    padding: 10px 14px;
+    font-size: 18px; /* reduced font size for longer text */
+    padding: 8px 12px;
     border-radius: 6px;
     cursor: pointer;
+    white-space: nowrap;
 }
 .nc-topbar-btn:hover { background: rgba(255,255,255,0.06); }
 
-/* Right-aligned month/year inside topbar */
+/* Right-aligned month/year inside topbar - now positioned below the title */
 .nc-topbar-right {
     margin-left: auto;
+    margin-top: 8px; /* space between title row and controls row */
     display:flex;
     gap:12px;
     align-items:center;
@@ -286,14 +313,13 @@
     font-size:13px;
     color: #111827;
 }
-
 @media (max-width: 640px) {
-    .nc-topbar { height: 64px; padding: 12px 16px; }
-    .nc-topbar-right { gap:8px; }
+    .nc-topbar { height: 80px; padding: 6px 16px; } /* adjusted height for mobile */
+    .nc-topbar-right { gap:8px; margin-top: 4px; }
     .nc-topbar-bs { font-size: 15px; }
     .nc-topbar-ad { font-size: 12px; }
-    .nc-topbar-btn { font-size: 18px; padding: 8px 10px; }
-    .nepali-calendar-container { padding-top: 64px; }
+    .nc-topbar-btn { font-size: 16px; padding: 6px 8px; }
+    .nepali-calendar-container { padding-top: 80px; } /* adjusted padding-top */
 }
 
 /* Day Tiles */
@@ -886,7 +912,7 @@
 @media (max-width: 768px) {
     .nepali-calendar-container {
         /* Expand to cover most of the viewport on mobile */
-        padding: 68px 0 0 0; /* Remove horizontal padding for full-width */
+        padding: 100px 0 0 0; /* Remove horizontal padding for full-width */
         margin-bottom: 0; /* Remove bottom margin */
         border-radius: 0; /* Remove border radius for edge-to-edge */
         /* Use more of the available width */
@@ -1066,7 +1092,7 @@
 
 @media (max-width: 480px) {
     .nepali-calendar-container {
-        padding: 64px 0 0 0; /* Remove all horizontal padding */
+        padding: 100px 0 0 0; /* Remove all horizontal padding */
         margin-bottom: 0;
         border-radius: 0; /* Full edge-to-edge */
         /* Nearly full viewport coverage */
@@ -1264,7 +1290,7 @@
 
 @media (max-width:420px) {
     .nepali-calendar-container {
-        padding: 62px 0 0 0; /* Remove all padding for absolute full width */
+        padding: 100px 0 0 0; /* Remove all padding for absolute full width */
         margin-bottom: 0;
         border-radius: 0; /* Complete edge-to-edge */
         /* Full viewport utilization */

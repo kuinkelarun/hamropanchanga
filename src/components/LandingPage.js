@@ -7,7 +7,6 @@ import './LandingPage.css';
 import heroAnimation from './hero-image.png';
 import NepaliCalendar from './NepaliCalendar';
 import Block1 from './Block1';
-import BlockTithi from './BlockTithi';
 import Footer from './Footer';
 import { signInWithGoogle } from '../firebase';
 
@@ -35,17 +34,34 @@ const LandingPage = ({ user, isAdmin, customers, onSelectCustomer, onAddCustomer
             fetchBlock1Visibility();
         }, []);
 
+    // Restore scroll position when returning to landing page
+    useEffect(() => {
+        const savedScrollPosition = sessionStorage.getItem('landingPageScrollPosition');
+        if (savedScrollPosition) {
+            // Use setTimeout to ensure DOM is fully rendered before scrolling
+            setTimeout(() => {
+                window.scrollTo(0, parseInt(savedScrollPosition, 10));
+                // Clear the saved position after restoring
+                sessionStorage.removeItem('landingPageScrollPosition');
+            }, 0);
+        }
+    }, []);
+
         // Note: BlockTithi has its own visibility loader; we render it alongside Block1
     
         return (
             <div className="landing-container">
                 {/* HERO: full-width container - visible to all users */}
-                <div className="hero-full">
-                    <div className="hero-section">
+                <div className="hero-full edgefull">
+                    <section className="hero-section" aria-label="Hero section">
                         <div className="hero-content">
                             <h1 className="app-name">My Family Tree</h1>
                             <p className="tagline">Connect your past. Branch out your future.</p>
-                            <button className="cta-button" onClick={onAddCustomer}>
+                            <button 
+                                className="cta-button" 
+                                onClick={onAddCustomer}
+                                aria-label="Start building your family tree"
+                            >
                                 Start Your Tree
                             </button>
                         </div>
@@ -54,41 +70,49 @@ const LandingPage = ({ user, isAdmin, customers, onSelectCustomer, onAddCustomer
                                 src={heroAnimation}
                                 alt="Family tree illustration"
                                 className="hero-images"
+                                loading="lazy"
                             />
                         </div>
-                            </div>
+                            </section>
                         </div>
 
                 {/* Block 1: Horizontal Scrolling Cards - Conditionally visible */}
-            {block1Visible === true && <Block1 />}
+            {block1Visible === true && (
+                <div className="edgefull block1-wrapper">
+                    <Block1 />
+                </div>
+            )}
 
-            {/* Tithi Calculator block (visibility controlled by siteSettings/blockTithi) */}
-            <BlockTithi />
-
-            {/* PAGE BODY: constrained width and centered */}
-            <main className="page-body">
-                {/* Outer layout wrapper without card visuals; each section below is its own card */}
-                <div className="single-container">
-                    {/* Nepali Calendar - inserted above branches */}
+            {/* Nepali Calendar */}
+            <div className="edgefull">
+                <div className="section-content-centered">
                     <div className="section-card calendar-wrapper">
                         <NepaliCalendar user={user} isAdmin={isAdmin} />
                     </div>
+                </div>
+            </div>
 
-                    {/* Branches Cards Section */}
-                    {user && (
+            {/* Branches Cards Section */}
+            {user && (
+                <div className="edgefull">
+                    <div className="section-content-centered">
                         <div className="section-card branches-section">
-                        <CustomerList
-                            customers={customers}
-                            onSelectCustomer={onSelectCustomer}
-                            onAddCustomer={onAddCustomer}
-                            onEditCustomer={onEditCustomer}
-                            onDeleteCustomer={onDeleteCustomer}
-                        />
+                            <CustomerList
+                                customers={customers}
+                                onSelectCustomer={onSelectCustomer}
+                                onAddCustomer={onAddCustomer}
+                                onEditCustomer={onEditCustomer}
+                                onDeleteCustomer={onDeleteCustomer}
+                            />
                         </div>
-                    )}
+                    </div>
+                </div>
+            )}
 
-                    {/* Events/Updates Section */}
-                    {user && (
+            {/* Events/Updates Section */}
+            {user && (
+                <div className="edgefull">
+                    <div className="section-content-centered">
                         <div className="section-card events-section">
                             <LandingPageEventsSection 
                                 events={events} 
@@ -96,12 +120,14 @@ const LandingPage = ({ user, isAdmin, customers, onSelectCustomer, onAddCustomer
                                 onDoubleClickEvent={onDoubleClickEvent} 
                             />
                         </div>
-                    )}
+                    </div>
                 </div>
-            </main>
+            )}
             
-            {/* Footer */}
-            <Footer />
+            {/* Footer: full-width container */}
+            <div className="footer-full edgefull">
+                <Footer />
+            </div>
         </div>
     );
 };

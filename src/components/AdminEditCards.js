@@ -13,6 +13,7 @@ const AdminEditCards = ({ user, isAdmin, onBack }) => {
     const [loading, setLoading] = useState(false);
     const [notification, setNotification] = useState({ show: false, message: '', type: '' });
     const [block1Visible, setBlock1Visible] = useState(true);
+    const [block2Visible, setBlock2Visible] = useState(true);
     
     // Check permissions
     const { hasPermission } = useUserPermissions(user);
@@ -73,6 +74,24 @@ const AdminEditCards = ({ user, isAdmin, onBack }) => {
         fetchBlock1Visibility();
     }, [user, isAdmin]);
 
+    // Fetch Block 2 visibility setting
+    useEffect(() => {
+        if (!user || !isAdmin) return;
+        
+        const fetchBlock2Visibility = async () => {
+            try {
+                const settingsDoc = await getDoc(doc(db, 'siteSettings', 'block2'));
+                if (settingsDoc.exists()) {
+                    setBlock2Visible(settingsDoc.data().visible !== false); // Default to true
+                }
+            } catch (error) {
+                console.error('Error fetching Block 2 visibility:', error);
+            }
+        };
+        
+        fetchBlock2Visibility();
+    }, [user, isAdmin]);
+
     // Toggle Block 1 visibility
     const toggleBlock1Visibility = async () => {
         try {
@@ -89,6 +108,26 @@ const AdminEditCards = ({ user, isAdmin, onBack }) => {
             );
         } catch (error) {
             console.error('Error toggling Block 1 visibility:', error);
+            showNotification('Error updating visibility', 'error');
+        }
+    };
+
+    // Toggle Block 2 visibility
+    const toggleBlock2Visibility = async () => {
+        try {
+            const newVisibility = !block2Visible;
+            await setDoc(doc(db, 'siteSettings', 'block2'), {
+                visible: newVisibility,
+                updatedAt: new Date().toISOString(),
+                updatedBy: user.uid
+            });
+            setBlock2Visible(newVisibility);
+            showNotification(
+                `Tithi Calculator menu is now ${newVisibility ? 'visible' : 'hidden'}`,
+                'success'
+            );
+        } catch (error) {
+            console.error('Error toggling Block 2 visibility:', error);
             showNotification('Error updating visibility', 'error');
         }
     };
@@ -283,6 +322,7 @@ const AdminEditCards = ({ user, isAdmin, onBack }) => {
                 </div>
                 <div className="admin-header-right">
                         {isAdmin && (
+                        <>
                         <div className="block1-visibility-toggle">
                             <label className="toggle-label">
                                 <span>Show Block 1 on Homepage:</span>
@@ -295,6 +335,19 @@ const AdminEditCards = ({ user, isAdmin, onBack }) => {
                                 <span className="toggle-status">{block1Visible ? 'Visible' : 'Hidden'}</span>
                             </label>
                         </div>
+                        <div className="block1-visibility-toggle">
+                            <label className="toggle-label">
+                                <span>Show Tithi Calculator Menu:</span>
+                                <button
+                                    onClick={toggleBlock2Visibility}
+                                    className={`toggle-switch ${block2Visible ? 'active' : ''}`}
+                                >
+                                    <span className="toggle-slider"></span>
+                                </button>
+                                <span className="toggle-status">{block2Visible ? 'Visible' : 'Hidden'}</span>
+                            </label>
+                        </div>
+                        </>
                         )}
                     <button onClick={handleAddNew} className="admin-add-btn">
                         + Add New Card

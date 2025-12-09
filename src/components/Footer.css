@@ -3,23 +3,8 @@
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     color: white;
     padding: 3rem 2rem 1rem;
-    margin-top: 3rem;
     box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.1);
     width: 100%;
-}
-
-/* Force full viewport width on mobile - match header/hero behavior */
-@media (max-width: 768px) {
-    .app-footer {
-        width: 100vw !important; /* Full viewport width */
-        position: relative;
-        left: 50%;
-        right: 50%;
-        margin-left: -50vw !important;
-        margin-right: -50vw !important;
-        padding: 2rem 1rem 1rem;
-        margin-top: 2rem;
-    }
 }
 
 .footer-content {
@@ -104,14 +89,7 @@
 /* Mobile Responsiveness */
 @media (max-width: 768px) {
     .app-footer {
-        width: 100vw !important; /* Full viewport width */
-        position: relative;
-        left: 50%;
-        right: 50%;
-        margin-left: -50vw !important;
-        margin-right: -50vw !important;
         padding: 2rem 1rem 1rem;
-        margin-top: 2rem;
     }
     
     .footer-content {

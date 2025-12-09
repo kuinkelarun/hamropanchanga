@@ -1,0 +1,97 @@
+/* Tithi Calculator Page Styles */
+.tithi-calculator-page {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 2rem 1rem;
+}
+
+.tithi-page-header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+
+.tithi-back-btn {
+    background-color: #f3f4f6;
+    color: #374151;
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    font-weight: 500;
+    transition: background-color 0.2s ease;
+    border: 1px solid #e5e7eb;
+}
+
+.tithi-back-btn:hover {
+    background-color: #e5e7eb;
+}
+
+.tithi-page-title {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #1f2937;
+    margin: 0;
+}
+
+.tithi-page-content {
+    background: white;
+    border-radius: 12px;
+    padding: 2rem;
+    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.05);
+    border: 1px solid rgba(15, 23, 42, 0.06);
+}
+
+.tithi-page-description {
+    margin-bottom: 2rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.tithi-page-description p {
+    font-size: 1rem;
+    color: #6b7280;
+    line-height: 1.6;
+    margin: 0;
+}
+
+.tithi-calculator-container {
+    display: flex;
+    justify-content: center;
+    padding: 1rem 0;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .tithi-calculator-page {
+        padding: 1rem 0.5rem;
+    }
+
+    .tithi-page-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+    }
+
+    .tithi-page-title {
+        font-size: 1.5rem;
+    }
+
+    .tithi-page-content {
+        padding: 1.5rem 1rem;
+    }
+
+    .tithi-page-description p {
+        font-size: 0.875rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .tithi-page-title {
+        font-size: 1.25rem;
+    }
+
+    .tithi-page-content {
+        padding: 1rem;
+        border-radius: 8px;
+    }
+}
