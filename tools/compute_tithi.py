@@ -68,6 +68,9 @@ def find_tithi_boundary(ts, start_time, target_tithi, direction, eph, earth, obs
     """
     Find the exact time when tithi changes using binary search.
     direction: -1 for backwards (start), +1 for forwards (end)
+    
+    This function searches for the moment when the Tithi index changes.
+    It assumes the Tithi function is monotonic within the search window (approx 3 days).
     """
     # Initial bounds: search within ~3 days
     if direction == -1:
