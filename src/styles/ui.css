@@ -78,35 +78,34 @@
 /* Button base styles */
 .btn {
   padding: 0.625rem 1.5rem;
-  border-radius: 9999px;
+  border-radius: 8px;
   font-weight: 600;
   cursor: pointer;
   border: none;
-  transition: all 0.3s ease;
+  transition: all 0.2s ease;
   display: inline-block;
   text-align: center;
+  box-shadow: 0 2px 4px rgba(102, 126, 234, 0.3);
 }
 
 .btn-primary {
-  background-color: #f6ad55;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
 }
 
 .btn-primary:hover {
-  background-color: #ed8936;
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(246, 173, 85, 0.4);
+  box-shadow: 0 4px 8px rgba(102, 126, 234, 0.4);
 }
 
 .btn-secondary {
-  background-color: #2563eb;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
 }
 
 .btn-secondary:hover {
-  background-color: #1e40af;
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.4);
+  box-shadow: 0 4px 8px rgba(102, 126, 234, 0.4);
 }
 
 /* Focus states for accessibility */
@@ -133,11 +132,12 @@ a:focus-visible {
   /* Hero overlay color */
   --hero-overlay: rgba(90, 51, 86, 0.4);
   
-  /* Brand colors */
-  --color-primary: #f6ad55;
-  --color-primary-dark: #ed8936;
-  --color-secondary: #2563eb;
-  --color-secondary-dark: #1e40af;
+  /* Brand colors - Updated to modern purple gradient theme */
+  --color-primary: #667eea;
+  --color-primary-dark: #764ba2;
+  --color-secondary: #667eea;
+  --color-secondary-dark: #764ba2;
+  --gradient-primary: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
 }
 
 /* Card interaction states */

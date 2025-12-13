@@ -39,7 +39,20 @@ function TithiCalculatorButton({ onClick }) {
     return (
         <button
             onClick={onClick}
-            className="text-sm bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded-md shadow-sm transition-colors flex items-center gap-2"
+            className="text-sm text-white px-4 py-2 rounded-lg shadow-md transition-all duration-200 hover:shadow-lg flex items-center gap-2 font-semibold"
+            style={{
+                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                transform: 'translateY(0)',
+                transition: 'all 0.2s ease'
+            }}
+            onMouseEnter={(e) => {
+                e.currentTarget.style.transform = 'translateY(-2px)';
+                e.currentTarget.style.boxShadow = '0 4px 8px rgba(102, 126, 234, 0.4)';
+            }}
+            onMouseLeave={(e) => {
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.boxShadow = '0 2px 4px rgba(102, 126, 234, 0.3)';
+            }}
         >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
@@ -410,7 +423,18 @@ function AppContent() {
                 <div className="flex items-center gap-4">
                     <button
                         onClick={() => navigate('/')}
-                        className="text-sm font-medium bg-blue-50 hover:bg-blue-100 text-blue-700 px-3 py-1.5 rounded-md transition-colors"
+                        className="text-sm font-semibold text-white px-4 py-2 rounded-lg shadow-md transition-all duration-200"
+                        style={{
+                            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+                        }}
+                        onMouseEnter={(e) => {
+                            e.currentTarget.style.transform = 'translateY(-2px)';
+                            e.currentTarget.style.boxShadow = '0 4px 8px rgba(102, 126, 234, 0.4)';
+                        }}
+                        onMouseLeave={(e) => {
+                            e.currentTarget.style.transform = 'translateY(0)';
+                            e.currentTarget.style.boxShadow = '0 2px 4px rgba(102, 126, 234, 0.3)';
+                        }}
                     >
                         Home
                     </button>
@@ -475,12 +499,14 @@ function AppContent() {
                     } />
 
                     <Route path="/add-customer" element={
-                        <AddCustomerForm
-                            initialData={selectedCustomer}
-                            onAddSuccess={handleAddCustomerSuccess}
-                            onUpdateSuccess={handleUpdateCustomer}
-                            onCancel={handleBackToList}
-                        />
+                        <div className="max-w-2xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
+                            <AddCustomerForm
+                                initialData={selectedCustomer}
+                                onAddSuccess={handleAddCustomerSuccess}
+                                onUpdateSuccess={handleUpdateCustomer}
+                                onCancel={handleBackToList}
+                            />
+                        </div>
                     } />
 
                     <Route path="/admin/edit-cards" element={
