@@ -41,6 +41,7 @@ Computing Panchanga Elements
 
     Formula: [ Tithi = \frac{(Moon Longitude - Sun Longitude)}{12°} ]
     There are 30 tithis in a lunar month, and they do not always align with calendar days.
+    
     Vara (Weekday):
 
     Simple modulus operation on days since a fixed epoch date.

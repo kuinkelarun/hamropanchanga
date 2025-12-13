@@ -1,25 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import './TithiCalculator.css';
 import { computeTithiFromLongitudes, getEphemerisData } from '../utils/ephemeris';
-import { convertAdToBs, nepaliMonths, toNepaliNumber, formatNepaliDateTime } from '../utils/nepaliDateUtils';
+import { toNepaliNumber, formatNepaliDateTime } from '../utils/nepaliDateUtils';
 
 // Nepali Tithi names
 const shuklaNames = ["प्रतिपदा", "द्वितीया", "तृतीया", "चतुर्थी", "पञ्चमी", "षष्ठी", "सप्तमी", "अष्टमी", "नवमी", "दशमी", "एकादशी", "द्वादशी", "त्रयोदशी", "चतुर्दशी", "पूर्णिमा"];
 const krishnaNames = ["प्रतिपदा", "द्वितीया", "तृतीया", "चतुर्थी", "पञ्चमी", "षष्ठी", "सप्तमी", "अष्टमी", "नवमी", "दशमी", "एकादशी", "द्वादशी", "त्रयोदशी", "चतुर्दशी", "औंसी"];
-
-// Convert number to Devanagari numerals
-function toDevanagari(num) {
-  return num.toString().replace(/\d/g, d => '०१२३४५६७८९'[d]);
-}
-
-// Convert 24-hour time (HH:MM:SS) to 12-hour format with AM/PM
-function formatTime12Hour(time24) {
-  if (!time24) return '';
-  const [hours, minutes, seconds] = time24.split(':').map(Number);
-  const period = hours >= 12 ? 'PM' : 'AM';
-  const hours12 = hours % 12 || 12;
-  return `${hours12}:${String(minutes).padStart(2, '0')}:${String(seconds || 0).padStart(2, '0')} ${period}`;
-}
 
 // Use centralized helper for Nepali date/time formatting (NPT)
 // `formatNepaliDateTime` is imported from `nepaliDateUtils`.
@@ -35,6 +21,7 @@ export default function TithiCalculator() {
   const [userLat, setUserLat] = useState(null);
   const [userLon, setUserLon] = useState(null);
   const [locationStatus, setLocationStatus] = useState('detecting');
+  const [locationMode, setLocationMode] = useState('kathmandu'); // 'current' or 'kathmandu'
   const [showInfo, setShowInfo] = useState(false);
 
   // Initialize date/time to now and detect location
@@ -53,6 +40,8 @@ export default function TithiCalculator() {
           setUserLat(position.coords.latitude);
           setUserLon(position.coords.longitude);
           setLocationStatus('detected');
+          // Default to current location if detected successfully
+          setLocationMode('current');
         },
         (err) => {
           console.error('Geolocation error:', err);
@@ -61,6 +50,7 @@ export default function TithiCalculator() {
           } else {
             setLocationStatus('error');
           }
+          // Fallback to Kathmandu is automatic via locationMode default or explicit selection
         },
         { enableHighAccuracy: true, timeout: 10000 }
       );
@@ -92,7 +82,21 @@ export default function TithiCalculator() {
       }
       try {
         const dt = new Date(`${dateStr}T${timeStr}:00`);
-        eph = await getEphemerisData(dt, userLat, userLon);
+        
+        // Determine coordinates based on location mode
+        let lat = null;
+        let lon = null;
+        
+        if (locationMode === 'current' && locationStatus === 'detected') {
+          lat = userLat;
+          lon = userLon;
+        } else {
+          // Kathmandu coordinates
+          lat = 27.7172;
+          lon = 85.3240;
+        }
+
+        eph = await getEphemerisData(dt, lat, lon);
         m = eph.moonLon;
         s = eph.sunLon;
         // Update the manual fields to show what was calculated
@@ -191,13 +195,42 @@ export default function TithiCalculator() {
       </p>
 
       {mode === 'auto' && (
-        <div className="tc-location-status">
-          <strong>Location:</strong> 
-          {locationStatus === 'detecting' && ' Detecting...'}
-          {locationStatus === 'detected' && ` Detected (${userLat?.toFixed(4)}, ${userLon?.toFixed(4)})`}
-          {locationStatus === 'denied' && ' Permission denied. Using default location (Kathmandu).'}
-          {locationStatus === 'error' && ' Error detecting location. Using default location (Kathmandu).'}
-          {locationStatus === 'not supported' && ' Geolocation not supported. Using default location (Kathmandu).'}
+        <div className="tc-location-selector" style={{ marginBottom: '1rem', padding: '10px', background: '#f5f5f5', borderRadius: '4px' }}>
+          <label className="tc-label" style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>Location:</label>
+          <div className="tc-radio-group" style={{ display: 'flex', gap: '15px', flexWrap: 'wrap' }}>
+            <label className={`tc-radio-label ${locationMode === 'kathmandu' ? 'selected' : ''}`} style={{ cursor: 'pointer' }}>
+              <input 
+                type="radio" 
+                name="locationMode" 
+                value="kathmandu" 
+                checked={locationMode === 'kathmandu'} 
+                onChange={() => setLocationMode('kathmandu')}
+                style={{ marginRight: '5px' }}
+              />
+              Kathmandu, Nepal
+            </label>
+            <label 
+              className={`tc-radio-label ${locationMode === 'current' ? 'selected' : ''} ${locationStatus !== 'detected' ? 'disabled' : ''}`}
+              style={{ cursor: locationStatus === 'detected' ? 'pointer' : 'not-allowed', opacity: locationStatus === 'detected' ? 1 : 0.6 }}
+            >
+              <input 
+                type="radio" 
+                name="locationMode" 
+                value="current" 
+                checked={locationMode === 'current'} 
+                onChange={() => setLocationMode('current')}
+                disabled={locationStatus !== 'detected'}
+                style={{ marginRight: '5px' }}
+              />
+              Current Location 
+              {locationStatus === 'detected' ? '' : ' (Not available)'}
+            </label>
+          </div>
+          {locationMode === 'current' && locationStatus === 'detected' && (
+            <div className="tc-location-coords" style={{ fontSize: '0.85em', color: '#666', marginTop: '5px' }}>
+              Using: {userLat?.toFixed(4)}, {userLon?.toFixed(4)}
+            </div>
+          )}
         </div>
       )}
 
@@ -255,7 +288,7 @@ export default function TithiCalculator() {
           <div><strong>Normalized difference (°):</strong> {result.Dnorm.toFixed(6)}</div>
           <div><strong>Fractional tithi (0..30):</strong> {result.t_frac.toFixed(6)}</div>
           <div><strong>Tithi (1..30):</strong> {result.tithi} ({result.paksha} {result.pakshaIndex})</div>
-          <div><strong>Tithi (१..३०):</strong> {toDevanagari(result.tithi)} ({result.paksha === 'Shukla' ? 'शुक्लपक्ष' : 'कृष्णपक्ष'} {(result.paksha === 'Shukla' ? shuklaNames : krishnaNames)[result.pakshaIndex - 1]})</div>
+          <div><strong>Tithi (१..३०):</strong> {toNepaliNumber(result.tithi)} ({result.paksha === 'Shukla' ? 'शुक्लपक्ष' : 'कृष्णपक्ष'} {(result.paksha === 'Shukla' ? shuklaNames : krishnaNames)[result.pakshaIndex - 1]})</div>
           <div><strong>Progress through tithi:</strong> {(result.progress * 100).toFixed(2)}%</div>
           <div><strong>Tithi start:</strong> {result.startTime ? new Date(result.startTime).toLocaleString() : 'N/A'}</div>
           <div><strong>Tithi end:</strong> {result.endTime ? new Date(result.endTime).toLocaleString() : 'N/A'}</div>
