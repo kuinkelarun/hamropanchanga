@@ -196,7 +196,7 @@
     grid-template-columns:repeat(7,1fr); 
     gap:10px; 
     /* Force consistent 6 rows: each tile has fixed height, so explicitly set row height */
-    grid-auto-rows: 88px; /* matches .nt-day-tile min/max height */
+    grid-auto-rows: 105px; /* matches .nt-day-tile min/max height */
     /* Smooth transition for gap changes */
     transition: gap 0.3s ease;
 }
@@ -327,8 +327,8 @@
     background:#fff; 
     border-radius:10px; 
     padding:10px; 
-    min-height:88px; 
-    max-height:88px; /* Fixed height to prevent expansion */
+    min-height:105px; 
+    max-height:105px; /* Fixed height to prevent expansion */
     position:relative; 
     box-shadow:0 4px 10px rgba(0,0,0,0.04); 
     cursor:pointer; 
@@ -439,7 +439,7 @@
     left: 8px;
     font-size: 9px;
     font-weight: 600;
-    color: #6b21a8;
+    color: #000000; /* Black for tithis */
     white-space: nowrap;
     max-width: 60%;
     overflow: hidden;
@@ -451,12 +451,12 @@
     top:32px; /* Start below the Nepali date */
     left:8px;
     right:8px;
-    bottom:26px; /* Leave space for tithi and English date at bottom */
+    bottom:24px; /* Leave space for tithi and English date at bottom */
     display:flex; 
     flex-direction:column; 
     justify-content:center; /* Center vertically */
     align-items:center; /* Center horizontally */
-    gap:3px; 
+    gap:4px; 
     overflow:hidden; /* Hide overflow content */
 }
 
@@ -474,6 +474,29 @@
     max-width: 100%; /* Ensure text doesn't overflow container */
 }
 
+/* Public Events - Red */
+.nt-summary-item.event-public { 
+    color: #ef4444; /* red-500 */
+    font-weight: 500;
+}
+
+/* Personal Events - Blue */
+.nt-summary-item.event-personal { 
+    color: #3b82f6; /* blue-500 */
+    font-weight: 500;
+}
+
+/* Customer Events - Purple Gradient */
+.nt-summary-item.customer-event {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    font-weight: 600;
+    margin-top: 2px;
+}
+
+/* Legacy event class - keep for backwards compatibility */
 .nt-summary-item.event { 
     color: #ef4444; /* red-500 */
     font-weight: 500;
@@ -584,10 +607,26 @@
     display:flex;
     justify-content:space-between;
     align-items:center;
-    padding:12px;
+    padding:8px 12px;
     border-radius:10px;
-    margin-bottom:10px;
+    margin-bottom:6px;
     box-shadow: 0 4px 10px rgba(2,6,23,0.04);
+}
+
+/* Customer Event Items - Purple gradient border */
+.nc-item.customer-event-item {
+    border: 2px solid transparent;
+    background-image: linear-gradient(white, white), linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background-origin: border-box;
+    background-clip: padding-box, border-box;
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
+    transition: all 0.2s ease;
+}
+
+/* Customer Event Items - Hover effect when clickable */
+.nc-item.customer-event-item:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(102, 126, 234, 0.25);
 }
 
 .nc-item-title { 

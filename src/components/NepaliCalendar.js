@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react';
-import { collection, addDoc, deleteDoc, doc, onSnapshot, query, orderBy, getDocs, where } from 'firebase/firestore';
+import { collection, addDoc, deleteDoc, doc, onSnapshot, query, orderBy, getDocs, where, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { onAuthStateChanged } from 'firebase/auth';
 import { db, auth, signInWithGoogle } from '../firebase';
 import { useUserPermissions } from '../hooks/usePermissions';
@@ -112,7 +112,7 @@ function convertBsToAd(year, month, day){
   return { year: adDate.getFullYear(), month: adDate.getMonth(), day: adDate.getDate() };
 }
 
-export default function NepaliCalendar({ user: propUser, isAdmin }) {
+export default function NepaliCalendar({ user: propUser, isAdmin, onCustomerClick }) {
   const { isEditMode } = useSettings();
   const [user, setUser] = useState(propUser || null);
   const [authLoading, setAuthLoading] = useState(!propUser);
@@ -161,12 +161,12 @@ export default function NepaliCalendar({ user: propUser, isAdmin }) {
   const [currentBsMonth, setCurrentBsMonth] = useState(() => todayBs.month);
   const [tithisByDate, setTithisByDate] = useState({}); // { "YYYY-M-D": [{name,start,end}, ...] }
   const [calendarEvents, setCalendarEvents] = useState([]); // Array of calendar events
+  const [customerEvents, setCustomerEvents] = useState([]); // Array of customer events (from customers collection)
   const [activeDate, setActiveDate] = useState(null);
 
   // Permissions
   const { hasPermission, loading: permsLoading, isSuperUser } = useUserPermissions(user);
   const canManageTithis = isAdmin || (!permsLoading && hasPermission(PERMISSIONS.MANAGE_TITHIS));
-  const canManageEvents = isAdmin || (!permsLoading && hasPermission(PERMISSIONS.MANAGE_EVENTS));
 
   // Calendar-only transition state and direction
   const [isMonthTransitioning, setIsMonthTransitioning] = useState(false);
@@ -410,6 +410,76 @@ export default function NepaliCalendar({ user: propUser, isAdmin }) {
     }
   }, [authLoading, user, isAdmin]);
 
+  // Load customer events from customers collection
+  useEffect(() => {
+    if (authLoading || !user) {
+      console.log('Skipping customer events - auth loading or no user');
+      setCustomerEvents([]);
+      return;
+    }
+
+    console.log('Setting up Firebase listener for customer events...', { userId: user.uid, isAdmin });
+    const customersCollection = collection(db, 'customers');
+    
+    // Query for customers that belong to the current user OR all customers if admin
+    const q = isAdmin 
+      ? query(customersCollection) // Admins see all customer events
+      : query(customersCollection, where('userId', '==', user.uid)); // Users see only their own
+    
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      console.log('Firebase customers snapshot received:', {
+        docsCount: snapshot.docs.length,
+        timestamp: new Date().toLocaleTimeString()
+      });
+      
+      // Extract all events from all customers
+      const allCustomerEvents = [];
+      snapshot.docs.forEach(docSnap => {
+        const customer = { id: docSnap.id, ...docSnap.data() };
+        
+        console.log('Processing customer:', { 
+          id: customer.id, 
+          name: customer.name, 
+          hasEvents: !!customer.events,
+          eventsCount: customer.events?.length || 0,
+          eventsArray: customer.events
+        });
+        
+        // Check if customer has events array
+        if (customer.events && Array.isArray(customer.events)) {
+          customer.events.forEach((event, idx) => {
+            console.log(`  Event ${idx}:`, event);
+            // Each event should have: { date (YYYY-MM-DD), name OR title, personId?, description? }
+            const eventTitle = event.title || event.name; // Support both 'title' and 'name' fields
+            if (event.date && eventTitle) {
+              allCustomerEvents.push({
+                ...event,
+                title: eventTitle, // Normalize to 'title' field
+                customerId: customer.id,
+                customerName: customer.name,
+                customerUserId: customer.userId // Track which user owns this customer
+              });
+              console.log(`    ✓ Added event: ${eventTitle} on ${event.date}`);
+            } else {
+              console.log(`    ✗ Skipped event (missing date or name/title):`, { date: event.date, title: eventTitle });
+            }
+          });
+        } else {
+          console.log('  No events array for customer:', customer.name);
+        }
+      });
+      
+      console.log('🎉 Customer events loaded:', allCustomerEvents.length, allCustomerEvents);
+      setCustomerEvents(allCustomerEvents);
+    }, (error) => {
+      console.error('Firebase customer events onSnapshot error:', error);
+    });
+
+    return () => {
+      console.log('Cleaning up customer events listener');
+      unsubscribe();
+    };
+  }, [authLoading, user, isAdmin]);
 
   useEffect(()=>{
     if (currentBsYear < minBsYear) setCurrentBsYear(minBsYear);
@@ -458,6 +528,21 @@ export default function NepaliCalendar({ user: propUser, isAdmin }) {
     return `${year}-${String(month).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
   }
 
+  // Aggregate customer events by date (YYYY-MM-DD format)
+  const customerEventsByDate = useMemo(() => {
+    const eventsByDate = {};
+    customerEvents.forEach(event => {
+      const dateKey = event.date; // Already in YYYY-MM-DD format
+      if (!eventsByDate[dateKey]) {
+        eventsByDate[dateKey] = [];
+      }
+      eventsByDate[dateKey].push(event);
+    });
+    console.log('📅 Customer events by date:', eventsByDate);
+    console.log('📅 Date keys:', Object.keys(eventsByDate));
+    return eventsByDate;
+  }, [customerEvents]);
+
   // Robust lookup for tithis: try common dateKey formats (no padding and zero-padded)
   const findTithisForAdDate = useCallback((adYear, adMonthZeroBased, adDay) => {
     const y = adYear;
@@ -474,6 +559,16 @@ export default function NepaliCalendar({ user: propUser, isAdmin }) {
     }
     return tithisByDate[`${y}-${m}-${d}`] || [];
   }, [tithisByDate]);
+
+  // Helper to find customer events for a specific AD date
+  const findCustomerEventsForAdDate = useCallback((adYear, adMonthZeroBased, adDay) => {
+    const dateKey = `${adYear}-${String(adMonthZeroBased + 1).padStart(2,'0')}-${String(adDay).padStart(2,'0')}`;
+    const found = customerEventsByDate[dateKey] || [];
+    if (found.length > 0) {
+      console.log(`🔍 Found ${found.length} customer events for ${dateKey}:`, found);
+    }
+    return found;
+  }, [customerEventsByDate]);
 
   // Manual refresh function to force reload tithis data
   const refreshTithis = useCallback(async () => {
@@ -609,6 +704,26 @@ export default function NepaliCalendar({ user: propUser, isAdmin }) {
     return nepaliMonths[m-1] || '';
   }
 
+  // Helper function to navigate to customer page
+  const handleCustomerClick = useCallback(async (customerId) => {
+    if (!onCustomerClick || !customerId) return;
+    
+    try {
+      // Fetch the customer document from Firestore
+      const customerRef = doc(db, 'customers', customerId);
+      const customerDoc = await getDoc(customerRef);
+      
+      if (customerDoc.exists()) {
+        const customer = { id: customerDoc.id, ...customerDoc.data() };
+        onCustomerClick(customer);
+      } else {
+        console.error('Customer not found:', customerId);
+      }
+    } catch (error) {
+      console.error('Error fetching customer:', error);
+    }
+  }, [onCustomerClick]);
+
   // open details modal when clicking on tile
   function openDetailsModalForDate(adYear, adMonthZeroBased, adDay){
     // Use a consistently padded YYYY-MM-DD key
@@ -633,6 +748,30 @@ export default function NepaliCalendar({ user: propUser, isAdmin }) {
     
     setDetailsModalOpen(false); // Close details modal if open
     setAddTithiModalOpen(true);
+  }
+
+  // open add event modal from + button or details modal
+  function openAddEventModalForDate(adYear, adMonthZeroBased, adDay){
+    console.log('openAddEventModalForDate called with:', { adYear, adMonthZeroBased, adDay });
+    // Use consistently padded YYYY-MM-DD for activeDate
+    const key = `${adYear}-${String(adMonthZeroBased + 1).padStart(2, '0')}-${String(adDay).padStart(2, '0')}`;
+    setActiveDate(key);
+    
+    // Set default event date
+    const defaultDate = `${adYear}-${String(adMonthZeroBased + 1).padStart(2, '0')}-${String(adDay).padStart(2, '0')}`;
+    setEventDate(defaultDate);
+    
+    // Reset form
+    setEventTitle('');
+    setEventDescription('');
+    setEventRepetition('none');
+    setEventType('private'); // Default to private events
+    setSelectedCustomerId('');
+    setSelectedPersonId('');
+    setEventValidation('');
+    
+    setDetailsModalOpen(false); // Close details modal if open
+    setAddEventModalOpen(true);
   }
 
   async function addTithi(dateKey, name, startDate, startTime='', endDate, endTime=''){
@@ -768,6 +907,106 @@ export default function NepaliCalendar({ user: propUser, isAdmin }) {
     }
   }
 
+  // submit add event form
+  async function submitAddEvent() {
+    if (!user) {
+      setEventValidation('Please log in to add events.');
+      return;
+    }
+
+    if (!eventTitle.trim()) {
+      setEventValidation('Please enter an event title.');
+      return;
+    }
+
+    if (!eventDate) {
+      setEventValidation('Please select a date.');
+      return;
+    }
+
+    // Validate customer selection for customer events
+    if (eventType === 'customer' && !selectedCustomerId) {
+      setEventValidation('Please select a customer for customer events.');
+      return;
+    }
+
+    setIsAddingEvent(true);
+    setEventValidation('');
+
+    try {
+      if (eventType === 'customer') {
+        // Add to customer's events array
+        const customerRef = doc(db, 'customers', selectedCustomerId);
+        const customerDoc = await getDoc(customerRef);
+        
+        if (!customerDoc.exists()) {
+          throw new Error('Customer not found');
+        }
+
+        const customerData = customerDoc.data();
+        const currentEvents = customerData.events || [];
+        
+        // Find person name if person selected
+        let personName = '';
+        if (selectedPersonId && customerData.familyMembers) {
+          const person = customerData.familyMembers[selectedPersonId];
+          if (person) {
+            personName = person.name || '';
+          }
+        }
+
+        const newEvent = {
+          title: eventTitle.trim(),
+          description: eventDescription.trim(),
+          date: eventDate,
+          personId: selectedPersonId || '',
+          personName: personName,
+          repetition: eventRepetition,
+          createdAt: Date.now()
+        };
+
+        await updateDoc(customerRef, {
+          events: [...currentEvents, newEvent]
+        });
+
+        console.log('Customer event added successfully');
+      } else {
+        // Add to calendarEvents collection (public or private)
+        const isPublic = eventType === 'public';
+        const createdByAdmin = isAdmin || isSuperUser;
+
+        await addDoc(collection(db, 'calendarEvents'), {
+          title: eventTitle.trim(),
+          description: eventDescription.trim(),
+          dateKey: eventDate,
+          repetition: eventRepetition,
+          isPublic: isPublic,
+          createdBy: user.uid,
+          createdByAdmin: createdByAdmin,
+          createdAt: serverTimestamp()
+        });
+
+        console.log(`${isPublic ? 'Public' : 'Private'} event added successfully`);
+      }
+
+      // Close modal and reset form
+      setAddEventModalOpen(false);
+      setEventTitle('');
+      setEventDescription('');
+      setEventDate('');
+      setEventRepetition('none');
+      setEventType('private');
+      setSelectedCustomerId('');
+      setSelectedPersonId('');
+      setEventValidation('');
+    } catch (error) {
+      console.error('Error adding event:', error);
+      setEventValidation(`Error adding event: ${error.message}`);
+    } finally {
+      setIsAddingEvent(false);
+    }
+  }
+
   // eslint-disable-next-line no-unused-vars
   async function deleteTithi(dateKey, id){
     if (!user) {
@@ -858,39 +1097,6 @@ export default function NepaliCalendar({ user: propUser, isAdmin }) {
     }
   }
 
-  // Calendar Event Management Functions
-  async function addCalendarEvent(dateKey, eventData) {
-    if (!user) {
-      console.error('User not authenticated for event creation');
-      return;
-    }
-
-    try {
-      const newEvent = {
-        dateKey,
-        title: eventData.title,
-        description: eventData.description || '',
-        createdBy: user.uid,
-        // Allow admins OR users with manageEvents permission to create public events
-        isPublic: (isAdmin || hasPermission(PERMISSIONS.MANAGE_EVENTS)) && eventData.isPublic === true,
-        createdByAdmin: isAdmin || false,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        ...(eventData.customerId && { customerId: eventData.customerId }),
-        ...(eventData.familyMemberId && { familyMemberId: eventData.familyMemberId })
-      };
-
-      const eventsCollection = collection(db, 'calendarEvents');
-      const docRef = await addDoc(eventsCollection, newEvent);
-      console.log('Successfully added calendar event with ID:', docRef.id);
-      
-      return docRef.id;
-    } catch (error) {
-      console.error('Error adding calendar event:', error);
-      throw error;
-    }
-  }
-
   // controlled inputs inside modal
   const [newPakshya, setNewPakshya] = useState('शुक्लपक्ष');
   const [newTithi, setNewTithi] = useState('');
@@ -902,11 +1108,42 @@ export default function NepaliCalendar({ user: propUser, isAdmin }) {
   const [isLoading, setIsLoading] = useState(false);
   const [tithiDropdownOpen, setTithiDropdownOpen] = useState(false);
 
-  // Event form state
+  // Event form state - moved to dedicated modal
+  const [addEventModalOpen, setAddEventModalOpen] = useState(false);
   const [eventTitle, setEventTitle] = useState('');
   const [eventDescription, setEventDescription] = useState('');
-  const [eventIsPublic, setEventIsPublic] = useState(false);
-  const [showAddEventForm, setShowAddEventForm] = useState(false);
+  const [eventDate, setEventDate] = useState('');
+  const [eventRepetition, setEventRepetition] = useState('none'); // 'none', 'monthly', 'yearly'
+  const [eventType, setEventType] = useState('private'); // 'public', 'private', 'customer'
+  const [selectedCustomerId, setSelectedCustomerId] = useState('');
+  const [selectedPersonId, setSelectedPersonId] = useState('');
+  const [eventValidation, setEventValidation] = useState('');
+  const [isAddingEvent, setIsAddingEvent] = useState(false);
+  
+  // Load customers for customer event selection
+  const [customers, setCustomers] = useState([]);
+  
+  useEffect(() => {
+    if (!user) {
+      setCustomers([]);
+      return;
+    }
+    
+    const customersCollection = collection(db, 'customers');
+    const q = isAdmin 
+      ? query(customersCollection) 
+      : query(customersCollection, where('userId', '==', user.uid));
+    
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const customersList = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      setCustomers(customersList);
+    });
+    
+    return () => unsubscribe();
+  }, [user, isAdmin]);
 
   useEffect(() => {
     if (addTithiModalOpen && modalFocusHint === 'tithi') {
@@ -927,17 +1164,22 @@ export default function NepaliCalendar({ user: propUser, isAdmin }) {
       setIsLoading(false);
       setTithiDropdownOpen(false); // Close dropdown when modal closes
     }
-    if (!detailsModalOpen && !addTithiModalOpen) {
-      setActiveDate(null); // Clear active tile when both modals are closed
+    if (!detailsModalOpen && !addTithiModalOpen && !addEventModalOpen) {
+      setActiveDate(null); // Clear active tile when all modals are closed
     }
-    if (!detailsModalOpen) {
-      // Reset event form when details modal closes
-      setShowAddEventForm(false);
+    if (!addEventModalOpen) {
+      // Reset event form when event modal closes
       setEventTitle('');
       setEventDescription('');
-      setEventIsPublic(false);
+      setEventDate('');
+      setEventRepetition('none');
+      setEventType('private');
+      setSelectedCustomerId('');
+      setSelectedPersonId('');
+      setEventValidation('');
+      setIsAddingEvent(false);
     }
-  }, [addTithiModalOpen, detailsModalOpen, modalFocusHint]);
+  }, [addTithiModalOpen, detailsModalOpen, addEventModalOpen, modalFocusHint]);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -1041,6 +1283,25 @@ export default function NepaliCalendar({ user: propUser, isAdmin }) {
     const dateKey = `${adYear}-${adMonthZeroBased + 1}-${adDay}`;
     return calendarEvents.filter(event => event.dateKey === dateKey);
   }, [calendarEvents]);
+
+  // Helper function to categorize events by type
+  const categorizeEvents = useCallback((events) => {
+    const publicEvents = [];
+    const personalEvents = [];
+    
+    events.forEach(event => {
+      if (event.isPublic) {
+        // Explicitly marked as public
+        publicEvents.push(event);
+      } else if (event.createdBy === user?.uid) {
+        // Created by current user and not marked public = personal/private
+        personalEvents.push(event);
+      }
+      // Events not marked public and not created by current user are hidden
+    });
+    
+    return { publicEvents, personalEvents };
+  }, [user]);
 
   // Helper function to parse pakshya and tithi from full tithi name
   const parseTithiName = (fullName) => {
@@ -1168,6 +1429,7 @@ function compareTithisByStart(a,b){
   const dateKey = dateKeyFromAd({ year: adDate.getFullYear(), month: adDate.getMonth(), day: adDate.getDate() });
   const tithis = findTithisForAdDate(adDate.getFullYear(), adDate.getMonth(), adDate.getDate()) || [];
         const events = getEventsForDate(adDate.getFullYear(), adDate.getMonth(), adDate.getDate()) || [];
+        const custEvents = findCustomerEventsForAdDate(adDate.getFullYear(), adDate.getMonth(), adDate.getDate()) || [];
 
         // Parse tithis
         const parsedTithis = tithis.map(t => ({
@@ -1190,6 +1452,21 @@ function compareTithisByStart(a,b){
               {events.length > 0 && (
                 <div className="nt-summary-item event">
                   {events.map(e => e.title).join(' | ')}
+                </div>
+              )}
+              {custEvents.length > 0 && (
+                <div 
+                  className="nt-summary-item customer-event"
+                  style={{ cursor: onCustomerClick ? 'pointer' : 'default' }}
+                  onClick={(e) => {
+                    if (onCustomerClick && custEvents.length > 0) {
+                      e.stopPropagation();
+                      const firstEvent = custEvents[0];
+                      handleCustomerClick(firstEvent.customerId);
+                    }
+                  }}
+                >
+                  {custEvents.map(e => e.title).join(' | ')}
                 </div>
               )}
             </div>
@@ -1215,15 +1492,18 @@ function compareTithisByStart(a,b){
       const isActive = activeDate === dateKey;
   const tithis = findTithisForAdDate(ad.year, ad.month, ad.day) || [];
       const events = getEventsForDate(ad.year, ad.month, ad.day) || [];
+      const custEvents = findCustomerEventsForAdDate(ad.year, ad.month, ad.day) || [];
       
       // Debug: Log tile rendering with dateKey and tithis
-      if (day <= 5 || tithis.length > 0 || events.length > 0) { // Only log first few days and days with content
+      if (day <= 5 || tithis.length > 0 || events.length > 0 || custEvents.length > 0) { // Only log first few days and days with content
         console.log(`Rendering tile for day ${day}:`, {
           dateKey,
           tithisCount: tithis.length,
           eventsCount: events.length,
+          customerEventsCount: custEvents.length,
           tithisNames: tithis.map(t => t.name),
-          eventTitles: events.map(e => e.title)
+          eventTitles: events.map(e => e.title),
+          customerEventTitles: custEvents.map(e => e.title)
         });
       }
 
@@ -1254,13 +1534,40 @@ function compareTithisByStart(a,b){
           <div className="nt-nepali-date" aria-hidden>{toNepaliNumber(day)}</div>
           <div className="nt-english-date" aria-hidden>{ad.day}</div>
           
-          {/* Card body - shows events only */}
+          {/* Card body - shows events and customer events */}
           <div className="nt-summary" aria-hidden>
-            {events.length > 0 && (
-              <div className="nt-summary-item event">
-                {events.map(e => e.title).join(' | ')}
-              </div>
-            )}
+            {(() => {
+              const { publicEvents, personalEvents } = categorizeEvents(events);
+              return (
+                <>
+                  {publicEvents.length > 0 && (
+                    <div className="nt-summary-item event-public">
+                      {publicEvents.map(e => e.title).join(' | ')}
+                    </div>
+                  )}
+                  {personalEvents.length > 0 && (
+                    <div className="nt-summary-item event-personal">
+                      {personalEvents.map(e => e.title).join(' | ')}
+                    </div>
+                  )}
+                  {custEvents.length > 0 && (
+                    <div 
+                      className="nt-summary-item customer-event"
+                      style={{ cursor: onCustomerClick ? 'pointer' : 'default' }}
+                      onClick={(e) => {
+                        if (onCustomerClick && custEvents.length > 0) {
+                          e.stopPropagation();
+                          const firstEvent = custEvents[0];
+                          handleCustomerClick(firstEvent.customerId);
+                        }
+                      }}
+                    >
+                      {custEvents.map(e => e.title).join(' | ')}
+                    </div>
+                  )}
+                </>
+              );
+            })()}
           </div>
           
           {/* Tithi at bottom left */}
@@ -1291,6 +1598,7 @@ function compareTithisByStart(a,b){
       const dateKey = ad ? `${ad.year}-${ad.month+1}-${ad.day}` : `next-${i}`;
       const tithis = ad ? findTithisForAdDate(ad.year, ad.month, ad.day) || [] : [];
       const events = ad ? getEventsForDate(ad.year, ad.month, ad.day) || [] : [];
+      const custEvents = ad ? findCustomerEventsForAdDate(ad.year, ad.month, ad.day) || [] : [];
 
       // Parse tithis
       const parsedTithis = tithis.map(t => ({
@@ -1310,11 +1618,38 @@ function compareTithisByStart(a,b){
           <div className="nt-nepali-date">{toNepaliNumber(i)}</div>
           {ad && <div className="nt-english-date">{ad.day}</div>}
           <div className="nt-summary" aria-hidden>
-            {events.length > 0 && (
-              <div className="nt-summary-item event">
-                {events.map(e => e.title).join(' | ')}
-              </div>
-            )}
+            {(() => {
+              const { publicEvents, personalEvents } = categorizeEvents(events);
+              return (
+                <>
+                  {publicEvents.length > 0 && (
+                    <div className="nt-summary-item event-public">
+                      {publicEvents.map(e => e.title).join(' | ')}
+                    </div>
+                  )}
+                  {personalEvents.length > 0 && (
+                    <div className="nt-summary-item event-personal">
+                      {personalEvents.map(e => e.title).join(' | ')}
+                    </div>
+                  )}
+                  {custEvents.length > 0 && (
+                    <div 
+                      className="nt-summary-item customer-event"
+                      style={{ cursor: onCustomerClick ? 'pointer' : 'default' }}
+                      onClick={(e) => {
+                        if (onCustomerClick && custEvents.length > 0) {
+                          e.stopPropagation();
+                          const firstEvent = custEvents[0];
+                          handleCustomerClick(firstEvent.customerId);
+                        }
+                      }}
+                    >
+                      {custEvents.map(e => e.title).join(' | ')}
+                    </div>
+                  )}
+                </>
+              );
+            })()}
           </div>
           {parsedTithis.length > 0 && (
             <div className="nt-tithi-bottom" aria-hidden>
@@ -1341,11 +1676,35 @@ function compareTithisByStart(a,b){
     return findTithisForAdDate(adYear, adMonthZeroBased, adDay) || [];
   }, [activeDate, findTithisForAdDate]);
 
-  // Get events for the active date in modal
+  // Get events for the active date in modal (all public events and admin private events)
   const modalEvents = useMemo(() => {
     if (!activeDate || !calendarEvents.length) return [];
-    return calendarEvents.filter(event => event.dateKey === activeDate);
+    return calendarEvents.filter(event => 
+      event.dateKey === activeDate && 
+      (event.isPublic || event.createdByAdmin)
+    );
   }, [activeDate, calendarEvents]);
+
+  // Get personal events for the active date in modal (user's own private events)
+  const modalPersonalEvents = useMemo(() => {
+    if (!activeDate || !calendarEvents.length || !user) return [];
+    return calendarEvents.filter(event => 
+      event.dateKey === activeDate && 
+      !event.isPublic && 
+      !event.createdByAdmin &&
+      event.createdBy === user.uid
+    );
+  }, [activeDate, calendarEvents, user]);
+
+  // Get customer events for the active date in modal
+  const modalCustomerEvents = useMemo(() => {
+    if (!activeDate) return [];
+    const parts = activeDate.split('-').map(p=>+p);
+    const adYear = parts[0];
+    const adMonthZeroBased = parts[1]-1;
+    const adDay = parts[2];
+    return findCustomerEventsForAdDate(adYear, adMonthZeroBased, adDay) || [];
+  }, [activeDate, findCustomerEventsForAdDate]);
 
   // Expose manual debug helpers to window during development so they're usable and not flagged as unused
   useEffect(() => {
@@ -1539,10 +1898,10 @@ function compareTithisByStart(a,b){
               ))}
             </div>
 
-            {/* Events Section */}
+            {/* Public Events Section */}
             <div className="nc-modal-section" style={{ borderTop: '1px solid #eee', paddingTop: '1rem' }}>
-              <h4>Events</h4>
-              {modalEvents.length===0 && <div className="muted">No events for this date</div>}
+              <h4>Public Events</h4>
+              {modalEvents.length===0 && <div className="muted">No public events for this date</div>}
               {modalEvents.map(event => (
                 <div key={event.id} className="nc-item" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '0.5rem' }}>
                   <div style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
@@ -1561,75 +1920,62 @@ function compareTithisByStart(a,b){
               ))}
             </div>
 
-            {/* Add Event Form - shown when user clicks "Add Event" */}
-            {showAddEventForm && user && (
-              <div className="nc-modal-section" style={{ borderTop: '1px solid #eee', paddingTop: '1rem', background: '#f9fafb' }}>
-                <h4>Add New Event</h4>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                  <input
-                    type="text"
-                    placeholder="Event title (required)"
-                    value={eventTitle}
-                    onChange={(e) => setEventTitle(e.target.value)}
-                    style={{ padding: '0.5rem', border: '1px solid #d1d5db', borderRadius: '0.375rem', fontSize: '0.875rem' }}
-                  />
-                  <textarea
-                    placeholder="Description (optional)"
-                    value={eventDescription}
-                    onChange={(e) => setEventDescription(e.target.value)}
-                    rows={3}
-                    style={{ padding: '0.5rem', border: '1px solid #d1d5db', borderRadius: '0.375rem', fontSize: '0.875rem', resize: 'vertical' }}
-                  />
-                  {/* Show public checkbox for admins or users with manageEvents permission */}
-                  {(canManageEvents) && (
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.875rem' }}>
-                      <input
-                        type="checkbox"
-                        checked={eventIsPublic}
-                        onChange={(e) => setEventIsPublic(e.target.checked)}
-                      />
-                      <span>Make this event public (visible to all users)</span>
-                    </label>
-                  )}
-                  <div style={{ display: 'flex', gap: '0.5rem' }}>
-                    <button
-                      onClick={async () => {
-                        if (!eventTitle.trim()) {
-                          alert('Please enter an event title');
-                          return;
-                        }
-                        try {
-                          await addCalendarEvent(activeDate, {
-                            title: eventTitle.trim(),
-                            description: eventDescription.trim(),
-                            isPublic: eventIsPublic
-                          });
-                          setShowAddEventForm(false);
-                          setEventTitle('');
-                          setEventDescription('');
-                          setEventIsPublic(false);
-                        } catch (error) {
-                          alert(`Error adding event: ${error.message}`);
-                        }
-                      }}
-                      className="nc-add-btn"
-                      style={{ flex: 1 }}
-                    >
-                      Save Event
-                    </button>
-                    <button
-                      onClick={() => {
-                        setShowAddEventForm(false);
-                        setEventTitle('');
-                        setEventDescription('');
-                        setEventIsPublic(false);
-                      }}
-                      style={{ flex: 1 }}
-                    >
-                      Cancel
-                    </button>
+            {/* Personal Events Section - user's own private events */}
+            <div className="nc-modal-section" style={{ borderTop: '1px solid #eee', paddingTop: '1rem' }}>
+              <h4 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                Personal Events
+                <span style={{ fontSize: '0.75rem', padding: '0.125rem 0.375rem', background: '#dbeafe', color: '#1e40af', borderRadius: '0.25rem', fontWeight: '600' }}>Private</span>
+              </h4>
+              {modalPersonalEvents.length===0 && <div className="muted">No personal events for this date</div>}
+              {modalPersonalEvents.map(event => (
+                <div key={event.id} className="nc-item" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '0.5rem' }}>
+                  <div style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
+                    <div style={{ flex: 1 }}>
+                      <div className="nc-item-title">{event.title}</div>
+                      {event.description && <div className="muted" style={{ marginTop: '0.25rem' }}>{event.description}</div>}
+                    </div>
                   </div>
                 </div>
+              ))}
+            </div>
+
+            {/* Customer Events Section - shows family member events from customers collection */}
+            {modalCustomerEvents.length > 0 && (
+              <div className="nc-modal-section" style={{ borderTop: '1px solid #eee', paddingTop: '1rem' }}>
+                <h4 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  Customer Events
+                  <span style={{ fontSize: '0.75rem', padding: '0.125rem 0.375rem', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', color: 'white', borderRadius: '0.25rem', fontWeight: '600' }}>Family</span>
+                </h4>
+                {modalCustomerEvents.map((event, idx) => (
+                  <div 
+                    key={`${event.customerId}-${idx}`} 
+                    className="nc-item customer-event-item" 
+                    style={{ 
+                      flexDirection: 'column', 
+                      alignItems: 'flex-start', 
+                      gap: '0.5rem',
+                      cursor: onCustomerClick ? 'pointer' : 'default'
+                    }}
+                    onClick={() => {
+                      if (onCustomerClick && event.customerId) {
+                        handleCustomerClick(event.customerId);
+                        setDetailsModalOpen(false);
+                      }
+                    }}
+                  >
+                    <div style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
+                      <div style={{ flex: 1 }}>
+                        <div className="nc-item-title">
+                          {event.personName || 'Unknown'}: {event.title || event.name}
+                        </div>
+                        <div className="muted" style={{ marginTop: '0.25rem', fontSize: '0.875rem' }}>
+                          Customer: {event.customerName}
+                        </div>
+                        {event.description && <div className="muted" style={{ marginTop: '0.25rem', fontSize: '0.875rem' }}>{event.description}</div>}
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
 
@@ -1652,10 +1998,17 @@ function compareTithisByStart(a,b){
                 </button>
               )}
               
-              {/* For Logged-in Users: Show "Add Event" button (single shared button for all users) */}
-              {user && !showAddEventForm && (
+              {/* For Logged-in Users: Show "Add Event" button */}
+              {user && (
                 <button 
-                  onClick={() => setShowAddEventForm(true)}
+                  onClick={() => {
+                    if (!activeDate) return;
+                    const parts = activeDate.split('-').map(p=>+p);
+                    const adYear = parts[0];
+                    const adMonthZeroBased = parts[1]-1;
+                    const adDay = parts[2];
+                    openAddEventModalForDate(adYear, adMonthZeroBased, adDay);
+                  }}
                   className="nc-add-btn"
                   style={{ flex: '1 1 auto' }}
                 >
@@ -1664,7 +2017,7 @@ function compareTithisByStart(a,b){
               )}
 
               {/* For Admins and Super Users with tithi permission: Show "Add Tithi" when in edit mode */}
-              {(isAdmin || (isSuperUser && !permsLoading && hasPermission(PERMISSIONS.MANAGE_TITHIS))) && isEditMode && !showAddEventForm && (
+              {(isAdmin || (isSuperUser && !permsLoading && hasPermission(PERMISSIONS.MANAGE_TITHIS))) && isEditMode && (
                 <button 
                   onClick={() => {
                     if (!activeDate) return;
@@ -1855,6 +2208,200 @@ function compareTithisByStart(a,b){
                   {isLoading ? 'Adding...' : !user ? 'Log in to Add' : 'Add Tithi'}
                 </button>
                 <button onClick={()=>{ setAddTithiModalOpen(false); setValidation(''); }}>Cancel</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add Event Modal - form for adding new event */}
+      {addEventModalOpen && (
+        <div className="nc-modal-backdrop" onClick={()=> setAddEventModalOpen(false)}>
+          <div className="nc-modal" onClick={(e)=>e.stopPropagation()}>
+            <div className="nc-modal-header">
+              <h3 className="nc-modal-title">{
+                (() => {
+                  if (!activeDate) return '';
+                  const parts = activeDate.split('-').map(p=>+p);
+                  const adYear = parts[0];
+                  const adMonthZeroBased = parts[1]-1;
+                  const adDay = parts[2];
+                  const bs = convertAdToBs(adYear, adMonthZeroBased, adDay);
+                  return `Add Event - ${nepaliMonths[bs.month-1]} ${toNepaliNumber(bs.day)}, ${toNepaliNumber(bs.year)}`;
+                })()
+              }</h3>
+              <button onClick={()=> setAddEventModalOpen(false)} aria-label="Close">✕</button>
+            </div>
+
+            <div className="nc-modal-section">
+              {/* Event Type Selection */}
+              <div className="nc-form-row" style={{ marginBottom: '1rem' }}>
+                <label className="nc-label">Event Type:</label>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                  {/* Public Event - Only for admins */}
+                  {(isAdmin || isSuperUser) && (
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                      <input
+                        type="radio"
+                        name="eventType"
+                        value="public"
+                        checked={eventType === 'public'}
+                        onChange={(e) => {
+                          setEventType(e.target.value);
+                          setSelectedCustomerId('');
+                          setSelectedPersonId('');
+                        }}
+                      />
+                      <span>Public Event <span style={{ fontSize: '0.75rem', padding: '0.125rem 0.375rem', background: '#fbbf24', color: '#78350f', borderRadius: '0.25rem', fontWeight: '600' }}>Admin</span></span>
+                      <span style={{ fontSize: '0.875rem', color: '#6b7280' }}>(Visible to all users)</span>
+                    </label>
+                  )}
+                  
+                  {/* Private Event - For all users */}
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                    <input
+                      type="radio"
+                      name="eventType"
+                      value="private"
+                      checked={eventType === 'private'}
+                      onChange={(e) => {
+                        setEventType(e.target.value);
+                        setSelectedCustomerId('');
+                        setSelectedPersonId('');
+                      }}
+                    />
+                    <span>Personal Event <span style={{ fontSize: '0.75rem', padding: '0.125rem 0.375rem', background: '#dbeafe', color: '#1e40af', borderRadius: '0.25rem', fontWeight: '600' }}>Private</span></span>
+                    <span style={{ fontSize: '0.875rem', color: '#6b7280' }}>(Only visible to you)</span>
+                  </label>
+                  
+                  {/* Customer Event - For all users */}
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                    <input
+                      type="radio"
+                      name="eventType"
+                      value="customer"
+                      checked={eventType === 'customer'}
+                      onChange={(e) => {
+                        setEventType(e.target.value);
+                      }}
+                    />
+                    <span>Customer Event <span style={{ fontSize: '0.75rem', padding: '0.125rem 0.375rem', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', color: 'white', borderRadius: '0.25rem', fontWeight: '600' }}>Family</span></span>
+                    <span style={{ fontSize: '0.875rem', color: '#6b7280' }}>(For a family member)</span>
+                  </label>
+                </div>
+              </div>
+
+              {/* Customer Selection - shown when eventType is 'customer' */}
+              {eventType === 'customer' && (
+                <div className="nc-form-row" style={{ marginBottom: '1rem' }}>
+                  <label className="nc-label">Select Customer:</label>
+                  <select
+                    value={selectedCustomerId}
+                    onChange={(e) => {
+                      setSelectedCustomerId(e.target.value);
+                      setSelectedPersonId(''); // Reset person selection when customer changes
+                    }}
+                    className="nc-select"
+                  >
+                    <option value="">-- Select a customer --</option>
+                    {customers.map(customer => (
+                      <option key={customer.id} value={customer.id}>
+                        {customer.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              {/* Family Member Selection - shown when customer is selected */}
+              {eventType === 'customer' && selectedCustomerId && (() => {
+                const selectedCustomer = customers.find(c => c.id === selectedCustomerId);
+                const familyMembers = selectedCustomer?.familyMembers || {};
+                const familyMembersList = Object.entries(familyMembers).map(([id, member]) => ({
+                  id,
+                  name: member.name || 'Unknown'
+                }));
+                
+                return familyMembersList.length > 0 && (
+                  <div className="nc-form-row" style={{ marginBottom: '1rem' }}>
+                    <label className="nc-label">Select Family Member (Optional):</label>
+                    <select
+                      value={selectedPersonId}
+                      onChange={(e) => setSelectedPersonId(e.target.value)}
+                      className="nc-select"
+                    >
+                      <option value="">-- Select a family member (optional) --</option>
+                      {familyMembersList.map(person => (
+                        <option key={person.id} value={person.id}>
+                          {person.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                );
+              })()}
+
+              {/* Event Title */}
+              <div className="nc-form-row" style={{ marginBottom: '1rem' }}>
+                <label className="nc-label">Event Title:</label>
+                <input
+                  type="text"
+                  value={eventTitle}
+                  onChange={(e) => setEventTitle(e.target.value)}
+                  placeholder="e.g., Birthday, Anniversary, etc."
+                  className="nc-input"
+                />
+              </div>
+
+              {/* Event Description */}
+              <div className="nc-form-row" style={{ marginBottom: '1rem' }}>
+                <label className="nc-label">Description (Optional):</label>
+                <textarea
+                  value={eventDescription}
+                  onChange={(e) => setEventDescription(e.target.value)}
+                  placeholder="Add any additional details..."
+                  className="nc-input"
+                  rows={3}
+                  style={{ resize: 'vertical' }}
+                />
+              </div>
+
+              {/* Event Date - using NepaliDatePicker */}
+              <div className="nc-form-row" style={{ marginBottom: '1rem' }}>
+                <NepaliDatePicker
+                  value={eventDate}
+                  onChange={setEventDate}
+                  label="Event Date"
+                  required
+                />
+              </div>
+
+              {/* Event Repetition */}
+              <div className="nc-form-row" style={{ marginBottom: '1rem' }}>
+                <label className="nc-label">Repeats:</label>
+                <select
+                  value={eventRepetition}
+                  onChange={(e) => setEventRepetition(e.target.value)}
+                  className="nc-select"
+                >
+                  <option value="none">Does not repeat</option>
+                  <option value="monthly">Monthly</option>
+                  <option value="yearly">Yearly</option>
+                </select>
+              </div>
+
+              {eventValidation && <div className="nc-validation">{eventValidation}</div>}
+              {!user && !authLoading && <div className="nc-validation">Please log in to add events</div>}
+              
+              <div className="nc-modal-actions">
+                <button 
+                  onClick={submitAddEvent} 
+                  className="nc-add-btn"
+                  disabled={isAddingEvent || !user || authLoading}
+                >
+                  {isAddingEvent ? 'Adding...' : !user ? 'Log in to Add' : 'Add Event'}
+                </button>
+                <button onClick={()=>{ setAddEventModalOpen(false); setEventValidation(''); }}>Cancel</button>
               </div>
             </div>
           </div>

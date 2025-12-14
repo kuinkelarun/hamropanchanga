@@ -8,7 +8,6 @@ import heroAnimation from './hero-image.png';
 import NepaliCalendar from './NepaliCalendar';
 import Block1 from './Block1';
 import Footer from './Footer';
-import { signInWithGoogle } from '../firebase';
 
 const LandingPage = ({ user, isAdmin, customers, onSelectCustomer, onAddCustomer, events, familyMembers, onDoubleClickEvent, onEditCustomer, onDeleteCustomer }) => {
     const [block1Visible, setBlock1Visible] = useState(null);
@@ -87,7 +86,7 @@ const LandingPage = ({ user, isAdmin, customers, onSelectCustomer, onAddCustomer
             <div className="edgefull">
                 <div className="section-content-centered">
                     <div className="section-card calendar-wrapper">
-                        <NepaliCalendar user={user} isAdmin={isAdmin} />
+                        <NepaliCalendar user={user} isAdmin={isAdmin} onCustomerClick={onSelectCustomer} />
                     </div>
                 </div>
             </div>
