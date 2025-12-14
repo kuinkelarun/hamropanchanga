@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, useNavigate, useLocation } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, useNavigate, useParams } from 'react-router-dom';
 import { collection, query, where, onSnapshot, doc, getDoc, setDoc, updateDoc, addDoc, deleteDoc } from 'firebase/firestore';
 import { onAuthStateChanged, signOut, getIdTokenResult } from 'firebase/auth';
 import { auth, signInWithGoogle, db } from './firebase';
@@ -72,9 +72,70 @@ export default function App() {
     );
 }
 
+// Wrapper component to handle customer route with URL params
+function CustomerDetailWrapper({ customers, selectedCustomer, onBack, onUpdate }) {
+    const { customerId } = useParams();
+    const [customer, setCustomer] = useState(null);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        // If selectedCustomer is available, use it
+        if (selectedCustomer && selectedCustomer.id === customerId) {
+            setCustomer(selectedCustomer);
+            setLoading(false);
+            return;
+        }
+
+        // Check if customer is in the customers list
+        const foundCustomer = customers.find(c => c.id === customerId);
+        if (foundCustomer) {
+            setCustomer(foundCustomer);
+            setLoading(false);
+            return;
+        }
+
+        // If not found, fetch from Firestore (for page refresh case)
+        const fetchCustomer = async () => {
+            try {
+                const customerRef = doc(db, 'customers', customerId);
+                const customerDoc = await getDoc(customerRef);
+                
+                if (customerDoc.exists()) {
+                    setCustomer({ id: customerDoc.id, ...customerDoc.data() });
+                } else {
+                    console.error('Customer not found');
+                }
+            } catch (error) {
+                console.error('Error fetching customer:', error);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchCustomer();
+    }, [customerId, selectedCustomer, customers]);
+
+    if (loading) {
+        return (
+            <div className="flex items-center justify-center min-h-screen">
+                <div className="text-gray-600">Loading...</div>
+            </div>
+        );
+    }
+
+    if (!customer) {
+        return (
+            <div className="flex items-center justify-center min-h-screen">
+                <div className="text-red-600">Customer not found</div>
+            </div>
+        );
+    }
+
+    return <CustomerDetail customer={customer} onBack={onBack} onUpdate={onUpdate} />;
+}
+
 function AppContent() {
     const navigate = useNavigate();
-    const location = useLocation();
     
     // STATE MANAGEMENT
     const [user, setUser] = useState(null);
@@ -358,7 +419,22 @@ function AppContent() {
             }
 
             // Otherwise treat as a top-level edit (name/contact/location) and return to the list after saving
-            await updateDoc(customerDocRef, { ...updatedData });
+            // If the customer name is being updated, also update the "Self" member's name
+            if (updatedData.name && selectedCustomer.familyMembers) {
+                const updatedFamilyMembers = { ...selectedCustomer.familyMembers };
+                // Find and update the Self member
+                Object.keys(updatedFamilyMembers).forEach(memberId => {
+                    if (updatedFamilyMembers[memberId].relation === 'Self') {
+                        updatedFamilyMembers[memberId] = {
+                            ...updatedFamilyMembers[memberId],
+                            name: updatedData.name
+                        };
+                    }
+                });
+                await updateDoc(customerDocRef, { ...updatedData, familyMembers: updatedFamilyMembers });
+            } else {
+                await updateDoc(customerDocRef, { ...updatedData });
+            }
             setSelectedCustomer(null);
             navigate('/');
         } catch (error) {
@@ -489,13 +565,12 @@ function AppContent() {
                     } />
 
                     <Route path="/customer/:customerId" element={
-                        selectedCustomer && (
-                            <CustomerDetail
-                                customer={customers.find(c => c.id === selectedCustomer.id) || selectedCustomer}
-                                onBack={handleBackToList}
-                                onUpdate={handleUpdateCustomer}
-                            />
-                        )
+                        <CustomerDetailWrapper
+                            customers={customers}
+                            selectedCustomer={selectedCustomer}
+                            onBack={handleBackToList}
+                            onUpdate={handleUpdateCustomer}
+                        />
                     } />
 
                     <Route path="/add-customer" element={

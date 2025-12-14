@@ -40,6 +40,11 @@ const EventList = ({ events, eventFilter, onEdit, onDelete }) => {
 
     // Filter and sort events based on the selected filter
     const sortedAndFilteredEvents = events
+        .filter(event => {
+            // Filter out events without a name or title
+            const eventName = event.title || event.name;
+            return eventName && eventName.trim() !== '';
+        })
         .map(event => {
             const originalDate = new Date(event.date);
             const displayDate = (event.repetition && event.repetition !== 'none') ?
@@ -108,7 +113,7 @@ const EventList = ({ events, eventFilter, onEdit, onDelete }) => {
                                         <li key={id} className="bg-white p-3 rounded-xl shadow-sm flex justify-between items-center">
                                         <div className="flex-1">
                                             <div className="text-gray-800 font-medium">
-                                                {event.name}
+                                                {event.title || event.name || 'Untitled Event'}
                                                 {event.repetition && event.repetition !== 'none' && (
                                                     <span className="text-xs text-gray-400 ml-2">({event.repetition} repeating)</span>
                                                 )}
@@ -153,7 +158,7 @@ const EventList = ({ events, eventFilter, onEdit, onDelete }) => {
                                 <li key={id} className="bg-white p-3 rounded-xl shadow-sm flex justify-between items-center">
                                     <div className="flex-1">
                                     <div className="text-gray-800 font-medium">
-                                        {event.name}
+                                        {event.title || event.name || 'Untitled Event'}
                                         {event.repetition && event.repetition !== 'none' && (
                                             <span className="text-xs text-gray-400 ml-2">({event.repetition} repeating)</span>
                                         )}

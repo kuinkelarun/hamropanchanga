@@ -1333,7 +1333,8 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
           isPublic: newRecordData.isPublic || false,
           associatedPerson: '',
           createdAt: new Date().toISOString(),
-          createdByAdmin: true
+          createdByAdmin: true,
+          createdBy: user?.uid || ''
         };
         
         await addDoc(collection(db, 'calendarEvents'), eventData);

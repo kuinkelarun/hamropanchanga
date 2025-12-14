@@ -8,7 +8,6 @@ const shuklaNames = ["प्रतिपदा", "द्वितीया", "�
 const krishnaNames = ["प्रतिपदा", "द्वितीया", "तृतीया", "चतुर्थी", "पञ्चमी", "षष्ठी", "सप्तमी", "अष्टमी", "नवमी", "दशमी", "एकादशी", "द्वादशी", "त्रयोदशी", "चतुर्दशी", "औंसी"];
 
 export default function TithiCalculator() {
-  const [mode, setMode] = useState('auto'); // 'auto' only now
   const [moonLon, setMoonLon] = useState('');
   const [sunLon, setSunLon] = useState('');
   const [dateStr, setDateStr] = useState('');

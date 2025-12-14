@@ -3,7 +3,6 @@ import { doc, updateDoc, onSnapshot } from 'firebase/firestore'; // Import Fires
 import { db } from '../firebase'; // Import your Firebase db instance
 import AddFamilyMemberForm from './AddFamilyMemberForm'; // Import other components
 import EditFamilyMemberForm from './EditFamilyMemberForm';
-import FamilyTreeChart from './FamilyTreeChart';
 import AddEventForm from './AddEventForm';
 import EventList from './EventList';
 import EditEventForm from './EditEventForm';
@@ -231,19 +230,46 @@ const CustomerDetail = ({ customer: propCustomer, onBack, onUpdate }) => {
 
     const handleAddEvent = async (eventData) => {
         setIsAddingEvent(false);
+        
+        // Validate event data
+        const eventName = eventData.name || eventData.title;
+        if (!eventName || !eventName.trim()) {
+            alert('Please enter an event name');
+            setIsAddingEvent(true); // Re-open the form
+            return;
+        }
+        
+        if (!eventData.personId) {
+            alert('Please select a person');
+            setIsAddingEvent(true); // Re-open the form
+            return;
+        }
+        
+        if (!eventData.date) {
+            alert('Please select a date');
+            setIsAddingEvent(true); // Re-open the form
+            return;
+        }
+        
         try {
-            const person = Object.values(customer.familyMembers).find(
+            const familyMembers = customer.familyMembers || {};
+            const person = Object.values(familyMembers).find(
                 (member) => member.id === eventData.personId
             );
             const newEvent = {
                 ...eventData,
+                title: eventName.trim(), // Use the validated and trimmed name
+                name: eventName.trim(), // Keep for backward compatibility
                 personName: person ? person.name : 'Unknown',
                 personRelation: person ? person.relation : 'N/A',
                 id: crypto.randomUUID(),
-                dateHistory: [eventData.date] // Initialize dateHistory with the first date
+                repetition: eventData.repetition || 'none', // Default to 'none' if not provided
+                dateHistory: [eventData.date], // Initialize dateHistory with the first date
+                createdAt: Date.now()
             };
 
-            const updatedEvents = [...customer.events, newEvent];
+            const currentEvents = customer.events || [];
+            const updatedEvents = [...currentEvents, newEvent];
             const updatedCustomer = {
                 ...customer,
                 events: updatedEvents
@@ -253,6 +279,7 @@ const CustomerDetail = ({ customer: propCustomer, onBack, onUpdate }) => {
             onUpdate(updatedCustomer);
         } catch (error) {
             console.error("Error adding event:", error);
+            alert(`Error adding event: ${error.message}`);
         }
     };
 
@@ -316,26 +343,102 @@ const CustomerDetail = ({ customer: propCustomer, onBack, onUpdate }) => {
                 <h2 className="text-3xl font-bold text-gray-800">{customer.name}</h2>
             </div>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <div className="bg-gray-50 p-6 rounded-2xl shadow-md">
-                    <div className="flex justify-between items-center mb-4">
-                        <h3 className="text-xl font-bold text-gray-800">Family Tree</h3>
-                        <button onClick={() => setIsAddingMember(prev => !prev)} className="bg-green-600 hover:bg-green-700 text-white font-semibold py-1 px-3 rounded-xl shadow-md transition-transform transform hover:scale-105 text-sm">
-                            {isAddingMember ? 'Cancel' : 'Add Member'}
+                <div className="bg-white p-6 rounded-xl shadow-lg border border-gray-200">
+                    <div className="flex justify-between items-center mb-6">
+                        <h3 className="text-xl font-bold text-gray-800">Family Members</h3>
+                        <button 
+                            onClick={() => setIsAddingMember(prev => !prev)} 
+                            className="text-white font-semibold py-2 px-4 rounded-lg shadow-md transition-all text-sm"
+                            style={{
+                                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+                            }}
+                            onMouseEnter={(e) => {
+                                e.currentTarget.style.transform = 'translateY(-2px)';
+                                e.currentTarget.style.boxShadow = '0 4px 8px rgba(102, 126, 234, 0.4)';
+                            }}
+                            onMouseLeave={(e) => {
+                                e.currentTarget.style.transform = 'translateY(0)';
+                                e.currentTarget.style.boxShadow = '0 2px 4px rgba(102, 126, 234, 0.3)';
+                            }}
+                        >
+                            {isAddingMember ? 'Cancel' : '+ Add Member'}
                         </button>
                     </div>
-                    {isAddingMember && <AddFamilyMemberForm onAdd={handleAddFamilyMember} familyMembers={customer.familyMembers || {}} />}
-                    {editingMember && (
-                        <EditFamilyMemberForm 
-                            member={editingMember}
-                            familyMembers={customer.familyMembers || {}}
-                            onUpdate={handleUpdateFamilyMember}
-                            onCancel={() => setEditingMember(null)}
-                        />
+                    
+                    {isAddingMember && (
+                        <div className="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                            <AddFamilyMemberForm onAdd={handleAddFamilyMember} familyMembers={customer.familyMembers || {}} />
+                        </div>
                     )}
-                    <FamilyTreeChart familyMembers={customer.familyMembers || {}} onEdit={handleEditFamilyMember} onDeleteRequest={handleDeleteMemberRequest} />
+                    
+                    {editingMember && (
+                        <div className="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                            <EditFamilyMemberForm 
+                                member={editingMember}
+                                familyMembers={customer.familyMembers || {}}
+                                onUpdate={handleUpdateFamilyMember}
+                                onCancel={() => setEditingMember(null)}
+                            />
+                        </div>
+                    )}
+                    
+                    {/* Family Members List */}
+                    <div className="space-y-3">
+                        {familyMembersArray.length === 0 ? (
+                            <div className="text-center py-12">
+                                <svg className="mx-auto h-12 w-12 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                                </svg>
+                                <p className="text-gray-500 mb-4">No family members added yet</p>
+                                <button 
+                                    onClick={() => setIsAddingMember(true)}
+                                    className="text-purple-600 hover:text-purple-700 font-semibold"
+                                >
+                                    Add your first family member
+                                </button>
+                            </div>
+                        ) : (
+                            familyMembersArray
+                                .sort((a, b) => (b.generation || 0) - (a.generation || 0))
+                                .map((member) => (
+                                    <div 
+                                        key={member.id} 
+                                        className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200 hover:border-purple-300 hover:shadow-md transition-all"
+                                    >
+                                        <div className="flex-1">
+                                            <h4 className="font-semibold text-gray-800">{member.name}</h4>
+                                            <p className="text-sm text-gray-600">{member.relation}</p>
+                                            {member.generation !== undefined && (
+                                                <p className="text-xs text-gray-500 mt-1">Generation: {member.generation}</p>
+                                            )}
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <button
+                                                onClick={() => handleEditFamilyMember(member)}
+                                                className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                                title="Edit member"
+                                            >
+                                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                                </svg>
+                                            </button>
+                                            <button
+                                                onClick={() => handleDeleteMemberRequest(member)}
+                                                className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                                title="Delete member"
+                                            >
+                                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                </svg>
+                                            </button>
+                                        </div>
+                                    </div>
+                                ))
+                        )}
+                    </div>
                 </div>
-                <div className="bg-gray-50 p-6 rounded-2xl shadow-md">
-                    <div className="flex justify-between items-center mb-4">
+                <div className="bg-white p-6 rounded-xl shadow-lg border border-gray-200">
+                    <div className="flex justify-between items-center mb-6">
                         <h3 className="text-xl font-bold text-gray-800">Events</h3>
                         {/* When adding or editing an event, hide the filter and top toggle; the form shows Add/Cancel */}
                         {!isAddingEvent && !editingEvent && (
@@ -343,7 +446,7 @@ const CustomerDetail = ({ customer: propCustomer, onBack, onUpdate }) => {
                                 <select
                                     value={eventFilter}
                                     onChange={(e) => setEventFilter(e.target.value)}
-                                    className="border rounded-xl p-1 text-sm"
+                                    className="border-2 border-gray-300 rounded-lg p-2 text-sm focus:border-purple-500 focus:outline-none"
                                 >
                                     <option value="upcoming">Upcoming</option>
                                     <option value="all">All Events</option>
@@ -352,14 +455,36 @@ const CustomerDetail = ({ customer: propCustomer, onBack, onUpdate }) => {
                                     <option value="next-month">Next 30 Days</option>
                                     <option value="next-90-days">Next 90 Days</option>
                                 </select>
-                                <button onClick={() => { setIsAddingEvent(prev => !prev); setEditingEvent(null); }} className="bg-green-600 hover:bg-green-700 text-white font-semibold py-1 px-3 rounded-xl shadow-md transition-transform transform hover:scale-105 text-sm">
-                                    Add Event
+                                <button 
+                                    onClick={() => { setIsAddingEvent(prev => !prev); setEditingEvent(null); }} 
+                                    className="text-white font-semibold py-2 px-4 rounded-lg shadow-md transition-all text-sm"
+                                    style={{
+                                        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+                                    }}
+                                    onMouseEnter={(e) => {
+                                        e.currentTarget.style.transform = 'translateY(-2px)';
+                                        e.currentTarget.style.boxShadow = '0 4px 8px rgba(102, 126, 234, 0.4)';
+                                    }}
+                                    onMouseLeave={(e) => {
+                                        e.currentTarget.style.transform = 'translateY(0)';
+                                        e.currentTarget.style.boxShadow = '0 2px 4px rgba(102, 126, 234, 0.3)';
+                                    }}
+                                >
+                                    + Add Event
                                 </button>
                             </div>
                         )}
                     </div>
-                    {isAddingEvent && <AddEventForm onAdd={handleAddEvent} onCancel={() => setIsAddingEvent(false)} familyMembers={familyMembersArray} />}
-                    {editingEvent && <EditEventForm event={editingEvent} onUpdate={handleUpdateEvent} onCancel={() => setEditingEvent(null)} familyMembers={familyMembersArray} />}
+                    {isAddingEvent && (
+                        <div className="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                            <AddEventForm onAdd={handleAddEvent} onCancel={() => setIsAddingEvent(false)} familyMembers={familyMembersArray} />
+                        </div>
+                    )}
+                    {editingEvent && (
+                        <div className="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                            <EditEventForm event={editingEvent} onUpdate={handleUpdateEvent} onCancel={() => setEditingEvent(null)} familyMembers={familyMembersArray} />
+                        </div>
+                    )}
                     {!isAddingEvent && !editingEvent && <EventList events={customer.events || []} eventFilter={eventFilter} onEdit={handleEditEvent} onDelete={handleDeleteRequest} />}
                 </div>
             </div>
