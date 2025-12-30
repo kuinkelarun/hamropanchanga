@@ -592,7 +592,7 @@ function AppContent() {
                         />
                     } />
 
-                    <Route path="/admin/management" element={
+                    <Route path="/admin/management/:tab?" element={
                         <AdminManagement
                             user={user}
                             isAdmin={isAdmin}

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { collection, getDocs, deleteDoc, doc, writeBatch, query, updateDoc, where, addDoc, getDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import * as XLSX from 'xlsx';
@@ -98,7 +99,10 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
     hasPermission(PERMISSIONS.MANAGE_EVENTS) ||
     hasPermission(PERMISSIONS.MANAGE_HOME_CARDS);
   
-  const [activeTab, setActiveTab] = useState('tithis'); // 'tithis', 'events', 'dataManagement', 'userManagement'
+  const navigate = useNavigate();
+  const { tab } = useParams();
+  const activeTab = tab || 'tithis';
+  
   const [tithis, setTithis] = useState([]);
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -1736,7 +1740,7 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
       <div className="admin-tabs">
         <button 
           className={`admin-tab ${activeTab === 'tithis' ? 'active' : ''}`}
-          onClick={() => setActiveTab('tithis')}
+          onClick={() => navigate('/admin/management/tithis')}
           disabled={!hasPermission(PERMISSIONS.MANAGE_TITHIS)}
           title={!hasPermission(PERMISSIONS.MANAGE_TITHIS) ? 'No permission to manage tithis' : ''}
         >
@@ -1744,7 +1748,7 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
         </button>
         <button 
           className={`admin-tab ${activeTab === 'events' ? 'active' : ''}`}
-          onClick={() => setActiveTab('events')}
+          onClick={() => navigate('/admin/management/events')}
           disabled={!hasPermission(PERMISSIONS.MANAGE_EVENTS)}
           title={!hasPermission(PERMISSIONS.MANAGE_EVENTS) ? 'No permission to manage events' : ''}
         >
@@ -1752,7 +1756,7 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
         </button>
         <button 
           className={`admin-tab ${activeTab === 'dataManagement' ? 'active' : ''}`}
-          onClick={() => setActiveTab('dataManagement')}
+          onClick={() => navigate('/admin/management/dataManagement')}
           disabled={!hasPermission(PERMISSIONS.MANUAL_DASHBOARD)}
           title={!hasPermission(PERMISSIONS.MANUAL_DASHBOARD) ? 'No permission to access data management' : ''}
         >
