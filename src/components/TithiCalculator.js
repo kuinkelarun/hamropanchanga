@@ -250,26 +250,61 @@ export default function TithiCalculator() {
             <div className="tc-info-grid">
               <div className="tc-info-item">
                 <strong>Start Time</strong>
-                <span>{result.startTime ? new Date(result.startTime).toLocaleTimeString('en-US', {hour: '2-digit', minute: '2-digit'}) : 'N/A'}</span>
-                <span style={{fontSize: '0.85rem', color: '#6b7280', marginTop: '4px'}}>
-                  {result.startTime ? new Date(result.startTime).toLocaleDateString() : ''}
-                </span>
+                {/* Local Time */}
+                <div style={{marginBottom: '4px'}}>
+                  <span style={{fontWeight: '500'}}>
+                    {result.startTime ? new Date(result.startTime).toLocaleString('en-US', {
+                      month: 'short', day: 'numeric',
+                      hour: '2-digit', minute: '2-digit',
+                      timeZoneName: 'short'
+                    }) : 'N/A'}
+                  </span>
+                  <span style={{fontSize: '0.75rem', color: '#666', marginLeft: '4px'}}>(Local)</span>
+                </div>
+                {/* UTC Time */}
+                <div style={{fontSize: '0.85rem', color: '#6b7280'}}>
+                  <span>
+                    {result.startTime ? new Date(result.startTime).toLocaleString('en-US', {
+                      month: 'short', day: 'numeric',
+                      hour: '2-digit', minute: '2-digit',
+                      timeZone: 'UTC', timeZoneName: 'short'
+                    }) : ''}
+                  </span>
+                </div>
               </div>
+              
               <div className="tc-info-item">
                 <strong>End Time</strong>
-                <span>{result.endTime ? new Date(result.endTime).toLocaleTimeString('en-US', {hour: '2-digit', minute: '2-digit'}) : 'N/A'}</span>
-                <span style={{fontSize: '0.85rem', color: '#6b7280', marginTop: '4px'}}>
-                  {result.endTime ? new Date(result.endTime).toLocaleDateString() : ''}
-                </span>
+                {/* Local Time */}
+                <div style={{marginBottom: '4px'}}>
+                  <span style={{fontWeight: '500'}}>
+                    {result.endTime ? new Date(result.endTime).toLocaleString('en-US', {
+                      month: 'short', day: 'numeric',
+                      hour: '2-digit', minute: '2-digit',
+                      timeZoneName: 'short'
+                    }) : 'N/A'}
+                  </span>
+                  <span style={{fontSize: '0.75rem', color: '#666', marginLeft: '4px'}}>(Local)</span>
+                </div>
+                {/* UTC Time */}
+                <div style={{fontSize: '0.85rem', color: '#6b7280'}}>
+                  <span>
+                    {result.endTime ? new Date(result.endTime).toLocaleString('en-US', {
+                      month: 'short', day: 'numeric',
+                      hour: '2-digit', minute: '2-digit',
+                      timeZone: 'UTC', timeZoneName: 'short'
+                    }) : ''}
+                  </span>
+                </div>
               </div>
             </div>
             {result.startTime && result.endTime && (
               <div style={{marginTop: '12px', padding: '8px', background: 'rgba(255,255,255,0.5)', borderRadius: '4px'}}>
                 <div style={{fontSize: '0.85rem', color: '#92400e'}}>
-                  <strong>आरम्भ:</strong> {formatNepaliDateTime(result.startTime)?.formatted ?? 'N/A'}
+                  <strong>आरम्भ (Nepal Time):</strong> {formatNepaliDateTime(result.startTime)?.formatted ?? 'N/A'}
                 </div>
                 <div style={{fontSize: '0.85rem', color: '#92400e', marginTop: '4px'}}>
-                  <strong>समाप्ति:</strong> {formatNepaliDateTime(result.endTime)?.formatted ?? 'N/A'}
+                  <strong>समाप्ति (Nepal Time):</strong> {formatNepaliDateTime(result.endTime)?.formatted ?? 'N/A'}
                 </div>
               </div>
             )}

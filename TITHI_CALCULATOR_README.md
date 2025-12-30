@@ -6,12 +6,12 @@ The Tithi Calculator is a component in the Family Tree App that computes the lun
 
 ### Automatic Mode (Date/Time)
 - Select a date and time to automatically calculate Sun and Moon ecliptic longitudes.
-- Uses high-precision astronomical calculations via a Python script (Skyfield library) running on Firebase Cloud Functions.
+- Uses high-precision astronomical calculations via `astronomy-engine` (JavaScript library) running natively on Firebase Cloud Functions.
 - Automatically detects the user's location for topocentric calculations (more accurate).
 - Falls back to default location (Kathmandu, Nepal) if geolocation is unavailable or denied.
 - **Displays exact Tithi start and end times** that are fixed for each Tithi period, calculated using binary search for precision.
 - **Shows Nepali date and time format** alongside English format for cultural relevance.
-- **Process Explanation**: Since the React app runs in the browser (client-side JavaScript), it cannot execute Python scripts directly. The automatic mode calls a Firebase Cloud Function (server-side), which spawns the local Python script with Skyfield to compute accurate ecliptic longitudes. The results are returned to the browser, where JavaScript calculates the final Tithi using the standard formula. This architecture ensures high precision while keeping the UI responsive.
+- **Process Explanation**: The automatic mode calls a Firebase Cloud Function (server-side), which uses the `astronomy-engine` library to compute accurate ecliptic longitudes and Tithi boundaries. The results are returned to the browser. This architecture ensures high precision and production compatibility.
 
 ### Manual Mode (Longitudes)
 - Enter Moon and Sun ecliptic longitudes manually (in degrees).
@@ -54,7 +54,6 @@ The Tithi Calculator is a component in the Family Tree App that computes the lun
 ### Prerequisites
 - Node.js and npm installed.
 - Firebase CLI installed (`npm install -g firebase-tools`).
-- Python 3 with Skyfield library (`pip install skyfield`).
 - Java JDK installed (for Firebase emulators).
 
 ### Running Locally with Emulators
@@ -62,6 +61,7 @@ The Tithi Calculator is a component in the Family Tree App that computes the lun
 1. **Install Dependencies**:
    ```
    npm install
+   cd functions && npm install
    ```
 
 2. **Start Firebase Emulators**:
@@ -92,10 +92,7 @@ The Tithi Calculator is a component in the Family Tree App that computes the lun
 ### Production Deployment
 - Deploy functions: `firebase deploy --only functions`
 - Deploy hosting: `firebase deploy --only hosting`
-- **Note**: The Python script won't work in production Firebase Functions (Node.js runtime lacks Python). For production, consider:
-  - Converting to a JavaScript astronomy library (e.g., fix astronomy-engine issues).
-  - Using a custom container with Python.
-  - Calling an external API for ephemeris data.
+- **Note**: The solution is now fully Node.js based and works natively in Firebase Functions.
 
 ## Technical Details
 
@@ -120,15 +117,15 @@ The Tithi Calculator is a component in the Family Tree App that computes the lun
 ## Files Involved
 - `src/components/TithiCalculator.js`: Main UI component with Nepali date/time formatting and timezone conversion.
 - `src/utils/ephemeris.js`: Handles API calls to Firebase function.
-- `functions/index.js`: Firebase function that spawns Python script.
-- `tools/compute_tithi.py`: Python script using Skyfield for calculations.
+- `functions/index.js`: Firebase function entry point.
+- `functions/tithiCalculator.js`: Core logic using `astronomy-engine` for calculations.
+- `tools/compute_tithi.py`: (Deprecated) Python script using Skyfield.
 - `src/utils/nepaliDateUtils.js`: Nepali calendar conversion utilities.
 - `src/components/TithiCalculator.css`: Styling.
 
 ## Troubleshooting
 - **Emulator Port Conflicts**: Kill processes on ports 8080/5001 if needed.
 - **Geolocation Not Working**: Check browser permissions; ensure HTTPS in production.
-- **Function Errors**: Check emulator logs for Python script issues.
-- **Production Issues**: Python not available; switch to JS library or custom deployment.
+- **Function Errors**: Check emulator logs.
 
 For more details, see the main app README or contact the development team.
