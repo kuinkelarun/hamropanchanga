@@ -1908,6 +1908,9 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
       <div className="admin-section">
         <h2>🤖 Auto Management</h2>
         <p>Automatically calculate Tithis for a date range and generate Excel file for bulk upload.</p>
+        <p className="text-sm text-gray-600 mt-1">
+          <strong>Note:</strong> Calculations use <strong>Kathmandu, Nepal</strong> coordinates (27.7172° N, 85.3240° E) for astronomical accuracy.
+        </p>
         
         <div className="auto-management-form">
           <div className="form-row">
