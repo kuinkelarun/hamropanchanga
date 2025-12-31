@@ -13,6 +13,9 @@ import AdminEditCards from './components/AdminEditCards';
 import AdminManagement from './components/AdminManagement';
 import UserManagement from './components/UserManagement';
 import TithiCalculatorPage from './components/TithiCalculatorPage';
+import TreeBuilderPage from './components/TreeBuilder/TreeBuilderPage';
+import EmbeddedBuilderPage from './components/TreeBuilder/EmbeddedBuilderPage';
+import TreeSelectionPage from './components/TreeBuilder/TreeSelectionPage';
 import { useUserPermissions } from './hooks/usePermissions';
 import { PERMISSIONS } from './constants/roles';
 
@@ -386,7 +389,11 @@ function AppContent() {
     const handleAddCustomerSuccess = async (newCustomerData) => {
         try {
             const customerCollectionRef = collection(db, 'customers');
-            await addDoc(customerCollectionRef, { ...newCustomerData, userId: user.uid });
+            await addDoc(customerCollectionRef, { 
+                ...newCustomerData, 
+                userId: user.uid,
+                createdAt: new Date().toISOString()
+            });
             navigate('/');
         } catch (error) {
             console.error("Error adding customer:", error);
@@ -610,6 +617,25 @@ function AppContent() {
                     <Route path="/tithi-calculator" element={
                         <TithiCalculatorPage
                             onBack={handleBackToList}
+                        />
+                    } />
+
+                    <Route path="/trees" element={
+                        <TreeSelectionPage
+                            user={user}
+                        />
+                    } />
+
+                    <Route path="/builder/:customerId" element={
+                        <TreeBuilderPage
+                            user={user}
+                        />
+                    } />
+
+                    {/* New embedded Tree Builder route backed by Firestore trees */}
+                    <Route path="/builder" element={
+                        <EmbeddedBuilderPage
+                            user={user}
                         />
                     } />
                 </Routes>
