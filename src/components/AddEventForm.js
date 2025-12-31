@@ -1,9 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import NepaliDatePicker from './NepaliDatePicker'; // Use the existing NepaliDatePicker component
 import { useSettings } from '../contexts/SettingsContext';
 
-// Component to add a new event
-const AddEventForm = ({ onAdd, familyMembers, onCancel }) => {
+// Component to add/edit an event
+const AddEventForm = ({ onAdd, familyMembers, onCancel, editingEvent }) => {
     // Initialize date with today's date in YYYY-MM-DD format
     const getTodayDate = () => {
         const today = new Date();
@@ -19,6 +19,16 @@ const AddEventForm = ({ onAdd, familyMembers, onCancel }) => {
     const [repetition, setRepetition] = useState('none');
     const { isNepaliCalendar } = useSettings(); // Use global settings
 
+    // Populate form when editing
+    useEffect(() => {
+        if (editingEvent) {
+            setName(editingEvent.title || '');
+            setDate(editingEvent.dateKey || getTodayDate());
+            setSelectedPersonId(editingEvent.memberId || '');
+            setRepetition(editingEvent.repetition || 'none');
+        }
+    }, [editingEvent]);
+
     const handleSubmit = (e) => {
         e.preventDefault();
         if (!name.trim() || !date || !selectedPersonId) return;
@@ -33,7 +43,9 @@ const AddEventForm = ({ onAdd, familyMembers, onCancel }) => {
     return (
         <>
             <div className="bg-white p-4 rounded-xl shadow-inner mb-4 space-y-3">
-                <h4 className="text-lg font-bold text-gray-800">Add New Event</h4>
+                <h4 className="text-lg font-bold text-gray-800">
+                    {editingEvent ? 'Edit Event' : 'Add New Event'}
+                </h4>
                 <form onSubmit={handleSubmit} className="space-y-3">
                     <div>
                         <label htmlFor="event-person" className="block text-gray-700 font-semibold mb-1 text-sm">
@@ -110,7 +122,7 @@ const AddEventForm = ({ onAdd, familyMembers, onCancel }) => {
                             Cancel
                         </button>
                         <button type="submit" className="px-4 py-2 rounded-xl text-white font-semibold transition bg-green-600 hover:bg-green-700 text-sm">
-                            Add Event
+                            {editingEvent ? 'Update Event' : 'Add Event'}
                         </button>
                     </div>
                 </form>

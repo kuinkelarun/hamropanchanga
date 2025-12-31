@@ -24,11 +24,13 @@ function treesCollection() {
 // ---- Trees API ----
 
 export const Trees = {
-  async create(title, ownerUid) {
+  async create(title, ownerUid, metadata = {}) {
     const colRef = treesCollection();
     const payload = {
       title: title || 'My Tree',
       ownerUid: ownerUid || null,
+      contact: metadata.contact || '',
+      location: metadata.location || '',
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
       deleted: false,

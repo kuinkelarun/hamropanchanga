@@ -112,7 +112,7 @@ function convertBsToAd(year, month, day){
   return { year: adDate.getFullYear(), month: adDate.getMonth(), day: adDate.getDate() };
 }
 
-export default function NepaliCalendar({ user: propUser, isAdmin, onCustomerClick }) {
+export default function NepaliCalendar({ user: propUser, isAdmin, onCustomerClick, treeMembers = [], onTreeEventClick }) {
   const { isEditMode } = useSettings();
   const [user, setUser] = useState(propUser || null);
   const [authLoading, setAuthLoading] = useState(!propUser);
@@ -314,36 +314,51 @@ export default function NepaliCalendar({ user: propUser, isAdmin, onCustomerClic
     const eventsCollection = collection(db, 'calendarEvents');
     
     if (!user) {
-      // Guests: only public events
-      const q = query(
+      // Guests: public events AND tree member events
+      const publicQuery = query(
         eventsCollection, 
         where('isPublic', '==', true),
         orderBy('dateKey')
       );
       
-      const unsubscribe = onSnapshot(q, (snapshot) => {
-        console.log('Firebase events snapshot received (guest):', {
-          docsCount: snapshot.docs.length,
-          timestamp: new Date().toLocaleTimeString()
+      const treeQuery = query(
+        eventsCollection,
+        orderBy('treeId'),
+        orderBy('dateKey')
+      );
+      
+      const eventsByIdMap = new Map();
+      
+      const unsubscribe1 = onSnapshot(publicQuery, (snapshot) => {
+        console.log('Public events snapshot (guest):', snapshot.docs.length);
+        snapshot.docs.forEach(docSnap => {
+          eventsByIdMap.set(docSnap.id, { id: docSnap.id, ...docSnap.data() });
         });
-        
-        const events = snapshot.docs.map(docSnap => ({
-          id: docSnap.id,
-          ...docSnap.data()
-        }));
-        
-        console.log('Calendar events loaded (guest):', events.length, events);
-        setCalendarEvents(events);
+        setCalendarEvents(Array.from(eventsByIdMap.values()));
       }, (error) => {
-        console.error('Firebase events onSnapshot error:', error);
+        console.error('Public events error:', error);
+      });
+
+      const unsubscribe2 = onSnapshot(treeQuery, (snapshot) => {
+        console.log('Tree events snapshot (guest):', snapshot.docs.length);
+        snapshot.docs.forEach(docSnap => {
+          const data = docSnap.data();
+          if (data.treeId) { // Only include if treeId exists
+            eventsByIdMap.set(docSnap.id, { id: docSnap.id, ...data });
+          }
+        });
+        setCalendarEvents(Array.from(eventsByIdMap.values()));
+      }, (error) => {
+        console.error('Tree events error:', error);
       });
 
       return () => {
         console.log('Cleaning up calendar events listener');
-        unsubscribe();
+        unsubscribe1();
+        unsubscribe2();
       };
     } else {
-      // Logged-in users: fetch public events AND their own private events
+      // Logged-in users: fetch public events AND their own private events AND tree member events
       // Admins also fetch ALL admin-created private events
       // Use queries and merge the results
       const publicQuery = query(
@@ -355,6 +370,12 @@ export default function NepaliCalendar({ user: propUser, isAdmin, onCustomerClic
       const userQuery = query(
         eventsCollection,
         where('createdBy', '==', user.uid),
+        orderBy('dateKey')
+      );
+
+      const treeQuery = query(
+        eventsCollection,
+        orderBy('treeId'),
         orderBy('dateKey')
       );
       
@@ -380,8 +401,21 @@ export default function NepaliCalendar({ user: propUser, isAdmin, onCustomerClic
         console.error('User events error:', error);
       });
 
+      const unsubscribe3 = onSnapshot(treeQuery, (snapshot) => {
+        console.log('Tree events snapshot:', snapshot.docs.length);
+        snapshot.docs.forEach(docSnap => {
+          const data = docSnap.data();
+          if (data.treeId) { // Only include if treeId exists
+            eventsByIdMap.set(docSnap.id, { id: docSnap.id, ...data });
+          }
+        });
+        setCalendarEvents(Array.from(eventsByIdMap.values()));
+      }, (error) => {
+        console.error('Tree events error:', error);
+      });
+
       // If admin, also fetch all admin-created private events
-      let unsubscribe3 = null;
+      let unsubscribe4 = null;
       if (isAdmin) {
         const adminPrivateQuery = query(
           eventsCollection,
@@ -390,7 +424,7 @@ export default function NepaliCalendar({ user: propUser, isAdmin, onCustomerClic
           orderBy('dateKey')
         );
         
-        unsubscribe3 = onSnapshot(adminPrivateQuery, (snapshot) => {
+        unsubscribe4 = onSnapshot(adminPrivateQuery, (snapshot) => {
           console.log('Admin private events snapshot:', snapshot.docs.length);
           snapshot.docs.forEach(docSnap => {
             eventsByIdMap.set(docSnap.id, { id: docSnap.id, ...docSnap.data() });
@@ -405,7 +439,8 @@ export default function NepaliCalendar({ user: propUser, isAdmin, onCustomerClic
         console.log('Cleaning up calendar events listeners');
         unsubscribe1();
         unsubscribe2();
-        if (unsubscribe3) unsubscribe3();
+        unsubscribe3();
+        if (unsubscribe4) unsubscribe4();
       };
     }
   }, [authLoading, user, isAdmin]);
@@ -1284,6 +1319,13 @@ export default function NepaliCalendar({ user: propUser, isAdmin, onCustomerClic
     return calendarEvents.filter(event => event.dateKey === dateKey);
   }, [calendarEvents]);
 
+  // Helper function to get tree member name
+  const getTreeMemberName = useCallback((memberId) => {
+    if (!memberId || !treeMembers) return null;
+    const member = treeMembers.find(m => m.id === memberId);
+    return member ? member.name : null;
+  }, [treeMembers]);
+
   // Helper function to categorize events by type
   const categorizeEvents = useCallback((events) => {
     const publicEvents = [];
@@ -1927,16 +1969,46 @@ function compareTithisByStart(a,b){
                 <span style={{ fontSize: '0.75rem', padding: '0.125rem 0.375rem', background: '#dbeafe', color: '#1e40af', borderRadius: '0.25rem', fontWeight: '600' }}>Private</span>
               </h4>
               {modalPersonalEvents.length===0 && <div className="muted">No personal events for this date</div>}
-              {modalPersonalEvents.map(event => (
-                <div key={event.id} className="nc-item" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '0.5rem' }}>
-                  <div style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
-                    <div style={{ flex: 1 }}>
-                      <div className="nc-item-title">{event.title}</div>
-                      {event.description && <div className="muted" style={{ marginTop: '0.25rem' }}>{event.description}</div>}
+              {modalPersonalEvents.map(event => {
+                const memberName = getTreeMemberName(event.memberId);
+                const isTreeEvent = !!event.treeId;
+                return (
+                  <div 
+                    key={event.id} 
+                    className="nc-item" 
+                    style={{ 
+                      flexDirection: 'column', 
+                      alignItems: 'flex-start', 
+                      gap: '0.5rem',
+                      cursor: isTreeEvent && onTreeEventClick ? 'pointer' : 'default'
+                    }}
+                    onDoubleClick={() => {
+                      if (isTreeEvent && onTreeEventClick) {
+                        const eventData = {
+                          ...event,
+                          name: event.title,
+                          date: event.dateKey,
+                          personId: event.memberId
+                        };
+                        onTreeEventClick(eventData);
+                        setDetailsModalOpen(false);
+                      }
+                    }}
+                  >
+                    <div style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
+                      <div style={{ flex: 1 }}>
+                        <div className="nc-item-title">{event.title}</div>
+                        {memberName && (
+                          <div className="muted" style={{ marginTop: '0.25rem', fontSize: '0.875rem' }}>
+                            For: {memberName}
+                          </div>
+                        )}
+                        {event.description && <div className="muted" style={{ marginTop: '0.25rem' }}>{event.description}</div>}
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
 
             {/* Customer Events Section - shows family member events from customers collection */}
