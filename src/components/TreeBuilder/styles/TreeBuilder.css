@@ -164,3 +164,26 @@
   font-size: 1.1rem;
   color: #64748b;
 }
+
+/* Edge draw animation: grows from source to target and fades */
+@keyframes edgeDraw {
+  0% {
+    stroke-dasharray: var(--edge-length) var(--edge-length);
+    stroke-dashoffset: var(--edge-length);
+    opacity: 0.9;
+  }
+  80% {
+    opacity: 0.55;
+  }
+  100% {
+    stroke-dashoffset: 0;
+    opacity: 0;
+  }
+}
+
+.edge-race {
+  animation-name: edgeDraw;
+  animation-duration: 700ms;
+  animation-timing-function: ease-out;
+  animation-iteration-count: 1;
+}

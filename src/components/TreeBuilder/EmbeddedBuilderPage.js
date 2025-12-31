@@ -6,6 +6,7 @@ import SidebarPanel from './SidebarPanel';
 import MemberModal from './MemberModal';
 import RelationshipPicker from './RelationshipPicker';
 import { displayMemberName } from './utils/format';
+import './styles/TreeBuilder.css';
 
 const RELATIONSHIP_COLORS = {
   parent: '#f97316',
@@ -783,6 +784,8 @@ export default function EmbeddedBuilderPage({ user }) {
     if (!edge || !edge.data) return;
     const { relationshipId, type, label } = edge.data;
     if (!relationshipId) return;
+    // Clear highlight when entering edit mode
+    clearSelection();
     setEditPicker({
       open: true,
       relationshipId,
@@ -876,18 +879,21 @@ export default function EmbeddedBuilderPage({ user }) {
         if (edge?.data?.fromMarriagePoint) addMemberSeed(targetId);
       }
 
-      // BFS over parent/child adjacency
-      const visited = new Set();
+      // BFS over parent/child adjacency (compute distance by levels)
+      const dist = new Map();
       const queue = Array.from(seeds);
+      queue.forEach(s => dist.set(String(s), 0));
       while (queue.length) {
         const cur = String(queue.shift());
-        if (!cur || visited.has(cur)) continue;
-        visited.add(cur);
+        const curDist = dist.get(cur) ?? 0;
         const neigh = relAdj.get(cur);
         if (neigh && neigh.size) {
           for (const n of neigh) {
             const nn = String(n);
-            if (!visited.has(nn)) queue.push(nn);
+            if (!dist.has(nn)) {
+              dist.set(nn, curDist + 1);
+              queue.push(nn);
+            }
           }
         }
       }
@@ -897,43 +903,58 @@ export default function EmbeddedBuilderPage({ user }) {
         const id = String(n.id);
         if (n.type === 'marriagePoint') {
           const parents = (n.data && Array.isArray(n.data.parents)) ? n.data.parents.map(String) : [];
-          const select = parents.some(p => visited.has(p));
+          const select = parents.some(p => dist.has(p));
           return { ...n, selected: !!select };
         }
-        return { ...n, selected: visited.has(id) };
+        return { ...n, selected: dist.has(id) };
       }));
 
-      // Select edges along the parent/child chain
+      // Select edges along the parent/child chain and assign animation delay by phase
+      const PHASE_MS = 140; // delay between levels
       setEdges(prev => prev.map(e => {
         const et = e?.data?.type || e?.label || 'custom';
         const s = String(e.source || '');
         const t = String(e.target || '');
         let select = false;
+        let animDelayMs = null;
         if (et === 'parent' || et === 'child') {
           const sMember = !s.startsWith('mp-');
           const tMember = !t.startsWith('mp-');
           if (sMember && tMember) {
-            select = visited.has(s) && visited.has(t);
+            const ds = dist.get(s);
+            const dt = dist.get(t);
+            select = dist.has(s) && dist.has(t);
+            if (select) animDelayMs = Math.min(ds ?? 0, dt ?? 0) * PHASE_MS;
           } else if (!sMember && tMember && e?.data?.fromMarriagePoint) {
             // mp -> child edge: select if child is visited
-            select = visited.has(t);
+            const dt = dist.get(t);
+            select = dist.has(t);
+            if (select) animDelayMs = (dt ?? 0) * PHASE_MS;
           }
         } else if (et === 'parent-connector') {
           // select if parent endpoint is visited
           const parentId = !s.startsWith('mp-') ? s : (!t.startsWith('mp-') ? t : '');
-          select = !!parentId && visited.has(parentId);
+          const dp = parentId ? dist.get(parentId) : null;
+          select = !!parentId && dist.has(parentId);
+          if (select) animDelayMs = (dp ?? 0) * PHASE_MS;
         }
-        return { ...e, selected: !!select };
+        const nextData = { ...(e.data || {}) };
+        if (animDelayMs != null) nextData.animDelayMs = animDelayMs;
+        return { ...e, selected: !!select, data: nextData };
       }));
     } catch (err) {
       // Fail-safe: ignore highlight errors
     }
   };
 
+  const clearSelection = () => {
+    setNodes(prev => prev.map(n => ({ ...n, selected: false })));
+    setEdges(prev => prev.map(e => ({ ...e, selected: false, data: { ...(e.data || {}), animDelayMs: null } })));
+  };
+
   const handlePaneClick = () => {
     // Clear all selections
-    setNodes(prev => prev.map(n => ({ ...n, selected: false })));
-    setEdges(prev => prev.map(e => ({ ...e, selected: false })));
+    clearSelection();
   };
 
   if (loading) {
