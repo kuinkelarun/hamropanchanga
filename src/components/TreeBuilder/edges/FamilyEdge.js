@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useRef, useEffect } from 'react';
 import { getBezierPath, getSmoothStepPath, BaseEdge, EdgeLabelRenderer } from 'reactflow';
 
 // Custom edge component mirroring the standalone FamilyEdge behavior.
@@ -75,9 +75,41 @@ export default function FamilyEdge({
     return true;
   }, [virtual, type, fromMarriagePoint]);
 
+  const animDelayMs = Number.isFinite(data?.animDelayMs) ? data.animDelayMs : null;
+  const raceRef = useRef(null);
+  const [raceLen, setRaceLen] = useState(null);
+  useEffect(() => {
+    try {
+      if (raceRef.current && typeof raceRef.current.getTotalLength === 'function') {
+        const len = raceRef.current.getTotalLength();
+        if (Number.isFinite(len)) setRaceLen(len);
+      } else {
+        setRaceLen(null);
+      }
+    } catch {
+      setRaceLen(null);
+    }
+  }, [edgePath]);
+
   return (
     <g onMouseEnter={() => setHovering(true)} onMouseLeave={() => setHovering(false)}>
       <BaseEdge id={id} path={edgePath} markerEnd={markerEnd} style={edgeStyle} interactionWidth={16} />
+      {/* Animated overlay to create a "race" effect when highlighting */}
+      {animDelayMs != null && (
+        <path
+          ref={raceRef}
+          d={edgePath}
+          className="edge-race"
+          style={{
+            '--edge-length': raceLen || 60,
+            stroke: '#6366f1', // modern indigo accent for animation
+            strokeWidth: edgeWidth + 1,
+            filter: 'drop-shadow(0 0 1.2px rgba(99,102,241,0.55))',
+            animationDelay: `${animDelayMs}ms`,
+          }}
+          fill="none"
+        />
+      )}
       {effectiveLabel && !virtual && (
         <EdgeLabel x={labelX} y={labelY} label={effectiveLabel} color={edgeColor} selected={selected} />
       )}
