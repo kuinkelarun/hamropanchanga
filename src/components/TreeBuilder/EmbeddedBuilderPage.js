@@ -6,6 +6,7 @@ import SidebarPanel from './SidebarPanel';
 import MemberModal from './MemberModal';
 import RelationshipPicker from './RelationshipPicker';
 import { displayMemberName } from './utils/format';
+import * as htmlToImage from 'html-to-image';
 import './styles/TreeBuilder.css';
 
 const RELATIONSHIP_COLORS = {
@@ -82,6 +83,38 @@ function bundleEdges(edgesIn, nodesIn) {
   }
 }
 
+// Helper function to create filename with tree title and date
+function makeFilename(treeTitle, ext) {
+  const title = (treeTitle || 'family-tree').trim();
+  const safeTitle = title.replace(/[^a-z0-9\- _.]/gi, '').replace(/\s+/g, ' ').trim();
+  const date = new Date();
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${safeTitle} ${y}-${m}-${d}.${ext}`;
+}
+
+// Helper function to convert SVG data URL to PNG
+function svgDataUrlToPng(svgUrl, pixelRatio = 2) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      const w = img.naturalWidth || img.width;
+      const h = img.naturalHeight || img.height;
+      canvas.width = Math.max(1, Math.floor(w * pixelRatio));
+      canvas.height = Math.max(1, Math.floor(h * pixelRatio));
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      resolve(canvas.toDataURL('image/png'));
+    };
+    img.onerror = reject;
+    img.src = svgUrl;
+  });
+}
+
 // Temporary shell component that will host the ported standalone Tree Builder UI.
 // For now, it simply ensures a tree exists for the current user and displays its id.
 export default function EmbeddedBuilderPage({ user }) {
@@ -100,6 +133,23 @@ export default function EmbeddedBuilderPage({ user }) {
   const [editPicker, setEditPicker] = useState({ open: false, relationshipId: '', type: 'custom', label: '' });
   const [previewEdge, setPreviewEdge] = useState(null);
   const [relAdj, setRelAdj] = useState(new Map());
+  const [sidebarVisible, setSidebarVisible] = useState(false);
+
+  // Auto-show sidebar when the canvas is ready, then auto-hide after 3s on mobile
+  useEffect(() => {
+    if (!tree || loading) return;
+
+    if (window.innerWidth < 1024) {
+      setSidebarVisible(true);
+      const timer = setTimeout(() => {
+        setSidebarVisible(false);
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+
+    // On larger screens keep sidebar always visible
+    setSidebarVisible(true);
+  }, [tree, loading]);
 
   useEffect(() => {
     async function ensureTree() {
@@ -491,6 +541,7 @@ export default function EmbeddedBuilderPage({ user }) {
   useEffect(() => {
     if (!tree) return;
     loadGraph(tree);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tree]);
 
   const handleNodeDragStop = async (event, node) => {
@@ -734,6 +785,95 @@ export default function EmbeddedBuilderPage({ user }) {
   const handleCancelRelationship = () => {
     setRelPicker({ open: false, source: '', target: '', sourceHandle: '', targetHandle: '' });
     setPreviewEdge(null);
+  };
+
+  const handleExportPng = async () => {
+    try {
+      if (!exportRef.current) return;
+      
+      // If we have a React Flow instance, fitView first so all nodes/edges are visible in the export
+      const inst = exportRef.current._reactFlowInstance;
+      let prevViewport = null;
+      try {
+        if (inst && typeof inst.getViewport === 'function') {
+          prevViewport = inst.getViewport();
+        }
+      } catch (err) {}
+
+      try {
+        if (inst && typeof inst.fitView === 'function') {
+          inst.fitView({ padding: 0.1 });
+          // allow a short delay for layout/paint
+          await new Promise(r => setTimeout(r, 180));
+        }
+      } catch (err) {
+        // ignore
+      }
+
+      // Use SVG render path first (captures React Flow edges reliably), then rasterize to PNG
+      const svgUrl = await htmlToImage.toSvg(exportRef.current, { backgroundColor: '#ffffff' });
+
+      // Decide pixel ratio based on current viewport zoom so labels remain readable on large graphs
+      const MIN_ZOOM = 0.12; // below this, increase pixel ratio
+      const MAX_PIXEL_RATIO = 6; // do not exceed this to avoid insane memory usage
+      let pixelRatio = 2;
+      try {
+        if (inst && typeof inst.getViewport === 'function') {
+          const vp = inst.getViewport();
+          const zoom = vp?.zoom || 1;
+          if (zoom < MIN_ZOOM) {
+            pixelRatio = Math.min(MAX_PIXEL_RATIO, Math.ceil(MIN_ZOOM / zoom) * 2);
+          }
+        }
+      } catch (err) {
+        // fallback to default pixelRatio
+        pixelRatio = 2;
+      }
+
+      // Safety cap based on resulting raster size (browser canvas limits)
+      const MAX_CANVAS_DIM = 16000; // conservative cap to avoid OOM or browser failures
+      const tempImg = await new Promise((resolve, reject) => {
+        const i = new Image();
+        i.onload = () => resolve(i);
+        i.onerror = reject;
+        i.src = svgUrl;
+      });
+      const naturalW = tempImg.naturalWidth || tempImg.width || 0;
+      const naturalH = tempImg.naturalHeight || tempImg.height || 0;
+      if (naturalW > 0 && naturalH > 0) {
+        const maxDim = Math.max(naturalW, naturalH);
+        if (maxDim * pixelRatio > MAX_CANVAS_DIM) {
+          const cap = Math.floor(MAX_CANVAS_DIM / maxDim) || 1;
+          if (cap < pixelRatio) {
+            console.warn(`Large tree detected — reducing export resolution to ${cap}× to avoid browser limits`);
+            pixelRatio = cap;
+          }
+        }
+      }
+
+      const pngUrl = await svgDataUrlToPng(svgUrl, pixelRatio);
+
+      // Restore previous viewport if possible
+      try {
+        if (inst && prevViewport) {
+          if (typeof inst.setViewport === 'function') {
+            inst.setViewport(prevViewport, { duration: 0 });
+          } else if (typeof inst.setCenter === 'function') {
+            inst.setCenter(prevViewport.x, prevViewport.y, { duration: 0 });
+          }
+        }
+      } catch (err) {
+        // ignore restore errors
+      }
+
+      const link = document.createElement('a');
+      link.download = makeFilename(tree?.title, 'png');
+      link.href = pngUrl;
+      link.click();
+    } catch (e) {
+      console.error('Export failed:', e);
+      alert('Export failed: ' + (e.message || 'unknown error'));
+    }
   };
 
   const handleTypePreview = type => {
@@ -994,22 +1134,56 @@ export default function EmbeddedBuilderPage({ user }) {
 
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col">
-      <div className="px-4 py-3 border-b border-gray-200 flex items-center justify-between bg-white shadow-sm">
-        <div>
+      <div 
+        className="px-4 py-3 border-b border-gray-200 flex items-center justify-center relative bg-white shadow-sm"
+        onClick={() => {
+          if (window.innerWidth < 1024) {
+            setSidebarVisible(false);
+          }
+        }}
+      >
+        <button
+          onClick={handleAddNodeToCanvas}
+          disabled={!tree}
+          className="absolute left-4 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white rounded-lg shadow font-medium text-sm transition-all"
+          title="Add a new node to the canvas"
+        >
+          + Add Node
+        </button>
+        <div className="text-center">
           <h1 className="text-xl font-semibold text-gray-800">{tree.title || 'Untitled Tree'}</h1>
           <p className="text-xs text-gray-500">Tree ID: {tree.id}</p>
         </div>
+        <button
+          onClick={handleExportPng}
+          disabled={!tree || !nodes || nodes.length === 0}
+          className="absolute right-4 px-4 py-2 bg-sky-500 hover:bg-sky-600 disabled:bg-gray-400 text-white rounded-lg shadow font-medium text-sm transition-all"
+          title="Export the tree as PNG"
+        >
+          Export PNG
+        </button>
       </div>
-      <div className="flex flex-1 min-h-0">
+      <div className="flex flex-1 min-h-0 relative">
         <SidebarPanel
           members={members}
           onAddNewMember={handleAddNodeToCanvas}
           onAddMemberToCanvas={handleAddMemberToCanvas}
           onSelectMember={handleSelectMember}
           canAddMember={!!tree}
+          isVisible={sidebarVisible}
+          onToggle={() => setSidebarVisible(!sidebarVisible)}
+          modalOpen={memberModalOpen}
         />
         {/* Give React Flow a concrete height so it can render */}
-        <div style={{ width: '100%', height: 'calc(100vh - 56px)' }}>
+        <div 
+          style={{ width: '100%', height: 'calc(100vh - 56px)' }}
+          onClick={() => {
+            // Hide sidebar on click (mobile-friendly auto-hide)
+            if (window.innerWidth < 1024) {
+              setSidebarVisible(false);
+            }
+          }}
+        >
           {/** Include a temporary preview edge when the relationship picker is open */}
           <TreeBoard
             nodes={nodes}
@@ -1024,19 +1198,20 @@ export default function EmbeddedBuilderPage({ user }) {
             onPaneClick={handlePaneClick}
             onDropMember={handleDropMember}
             exportRef={exportRef}
+            onExport={handleExportPng}
           />
         </div>
+        <MemberModal
+          open={memberModalOpen}
+          member={editingMember}
+          allMembers={members}
+          onSave={handleSaveMember}
+          onClose={handleCloseMemberModal}
+          canSave
+          onMoveToPool={handleMoveMemberToPool}
+          onDelete={handleDeleteMember}
+        />
       </div>
-      <MemberModal
-        open={memberModalOpen}
-        member={editingMember}
-        allMembers={members}
-        onSave={handleSaveMember}
-        onClose={handleCloseMemberModal}
-        canSave
-        onMoveToPool={handleMoveMemberToPool}
-        onDelete={handleDeleteMember}
-      />
       <RelationshipPicker
         open={relPicker.open}
         fromName={displayMemberName(members.find(m => m.id === relPicker.source))}

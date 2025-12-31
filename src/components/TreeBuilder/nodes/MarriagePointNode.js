@@ -5,7 +5,7 @@ import { Handle, Position } from 'reactflow';
 // Appears as a small circle between parents, connecting down to children.
 export default function MarriagePointNode({ data, selected }) {
   const [hovering, setHovering] = useState(false);
-  const { label, parents = [], verified } = data || {};
+  const { label, verified } = data || {};
 
   return (
     <div

@@ -145,15 +145,8 @@ const AddFamilyMemberForm = ({ onAdd, familyMembers }) => {
             const gen = relationToGeneration[relation];
             if (gen !== undefined) setGenerationOverride(String(gen));
         }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [relation, relationshipType]);
-
-    const directRelations = [
-        'Father', 'Mother', 'Spouse', 'Brother', 'Sister', 'Uncle', 'Aunt',
-        'Grandfather', 'Grandmother',
-        'Great Grandfather', 'Great Grandmother',
-        'Great Great Grandfather', 'Great Great Grandmother',
-        'Great Great Great Grandfather', 'Great Great Great Grandmother'
-    ];
 
     const childRelations = ['Son', 'Daughter'];
 

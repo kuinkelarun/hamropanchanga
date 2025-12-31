@@ -9,15 +9,6 @@ const EditFamilyMemberForm = ({ member, familyMembers, onUpdate, onCancel }) => 
         member.generationOverride !== undefined ? String(member.generationOverride) : (member.generation !== undefined ? String(member.generation) : '')
     );
 
-    const directRelations = [
-        'Father', 'Mother', 'Spouse', 'Brother', 'Sister', 'Uncle', 'Aunt',
-        'Grandfather', 'Grandmother',
-        'Great Grandfather', 'Great Grandmother',
-        'Great Great Grandfather', 'Great Great Grandmother',
-        'Great Great Great Grandfather', 'Great Great Great Grandmother',
-    ];
-    const childRelations = ['Son', 'Daughter'];
-
     const handleSubmit = (e) => {
         e.preventDefault();
         if (!name.trim() || !relation) return;
@@ -58,6 +49,7 @@ const EditFamilyMemberForm = ({ member, familyMembers, onUpdate, onCancel }) => 
             const gen = relationToGeneration[relation];
             if (gen !== undefined) setGenerationOverride(String(gen));
         }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [relation]);
 
     return (

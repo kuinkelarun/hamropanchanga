@@ -26,6 +26,7 @@ const NepaliDatePicker = ({ value, onChange, label, required = false }) => {
       setBsDate(todayBs);
       setAdValue('');
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [value]);
 
   const handleChange = (field, val) => {

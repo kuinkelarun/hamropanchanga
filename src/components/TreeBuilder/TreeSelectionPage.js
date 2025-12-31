@@ -12,9 +12,16 @@ export default function TreeSelectionPage({ user }) {
   const [error, setError] = useState('');
   const [eventModal, setEventModal] = useState({ open: false, treeId: null, members: [] });
   const [creatingModalOpen, setCreatingModalOpen] = useState(false);
+  const [editingModalOpen, setEditingModalOpen] = useState(false);
+  const [editingTree, setEditingTree] = useState(null);
   const [newTreeData, setNewTreeData] = useState({
     title: '',
     primaryName: '',
+    contact: '',
+    location: ''
+  });
+  const [editTreeData, setEditTreeData] = useState({
+    title: '',
     contact: '',
     location: ''
   });
@@ -70,15 +77,38 @@ export default function TreeSelectionPage({ user }) {
 
   const confirmCreateTree = async () => {
     if (!user) return;
+    
+    // Validate required fields
+    if (!newTreeData.title.trim()) {
+      alert('Tree Name is required');
+      return;
+    }
+    if (!newTreeData.primaryName.trim()) {
+      alert('Primary Member Name is required');
+      return;
+    }
+    if (!newTreeData.contact.trim()) {
+      alert('Contact Information is required');
+      return;
+    }
+    if (!newTreeData.location.trim()) {
+      alert('Location is required');
+      return;
+    }
+    
     setCreating(true);
     setError('');
     try {
-      const title = newTreeData.title.trim() || 'My Family Tree';
-      const primaryName = newTreeData.primaryName.trim() || user.displayName || 'Self';
+      const title = newTreeData.title.trim();
+      const primaryName = newTreeData.primaryName.trim();
       const contact = newTreeData.contact.trim();
       const location = newTreeData.location.trim();
       
-      const newTree = await Trees.create(title, user.uid, { contact, location });
+      const newTree = await Trees.create(title, user.uid, { 
+        contact, 
+        location,
+        primaryMemberName: primaryName 
+      });
       
       try {
         await Members.create({
@@ -104,6 +134,54 @@ export default function TreeSelectionPage({ user }) {
     }
   };
 
+  const handleEditTree = (tree) => {
+    setEditingTree(tree);
+    setEditTreeData({
+      title: tree.title || '',
+      contact: tree.contactInfo || tree.contact || '',
+      location: tree.location || ''
+    });
+    setEditingModalOpen(true);
+  };
+
+  const confirmEditTree = async () => {
+    if (!user || !editingTree) return;
+    
+    // Validate required fields
+    if (!editTreeData.title.trim()) {
+      alert('Tree Name is required');
+      return;
+    }
+    if (!editTreeData.contact.trim()) {
+      alert('Contact Information is required');
+      return;
+    }
+    if (!editTreeData.location.trim()) {
+      alert('Location is required');
+      return;
+    }
+    
+    try {
+      await Trees.update(editingTree.id, {
+        title: editTreeData.title.trim(),
+        contactInfo: editTreeData.contact.trim(),
+        contact: editTreeData.contact.trim(),
+        location: editTreeData.location.trim()
+      });
+      
+      // Refresh list
+      const all = await Trees.list(user.uid);
+      setTrees((all || []).filter(t => !t.deleted));
+      
+      setEditingModalOpen(false);
+      setEditingTree(null);
+      setEditTreeData({ title: '', contact: '', location: '' });
+    } catch (err) {
+      console.error('Error updating tree:', err);
+      setError(err.message || 'Failed to update tree');
+    }
+  };
+
   const handleDeleteTree = async (treeId) => {
     const ok = window.confirm('Delete this tree? It will be archived and hidden.');
     if (!ok) return;
@@ -115,17 +193,6 @@ export default function TreeSelectionPage({ user }) {
     } catch (err) {
       console.error('Error deleting tree:', err);
       setError(err.message || 'Failed to delete tree');
-    }
-  };
-
-  const openEventModal = async (treeId) => {
-    try {
-      const members = await Members.list(treeId);
-      const fm = (members || []).map(m => ({ id: m.id, name: m.name || 'Member', relation: '' }));
-      setEventModal({ open: true, treeId, members: fm });
-    } catch (err) {
-      console.error('Error loading members for event:', err);
-      setEventModal({ open: true, treeId, members: [] });
     }
   };
 
@@ -226,7 +293,7 @@ export default function TreeSelectionPage({ user }) {
               disabled={creating}
               className="px-6 py-2.5 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 disabled:opacity-60 disabled:cursor-not-allowed text-white rounded-lg font-semibold shadow-md transition-all transform hover:scale-105"
             >
-              {creating ? 'Creating...' : '+ Create New Tree'}
+              {creating ? 'Creating...' : '+ Build New Tree'}
             </button>
           </div>
 
@@ -245,12 +312,19 @@ export default function TreeSelectionPage({ user }) {
                       <p className="text-sm text-gray-600 mb-2">📍 {tree.location}</p>
                     )}
                     {tree.contact && (
-                      <p className="text-sm text-gray-600 mb-2">📞 {tree.contact}</p>
+                      <a 
+                        href={`tel:${tree.contact.replace(/\D/g, '')}`}
+                        className="text-sm text-gray-600 mb-2 block hover:text-blue-600 transition-colors"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        📞 {tree.contact}
+                      </a>
                     )}
                   </div>
                   <div className="flex items-center gap-2 mt-4 pt-4 border-t border-gray-200">
                     <button className="flex-1 px-3 py-2 text-xs bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium" onClick={() => handleOpenTree(tree.id)}>View Details</button>
-                    <button className="px-3 py-2 text-xs bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium" onClick={() => handleDeleteTree(tree.id)}>Delete</button>
+                    <button className="px-3 py-2 text-xs bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium" onClick={(e) => { e.stopPropagation(); handleEditTree(tree); }}>Edit</button>
+                    <button className="px-3 py-2 text-xs bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium" onClick={(e) => { e.stopPropagation(); handleDeleteTree(tree.id); }}>Delete</button>
                   </div>
                 </div>
               ))}
@@ -263,7 +337,7 @@ export default function TreeSelectionPage({ user }) {
                 </svg>
               </div>
               <p className="text-gray-600 mb-4">You don't have any trees yet.</p>
-              <p className="text-sm text-gray-500">Click "Create New Tree" to get started on your family history journey.</p>
+              <p className="text-sm text-gray-500">Click "Build New Tree" to get started on your family history journey.</p>
             </div>
           )}
         </div>
@@ -294,7 +368,7 @@ export default function TreeSelectionPage({ user }) {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Contact Information</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Contact Information *</label>
                 <input 
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
                   value={newTreeData.contact} 
@@ -303,7 +377,7 @@ export default function TreeSelectionPage({ user }) {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Location</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Location *</label>
                 <input 
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
                   value={newTreeData.location} 
@@ -333,7 +407,63 @@ export default function TreeSelectionPage({ user }) {
           </div>
         </div>
       )}
+Edit Tree Modal */}
+      {editingModalOpen && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md">
+            <h2 className="text-xl font-bold text-gray-800 mb-4">Edit Tree</h2>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Tree Name *</label>
+                <input 
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
+                  value={editTreeData.title} 
+                  onChange={(e) => setEditTreeData({...editTreeData, title: e.target.value})} 
+                  placeholder="e.g., Smith Family Tree" 
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Contact Information *</label>
+                <input 
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
+                  value={editTreeData.contact} 
+                  onChange={(e) => setEditTreeData({...editTreeData, contact: e.target.value})} 
+                  placeholder="Phone or Email" 
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Location *</label>
+                <input 
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
+                  value={editTreeData.location} 
+                  onChange={(e) => setEditTreeData({...editTreeData, location: e.target.value})} 
+                  placeholder="City, State, or Country" 
+                />
+              </div>
+            </div>
+            <div className="mt-6 flex justify-end gap-3">
+              <button 
+                className="px-4 py-2 text-sm bg-gray-100 hover:bg-gray-200 rounded-lg font-medium transition-colors" 
+                onClick={() => { 
+                  setEditingModalOpen(false); 
+                  setEditingTree(null);
+                  setEditTreeData({ title: '', contact: '', location: '' }); 
+                }}
+              >
+                Cancel
+              </button>
+              <button 
+                className="px-4 py-2 text-sm bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors" 
+                onClick={confirmEditTree}
+              >
+                Save Changes
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
+      {/* 
       {/* Add Event Modal */}
       {eventModal.open && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">

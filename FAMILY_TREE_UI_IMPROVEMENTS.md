@@ -568,7 +568,7 @@ img {
 **FIND:**
 ```jsx
                             <button className="cta-button" onClick={onAddCustomer}>
-                                Start Your Tree
+                                Build Your Tree
                             </button>
 ```
 
@@ -579,7 +579,7 @@ img {
                                 onClick={onAddCustomer}
                                 aria-label="Start building your family tree"
                             >
-                                Start Your Tree
+                                Build Your Tree
                             </button>
 ```
 

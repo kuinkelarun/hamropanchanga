@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef, useCallback, useMemo } from 'react';
+import React, { useEffect } from 'react';
 import ReactFlow, { Background, useNodesState, useEdgesState, ReactFlowProvider, useReactFlow } from 'reactflow';
 import 'reactflow/dist/style.css';
 import FamilyNode from './nodes/FamilyNode';
@@ -34,15 +34,25 @@ function TreePreviewInner({ treeId, members, relationships, marriagePoints, onCl
       return;
     }
     
-    console.log('TreePreview: Building nodes from members:', members);
+    // Filter to only show members with positions (on canvas)
+    const positionedMembers = members.filter(m => m.position && m.position.x !== undefined && m.position.y !== undefined);
+    
+    console.log('TreePreview: Building nodes from positioned members:', positionedMembers);
     console.log('TreePreview: Relationships:', relationships);
     console.log('TreePreview: Marriage points:', marriagePoints);
     
-    // Build nodes from members
-    const memberNodes = members.map(m => ({
+    if (positionedMembers.length === 0) {
+      console.log('TreePreview: No positioned members to display');
+      setNodes([]);
+      setEdges([]);
+      return;
+    }
+    
+    // Build nodes from positioned members only
+    const memberNodes = positionedMembers.map(m => ({
       id: String(m.id),
       type: 'familyNode',
-      position: m.position || { x: 0, y: 0 },
+      position: m.position,
       data: {
         label: m.name || 'Unknown',
         gender: m.gender,

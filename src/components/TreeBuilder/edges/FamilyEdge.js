@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useRef, useEffect } from 'react';
-import { getBezierPath, getSmoothStepPath, BaseEdge, EdgeLabelRenderer } from 'reactflow';
+import { getSmoothStepPath, BaseEdge } from 'reactflow';
 
 // Custom edge component mirroring the standalone FamilyEdge behavior.
 // Handles parent-child, spouse, sibling, and virtual connector edges with
