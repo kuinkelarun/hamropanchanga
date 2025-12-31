@@ -68,6 +68,7 @@ export default function RelationInput({ id, value, onChange, groupedOptions = []
                 <div
                   key={opt}
                   role="option"
+                  aria-selected={value === opt}
                   tabIndex={0}
                   onClick={() => { onChange(opt); setOpen(false); }}
                   onKeyDown={(e)=> { if (e.key === 'Enter') { onChange(opt); setOpen(false); } }}

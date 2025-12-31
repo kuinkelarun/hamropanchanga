@@ -1,25 +1,20 @@
 import React, { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, useNavigate, useParams } from 'react-router-dom';
-import { collection, query, where, onSnapshot, doc, getDoc, setDoc, updateDoc, addDoc, deleteDoc, getDocs } from 'firebase/firestore';
+import { BrowserRouter as Router, Routes, Route, useNavigate } from 'react-router-dom';
+import { collection, query, where, onSnapshot, doc, getDoc, setDoc, updateDoc, getDocs } from 'firebase/firestore';
 import { onAuthStateChanged, signOut, getIdTokenResult } from 'firebase/auth';
 import { auth, signInWithGoogle, db } from './firebase';
 import { SettingsProvider } from './contexts/SettingsContext';
 import SettingsMenu from './components/SettingsMenu';
-// CustomerList is rendered inside LandingPage; App does not use it directly here
-import CustomerDetail from './components/CustomerDetail';
-import AddCustomerForm from './components/AddCustomerForm';
 import LandingPage from './components/LandingPage';
 import AdminEditCards from './components/AdminEditCards';
 import AdminManagement from './components/AdminManagement';
 import UserManagement from './components/UserManagement';
 import TithiCalculatorPage from './components/TithiCalculatorPage';
-import TreeBuilderPage from './components/TreeBuilder/TreeBuilderPage';
 import EmbeddedBuilderPage from './components/TreeBuilder/EmbeddedBuilderPage';
 import TreeSelectionPage from './components/TreeBuilder/TreeSelectionPage';
 import TreeDetailPage from './components/TreeBuilder/TreeDetailPage';
 import { Trees } from './components/TreeBuilder/utils/firestoreTreeApi';
 import { useUserPermissions } from './hooks/usePermissions';
-import { PERMISSIONS } from './constants/roles';
 
 // Tithi Calculator Button Component with visibility control
 function TithiCalculatorButton({ onClick }) {
@@ -77,86 +72,19 @@ export default function App() {
     );
 }
 
-// Wrapper component to handle customer route with URL params
-function CustomerDetailWrapper({ customers, selectedCustomer, onBack, onUpdate }) {
-    const { customerId } = useParams();
-    const [customer, setCustomer] = useState(null);
-    const [loading, setLoading] = useState(true);
-
-    useEffect(() => {
-        // If selectedCustomer is available, use it
-        if (selectedCustomer && selectedCustomer.id === customerId) {
-            setCustomer(selectedCustomer);
-            setLoading(false);
-            return;
-        }
-
-        // Check if customer is in the customers list
-        const foundCustomer = customers.find(c => c.id === customerId);
-        if (foundCustomer) {
-            setCustomer(foundCustomer);
-            setLoading(false);
-            return;
-        }
-
-        // If not found, fetch from Firestore (for page refresh case)
-        const fetchCustomer = async () => {
-            try {
-                const customerRef = doc(db, 'customers', customerId);
-                const customerDoc = await getDoc(customerRef);
-                
-                if (customerDoc.exists()) {
-                    setCustomer({ id: customerDoc.id, ...customerDoc.data() });
-                } else {
-                    console.error('Customer not found');
-                }
-            } catch (error) {
-                console.error('Error fetching customer:', error);
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        fetchCustomer();
-    }, [customerId, selectedCustomer, customers]);
-
-    if (loading) {
-        return (
-            <div className="flex items-center justify-center min-h-screen">
-                <div className="text-gray-600">Loading...</div>
-            </div>
-        );
-    }
-
-    if (!customer) {
-        return (
-            <div className="flex items-center justify-center min-h-screen">
-                <div className="text-red-600">Customer not found</div>
-            </div>
-        );
-    }
-
-    return <CustomerDetail customer={customer} onBack={onBack} onUpdate={onUpdate} />;
-}
-
 function AppContent() {
     const navigate = useNavigate();
     
     // STATE MANAGEMENT
     const [user, setUser] = useState(null);
-    const [customers, setCustomers] = useState([]);
     const [trees, setTrees] = useState([]);
     const [calendarEvents, setCalendarEvents] = useState([]);
     const [treeMembers, setTreeMembers] = useState([]);
-    const [selectedCustomer, setSelectedCustomer] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
     const [isAdmin, setIsAdmin] = useState(false);
-    const [error, setError] = useState(null);
 
     // Use the new permissions hook
-    const { 
-        hasPermission
-    } = useUserPermissions(user);
+    useUserPermissions(user);
 
     // --- HOOKS ---
     useEffect(() => {
@@ -301,8 +229,6 @@ function AppContent() {
             } else {
                 setUser(null);
                 setIsAdmin(false);
-                setSelectedCustomer(null);
-                setCustomers([]);
                 setTrees([]);
             }
             setIsLoading(false);
@@ -323,38 +249,6 @@ function AppContent() {
         };
         loadTrees();
     }, [user]);
-
-    useEffect(() => {
-        if (!user) {
-            setCustomers([]);
-            return;
-        }
-
-        setIsLoading(true);
-        let q;
-        
-        // Admins can see all customers (have viewAllCustomers permission)
-        // Super Users and regular users can only see their own customers
-        if (isAdmin || hasPermission(PERMISSIONS.VIEW_ALL_CUSTOMERS)) {
-            q = collection(db, 'customers');
-        } else {
-            q = query(collection(db, 'customers'), where('userId', '==', user.uid));
-        }
-
-        const unsubscribe = onSnapshot(q, (snapshot) => {
-            const customersData = snapshot.docs.map(doc => ({
-                id: doc.id,
-                ...doc.data()
-            }));
-            setCustomers(customersData);
-            setIsLoading(false);
-        }, (error) => {
-            console.error("Error fetching customers: ", error);
-            setError("Failed to load data.");
-            setIsLoading(false);
-        });
-        return () => unsubscribe();
-    }, [user, isAdmin, hasPermission]);
 
     // Load calendar events (including tree member events)
     useEffect(() => {
@@ -409,122 +303,17 @@ function AppContent() {
     }, [user, trees]);
 
     // --- HANDLERS ---
-    const handleSelectCustomer = async (customer) => {
-        const ok = await requireAuthOrPrompt();
-        if (!ok) return;
-        // Save current scroll position before navigating away
-        sessionStorage.setItem('landingPageScrollPosition', window.scrollY.toString());
-        setSelectedCustomer(customer);
-        navigate(`/customer/${customer.id}`);
-    };
-    const requireAuthOrPrompt = async () => {
-        if (!user) {
-            try {
-                await signInWithGoogle();
-            } catch (err) {
-                // ignore — sign-in helper already logs
-            }
-            return false;
+    const handleLogout = async () => {
+        try {
+            await signOut(auth);
+        } catch (err) {
+            console.error('Logout error:', err);
         }
-        return true;
     };
 
     const handleBackToList = () => {
-        setSelectedCustomer(null);
         navigate('/');
     };
-
-    const handleAddCustomer = async () => {
-        const ok = await requireAuthOrPrompt();
-        if (!ok) return;
-        navigate('/add-customer');
-    };
-
-    // Open customer details (legacy behavior)
-    const handleEditCustomer = async (customer) => {
-        const ok = await requireAuthOrPrompt();
-        if (!ok) return;
-        // Prefer editing the basic customer fields on the AddCustomerForm page
-        setSelectedCustomer(customer);
-        navigate('/add-customer');
-    };
-
-    const handleDeleteCustomer = async (customer) => {
-        const ok = window.confirm(`Delete customer "${customer.name}"? This will remove all their data.`);
-        if (!ok) return;
-        try {
-            await deleteDoc(doc(db, 'customers', customer.id));
-        } catch (error) {
-            console.error('Error deleting customer', error);
-            setError('Failed to delete customer.');
-        }
-    };
-
-    const handleAddCustomerSuccess = async (newCustomerData) => {
-        try {
-            const customerCollectionRef = collection(db, 'customers');
-            await addDoc(customerCollectionRef, { 
-                ...newCustomerData, 
-                userId: user.uid,
-                createdAt: new Date().toISOString()
-            });
-            navigate('/');
-        } catch (error) {
-            console.error("Error adding customer:", error);
-            setError("Failed to add new customer.");
-        }
-    };
-
-    const handleUpdateCustomer = async (updatedData) => {
-        if (!selectedCustomer || !selectedCustomer.id) {
-            setError('No customer selected for update.');
-            return;
-        }
-        try {
-            const customerDocRef = doc(db, 'customers', selectedCustomer.id);
-
-            // If the update contains events or familyMembers, it's coming from the CustomerDetail
-            // and we should stay on the customer's detail view.
-            const isDetailUpdate = updatedData && (updatedData.events || updatedData.familyMembers);
-
-            if (isDetailUpdate) {
-                // Only update the nested collections provided to avoid overwriting other fields.
-                const fieldsToUpdate = {};
-                if (updatedData.events) fieldsToUpdate.events = updatedData.events;
-                if (updatedData.familyMembers) fieldsToUpdate.familyMembers = updatedData.familyMembers;
-                // Apply partial update and keep selected customer
-                await updateDoc(customerDocRef, fieldsToUpdate);
-                // Update selected customer in state so detail page shows fresh data
-                setSelectedCustomer(prev => ({ ...prev, ...fieldsToUpdate }));
-                return;
-            }
-
-            // Otherwise treat as a top-level edit (name/contact/location) and return to the list after saving
-            // If the customer name is being updated, also update the "Self" member's name
-            if (updatedData.name && selectedCustomer.familyMembers) {
-                const updatedFamilyMembers = { ...selectedCustomer.familyMembers };
-                // Find and update the Self member
-                Object.keys(updatedFamilyMembers).forEach(memberId => {
-                    if (updatedFamilyMembers[memberId].relation === 'Self') {
-                        updatedFamilyMembers[memberId] = {
-                            ...updatedFamilyMembers[memberId],
-                            name: updatedData.name
-                        };
-                    }
-                });
-                await updateDoc(customerDocRef, { ...updatedData, familyMembers: updatedFamilyMembers });
-            } else {
-                await updateDoc(customerDocRef, { ...updatedData });
-            }
-            setSelectedCustomer(null);
-            navigate('/');
-        } catch (error) {
-            console.error('Error updating customer', error);
-            setError('Failed to update customer.');
-        }
-    };
-
-    
 
     const handleSignOut = () => {
         signOut(auth).catch((error) => {
@@ -562,43 +351,27 @@ function AppContent() {
         // Save scroll position before navigating
         sessionStorage.setItem('landingPageScrollPosition', window.scrollY.toString());
         
-        // If event has treeId, navigate to tree detail page
+        // Navigate to tree detail page
         if (event.treeId) {
             navigate(`/tree/${event.treeId}`);
-            return;
-        }
-
-        // Find the customer who owns this event's personId
-        const customer = customers.find(c => {
-            if (!c.familyMembers) return false;
-            return Object.values(c.familyMembers).some(member => member.id === event.personId);
-        });
-
-        if (customer) {
-            handleSelectCustomer(customer);
         }
     };
 
-    // Combine all events and family members from all customers
-    const allEvents = [
-        ...customers.flatMap(customer => customer.events || []),
-        ...calendarEvents.map(event => ({
-            id: event.id,
-            name: event.title,
-            date: event.dateKey,
-            personId: event.memberId,
-            repetition: event.repetition || 'none',
-            treeId: event.treeId
-        }))
-    ];
-    const allFamilyMembers = [
-        ...customers.flatMap(customer => Object.values(customer.familyMembers || {})),
-        ...treeMembers.map(member => ({
-            id: member.id,
-            name: member.name,
-            relation: 'Tree Member' // Generic relation for tree members
-        }))
-    ];
+    // Only tree member events
+    const allEvents = calendarEvents.map(event => ({
+        id: event.id,
+        name: event.title,
+        date: event.dateKey,
+        personId: event.memberId,
+        repetition: event.repetition || 'none',
+        treeId: event.treeId
+    }));
+    
+    const allFamilyMembers = treeMembers.map(member => ({
+        id: member.id,
+        name: member.name,
+        relation: 'Tree Member'
+    }));
 
     return (
         <div className="min-h-screen bg-gray-100">
@@ -653,44 +426,17 @@ function AppContent() {
             </header>
 
             <main role="main">
-                {error && <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-xl mb-4" role="alert">{error}</div>}
-
                 <Routes>
                     <Route path="/" element={
                         <LandingPage
                             user={user}
                             isAdmin={isAdmin}
-                            customers={customers}
                             trees={trees}
                             treeMembers={treeMembers}
-                            onSelectCustomer={handleSelectCustomer}
-                            onAddCustomer={handleAddCustomer}
                             events={allEvents}
                             familyMembers={allFamilyMembers}
                             onDoubleClickEvent={handleDoubleClickEvent}
-                            onEditCustomer={handleEditCustomer}
-                            onDeleteCustomer={handleDeleteCustomer}
                         />
-                    } />
-
-                    <Route path="/customer/:customerId" element={
-                        <CustomerDetailWrapper
-                            customers={customers}
-                            selectedCustomer={selectedCustomer}
-                            onBack={handleBackToList}
-                            onUpdate={handleUpdateCustomer}
-                        />
-                    } />
-
-                    <Route path="/add-customer" element={
-                        <div className="max-w-2xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
-                            <AddCustomerForm
-                                initialData={selectedCustomer}
-                                onAddSuccess={handleAddCustomerSuccess}
-                                onUpdateSuccess={handleUpdateCustomer}
-                                onCancel={handleBackToList}
-                            />
-                        </div>
                     } />
 
                     <Route path="/admin/edit-cards" element={
@@ -735,9 +481,9 @@ function AppContent() {
                     } />
 
                     <Route path="/builder/:customerId" element={
-                        <TreeBuilderPage
-                            user={user}
-                        />
+                        <div className="min-h-screen flex items-center justify-center bg-gray-100">
+                            <div className="text-gray-600">This route is deprecated. Please use /trees instead.</div>
+                        </div>
                     } />
 
                     {/* New embedded Tree Builder route backed by Firestore trees */}

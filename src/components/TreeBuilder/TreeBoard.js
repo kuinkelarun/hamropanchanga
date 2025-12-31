@@ -1,4 +1,4 @@
-import React, { useCallback, useState, useMemo, useRef, useEffect } from 'react';
+import React, { useCallback, useState, useMemo, useRef } from 'react';
 import ReactFlow, {
   MiniMap,
   Controls,
@@ -37,6 +37,7 @@ export default function TreeBoard({
   onPaneClick,
   onDropMember, // Callback when a member is dropped from sidebar
   exportRef, // Reference for export functionality
+  onExport, // Export PNG handler
 }) {
   // If external state is provided, use it; otherwise use local state
   const controlled = Array.isArray(extNodes) && Array.isArray(extEdges);

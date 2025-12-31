@@ -112,7 +112,7 @@ function convertBsToAd(year, month, day){
   return { year: adDate.getFullYear(), month: adDate.getMonth(), day: adDate.getDate() };
 }
 
-export default function NepaliCalendar({ user: propUser, isAdmin, onCustomerClick, treeMembers = [], onTreeEventClick }) {
+export default function NepaliCalendar({ user: propUser, isAdmin, treeMembers = [], onTreeEventClick }) {
   const { isEditMode } = useSettings();
   const [user, setUser] = useState(propUser || null);
   const [authLoading, setAuthLoading] = useState(!propUser);
@@ -161,7 +161,6 @@ export default function NepaliCalendar({ user: propUser, isAdmin, onCustomerClic
   const [currentBsMonth, setCurrentBsMonth] = useState(() => todayBs.month);
   const [tithisByDate, setTithisByDate] = useState({}); // { "YYYY-M-D": [{name,start,end}, ...] }
   const [calendarEvents, setCalendarEvents] = useState([]); // Array of calendar events
-  const [customerEvents, setCustomerEvents] = useState([]); // Array of customer events (from customers collection)
   const [activeDate, setActiveDate] = useState(null);
 
   // Permissions
@@ -445,77 +444,6 @@ export default function NepaliCalendar({ user: propUser, isAdmin, onCustomerClic
     }
   }, [authLoading, user, isAdmin]);
 
-  // Load customer events from customers collection
-  useEffect(() => {
-    if (authLoading || !user) {
-      console.log('Skipping customer events - auth loading or no user');
-      setCustomerEvents([]);
-      return;
-    }
-
-    console.log('Setting up Firebase listener for customer events...', { userId: user.uid, isAdmin });
-    const customersCollection = collection(db, 'customers');
-    
-    // Query for customers that belong to the current user OR all customers if admin
-    const q = isAdmin 
-      ? query(customersCollection) // Admins see all customer events
-      : query(customersCollection, where('userId', '==', user.uid)); // Users see only their own
-    
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      console.log('Firebase customers snapshot received:', {
-        docsCount: snapshot.docs.length,
-        timestamp: new Date().toLocaleTimeString()
-      });
-      
-      // Extract all events from all customers
-      const allCustomerEvents = [];
-      snapshot.docs.forEach(docSnap => {
-        const customer = { id: docSnap.id, ...docSnap.data() };
-        
-        console.log('Processing customer:', { 
-          id: customer.id, 
-          name: customer.name, 
-          hasEvents: !!customer.events,
-          eventsCount: customer.events?.length || 0,
-          eventsArray: customer.events
-        });
-        
-        // Check if customer has events array
-        if (customer.events && Array.isArray(customer.events)) {
-          customer.events.forEach((event, idx) => {
-            console.log(`  Event ${idx}:`, event);
-            // Each event should have: { date (YYYY-MM-DD), name OR title, personId?, description? }
-            const eventTitle = event.title || event.name; // Support both 'title' and 'name' fields
-            if (event.date && eventTitle) {
-              allCustomerEvents.push({
-                ...event,
-                title: eventTitle, // Normalize to 'title' field
-                customerId: customer.id,
-                customerName: customer.name,
-                customerUserId: customer.userId // Track which user owns this customer
-              });
-              console.log(`    ✓ Added event: ${eventTitle} on ${event.date}`);
-            } else {
-              console.log(`    ✗ Skipped event (missing date or name/title):`, { date: event.date, title: eventTitle });
-            }
-          });
-        } else {
-          console.log('  No events array for customer:', customer.name);
-        }
-      });
-      
-      console.log('🎉 Customer events loaded:', allCustomerEvents.length, allCustomerEvents);
-      setCustomerEvents(allCustomerEvents);
-    }, (error) => {
-      console.error('Firebase customer events onSnapshot error:', error);
-    });
-
-    return () => {
-      console.log('Cleaning up customer events listener');
-      unsubscribe();
-    };
-  }, [authLoading, user, isAdmin]);
-
   useEffect(()=>{
     if (currentBsYear < minBsYear) setCurrentBsYear(minBsYear);
     if (currentBsYear > maxBsYear) setCurrentBsYear(maxBsYear);
@@ -563,21 +491,6 @@ export default function NepaliCalendar({ user: propUser, isAdmin, onCustomerClic
     return `${year}-${String(month).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
   }
 
-  // Aggregate customer events by date (YYYY-MM-DD format)
-  const customerEventsByDate = useMemo(() => {
-    const eventsByDate = {};
-    customerEvents.forEach(event => {
-      const dateKey = event.date; // Already in YYYY-MM-DD format
-      if (!eventsByDate[dateKey]) {
-        eventsByDate[dateKey] = [];
-      }
-      eventsByDate[dateKey].push(event);
-    });
-    console.log('📅 Customer events by date:', eventsByDate);
-    console.log('📅 Date keys:', Object.keys(eventsByDate));
-    return eventsByDate;
-  }, [customerEvents]);
-
   // Robust lookup for tithis: try common dateKey formats (no padding and zero-padded)
   const findTithisForAdDate = useCallback((adYear, adMonthZeroBased, adDay) => {
     const y = adYear;
@@ -594,16 +507,6 @@ export default function NepaliCalendar({ user: propUser, isAdmin, onCustomerClic
     }
     return tithisByDate[`${y}-${m}-${d}`] || [];
   }, [tithisByDate]);
-
-  // Helper to find customer events for a specific AD date
-  const findCustomerEventsForAdDate = useCallback((adYear, adMonthZeroBased, adDay) => {
-    const dateKey = `${adYear}-${String(adMonthZeroBased + 1).padStart(2,'0')}-${String(adDay).padStart(2,'0')}`;
-    const found = customerEventsByDate[dateKey] || [];
-    if (found.length > 0) {
-      console.log(`🔍 Found ${found.length} customer events for ${dateKey}:`, found);
-    }
-    return found;
-  }, [customerEventsByDate]);
 
   // Manual refresh function to force reload tithis data
   const refreshTithis = useCallback(async () => {
@@ -738,26 +641,6 @@ export default function NepaliCalendar({ user: propUser, isAdmin, onCustomerClic
     if (m > 12) { m = 1; }
     return nepaliMonths[m-1] || '';
   }
-
-  // Helper function to navigate to customer page
-  const handleCustomerClick = useCallback(async (customerId) => {
-    if (!onCustomerClick || !customerId) return;
-    
-    try {
-      // Fetch the customer document from Firestore
-      const customerRef = doc(db, 'customers', customerId);
-      const customerDoc = await getDoc(customerRef);
-      
-      if (customerDoc.exists()) {
-        const customer = { id: customerDoc.id, ...customerDoc.data() };
-        onCustomerClick(customer);
-      } else {
-        console.error('Customer not found:', customerId);
-      }
-    } catch (error) {
-      console.error('Error fetching customer:', error);
-    }
-  }, [onCustomerClick]);
 
   // open details modal when clicking on tile
   function openDetailsModalForDate(adYear, adMonthZeroBased, adDay){
@@ -1471,7 +1354,6 @@ function compareTithisByStart(a,b){
   const dateKey = dateKeyFromAd({ year: adDate.getFullYear(), month: adDate.getMonth(), day: adDate.getDate() });
   const tithis = findTithisForAdDate(adDate.getFullYear(), adDate.getMonth(), adDate.getDate()) || [];
         const events = getEventsForDate(adDate.getFullYear(), adDate.getMonth(), adDate.getDate()) || [];
-        const custEvents = findCustomerEventsForAdDate(adDate.getFullYear(), adDate.getMonth(), adDate.getDate()) || [];
 
         // Parse tithis
         const parsedTithis = tithis.map(t => ({
@@ -1494,21 +1376,6 @@ function compareTithisByStart(a,b){
               {events.length > 0 && (
                 <div className="nt-summary-item event">
                   {events.map(e => e.title).join(' | ')}
-                </div>
-              )}
-              {custEvents.length > 0 && (
-                <div 
-                  className="nt-summary-item customer-event"
-                  style={{ cursor: onCustomerClick ? 'pointer' : 'default' }}
-                  onClick={(e) => {
-                    if (onCustomerClick && custEvents.length > 0) {
-                      e.stopPropagation();
-                      const firstEvent = custEvents[0];
-                      handleCustomerClick(firstEvent.customerId);
-                    }
-                  }}
-                >
-                  {custEvents.map(e => e.title).join(' | ')}
                 </div>
               )}
             </div>
@@ -1534,18 +1401,15 @@ function compareTithisByStart(a,b){
       const isActive = activeDate === dateKey;
   const tithis = findTithisForAdDate(ad.year, ad.month, ad.day) || [];
       const events = getEventsForDate(ad.year, ad.month, ad.day) || [];
-      const custEvents = findCustomerEventsForAdDate(ad.year, ad.month, ad.day) || [];
       
       // Debug: Log tile rendering with dateKey and tithis
-      if (day <= 5 || tithis.length > 0 || events.length > 0 || custEvents.length > 0) { // Only log first few days and days with content
+      if (day <= 5 || tithis.length > 0 || events.length > 0) { // Only log first few days and days with content
         console.log(`Rendering tile for day ${day}:`, {
           dateKey,
           tithisCount: tithis.length,
           eventsCount: events.length,
-          customerEventsCount: custEvents.length,
           tithisNames: tithis.map(t => t.name),
-          eventTitles: events.map(e => e.title),
-          customerEventTitles: custEvents.map(e => e.title)
+          eventTitles: events.map(e => e.title)
         });
       }
 
@@ -1592,21 +1456,6 @@ function compareTithisByStart(a,b){
                       {personalEvents.map(e => e.title).join(' | ')}
                     </div>
                   )}
-                  {custEvents.length > 0 && (
-                    <div 
-                      className="nt-summary-item customer-event"
-                      style={{ cursor: onCustomerClick ? 'pointer' : 'default' }}
-                      onClick={(e) => {
-                        if (onCustomerClick && custEvents.length > 0) {
-                          e.stopPropagation();
-                          const firstEvent = custEvents[0];
-                          handleCustomerClick(firstEvent.customerId);
-                        }
-                      }}
-                    >
-                      {custEvents.map(e => e.title).join(' | ')}
-                    </div>
-                  )}
                 </>
               );
             })()}
@@ -1640,7 +1489,6 @@ function compareTithisByStart(a,b){
       const dateKey = ad ? `${ad.year}-${ad.month+1}-${ad.day}` : `next-${i}`;
       const tithis = ad ? findTithisForAdDate(ad.year, ad.month, ad.day) || [] : [];
       const events = ad ? getEventsForDate(ad.year, ad.month, ad.day) || [] : [];
-      const custEvents = ad ? findCustomerEventsForAdDate(ad.year, ad.month, ad.day) || [] : [];
 
       // Parse tithis
       const parsedTithis = tithis.map(t => ({
@@ -1672,21 +1520,6 @@ function compareTithisByStart(a,b){
                   {personalEvents.length > 0 && (
                     <div className="nt-summary-item event-personal">
                       {personalEvents.map(e => e.title).join(' | ')}
-                    </div>
-                  )}
-                  {custEvents.length > 0 && (
-                    <div 
-                      className="nt-summary-item customer-event"
-                      style={{ cursor: onCustomerClick ? 'pointer' : 'default' }}
-                      onClick={(e) => {
-                        if (onCustomerClick && custEvents.length > 0) {
-                          e.stopPropagation();
-                          const firstEvent = custEvents[0];
-                          handleCustomerClick(firstEvent.customerId);
-                        }
-                      }}
-                    >
-                      {custEvents.map(e => e.title).join(' | ')}
                     </div>
                   )}
                 </>
@@ -1737,16 +1570,6 @@ function compareTithisByStart(a,b){
       event.createdBy === user.uid
     );
   }, [activeDate, calendarEvents, user]);
-
-  // Get customer events for the active date in modal
-  const modalCustomerEvents = useMemo(() => {
-    if (!activeDate) return [];
-    const parts = activeDate.split('-').map(p=>+p);
-    const adYear = parts[0];
-    const adMonthZeroBased = parts[1]-1;
-    const adDay = parts[2];
-    return findCustomerEventsForAdDate(adYear, adMonthZeroBased, adDay) || [];
-  }, [activeDate, findCustomerEventsForAdDate]);
 
   // Expose manual debug helpers to window during development so they're usable and not flagged as unused
   useEffect(() => {
@@ -2010,46 +1833,6 @@ function compareTithisByStart(a,b){
                 );
               })}
             </div>
-
-            {/* Customer Events Section - shows family member events from customers collection */}
-            {modalCustomerEvents.length > 0 && (
-              <div className="nc-modal-section" style={{ borderTop: '1px solid #eee', paddingTop: '1rem' }}>
-                <h4 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  Customer Events
-                  <span style={{ fontSize: '0.75rem', padding: '0.125rem 0.375rem', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', color: 'white', borderRadius: '0.25rem', fontWeight: '600' }}>Family</span>
-                </h4>
-                {modalCustomerEvents.map((event, idx) => (
-                  <div 
-                    key={`${event.customerId}-${idx}`} 
-                    className="nc-item customer-event-item" 
-                    style={{ 
-                      flexDirection: 'column', 
-                      alignItems: 'flex-start', 
-                      gap: '0.5rem',
-                      cursor: onCustomerClick ? 'pointer' : 'default'
-                    }}
-                    onClick={() => {
-                      if (onCustomerClick && event.customerId) {
-                        handleCustomerClick(event.customerId);
-                        setDetailsModalOpen(false);
-                      }
-                    }}
-                  >
-                    <div style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
-                      <div style={{ flex: 1 }}>
-                        <div className="nc-item-title">
-                          {event.personName || 'Unknown'}: {event.title || event.name}
-                        </div>
-                        <div className="muted" style={{ marginTop: '0.25rem', fontSize: '0.875rem' }}>
-                          Customer: {event.customerName}
-                        </div>
-                        {event.description && <div className="muted" style={{ marginTop: '0.25rem', fontSize: '0.875rem' }}>{event.description}</div>}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
 
             {/* Modal Actions */}
             <div className="nc-modal-actions" style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>

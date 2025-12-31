@@ -32,6 +32,7 @@ export default function RelationshipPicker({
     if (onTypePreview && initialType) {
       onTypePreview(initialType);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, initialType, initialLabel]);
 
   useEffect(() => {

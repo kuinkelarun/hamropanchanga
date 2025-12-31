@@ -25,6 +25,7 @@ export default function TreeDetailPage({ user }) {
 
   useEffect(() => {
     loadTreeData();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [treeId, user]);
 
   // Scroll to top only on initial mount, not on every treeId change
@@ -205,9 +206,16 @@ export default function TreeDetailPage({ user }) {
             <div>
               <h1 className="text-2xl font-bold text-gray-800">{tree.title || 'Untitled Tree'}</h1>
               <div className="flex items-center gap-4 mt-1 text-sm text-gray-600">
-                {tree.location && <span>📍 {tree.location}</span>}
-                {tree.contact && <span>📞 {tree.contact}</span>}
-              </div>
+              {tree.location && <span>📍 {tree.location}</span>}
+              {tree.contact && (
+                <a 
+                  href={`tel:${tree.contact.replace(/\D/g, '')}`}
+                  className="hover:text-blue-600 transition-colors"
+                >
+                  📞 {tree.contact}
+                </a>
+              )}
+            </div>
             </div>
           </div>
         </div>

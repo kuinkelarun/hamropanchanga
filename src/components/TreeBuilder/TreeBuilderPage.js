@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { doc, getDoc, collection, getDocs, updateDoc, addDoc, setDoc, writeBatch } from 'firebase/firestore';
+import { doc, getDoc, collection, getDocs, updateDoc, addDoc, writeBatch } from 'firebase/firestore';
 import { db } from '../../firebase';
 import TreeBoard from './TreeBoard';
 import './styles/TreeBuilder.css';

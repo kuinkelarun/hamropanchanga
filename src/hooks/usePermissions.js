@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../firebase';
-import { USER_ROLES, PERMISSIONS, DEFAULT_ROLE_PERMISSIONS } from '../constants/roles';
+import { USER_ROLES, DEFAULT_ROLE_PERMISSIONS } from '../constants/roles';
 
 /**
  * Hook to fetch and manage user role and permissions

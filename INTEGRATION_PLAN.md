@@ -108,7 +108,7 @@ Existing `customers` documents will **no longer be the source of truth** for fam
 - [ ] Incrementally wire any optional panels (AdminPanel, KinshipPanel) once core CRUD/relationship flows are stable.
 
 ### Phase 6: Integration & UX Polish
-- [ ] Update Landing Page "Start Your Tree" to navigate directly to the embedded builder route.
+- [ ] Update Landing Page "Build Your Tree" to navigate directly to the embedded builder route.
 - [ ] Optionally link specific customers to specific trees (e.g. "Open Builder" from a customer detail view).
 - [ ] Review and remove/retire legacy list-based views once the builder covers all primary workflows.
 

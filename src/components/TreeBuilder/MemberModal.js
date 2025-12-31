@@ -74,11 +74,11 @@ export default function MemberModal({
 
   return (
     <div
-      className="fixed inset-0 z-40 flex items-center justify-center bg-black/50"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-2"
       onClick={onClose}
     >
       <div
-        className="w-full max-w-xl rounded-lg bg-white shadow-xl" 
+        className="w-full max-w-sm sm:max-w-md rounded-lg bg-white shadow-xl" 
         onClick={e => e.stopPropagation()}
       >
         <div className="flex items-center justify-between border-b px-4 py-3 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-t-lg">
@@ -94,16 +94,16 @@ export default function MemberModal({
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="px-4 py-3 space-y-3 text-sm bg-gray-50 rounded-b-lg">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <label className="md:col-span-2 space-y-1">
+        <form onSubmit={handleSubmit} className="px-3 py-2 space-y-2 text-sm bg-gray-50 rounded-b-lg">
+          <div className="grid grid-cols-1 gap-2">
+            <label className="space-y-1">
               <span className="text-xs font-semibold text-gray-700">Name <span className="text-red-500">*</span></span>
               <input
                 type="text"
                 value={name}
                 onChange={e => setName(e.target.value)}
-                placeholder="Enter full name"
-                className="w-full rounded-md border-2 border-gray-200 px-2.5 py-1.5 text-xs focus:border-indigo-500 focus:ring-1 focus:ring-indigo-400 bg-white"
+                placeholder="Full name"
+                className="w-full rounded-md border border-gray-300 px-2 py-1 text-xs focus:border-indigo-500 focus:ring-1 focus:ring-indigo-400 bg-white"
                 required
               />
             </label>
@@ -113,8 +113,8 @@ export default function MemberModal({
                 type="text"
                 value={nickname}
                 onChange={e => setNickname(e.target.value)}
-                placeholder="e.g., Jr., Sr., Mike"
-                className="w-full rounded-md border-2 border-gray-200 px-2.5 py-1.5 text-xs focus:border-indigo-500 focus:ring-1 focus:ring-indigo-400 bg-white"
+                placeholder="Jr., Sr., Mike, etc."
+                className="w-full rounded-md border border-gray-300 px-2 py-1 text-xs focus:border-indigo-500 focus:ring-1 focus:ring-indigo-400 bg-white"
               />
             </label>
           </div>
@@ -176,14 +176,14 @@ export default function MemberModal({
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-2">
             <label className="space-y-1">
               <span className="text-xs font-semibold text-gray-700">📅 Date of Birth</span>
               <input
                 type="date"
                 value={dob}
                 onChange={e => setDob(e.target.value)}
-                className="w-full rounded-md border-2 border-gray-200 px-2.5 py-1.5 text-xs focus:border-indigo-500 focus:ring-1 focus:ring-indigo-400 bg-white"
+                className="w-full rounded-md border border-gray-300 px-2 py-1 text-xs focus:border-indigo-500 focus:ring-1 focus:ring-indigo-400 bg-white"
               />
             </label>
             <label className="space-y-1">
@@ -193,7 +193,7 @@ export default function MemberModal({
                 value={location}
                 onChange={e => setLocation(e.target.value)}
                 placeholder="City, Country"
-                className="w-full rounded-md border-2 border-gray-200 px-2.5 py-1.5 text-xs focus:border-indigo-500 focus:ring-1 focus:ring-indigo-400 bg-white"
+                className="w-full rounded-md border border-gray-300 px-2 py-1 text-xs focus:border-indigo-500 focus:ring-1 focus:ring-indigo-400 bg-white"
               />
             </label>
           </div>
@@ -205,22 +205,22 @@ export default function MemberModal({
               value={photo}
               onChange={e => setPhoto(e.target.value)}
               placeholder="https://..."
-              className="w-full rounded-md border-2 border-gray-200 px-2.5 py-1.5 text-xs focus:border-indigo-500 focus:ring-1 focus:ring-indigo-400 bg-white"
+              className="w-full rounded-md border border-gray-300 px-2 py-1 text-xs focus:border-indigo-500 focus:ring-1 focus:ring-indigo-400 bg-white"
             />
           </label>
 
           <label className="space-y-1">
             <span className="text-xs font-semibold text-gray-700">📝 Notes</span>
             <textarea
-              rows={3}
+              rows={2}
               value={notes}
               onChange={e => setNotes(e.target.value)}
-              placeholder="Add notes, occupation, interesting facts..."
-              className="w-full rounded-md border-2 border-gray-200 px-2.5 py-1.5 text-xs focus:border-indigo-500 focus:ring-1 focus:ring-indigo-400 bg-white resize-y"
+              placeholder="Add notes, occupation, facts..."
+              className="w-full rounded-md border border-gray-300 px-2 py-1 text-xs focus:border-indigo-500 focus:ring-1 focus:ring-indigo-400 bg-white resize-none"
             />
           </label>
 
-          <div className="flex flex-wrap gap-2 pt-1 border-t border-gray-200 mt-2 justify-end">
+          <div className="flex flex-wrap gap-1 pt-2 border-t border-gray-300 mt-2 justify-end">
             {isEdit && onMoveToPool && member?.position && typeof member.position.x === 'number' && typeof member.position.y === 'number' && (
               <button
                 type="button"
