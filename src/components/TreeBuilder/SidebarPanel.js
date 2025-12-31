@@ -26,6 +26,19 @@ export default function SidebarPanel({
 
   return (
     <aside className="w-64 border-r border-gray-200 bg-white flex flex-col p-3 text-sm overflow-hidden">
+      <div className="mb-3">
+        <button
+          type="button"
+          onClick={handleAddClick}
+          className={`w-full px-3 py-2 rounded-md text-sm font-medium text-white ${
+            canAddMember ? 'bg-blue-600 hover:bg-blue-700' : 'bg-indigo-200 cursor-not-allowed'
+          }`}
+          title={!canAddMember ? 'Create or select a tree to add members.' : 'Add a new node to the canvas'}
+        >
+          + Add Node
+        </button>
+      </div>
+
       <div className="flex items-center justify-between mb-2">
         <h2 className="font-semibold text-gray-800 text-sm">Members</h2>
       </div>
@@ -36,21 +49,9 @@ export default function SidebarPanel({
             <span className="inline-block w-2 h-2 rounded-full bg-red-500" />
             <span>Member Pool ({membersInPool.length})</span>
           </div>
-          <div className="mt-2 mb-2">
-            <button
-              type="button"
-              onClick={handleAddClick}
-              className={`px-3 py-1.5 rounded-md text-xs font-medium text-white ${
-                canAddMember ? 'bg-blue-600 hover:bg-blue-700' : 'bg-indigo-200 cursor-not-allowed'
-              }`}
-              title={!canAddMember ? 'Create or select a tree to add members.' : 'Add a new member to this tree'}
-            >
-              + Add New Member
-            </button>
-          </div>
           {membersInPool.length === 0 ? (
-            <div className="mt-1 p-2 rounded-md bg-gray-50 text-gray-500 italic text-xs">
-              No members in pool. Use "+ Add New Member" to create members.
+            <div className="mt-2 p-2 rounded-md bg-gray-50 text-gray-500 italic text-xs">
+              No members in pool.
             </div>
           ) : (
             <ul className="mt-2 space-y-1 max-h-44 overflow-y-auto pr-1">
@@ -92,7 +93,7 @@ export default function SidebarPanel({
           </div>
           {membersOnCanvas.length === 0 ? (
             <div className="mt-2 p-2 rounded-md bg-gray-50 text-gray-500 italic text-xs">
-              No members on canvas yet.
+              No members on canvas yet. Drag members from pool or click "+ Add" button.
             </div>
           ) : (
             <ul className="mt-2 space-y-1 overflow-y-auto pr-1 text-xs">

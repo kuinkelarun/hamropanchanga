@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, useNavigate, useParams } from 'react-router-dom';
-import { collection, query, where, onSnapshot, doc, getDoc, setDoc, updateDoc, addDoc, deleteDoc } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, doc, getDoc, setDoc, updateDoc, addDoc, deleteDoc, getDocs } from 'firebase/firestore';
 import { onAuthStateChanged, signOut, getIdTokenResult } from 'firebase/auth';
 import { auth, signInWithGoogle, db } from './firebase';
 import { SettingsProvider } from './contexts/SettingsContext';
@@ -16,6 +16,8 @@ import TithiCalculatorPage from './components/TithiCalculatorPage';
 import TreeBuilderPage from './components/TreeBuilder/TreeBuilderPage';
 import EmbeddedBuilderPage from './components/TreeBuilder/EmbeddedBuilderPage';
 import TreeSelectionPage from './components/TreeBuilder/TreeSelectionPage';
+import TreeDetailPage from './components/TreeBuilder/TreeDetailPage';
+import { Trees } from './components/TreeBuilder/utils/firestoreTreeApi';
 import { useUserPermissions } from './hooks/usePermissions';
 import { PERMISSIONS } from './constants/roles';
 
@@ -143,6 +145,9 @@ function AppContent() {
     // STATE MANAGEMENT
     const [user, setUser] = useState(null);
     const [customers, setCustomers] = useState([]);
+    const [trees, setTrees] = useState([]);
+    const [calendarEvents, setCalendarEvents] = useState([]);
+    const [treeMembers, setTreeMembers] = useState([]);
     const [selectedCustomer, setSelectedCustomer] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
     const [isAdmin, setIsAdmin] = useState(false);
@@ -296,11 +301,28 @@ function AppContent() {
             } else {
                 setUser(null);
                 setIsAdmin(false);
+                setSelectedCustomer(null);
+                setCustomers([]);
+                setTrees([]);
             }
             setIsLoading(false);
         });
         return () => unsubscribe();
     }, []);
+
+    // Load trees for current user
+    useEffect(() => {
+        const loadTrees = async () => {
+            try {
+                if (!user) { setTrees([]); return; }
+                const all = await Trees.list(user.uid);
+                setTrees((all || []).filter(t => !t.deleted));
+            } catch (err) {
+                console.error('Error loading trees:', err);
+            }
+        };
+        loadTrees();
+    }, [user]);
 
     useEffect(() => {
         if (!user) {
@@ -333,6 +355,58 @@ function AppContent() {
         });
         return () => unsubscribe();
     }, [user, isAdmin, hasPermission]);
+
+    // Load calendar events (including tree member events)
+    useEffect(() => {
+        if (!user) {
+            setCalendarEvents([]);
+            return;
+        }
+
+        const eventsCollection = collection(db, 'calendarEvents');
+        const eventsQuery = query(eventsCollection, where('treeId', '!=', null));
+        
+        const unsubscribe = onSnapshot(eventsQuery, (snapshot) => {
+            const events = snapshot.docs.map(doc => ({
+                id: doc.id,
+                ...doc.data()
+            }));
+            setCalendarEvents(events);
+        }, (error) => {
+            console.error("Error fetching calendar events: ", error);
+        });
+
+        return () => unsubscribe();
+    }, [user]);
+
+    // Load tree members for all user's trees
+    useEffect(() => {
+        const loadTreeMembers = async () => {
+            if (!user || !trees || trees.length === 0) {
+                setTreeMembers([]);
+                return;
+            }
+
+            try {
+                const allMembers = [];
+                for (const tree of trees) {
+                    const membersRef = collection(db, 'trees', tree.id, 'members');
+                    const membersSnapshot = await getDocs(membersRef);
+                    const members = membersSnapshot.docs.map(doc => ({
+                        id: doc.id,
+                        treeId: tree.id,
+                        ...doc.data()
+                    }));
+                    allMembers.push(...members);
+                }
+                setTreeMembers(allMembers);
+            } catch (err) {
+                console.error('Error loading tree members:', err);
+            }
+        };
+
+        loadTreeMembers();
+    }, [user, trees]);
 
     // --- HANDLERS ---
     const handleSelectCustomer = async (customer) => {
@@ -485,20 +559,46 @@ function AppContent() {
     // The Login UI is available via header button or the explicit /login route (Login component still exists).
 
     const handleDoubleClickEvent = (event) => {
-    // Find the customer who owns this event's personId
-    const customer = customers.find(c => {
-        if (!c.familyMembers) return false;
-        return Object.values(c.familyMembers).some(member => member.id === event.personId);
-    });
+        // Save scroll position before navigating
+        sessionStorage.setItem('landingPageScrollPosition', window.scrollY.toString());
+        
+        // If event has treeId, navigate to tree detail page
+        if (event.treeId) {
+            navigate(`/tree/${event.treeId}`);
+            return;
+        }
 
-    if (customer) {
-        handleSelectCustomer(customer);
-    }
+        // Find the customer who owns this event's personId
+        const customer = customers.find(c => {
+            if (!c.familyMembers) return false;
+            return Object.values(c.familyMembers).some(member => member.id === event.personId);
+        });
+
+        if (customer) {
+            handleSelectCustomer(customer);
+        }
     };
 
     // Combine all events and family members from all customers
-    const allEvents = customers.flatMap(customer => customer.events || []);
-    const allFamilyMembers = customers.flatMap(customer => Object.values(customer.familyMembers || {}));
+    const allEvents = [
+        ...customers.flatMap(customer => customer.events || []),
+        ...calendarEvents.map(event => ({
+            id: event.id,
+            name: event.title,
+            date: event.dateKey,
+            personId: event.memberId,
+            repetition: event.repetition || 'none',
+            treeId: event.treeId
+        }))
+    ];
+    const allFamilyMembers = [
+        ...customers.flatMap(customer => Object.values(customer.familyMembers || {})),
+        ...treeMembers.map(member => ({
+            id: member.id,
+            name: member.name,
+            relation: 'Tree Member' // Generic relation for tree members
+        }))
+    ];
 
     return (
         <div className="min-h-screen bg-gray-100">
@@ -561,6 +661,8 @@ function AppContent() {
                             user={user}
                             isAdmin={isAdmin}
                             customers={customers}
+                            trees={trees}
+                            treeMembers={treeMembers}
                             onSelectCustomer={handleSelectCustomer}
                             onAddCustomer={handleAddCustomer}
                             events={allEvents}
@@ -622,6 +724,12 @@ function AppContent() {
 
                     <Route path="/trees" element={
                         <TreeSelectionPage
+                            user={user}
+                        />
+                    } />
+
+                    <Route path="/tree/:treeId" element={
+                        <TreeDetailPage
                             user={user}
                         />
                     } />

@@ -585,25 +585,10 @@ export default function EmbeddedBuilderPage({ user }) {
     setPreviewEdge(null);
   };
 
-  const handleAddNewMember = async () => {
+  const handleAddNodeToCanvas = async () => {
     if (!tree) return;
     setEditingMember(null);
     setMemberModalOpen(true);
-  };
-
-  const handleAddMemberToCanvas = async member => {
-    if (!tree || !member) return;
-    try {
-      const index = nodes.length;
-      const position = fallbackPosForIndex(index);
-      await Members.update(member.id, {
-        treeId: tree.id,
-        position,
-      });
-      await loadGraph(tree);
-    } catch (err) {
-      console.error('Error adding member to canvas:', err);
-    }
   };
 
   // Handle drag-drop from sidebar - member is placed at drop position
@@ -647,13 +632,16 @@ export default function EmbeddedBuilderPage({ user }) {
           ...form,
         });
       } else {
+        // Create new member directly on canvas at default position
         const incomingName = (form?.name || '').trim();
         const name = incomingName || nextAvailablePersonName(members);
+        const index = nodes.length;
+        const position = fallbackPosForIndex(index);
         await Members.create({
           treeId: tree.id,
           ...form,
           name,
-          position: null,
+          position,
           archived: false,
         });
       }
@@ -661,6 +649,21 @@ export default function EmbeddedBuilderPage({ user }) {
       handleCloseMemberModal();
     } catch (err) {
       console.error('Error saving member:', err);
+    }
+  };
+
+  const handleAddMemberToCanvas = async member => {
+    if (!tree || !member) return;
+    try {
+      const index = nodes.length;
+      const position = fallbackPosForIndex(index);
+      await Members.update(member.id, {
+        treeId: tree.id,
+        position,
+      });
+      await loadGraph(tree);
+    } catch (err) {
+      console.error('Error adding member to canvas:', err);
     }
   };
 
@@ -993,20 +996,14 @@ export default function EmbeddedBuilderPage({ user }) {
     <div className="min-h-screen bg-gray-100 flex flex-col">
       <div className="px-4 py-3 border-b border-gray-200 flex items-center justify-between bg-white shadow-sm">
         <div>
-          <h1 className="text-xl font-semibold text-gray-800">My Family Tree</h1>
+          <h1 className="text-xl font-semibold text-gray-800">{tree.title || 'Untitled Tree'}</h1>
           <p className="text-xs text-gray-500">Tree ID: {tree.id}</p>
         </div>
-        <button
-          className="px-3 py-1 text-sm bg-gray-100 hover:bg-gray-200 rounded-md"
-          onClick={() => navigate('/')}
-        >
-          Back to Home
-        </button>
       </div>
       <div className="flex flex-1 min-h-0">
         <SidebarPanel
           members={members}
-          onAddNewMember={handleAddNewMember}
+          onAddNewMember={handleAddNodeToCanvas}
           onAddMemberToCanvas={handleAddMemberToCanvas}
           onSelectMember={handleSelectMember}
           canAddMember={!!tree}

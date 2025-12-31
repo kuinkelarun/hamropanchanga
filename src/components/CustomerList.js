@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import EventMenu from './EventMenu';
 
-const CustomerList = ({ customers, onSelectCustomer, onAddCustomer, onEditCustomer, onDeleteCustomer }) => {
+const CustomerList = ({ customers, trees = [], onSelectCustomer, onAddCustomer, onEditCustomer, onDeleteCustomer, onOpenTree, onDeleteTree }) => {
     const [openMenuId, setOpenMenuId] = useState(null);
 
     const handleToggle = (id) => {
@@ -15,7 +15,7 @@ const CustomerList = ({ customers, onSelectCustomer, onAddCustomer, onEditCustom
     };
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-10">
             <div className="flex justify-between items-center mb-4">
                 <h2 className="section-title">Your Customers</h2>
                 {/* <h2 className="text-2xl font-bold text-gray-800">Your Customers</h2> */}
@@ -56,6 +56,34 @@ const CustomerList = ({ customers, onSelectCustomer, onAddCustomer, onEditCustom
                     ))}
                 </div>
             )}
+
+            {/* Trees Section */}
+            <div className="space-y-4">
+                <div className="flex justify-between items-center">
+                    <h2 className="section-title">Your Trees</h2>
+                    <button onClick={() => onOpenTree && onOpenTree(null)} className="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded-xl shadow-md transition-transform transform hover:scale-105">
+                        Create New Tree
+                    </button>
+                </div>
+                {trees.length === 0 ? (
+                    <div className="bg-white p-6 rounded-2xl shadow-md text-center text-gray-500">
+                        No trees found. Click "Create New Tree" to get started.
+                    </div>
+                ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {trees.map((tree) => (
+                            <div 
+                                key={tree.id} 
+                                className="relative bg-white p-6 rounded-2xl shadow-md border border-gray-200 hover:shadow-lg transition-shadow cursor-pointer"
+                                onClick={() => onOpenTree && onOpenTree(tree.id)}
+                            >
+                                <h3 className="text-xl font-semibold text-gray-800">{tree.title || 'Untitled Tree'}</h3>
+                                <p className="text-sm text-gray-500">ID: {tree.id}</p>
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </div>
         </div>
     );
 };

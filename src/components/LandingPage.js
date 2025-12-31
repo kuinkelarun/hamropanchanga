@@ -10,7 +10,7 @@ import NepaliCalendar from './NepaliCalendar';
 import Block1 from './Block1';
 import Footer from './Footer';
 
-const LandingPage = ({ user, isAdmin, customers, onSelectCustomer, onAddCustomer, events, familyMembers, onDoubleClickEvent, onEditCustomer, onDeleteCustomer }) => {
+const LandingPage = ({ user, isAdmin, customers, trees = [], treeMembers = [], onSelectCustomer, onAddCustomer, events, familyMembers, onDoubleClickEvent, onEditCustomer, onDeleteCustomer, onOpenTree, onDeleteTree }) => {
     const [block1Visible, setBlock1Visible] = useState(null);
     const navigate = useNavigate();
 
@@ -49,6 +49,8 @@ const LandingPage = ({ user, isAdmin, customers, onSelectCustomer, onAddCustomer
     }, []);
 
     const handleStartTree = () => {
+        // Save scroll position before navigating
+        sessionStorage.setItem('landingPageScrollPosition', window.scrollY.toString());
         // Route to the tree selection page; from there the user can
         // pick an existing tree or create a new one before entering
         // the visual builder.
@@ -95,7 +97,13 @@ const LandingPage = ({ user, isAdmin, customers, onSelectCustomer, onAddCustomer
             <div className="edgefull">
                 <div className="section-content-centered">
                     <div className="section-card calendar-wrapper">
-                        <NepaliCalendar user={user} isAdmin={isAdmin} onCustomerClick={onSelectCustomer} />
+                        <NepaliCalendar 
+                            user={user} 
+                            isAdmin={isAdmin} 
+                            onCustomerClick={onSelectCustomer}
+                            treeMembers={treeMembers}
+                            onTreeEventClick={onDoubleClickEvent}
+                        />
                     </div>
                 </div>
             </div>
@@ -107,10 +115,21 @@ const LandingPage = ({ user, isAdmin, customers, onSelectCustomer, onAddCustomer
                         <div className="section-card branches-section">
                             <CustomerList
                                 customers={customers}
+                                trees={trees}
                                 onSelectCustomer={onSelectCustomer}
                                 onAddCustomer={onAddCustomer}
                                 onEditCustomer={onEditCustomer}
                                 onDeleteCustomer={onDeleteCustomer}
+                                onOpenTree={(treeId) => {
+                                    // Save scroll position before navigating
+                                    sessionStorage.setItem('landingPageScrollPosition', window.scrollY.toString());
+                                    if (!treeId) {
+                                        navigate('/trees');
+                                    } else {
+                                        navigate(`/tree/${treeId}`);
+                                    }
+                                }}
+                                onDeleteTree={(tree) => navigate('/trees')}
                             />
                         </div>
                     </div>
