@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { doc, updateDoc, onSnapshot } from 'firebase/firestore'; // Import Firestore functions
 import { db } from '../firebase'; // Import your Firebase db instance
 import AddFamilyMemberForm from './AddFamilyMemberForm'; // Import other components
@@ -87,6 +88,7 @@ const calculateGeneration = (relation, parentIds, familyMembers) => {
 
 // Component to view customer details
 const CustomerDetail = ({ customer: propCustomer, onBack, onUpdate }) => {
+    const navigate = useNavigate();
     const [isAddingMember, setIsAddingMember] = useState(false);
     const [isAddingEvent, setIsAddingEvent] = useState(false);
     const [eventFilter, setEventFilter] = useState('upcoming');
@@ -334,13 +336,32 @@ const CustomerDetail = ({ customer: propCustomer, onBack, onUpdate }) => {
     const familyMembersArray = Object.values(customer.familyMembers || {});
     return (
         <div className="min-h-screen bg-gray-100 p-8">
-            <div className="flex items-center space-x-4 mb-6">
-                <button onClick={onBack} className="bg-gray-200 hover:bg-gray-300 text-gray-700 p-2 rounded-full transition-transform transform hover:scale-105">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                    </svg>
+            <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center space-x-4">
+                    <button onClick={onBack} className="bg-gray-200 hover:bg-gray-300 text-gray-700 p-2 rounded-full transition-transform transform hover:scale-105">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                        </svg>
+                    </button>
+                    <h2 className="text-3xl font-bold text-gray-800">{customer.name}</h2>
+                </div>
+                <button
+                    onClick={() => navigate(`/builder/${customer.id}`)}
+                    className="text-white font-semibold py-2 px-4 rounded-lg shadow-md transition-all text-sm"
+                    style={{
+                        background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)'
+                    }}
+                    onMouseEnter={(e) => {
+                        e.currentTarget.style.transform = 'translateY(-2px)';
+                        e.currentTarget.style.boxShadow = '0 4px 8px rgba(16, 185, 129, 0.4)';
+                    }}
+                    onMouseLeave={(e) => {
+                        e.currentTarget.style.transform = 'translateY(0)';
+                        e.currentTarget.style.boxShadow = '0 2px 4px rgba(16, 185, 129, 0.3)';
+                    }}
+                >
+                    Open Visual Tree Builder
                 </button>
-                <h2 className="text-3xl font-bold text-gray-800">{customer.name}</h2>
             </div>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <div className="bg-white p-6 rounded-xl shadow-lg border border-gray-200">

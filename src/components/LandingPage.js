@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import CustomerList from './CustomerList';
@@ -11,6 +12,7 @@ import Footer from './Footer';
 
 const LandingPage = ({ user, isAdmin, customers, onSelectCustomer, onAddCustomer, events, familyMembers, onDoubleClickEvent, onEditCustomer, onDeleteCustomer }) => {
     const [block1Visible, setBlock1Visible] = useState(null);
+    const navigate = useNavigate();
 
     // Fetch Block 1 visibility setting
     useEffect(() => {
@@ -46,6 +48,13 @@ const LandingPage = ({ user, isAdmin, customers, onSelectCustomer, onAddCustomer
         }
     }, []);
 
+    const handleStartTree = () => {
+        // Route to the tree selection page; from there the user can
+        // pick an existing tree or create a new one before entering
+        // the visual builder.
+        navigate('/trees');
+    };
+
         // Note: BlockTithi has its own visibility loader; we render it alongside Block1
     
         return (
@@ -58,7 +67,7 @@ const LandingPage = ({ user, isAdmin, customers, onSelectCustomer, onAddCustomer
                             <p className="tagline">Connect your past. Branch out your future.</p>
                             <button 
                                 className="cta-button" 
-                                onClick={onAddCustomer}
+                                onClick={handleStartTree}
                                 aria-label="Start building your family tree"
                             >
                                 Start Your Tree
@@ -127,6 +136,8 @@ const LandingPage = ({ user, isAdmin, customers, onSelectCustomer, onAddCustomer
             <div className="footer-full edgefull">
                 <Footer />
             </div>
+
+            {/* Tree Selection Modal (legacy) no longer used; builder opens directly */}
         </div>
     );
 };

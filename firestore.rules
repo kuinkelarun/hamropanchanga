@@ -44,6 +44,14 @@ service cloud.firestore {
         (request.resource != null && isOwnerOfUserId(request.resource.data.userId)) ||
         (resource != null && isOwnerOfUserId(resource.data.userId))
       );
+
+      // Allow access to familyMembers subcollection if user owns the parent customer document
+      match /familyMembers/{memberId} {
+        allow read, write: if isAdmin() || (
+          isAuthenticated() && 
+          get(/databases/$(database)/documents/customers/$(customerId)).data.userId == request.auth.uid
+        );
+      }
     }
 
     match /users/{userId} {
@@ -124,6 +132,42 @@ service cloud.firestore {
       allow read: if true;
       // Only admins can modify settings
       allow write: if isAdmin();
+    }
+
+    // Trees collection - backing the embedded visual tree builder
+    match /trees/{treeId} {
+      // A tree is owned by ownerUid; admins can manage all trees.
+      allow read, write: if isAdmin() || (
+        isAuthenticated() && (
+          // For create, use the requested ownerUid; for existing trees, use stored ownerUid
+          (request.resource != null && request.resource.data.ownerUid == request.auth.uid) ||
+          (resource != null && resource.data.ownerUid == request.auth.uid)
+        )
+      );
+
+      // Members subcollection for a given tree
+      match /members/{memberId} {
+        allow read, write: if isAdmin() || (
+          isAuthenticated() &&
+          get(/databases/$(database)/documents/trees/$(treeId)).data.ownerUid == request.auth.uid
+        );
+      }
+
+      // Relationships subcollection for a given tree
+      match /relationships/{relationshipId} {
+        allow read, write: if isAdmin() || (
+          isAuthenticated() &&
+          get(/databases/$(database)/documents/trees/$(treeId)).data.ownerUid == request.auth.uid
+        );
+      }
+
+      // Marriage points subcollection for a given tree
+      match /marriagePoints/{marriagePointId} {
+        allow read, write: if isAdmin() || (
+          isAuthenticated() &&
+          get(/databases/$(database)/documents/trees/$(treeId)).data.ownerUid == request.auth.uid
+        );
+      }
     }
   }
 }
