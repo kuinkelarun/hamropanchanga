@@ -33,6 +33,8 @@ export default function TreeBoard({
   onConnect: onConnectExt,
   onNodeDoubleClick,
   onEdgeDoubleClick,
+  onEdgeClick,
+  onPaneClick,
   onDropMember, // Callback when a member is dropped from sidebar
   exportRef, // Reference for export functionality
 }) {
@@ -338,6 +340,8 @@ export default function TreeBoard({
         onNodeDragStop={onNodeDragStopLocal}
         onNodeDoubleClick={onNodeDoubleClick}
         onEdgeDoubleClick={onEdgeDoubleClick ? (_e, edge) => onEdgeDoubleClick(edge) : undefined}
+        onEdgeClick={onEdgeClick ? (_e, edge) => onEdgeClick(edge) : undefined}
+        onPaneClick={onPaneClick}
         onDrop={onDrop}
         onDragOver={onDragOver}
         connectionLineType="smoothstep"

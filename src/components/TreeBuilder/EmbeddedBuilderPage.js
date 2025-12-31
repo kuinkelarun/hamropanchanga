@@ -98,6 +98,7 @@ export default function EmbeddedBuilderPage({ user }) {
   const [relPicker, setRelPicker] = useState({ open: false, source: '', target: '', sourceHandle: '', targetHandle: '' });
   const [editPicker, setEditPicker] = useState({ open: false, relationshipId: '', type: 'custom', label: '' });
   const [previewEdge, setPreviewEdge] = useState(null);
+  const [relAdj, setRelAdj] = useState(new Map());
 
   useEffect(() => {
     async function ensureTree() {
@@ -239,6 +240,9 @@ export default function EmbeddedBuilderPage({ user }) {
           }
         }
       }
+
+      // Persist parent/child adjacency for highlighting
+      setRelAdj(adjacency);
 
       // Derive parent pairs from members that share a common child. Here we
       // treat the member that has 2+ parent/child connections as the child,
@@ -842,6 +846,96 @@ export default function EmbeddedBuilderPage({ user }) {
     }
   };
 
+  // Highlight parent/child chain starting from a clicked edge
+  const handleEdgeClick = (edge) => {
+    try {
+      if (!edge) return;
+      const type = edge?.data?.type || edge?.label || 'custom';
+      const sourceId = String(edge.source || '');
+      const targetId = String(edge.target || '');
+
+      const seeds = new Set();
+
+      const addMemberSeed = (id) => {
+        if (!id) return;
+        const s = String(id);
+        if (!s.startsWith('mp-')) seeds.add(s);
+      };
+
+      if (type === 'parent-connector') {
+        // Use parent and both parents of the marriage point as seeds
+        addMemberSeed(sourceId);
+        const mpNode = nodes.find(n => String(n.id) === targetId && n.type === 'marriagePoint');
+        const parents = (mpNode && Array.isArray(mpNode.data?.parents)) ? mpNode.data.parents : [];
+        parents.forEach(p => addMemberSeed(p));
+      } else {
+        // For parent/child/custom edges, seed from member endpoints
+        addMemberSeed(sourceId);
+        addMemberSeed(targetId);
+        // If edge originates from a marriage point to a child, ensure child is a seed
+        if (edge?.data?.fromMarriagePoint) addMemberSeed(targetId);
+      }
+
+      // BFS over parent/child adjacency
+      const visited = new Set();
+      const queue = Array.from(seeds);
+      while (queue.length) {
+        const cur = String(queue.shift());
+        if (!cur || visited.has(cur)) continue;
+        visited.add(cur);
+        const neigh = relAdj.get(cur);
+        if (neigh && neigh.size) {
+          for (const n of neigh) {
+            const nn = String(n);
+            if (!visited.has(nn)) queue.push(nn);
+          }
+        }
+      }
+
+      // Select nodes: members in visited; marriage points that touch selected parents
+      setNodes(prev => prev.map(n => {
+        const id = String(n.id);
+        if (n.type === 'marriagePoint') {
+          const parents = (n.data && Array.isArray(n.data.parents)) ? n.data.parents.map(String) : [];
+          const select = parents.some(p => visited.has(p));
+          return { ...n, selected: !!select };
+        }
+        return { ...n, selected: visited.has(id) };
+      }));
+
+      // Select edges along the parent/child chain
+      setEdges(prev => prev.map(e => {
+        const et = e?.data?.type || e?.label || 'custom';
+        const s = String(e.source || '');
+        const t = String(e.target || '');
+        let select = false;
+        if (et === 'parent' || et === 'child') {
+          const sMember = !s.startsWith('mp-');
+          const tMember = !t.startsWith('mp-');
+          if (sMember && tMember) {
+            select = visited.has(s) && visited.has(t);
+          } else if (!sMember && tMember && e?.data?.fromMarriagePoint) {
+            // mp -> child edge: select if child is visited
+            select = visited.has(t);
+          }
+        } else if (et === 'parent-connector') {
+          // select if parent endpoint is visited
+          const parentId = !s.startsWith('mp-') ? s : (!t.startsWith('mp-') ? t : '');
+          select = !!parentId && visited.has(parentId);
+        }
+        return { ...e, selected: !!select };
+      }));
+    } catch (err) {
+      // Fail-safe: ignore highlight errors
+    }
+  };
+
+  const handlePaneClick = () => {
+    // Clear all selections
+    setNodes(prev => prev.map(n => ({ ...n, selected: false })));
+    setEdges(prev => prev.map(e => ({ ...e, selected: false })));
+  };
+
   if (loading) {
     return <div className="builder-loading">Loading Tree Builder...</div>;
   }
@@ -908,6 +1002,8 @@ export default function EmbeddedBuilderPage({ user }) {
             onConnect={handleConnect}
             onNodeDoubleClick={handleNodeDoubleClick}
             onEdgeDoubleClick={handleEdgeDoubleClick}
+            onEdgeClick={handleEdgeClick}
+            onPaneClick={handlePaneClick}
             onDropMember={handleDropMember}
             exportRef={exportRef}
           />
