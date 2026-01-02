@@ -93,13 +93,68 @@ function TreePreviewInner({ treeId, members, relationships, marriagePoints, onCl
     // Track which parent-child pairs are handled via marriage points (to avoid duplicates)
     const processedPairs = new Set();
     
+    // Track parent-child pairs to avoid showing both parent and child edges
+    const parentChildPairs = new Set(); // 'parentId|childId' - only store in parent->child direction
+    
     // Detect parent pairs and their children through relationships
     const parentChildMap = new Map(); // key: 'parent1|parent2' -> Set of childIds
     
     if (Array.isArray(relationships)) {
       // Build adjacency for parent-child relationships
       const adjacency = new Map(); // memberId -> Set(connectedMemberId)
+      const relationsMap = new Map(); // 'a|b' -> { type, rels: [] }
       
+      for (const rel of relationships) {
+        if (rel.type === 'parent' || rel.type === 'child') {
+          const a = String(rel.fromMemberId || '');
+          const b = String(rel.toMemberId || '');
+          if (!a || !b) continue;
+          
+          if (!adjacency.has(a)) adjacency.set(a, new Set());
+          if (!adjacency.has(b)) adjacency.set(b, new Set());
+          adjacency.get(a).add(b);
+          adjacency.get(b).add(a);
+          
+          // Track the relationship in sorted key order
+          const key = a < b ? `${a}|${b}` : `${b}|${a}`;
+          if (!relationsMap.has(key)) {
+            relationsMap.set(key, { types: new Set(), rels: [] });
+          }
+          relationsMap.get(key).types.add(rel.type);
+          relationsMap.get(key).rels.push({ type: rel.type, rel });
+        }
+      }
+      
+      // For each parent-child pair, only show one direction (parent->child)
+      relationsMap.forEach(({ types, rels }, key) => {
+        if (types.has('parent') || types.has('child')) {
+          // If both directions exist, we'll skip the 'child' type edges
+          // and only show 'parent' type edges
+          const [idA, idB] = key.split('|');
+          
+          // Find which is the parent and which is the child
+          // Prefer the 'parent' type relation if it exists
+          const parentRel = rels.find(r => r.type === 'parent');
+          if (parentRel) {
+            const parentId = String(parentRel.rel.fromMemberId);
+            const childId = String(parentRel.rel.toMemberId);
+            parentChildPairs.add(`${parentId}|${childId}`);
+          } else {
+            // Fallback: use child relation but reverse it
+            const childRel = rels.find(r => r.type === 'child');
+            if (childRel) {
+              const childId = String(childRel.rel.fromMemberId);
+              const parentId = String(childRel.rel.toMemberId);
+              parentChildPairs.add(`${parentId}|${childId}`);
+            }
+          }
+        }
+      });
+    }
+    
+    // Find parent pairs for each child
+    if (Array.isArray(relationships)) {
+      const adjacency = new Map();
       for (const rel of relationships) {
         if (rel.type === 'parent' || rel.type === 'child') {
           const a = String(rel.fromMemberId || '');
@@ -113,7 +168,6 @@ function TreePreviewInner({ treeId, members, relationships, marriagePoints, onCl
         }
       }
       
-      // Find parent pairs for each child
       adjacency.forEach((neighbors, memberId) => {
         const parents = [...neighbors];
         if (parents.length < 2) return;
@@ -156,6 +210,30 @@ function TreePreviewInner({ treeId, members, relationships, marriagePoints, onCl
     
     // Add direct relationship edges (excluding parent-child pairs handled via marriage points)
     if (Array.isArray(relationships)) {
+      const seenPairs = new Set(); // Track seen node pairs to avoid showing both directions
+      
+      // First pass: identify all parent-child pair directions
+      const parentChildDirections = new Map(); // 'a|b' -> 'a->b' or 'b->a' (direction of parent edge)
+      
+      relationships.forEach((rel) => {
+        const source = String(rel.fromMemberId || '');
+        const target = String(rel.toMemberId || '');
+        
+        if (!source || !target) return;
+        if (rel.type !== 'parent' && rel.type !== 'child') return;
+        
+        const pairKey = source < target ? `${source}|${target}` : `${target}|${source}`;
+        
+        // Record parent direction (parent type always shows source->target as parent)
+        if (rel.type === 'parent') {
+          parentChildDirections.set(pairKey, `${source}->${target}`);
+        }
+        // Record child direction (child type shows source->target, but means target is parent)
+        else if (rel.type === 'child') {
+          parentChildDirections.set(pairKey, `${source}->${target}`);
+        }
+      });
+      
       relationships.forEach((rel, idx) => {
         const source = String(rel.fromMemberId || '');
         const target = String(rel.toMemberId || '');
@@ -169,6 +247,26 @@ function TreePreviewInner({ treeId, members, relationships, marriagePoints, onCl
           console.log(`TreePreview: Skipping direct edge ${source}-${target} (handled via marriage point)`);
           return;
         }
+        
+        // Skip if we've already shown this node pair in either direction
+        const pairKey = source < target ? `${source}|${target}` : `${target}|${source}`;
+        if (seenPairs.has(pairKey)) {
+          console.log(`TreePreview: Skipping edge ${source}-${target} (pair already shown in other direction)`);
+          return;
+        }
+        
+        // For parent-child relationships, skip if this is NOT the canonical direction
+        if (relType === 'parent' || relType === 'child') {
+          const canonicalDirection = parentChildDirections.get(pairKey);
+          const currentDirection = `${source}->${target}`;
+          
+          if (canonicalDirection && canonicalDirection !== currentDirection) {
+            console.log(`TreePreview: Skipping ${relType} edge ${source}-${target} (reverse of canonical direction ${canonicalDirection})`);
+            return;
+          }
+        }
+        
+        seenPairs.add(pairKey);
         
         const edgeKey = `${source}-${target}-${relType}`;
         if (edgeMap.has(edgeKey)) return;
@@ -257,29 +355,45 @@ function TreePreviewInner({ treeId, members, relationships, marriagePoints, onCl
       }
       
       // Find and connect children through relationships
+      // A node should only be a child of the marriage point if it's connected to BOTH parents
       const childrenSet = new Set();
-      if (Array.isArray(relationships)) {
+      if (Array.isArray(relationships) && mp.parents && mp.parents.length >= 2) {
+        const p1 = String(mp.parents[0]);
+        const p2 = String(mp.parents[1]);
+        
+        // Build a map of which nodes connect to each parent
+        const connectedToP1 = new Set(); // nodes connected to p1
+        const connectedToP2 = new Set(); // nodes connected to p2
+        
         for (const rel of relationships) {
           if (rel.type !== 'parent' && rel.type !== 'child') continue;
           
           const from = String(rel.fromMemberId || '');
           const to = String(rel.toMemberId || '');
           
-          // Check if this relationship connects a parent to a potential child
-          if (mp.parents && mp.parents.length >= 2) {
-            const p1 = String(mp.parents[0]);
-            const p2 = String(mp.parents[1]);
-            
-            // Parent -> Child direction
-            if ((from === p1 || from === p2) && to !== p1 && to !== p2) {
-              childrenSet.add(to);
-            }
-            // Child -> Parent direction (reverse)
-            else if ((to === p1 || to === p2) && from !== p1 && from !== p2) {
-              childrenSet.add(from);
-            }
+          if (!from || !to) continue;
+          
+          // Check connections to p1
+          if (from === p1 && to !== p1 && to !== p2) {
+            connectedToP1.add(to);
+          } else if (to === p1 && from !== p1 && from !== p2) {
+            connectedToP1.add(from);
+          }
+          
+          // Check connections to p2
+          if (from === p2 && to !== p1 && to !== p2) {
+            connectedToP2.add(to);
+          } else if (to === p2 && from !== p1 && from !== p2) {
+            connectedToP2.add(from);
           }
         }
+        
+        // Only add nodes that are connected to BOTH parents as children
+        connectedToP1.forEach(nodeId => {
+          if (connectedToP2.has(nodeId)) {
+            childrenSet.add(nodeId);
+          }
+        });
       }
       
       // Create edges from marriage point to children
