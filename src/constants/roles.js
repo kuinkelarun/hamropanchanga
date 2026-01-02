@@ -17,6 +17,7 @@ export const PERMISSIONS = {
   MANAGE_TITHIS: 'manageTithis',
   MANAGE_EVENTS: 'manageEvents',
   MANUAL_DASHBOARD: 'manualDashboard',
+  MANAGE_CALENDAR: 'manageCalendar',
   
   // User-level permissions (everyone gets these)
   MANAGE_OWN_CUSTOMERS: 'manageOwnCustomers',
@@ -33,6 +34,7 @@ export const DEFAULT_ROLE_PERMISSIONS = {
     [PERMISSIONS.MANAGE_TITHIS]: true,
     [PERMISSIONS.MANAGE_EVENTS]: true,
     [PERMISSIONS.MANUAL_DASHBOARD]: true,
+    [PERMISSIONS.MANAGE_CALENDAR]: true,
     [PERMISSIONS.MANAGE_OWN_CUSTOMERS]: true,
     [PERMISSIONS.VIEW_OWN_CUSTOMERS]: true
   },
@@ -44,6 +46,7 @@ export const DEFAULT_ROLE_PERMISSIONS = {
     [PERMISSIONS.MANAGE_TITHIS]: false, // Configurable by admin
     [PERMISSIONS.MANAGE_EVENTS]: false, // Configurable by admin
     [PERMISSIONS.MANUAL_DASHBOARD]: false, // Configurable by admin
+    [PERMISSIONS.MANAGE_CALENDAR]: false, // Configurable by admin
     [PERMISSIONS.MANAGE_OWN_CUSTOMERS]: true,
     [PERMISSIONS.VIEW_OWN_CUSTOMERS]: true
   },

@@ -4,7 +4,14 @@ import CalendarSwitchConfirmation from './CalendarSwitchConfirmation';
 import { useUserPermissions } from '../hooks/usePermissions';
 import { PERMISSIONS } from '../constants/roles';
 
-const SettingsMenu = ({ user, onSignOut, isAdmin, onAdminEditCards, onAdminManagement, onUserManagement }) => {
+const SettingsMenu = ({ 
+    user, 
+    onSignOut, 
+    isAdmin, 
+    onAdminEditCards, 
+    onAdminManagement, 
+    onUserManagement 
+}) => {
     const [isOpen, setIsOpen] = useState(false);
     const [showConfirmation, setShowConfirmation] = useState(false);
     const { isNepaliCalendar, toggleCalendarLanguage, isEditMode, toggleEditMode } = useSettings();
@@ -15,13 +22,13 @@ const SettingsMenu = ({ user, onSignOut, isAdmin, onAdminEditCards, onAdminManag
     
     // User has admin capabilities if they're an admin OR a super user with certain permissions
     const canManageHomeCards = hasPermission(PERMISSIONS.MANAGE_HOME_CARDS);
-    const canAccessBulkUpload = hasPermission(PERMISSIONS.BULK_UPLOAD) || 
-                                hasPermission(PERMISSIONS.MANAGE_TITHIS) || 
-                                hasPermission(PERMISSIONS.MANAGE_EVENTS);
-    const canEditCalendar = hasPermission(PERMISSIONS.MANAGE_TITHIS) || 
-                           hasPermission(PERMISSIONS.MANAGE_EVENTS);
+    const canAccessBulkUpload = hasPermission(PERMISSIONS.BULK_UPLOAD);
+    const canManageTithis = hasPermission(PERMISSIONS.MANAGE_TITHIS);
+    const canManageEvents = hasPermission(PERMISSIONS.MANAGE_EVENTS);
+    const canManageCalendar = hasPermission(PERMISSIONS.MANAGE_CALENDAR);
+    const canEditCalendar = canManageTithis || canManageEvents;
     
-    const showAdminSection = isAdmin || isSuperUser || canManageHomeCards || canAccessBulkUpload;
+    const showAdminSection = isAdmin || isSuperUser || canManageHomeCards || canAccessBulkUpload || canManageTithis || canManageEvents || canManageCalendar;
 
     // Close menu when clicking outside
     useEffect(() => {

@@ -1,0 +1,534 @@
+.nepali-calendar-management {
+  padding: 2rem;
+  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  border-radius: 8px;
+  margin: 1rem 0;
+}
+
+.calendar-header {
+  margin-bottom: 2rem;
+}
+
+.calendar-header h2 {
+  font-size: 1.8rem;
+  color: #2c3e50;
+  margin-bottom: 0.5rem;
+}
+
+.calendar-header p {
+  color: #7f8c8d;
+  font-size: 0.95rem;
+}
+
+/* Alert Messages */
+.alert {
+  padding: 1rem;
+  border-radius: 6px;
+  margin-bottom: 1.5rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.alert-success {
+  background-color: #d4edda;
+  color: #155724;
+  border: 1px solid #c3e6cb;
+}
+
+.alert-error {
+  background-color: #f8d7da;
+  color: #721c24;
+  border: 1px solid #f5c6cb;
+}
+
+.alert-warning {
+  background-color: #fff3cd;
+  color: #856404;
+  border: 1px solid #ffeeba;
+}
+
+.alert-close {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: inherit;
+  padding: 0;
+  line-height: 1;
+}
+
+.alert-close:hover {
+  opacity: 0.7;
+}
+
+/* Mode Selector */
+.mode-selector {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 2rem;
+  flex-wrap: wrap;
+}
+
+.mode-btn {
+  padding: 0.75rem 1.5rem;
+  border: 2px solid #bdc3c7;
+  background: white;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.95rem;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  color: #34495e;
+}
+
+.mode-btn:hover:not(:disabled) {
+  border-color: #3498db;
+  color: #3498db;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(52, 152, 219, 0.2);
+}
+
+.mode-btn.active {
+  background: #3498db;
+  color: white;
+  border-color: #3498db;
+  box-shadow: 0 4px 12px rgba(52, 152, 219, 0.3);
+}
+
+.mode-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* View Section - Years Grid */
+.view-section {
+  background: white;
+  padding: 2rem;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.years-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1.5rem;
+}
+
+.year-card {
+  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  border: 2px solid #ecf0f1;
+  border-radius: 8px;
+  padding: 1.5rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+}
+
+.year-card:hover {
+  border-color: #3498db;
+  transform: translateY(-4px);
+  box-shadow: 0 8px 16px rgba(52, 152, 219, 0.2);
+}
+
+.year-card.selected {
+  border-color: #27ae60;
+  background: linear-gradient(135deg, #d5f4e6 0%, #a8e6d5 100%);
+  box-shadow: 0 8px 16px rgba(39, 174, 96, 0.3);
+}
+
+.year-number {
+  font-size: 2.5rem;
+  font-weight: bold;
+  color: #2c3e50;
+  margin-bottom: 0.5rem;
+}
+
+.year-badge {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.leap-badge {
+  display: inline-block;
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  background: #ecf0f1;
+  color: #34495e;
+}
+
+.leap-badge.leap {
+  background: #e8daef;
+  color: #8e44ad;
+}
+
+.year-info {
+  margin: 1rem 0;
+  border-top: 1px solid rgba(0, 0, 0, 0.1);
+  padding-top: 1rem;
+}
+
+.info-row {
+  display: flex;
+  justify-content: space-between;
+  margin: 0.5rem 0;
+  font-size: 0.9rem;
+}
+
+.info-row .label {
+  color: #7f8c8d;
+  font-weight: 500;
+}
+
+.info-row .value {
+  color: #2c3e50;
+  font-weight: 600;
+}
+
+.edit-btn {
+  width: 100%;
+  padding: 0.6rem;
+  margin-top: 1rem;
+  background: #3498db;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background 0.3s ease;
+}
+
+.edit-btn:hover {
+  background: #2980b9;
+}
+
+/* Form Section */
+.form-section {
+  background: white;
+  padding: 2rem;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.form-container h3 {
+  color: #2c3e50;
+  margin-bottom: 1.5rem;
+  font-size: 1.5rem;
+  border-bottom: 2px solid #ecf0f1;
+  padding-bottom: 1rem;
+}
+
+.form-group {
+  margin-bottom: 1.5rem;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 0.5rem;
+  color: #2c3e50;
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.form-group input {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid #bdc3c7;
+  border-radius: 4px;
+  font-size: 0.95rem;
+  transition: border-color 0.3s ease;
+}
+
+.form-group input:focus {
+  outline: none;
+  border-color: #3498db;
+  box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+}
+
+.form-group input:disabled {
+  background-color: #ecf0f1;
+  cursor: not-allowed;
+}
+
+.form-group small {
+  display: block;
+  margin-top: 0.25rem;
+  color: #95a5a6;
+  font-size: 0.85rem;
+}
+
+/* Months Editor */
+.months-editor {
+  margin: 2rem 0;
+  padding: 1.5rem;
+  background: #f8f9fa;
+  border-radius: 6px;
+  border-left: 4px solid #3498db;
+}
+
+.months-editor h4 {
+  color: #2c3e50;
+  margin-bottom: 0.5rem;
+}
+
+.editor-info {
+  color: #7f8c8d;
+  font-size: 0.9rem;
+  margin-bottom: 1rem;
+}
+
+.total-status {
+  font-weight: 600;
+  margin-left: 0.5rem;
+  padding: 0.2rem 0.5rem;
+  border-radius: 3px;
+}
+
+.total-status.valid {
+  color: #27ae60;
+  background: #d5f4e6;
+}
+
+.total-status.leap {
+  color: #8e44ad;
+  background: #e8daef;
+}
+
+.total-status.invalid {
+  color: #c0392b;
+  background: #fadbd8;
+}
+
+.months-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 1rem;
+  margin: 1rem 0;
+}
+
+.month-input-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.month-input-group label {
+  color: #2c3e50;
+  font-weight: 600;
+  font-size: 0.85rem;
+  margin-bottom: 0.4rem;
+}
+
+.month-input-group input {
+  padding: 0.6rem;
+  border: 1px solid #bdc3c7;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  text-align: center;
+  margin-bottom: 0.4rem;
+}
+
+.month-input-group .days-label {
+  color: #95a5a6;
+  font-size: 0.8rem;
+  text-align: center;
+}
+
+/* Leap Year Info */
+.leap-year-info {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem;
+  background: #ecf0f1;
+  border-radius: 6px;
+  margin: 1.5rem 0;
+}
+
+.leap-year-info input {
+  margin: 0;
+  width: 20px;
+  height: 20px;
+  cursor: pointer;
+}
+
+.leap-year-info label {
+  margin: 0;
+  color: #34495e;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.leap-year-info.leap {
+  background: #e8daef;
+  color: #8e44ad;
+}
+
+/* Form Summary */
+.form-summary {
+  margin: 2rem 0;
+  padding: 1.5rem;
+  background: #f0f8ff;
+  border: 1px solid #bee5eb;
+  border-radius: 6px;
+  border-left: 4px solid #3498db;
+}
+
+.form-summary h4 {
+  color: #2c3e50;
+  margin-bottom: 1rem;
+}
+
+.summary-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.5rem 0;
+  color: #34495e;
+  border-bottom: 1px solid #ecf0f1;
+}
+
+.summary-row:last-child {
+  border-bottom: none;
+}
+
+.summary-row span {
+  font-weight: 500;
+}
+
+.summary-row strong {
+  color: #2c3e50;
+  font-weight: 600;
+}
+
+/* Form Actions */
+.form-actions {
+  display: flex;
+  gap: 1rem;
+  justify-content: flex-end;
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid #ecf0f1;
+}
+
+.btn-cancel,
+.btn-save {
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: 4px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.btn-cancel {
+  background: #ecf0f1;
+  color: #34495e;
+}
+
+.btn-cancel:hover {
+  background: #bdc3c7;
+}
+
+.btn-save {
+  background: #27ae60;
+  color: white;
+}
+
+.btn-save:hover {
+  background: #229954;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(39, 174, 96, 0.3);
+}
+
+/* Info Card */
+.info-card {
+  background: #fff8e1;
+  border: 1px solid #ffe0b2;
+  border-radius: 6px;
+  padding: 1.5rem;
+  margin-top: 2rem;
+  border-left: 4px solid #f39c12;
+}
+
+.info-card h4 {
+  color: #2c3e50;
+  margin-bottom: 1rem;
+  font-size: 1.1rem;
+}
+
+.info-card ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.info-card li {
+  padding: 0.5rem 0;
+  padding-left: 1.5rem;
+  color: #34495e;
+  position: relative;
+}
+
+.info-card li:before {
+  content: "→";
+  position: absolute;
+  left: 0;
+  color: #f39c12;
+  font-weight: bold;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .nepali-calendar-management {
+    padding: 1rem;
+  }
+
+  .mode-selector {
+    flex-direction: column;
+  }
+
+  .mode-btn {
+    width: 100%;
+  }
+
+  .years-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .months-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .form-actions {
+    flex-direction: column;
+  }
+
+  .btn-cancel,
+  .btn-save {
+    width: 100%;
+  }
+
+  .summary-row {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .calendar-header h2 {
+    font-size: 1.4rem;
+  }
+}

@@ -232,7 +232,7 @@ export function formatAdDateToNepaliString(adDateStr) {
   if (!year || !month || !day) return '';
   
   const bs = convertAdToBs(year, month - 1, day);
-  return `${String(bs.month).padStart(2, '0')}-${String(bs.day).padStart(2, '0')}-${bs.year}`;
+  return `${bs.year}-${String(bs.month).padStart(2, '0')}-${String(bs.day).padStart(2, '0')}`;
 }
 
 // Format AD date string to Nepali with Nepali numerals

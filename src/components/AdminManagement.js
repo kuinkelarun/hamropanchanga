@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { collection, getDocs, deleteDoc, doc, writeBatch, query, updateDoc, where, addDoc, getDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import * as XLSX from 'xlsx';
 import './AdminManagement.css';
 import NepaliDatePicker from './NepaliDatePicker';
+import NepaliCalendarManagement from './NepaliCalendarManagement';
 import { convertAdToBs, toNepaliNumber, nepaliMonths, parseNepaliDate, formatAdDateToNepaliStringWithNumerals, formatNepaliDateTime } from '../utils/nepaliDateUtils';
 import { getEphemerisData, computeTithiFromLongitudes } from '../utils/ephemeris';
 import { useUserPermissions } from '../hooks/usePermissions';
@@ -88,6 +90,16 @@ function getTithiEndMillis_Admin(tithi) {
 export default function AdminManagement({ user, isAdmin, onBack }) {
   console.log('AdminManagement loaded - version 2025-11-14-v4', { isAdmin });
   
+  const navigate = useNavigate();
+  const { tab } = useParams();
+
+  // If user lands on /admin/management without a tab, redirect to the default tithis tab
+  React.useEffect(() => {
+    if (!tab) {
+      navigate('/admin/management/tithis', { replace: true });
+    }
+  }, [tab, navigate]);
+  
   // Get user permissions using the new hook
   const { hasPermission, loading: permsLoading } = useUserPermissions(user);
 
@@ -98,7 +110,22 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
     hasPermission(PERMISSIONS.MANAGE_EVENTS) ||
     hasPermission(PERMISSIONS.MANAGE_HOME_CARDS);
   
-  const [activeTab, setActiveTab] = useState('tithis'); // 'tithis', 'events', 'dataManagement', 'userManagement'
+  // Get active tab from URL parameter, default to 'tithis'
+  const [activeTab, setActiveTabLocal] = useState(tab || 'tithis');
+  
+  // Update local state when URL param changes
+  useEffect(() => {
+    if (tab) {
+      setActiveTabLocal(tab);
+    }
+  }, [tab]);
+  
+  // Wrapper to update both local state and URL
+  const setActiveTab = (tabName) => {
+    setActiveTabLocal(tabName);
+    navigate(`/admin/management/${tabName}`);
+  };
+  
   const [tithis, setTithis] = useState([]);
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -123,6 +150,18 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
   
   const fileInputRef = useRef(null);
   const hasLoadedData = useRef(false);
+
+  // Helper function to convert AD date to Nepali display
+  const getNepaliDateDisplay = (adDateString) => {
+    if (!adDateString) return '';
+    try {
+      const [year, month, day] = adDateString.split('-').map(Number);
+      const bs = convertAdToBs(year, month - 1, day);
+      return `(${toNepaliNumber(bs.year)}/${toNepaliNumber(bs.month)}/${toNepaliNumber(bs.day)})`;
+    } catch (e) {
+      return '';
+    }
+  };
 
   // Admin-only scan state for detecting tithis where end < start
   const [scanResults, setScanResults] = useState([]);
@@ -1653,7 +1692,7 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
     if (!dateStr) return '';
     const [year, month, day] = dateStr.split('-').map(Number);
     const bs = convertAdToBs(year, month - 1, day); // month is 0-indexed in Date
-    return `${toNepaliNumber(bs.month).padStart(2, '०')}-${toNepaliNumber(bs.day).padStart(2, '०')}-${toNepaliNumber(bs.year)}`;
+    return `${toNepaliNumber(bs.year)}-${toNepaliNumber(bs.month).padStart(2, '०')}-${toNepaliNumber(bs.day).padStart(2, '०')}`;
   }
 
   // Filter data based on search, year, and month
@@ -1717,17 +1756,8 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
     <div className="admin-management">
       <div className="admin-header">
         <div className="admin-header-content">
-          {onBack && (
-            <button onClick={onBack} className="back-button">
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-              </svg>
-              Back to Home
-            </button>
-          )}
           <div className="admin-header-title">
             <h1>📊 Admin Management</h1>
-            <p>Bulk upload and manage Tithis & Events</p>
           </div>
           </div>
         </div>
@@ -1751,6 +1781,14 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
           🎉 Events
         </button>
         <button 
+          className={`admin-tab ${activeTab === 'calendar' ? 'active' : ''}`}
+          onClick={() => setActiveTab('calendar')}
+          disabled={!hasPermission(PERMISSIONS.MANAGE_CALENDAR)}
+          title={!hasPermission(PERMISSIONS.MANAGE_CALENDAR) ? 'No permission to manage calendar' : ''}
+        >
+          🗓️ Calendar Manager
+        </button>
+        <button 
           className={`admin-tab ${activeTab === 'dataManagement' ? 'active' : ''}`}
           onClick={() => setActiveTab('dataManagement')}
           disabled={!hasPermission(PERMISSIONS.MANUAL_DASHBOARD)}
@@ -1759,6 +1797,19 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
           🗂️ Data Management
         </button>
       </div>
+
+      {/* Tab Descriptions */}
+      {activeTab === 'tithis' && (
+        <div className="tab-description">
+          <p>📅 Bulk upload and manage Tithis for the Nepali calendar. Import, edit, and track tithi data.</p>
+        </div>
+      )}
+
+      {activeTab === 'events' && (
+        <div className="tab-description">
+          <p>🎉 Bulk upload and manage calendar events. Create, edit, and organize events for the family calendar.</p>
+        </div>
+      )}
 
       {/* User Management moved to Settings -> User Management (top-level). */}
 
@@ -1903,84 +1954,13 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
         </div>
       )}
 
-      {/* Auto Management Section - Only show for tithis tab */}
-      {activeTab === 'tithis' && (
-      <div className="admin-section">
-        <h2>🤖 Auto Management</h2>
-        <p>Automatically calculate Tithis for a date range and generate Excel file for bulk upload.</p>
-        <p className="text-sm text-gray-600 mt-1">
-          <strong>Note:</strong> Calculations use <strong>Kathmandu, Nepal</strong> coordinates (27.7172° N, 85.3240° E) for astronomical accuracy.
-        </p>
-        
-        <div className="auto-management-form">
-          <div className="form-row">
-            <div className="form-field">
-              <label className="form-label">Start Date</label>
-              <input
-                type="date"
-                className="form-input"
-                value={autoStartDate}
-                onChange={e => {
-                  setAutoStartDate(e.target.value);
-                  if (autoProgress === 100) {
-                    setAutoProgress(0);
-                    setAutoStatus('');
-                  }
-                }}
-              />
-            </div>
-            <div className="form-field">
-              <label className="form-label">End Date</label>
-              <input
-                type="date"
-                className="form-input"
-                value={autoEndDate}
-                onChange={e => {
-                  setAutoEndDate(e.target.value);
-                  if (autoProgress === 100) {
-                    setAutoProgress(0);
-                    setAutoStatus('');
-                  }
-                }}
-              />
-            </div>
-          </div>
-          
-          <div className="form-actions">
-            <button 
-              onClick={generateTithiExcel}
-              className="btn-primary"
-              disabled={loading || !autoStartDate || !autoEndDate || (autoProgress > 0 && autoProgress < 100)}
-            >
-              {autoProgress === 100 ? '✅ Complete' : autoProgress > 0 ? '🔄 Generating...' : '📊 Generate Tithi Excel'}
-            </button>
-            {autoProgress > 0 && autoProgress < 100 && (
-              <div className="progress-indicator">
-                <div className="progress-bar">
-                  <div 
-                    className="progress-fill" 
-                    style={{ width: `${autoProgress}%` }}
-                  ></div>
-                </div>
-                <span className="progress-text">{autoProgress}% Complete</span>
-              </div>
-            )}
-            {autoProgress === 100 && (
-              <div className="progress-indicator complete">
-                <span className="progress-text">🎉 Generation Complete!</span>
-              </div>
-            )}
-          </div>
-          
-          {autoStatus && (
-            <div className={`status-message ${autoStatus.startsWith('❌') ? 'error' : autoStatus.startsWith('✅') ? 'success' : 'info'}`}>
-              {autoStatus}
-            </div>
-          )}
-        </div>
-      </div>
+      {/* Nepali Calendar Manager Tab */}
+      {activeTab === 'calendar' && (
+        <NepaliCalendarManagement 
+          hasPermission={hasPermission} 
+          PERMISSIONS={PERMISSIONS}
+        />
       )}
-
       {/* Bulk Upload Section - Only show for tithis/events tabs */}
       {(activeTab === 'tithis' || activeTab === 'events') && (
       <div className="admin-section">
@@ -2652,6 +2632,106 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Tithi Auto Generator Section - Only show for tithis tab */}
+      {activeTab === 'tithis' && (
+      <div className="admin-section">
+        <h2>⚡ Tithi Auto Generator</h2>
+        <p>Automatically calculate Tithis for a date range and generate Excel file for bulk upload.</p>
+        <p className="text-sm text-gray-600 mt-1">
+          <strong>Note:</strong> Calculations use <strong>Kathmandu, Nepal</strong> coordinates (27.7172° N, 85.3240° E) for astronomical accuracy.
+        </p>
+        
+        <div className="auto-management-form">
+          <div className="form-row">
+            <div className="form-field">
+              <label className="form-label">Start Date</label>
+              <div style={{ position: 'relative' }}>
+                <input
+                  type="date"
+                  className="form-input"
+                  value={autoStartDate}
+                  onChange={e => {
+                    setAutoStartDate(e.target.value);
+                    if (autoProgress === 100) {
+                      setAutoProgress(0);
+                      setAutoStatus('');
+                    }
+                  }}
+                />
+                {autoStartDate && (
+                  <div style={{
+                    fontSize: '0.85rem',
+                    color: '#6b7280',
+                    marginTop: '0.25rem'
+                  }}>
+                    {getNepaliDateDisplay(autoStartDate)}
+                  </div>
+                )}
+              </div>
+            </div>
+            <div className="form-field">
+              <label className="form-label">End Date</label>
+              <div style={{ position: 'relative' }}>
+                <input
+                  type="date"
+                  className="form-input"
+                  value={autoEndDate}
+                  onChange={e => {
+                    setAutoEndDate(e.target.value);
+                    if (autoProgress === 100) {
+                      setAutoProgress(0);
+                      setAutoStatus('');
+                    }
+                  }}
+                />
+                {autoEndDate && (
+                  <div style={{
+                    fontSize: '0.85rem',
+                    color: '#6b7280',
+                    marginTop: '0.25rem'
+                  }}>
+                    {getNepaliDateDisplay(autoEndDate)}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+          
+          <div className="form-actions">
+            <button 
+              onClick={generateTithiExcel}
+              className="btn-primary"
+              disabled={loading || !autoStartDate || !autoEndDate || (autoProgress > 0 && autoProgress < 100)}
+            >
+              {autoProgress === 100 ? '✅ Complete' : autoProgress > 0 ? '🔄 Generating...' : '📊 Generate Tithi Excel'}
+            </button>
+            {autoProgress > 0 && autoProgress < 100 && (
+              <div className="progress-indicator">
+                <div className="progress-bar">
+                  <div 
+                    className="progress-fill" 
+                    style={{ width: `${autoProgress}%` }}
+                  ></div>
+                </div>
+                <span className="progress-text">{autoProgress}% Complete</span>
+              </div>
+            )}
+            {autoProgress === 100 && (
+              <div className="progress-indicator complete">
+                <span className="progress-text">🎉 Generation Complete!</span>
+              </div>
+            )}
+          </div>
+          
+          {autoStatus && (
+            <div className={`status-message ${autoStatus.startsWith('❌') ? 'error' : autoStatus.startsWith('✅') ? 'success' : 'info'}`}>
+              {autoStatus}
+            </div>
+          )}
+        </div>
+      </div>
       )}
     </div>
   );

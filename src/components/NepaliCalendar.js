@@ -38,8 +38,15 @@ const krishnaPackshyaTithis = [
 const nepaliNumbers = ["०","१","२","३","४","५","६","७","८","९"];
 
 // bsCalendarData moved to src/data/bsCalendarData.js
+// Note: This is a fallback; we'll load updated data from Firestore if available
+let mergedCalendarData = { ...bsCalendarData };
 const minBsYear = Math.min(...Object.keys(bsCalendarData).map(n=>+n));
 const maxBsYear = Math.max(...Object.keys(bsCalendarData).map(n=>+n));
+
+// Function to get calendar data (Firestore override + bsCalendarData fallback)
+const getCalendarData = (year) => {
+  return mergedCalendarData[year] || bsCalendarData[year];
+};
 
 function toNepaliNumber(num){
   return String(num).split('').map(d => nepaliNumbers[+d] ?? d).join('');
@@ -80,8 +87,8 @@ function formatTime24Hour(time12) {
 function convertAdToBs(year, month, day){
   const adDate = new Date(year, month, day);
   let bsYear = null, totalDays = 0;
-  for (const y of Object.keys(bsCalendarData).sort()) {
-    const startAd = bsCalendarData[y].startAdDate;
+  for (const y of Object.keys(mergedCalendarData).sort()) {
+    const startAd = getCalendarData(+y).startAdDate;
     if (adDate >= startAd) {
       bsYear = +y;
       totalDays = Math.floor((adDate - startAd) / (1000*60*60*24)) + 1;
@@ -93,7 +100,7 @@ function convertAdToBs(year, month, day){
   }
   let bsMonth = 1;
   let bsDay = totalDays;
-  const months = bsCalendarData[bsYear].daysInMonths;
+  const months = getCalendarData(bsYear).daysInMonths;
   for (let i=0;i<months.length;i++){
     if (bsDay <= months[i]) { bsMonth = i+1; break; }
     bsDay -= months[i];
@@ -102,10 +109,11 @@ function convertAdToBs(year, month, day){
 }
 
 function convertBsToAd(year, month, day){
-  const start = bsCalendarData[year]?.startAdDate;
+  const yearData = getCalendarData(year);
+  const start = yearData?.startAdDate;
   if (!start) return null;
   let totalDays = 0;
-  for (let i=0;i<month-1;i++) totalDays += bsCalendarData[year].daysInMonths[i];
+  for (let i=0;i<month-1;i++) totalDays += yearData.daysInMonths[i];
   totalDays += day - 1;
   const adDate = new Date(start);
   adDate.setDate(start.getDate() + totalDays);
@@ -267,6 +275,50 @@ export default function NepaliCalendar({ user: propUser, isAdmin, treeMembers = 
     };
   }, [authLoading, user]); // Re-run when auth state changes
 
+  // Load Nepali calendar configuration from Firestore and merge with bsCalendarData
+  // This allows admin edits to be reflected in the calendar
+  useEffect(() => {
+    const loadCalendarConfiguration = async () => {
+      try {
+        const calendarYearsSnapshot = await getDocs(collection(db, 'nepaliCalendarYears'));
+        if (calendarYearsSnapshot.empty) {
+          console.log('No custom calendar years found in Firestore, using defaults only');
+          return;
+        }
+
+        // Merge Firestore data with bsCalendarData
+        calendarYearsSnapshot.docs.forEach((docSnap) => {
+          const data = docSnap.data();
+          const year = parseInt(data.year);
+          
+          // Convert startAdDate string to Date without timezone offset
+          let startAdDate = data.startAdDate;
+          if (typeof startAdDate === 'string') {
+            // Parse "YYYY-MM-DD" format manually to avoid timezone issues
+            const [dateYear, dateMonth, dateDay] = startAdDate.split('-');
+            startAdDate = new Date(parseInt(dateYear), parseInt(dateMonth) - 1, parseInt(dateDay));
+          }
+          
+          // Update mergedCalendarData with Firestore values
+          mergedCalendarData[year] = {
+            startAdDate,
+            daysInMonths: data.daysInMonths || []
+          };
+          
+          console.log(`Loaded custom calendar year ${year} from Firestore:`, mergedCalendarData[year]);
+        });
+      } catch (error) {
+        if (error.message && error.message.includes('permission')) {
+          console.log('No permission to read nepaliCalendarYears collection');
+        } else {
+          console.log('Calendar configuration load error (using defaults):', error.message);
+        }
+      }
+    };
+
+    loadCalendarConfiguration();
+  }, []);
+
   // Authentication state listener - only set up if user not passed as prop
   useEffect(() => {
     if (propUser) {
@@ -320,9 +372,9 @@ export default function NepaliCalendar({ user: propUser, isAdmin, treeMembers = 
         orderBy('dateKey')
       );
       
+      // Simplified treeQuery: only order by dateKey; filter treeId client-side to avoid composite index
       const treeQuery = query(
         eventsCollection,
-        orderBy('treeId'),
         orderBy('dateKey')
       );
       
@@ -372,9 +424,9 @@ export default function NepaliCalendar({ user: propUser, isAdmin, treeMembers = 
         orderBy('dateKey')
       );
 
+      // Simplified treeQuery: only order by dateKey; filter treeId client-side to avoid composite index
       const treeQuery = query(
         eventsCollection,
-        orderBy('treeId'),
         orderBy('dateKey')
       );
       
@@ -450,7 +502,7 @@ export default function NepaliCalendar({ user: propUser, isAdmin, treeMembers = 
   }, [currentBsYear]);
 
   const nepaliMonthDays = useMemo(() => {
-    return bsCalendarData[currentBsYear]?.daysInMonths[currentBsMonth-1] ?? 30;
+    return getCalendarData(currentBsYear)?.daysInMonths[currentBsMonth-1] ?? 30;
   }, [currentBsYear, currentBsMonth]);
 
   const firstDayOfBsMonthAd = useMemo(() => {
