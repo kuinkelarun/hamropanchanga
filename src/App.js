@@ -8,6 +8,10 @@ import SettingsMenu from './components/SettingsMenu';
 import LandingPage from './components/LandingPage';
 import AdminEditCards from './components/AdminEditCards';
 import AdminManagement from './components/AdminManagement';
+import AdminTithisPage from './components/Admin/AdminTithisPage';
+import AdminEventsPage from './components/Admin/AdminEventsPage';
+import AdminCalendarPage from './components/Admin/AdminCalendarPage';
+import AdminDataManagementPage from './components/Admin/AdminDataManagementPage';
 import UserManagement from './components/UserManagement';
 import TithiCalculatorPage from './components/TithiCalculatorPage';
 import EmbeddedBuilderPage from './components/TreeBuilder/EmbeddedBuilderPage';
@@ -449,6 +453,46 @@ function AppContent() {
 
                     <Route path="/admin/management" element={
                         <AdminManagement
+                            user={user}
+                            isAdmin={isAdmin}
+                            onBack={handleBackToList}
+                        />
+                    } />
+
+                    <Route path="/admin/management/:tab" element={
+                        <AdminManagement
+                            user={user}
+                            isAdmin={isAdmin}
+                            onBack={handleBackToList}
+                        />
+                    } />
+
+                    <Route path="/admin/tithis" element={
+                        <AdminTithisPage
+                            user={user}
+                            isAdmin={isAdmin}
+                            onBack={handleBackToList}
+                        />
+                    } />
+
+                    <Route path="/admin/events" element={
+                        <AdminEventsPage
+                            user={user}
+                            isAdmin={isAdmin}
+                            onBack={handleBackToList}
+                        />
+                    } />
+
+                    <Route path="/admin/calendar" element={
+                        <AdminCalendarPage
+                            user={user}
+                            isAdmin={isAdmin}
+                            onBack={handleBackToList}
+                        />
+                    } />
+
+                    <Route path="/admin/data-management" element={
+                        <AdminDataManagementPage
                             user={user}
                             isAdmin={isAdmin}
                             onBack={handleBackToList}

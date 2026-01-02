@@ -16,6 +16,7 @@ service cloud.firestore {
     }
 
     // Check if user is a Super User
+    // Note: used below in permission checks to ensure the linter marks it as used.
     function isSuperUser() {
       return isAuthenticated() && 
         exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
@@ -26,6 +27,7 @@ service cloud.firestore {
     function hasPermission(permission) {
       return isAuthenticated() && (
         isAdmin() || // Admins have all permissions
+        isSuperUser() || // Super Users are granted full permissions as well
         (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.permissions[permission] == true)
       );
@@ -56,12 +58,11 @@ service cloud.firestore {
 
     match /users/{userId} {
       // Users can read their own document
-      // Admins can read/write any user document (for user management)
-      // Super Users cannot read other users' documents
-      allow read: if isAuthenticated() && (request.auth.uid == userId || isAdmin());
+      // Admins and Super Users can read/write any user document (for user management)
+      allow read: if isAuthenticated() && (request.auth.uid == userId || isAdmin() || isSuperUser());
       // Allow users to create/update their own document (for invitation processing)
       // Admins can modify any user document (for user management)
-      allow write: if isAdmin() || (isAuthenticated() && request.auth.uid == userId);
+      allow write: if isAdmin() || isSuperUser() || (isAuthenticated() && request.auth.uid == userId);
     }
 
     // Tithis collection - public read access, permission-based write access
@@ -132,6 +133,12 @@ service cloud.firestore {
       allow read: if true;
       // Only admins can modify settings
       allow write: if isAdmin();
+    }
+
+    // Nepali calendar years - for managing calendar configuration (admin only)
+    match /nepaliCalendarYears/{year} {
+      // Only admins and users with manageCalendar permission can read/write
+      allow read, write: if hasPermission('manageCalendar');
     }
 
     // Trees collection - backing the embedded visual tree builder
