@@ -1133,50 +1133,56 @@ export default function EmbeddedBuilderPage({ user }) {
   }
 
   return (
-    <div className="min-h-screen bg-gray-100 flex flex-col">
-      <div 
-        className="px-4 py-3 border-b border-gray-200 flex items-center justify-center relative bg-white shadow-sm"
-        onClick={() => {
-          if (window.innerWidth < 1024) {
-            setSidebarVisible(false);
-          }
-        }}
-      >
-        <button
-          onClick={handleAddNodeToCanvas}
-          disabled={!tree}
-          className="absolute left-4 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white rounded-lg shadow font-medium text-sm transition-all"
-          title="Add a new node to the canvas"
-        >
-          + Add Node
-        </button>
-        <div className="text-center">
-          <h1 className="text-xl font-semibold text-gray-800">{tree.title || 'Untitled Tree'}</h1>
-          <p className="text-xs text-gray-500">Tree ID: {tree.id}</p>
-        </div>
-        <button
-          onClick={handleExportPng}
-          disabled={!tree || !nodes || nodes.length === 0}
-          className="absolute right-4 px-4 py-2 bg-sky-500 hover:bg-sky-600 disabled:bg-gray-400 text-white rounded-lg shadow font-medium text-sm transition-all"
-          title="Export the tree as PNG"
-        >
-          Export PNG
-        </button>
-      </div>
-      <div className="flex flex-1 min-h-0 relative">
-        <SidebarPanel
-          members={members}
-          onAddNewMember={handleAddNodeToCanvas}
-          onAddMemberToCanvas={handleAddMemberToCanvas}
-          onSelectMember={handleSelectMember}
-          canAddMember={!!tree}
-          isVisible={sidebarVisible}
-          onToggle={() => setSidebarVisible(!sidebarVisible)}
-          modalOpen={memberModalOpen}
-        />
-        {/* Give React Flow a concrete height so it can render */}
+    <div className="min-h-screen bg-gray-100 flex">
+      {/* Sidebar Panel - Fixed on the left */}
+      <SidebarPanel
+        members={members}
+        onAddNewMember={handleAddNodeToCanvas}
+        onAddMemberToCanvas={handleAddMemberToCanvas}
+        onSelectMember={handleSelectMember}
+        canAddMember={!!tree}
+        isVisible={sidebarVisible}
+        onToggle={() => setSidebarVisible(!sidebarVisible)}
+        modalOpen={memberModalOpen}
+      />
+      
+      {/* Canvas Area - Takes remaining space */}
+      <div className="flex flex-1 flex-col min-h-screen">
+        {/* Canvas Header */}
         <div 
-          style={{ width: '100%', height: 'calc(100vh - 56px)' }}
+          className="h-14 bg-white border-b border-gray-200 flex items-center justify-center gap-4 shadow-sm px-4"
+          onClick={() => {
+            // Hide sidebar on click (mobile-friendly auto-hide)
+            if (window.innerWidth < 1024) {
+              setSidebarVisible(false);
+            }
+          }}
+        >
+          <button
+            onClick={handleAddNodeToCanvas}
+            disabled={!tree}
+            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white rounded-lg shadow font-medium text-sm transition-all"
+            title="Add a new node to the canvas"
+          >
+            + Add Node
+          </button>
+          <div className="text-center flex-1">
+            <h1 className="text-lg font-semibold text-gray-800">{tree.title || 'Untitled Tree'}</h1>
+            <p className="text-xs text-gray-500">Tree ID: {tree.id}</p>
+          </div>
+          <button
+            onClick={handleExportPng}
+            disabled={!tree || !nodes || nodes.length === 0}
+            className="px-4 py-2 bg-sky-500 hover:bg-sky-600 disabled:bg-gray-400 text-white rounded-lg shadow font-medium text-sm transition-all"
+            title="Export the tree as PNG"
+          >
+            Export PNG
+          </button>
+        </div>
+
+        {/* Canvas Area - Takes remaining height */}
+        <div 
+          className="flex-1"
           onClick={() => {
             // Hide sidebar on click (mobile-friendly auto-hide)
             if (window.innerWidth < 1024) {
@@ -1201,17 +1207,18 @@ export default function EmbeddedBuilderPage({ user }) {
             onExport={handleExportPng}
           />
         </div>
-        <MemberModal
-          open={memberModalOpen}
-          member={editingMember}
-          allMembers={members}
-          onSave={handleSaveMember}
-          onClose={handleCloseMemberModal}
-          canSave
-          onMoveToPool={handleMoveMemberToPool}
-          onDelete={handleDeleteMember}
-        />
       </div>
+      
+      <MemberModal
+        open={memberModalOpen}
+        member={editingMember}
+        allMembers={members}
+        onSave={handleSaveMember}
+        onClose={handleCloseMemberModal}
+        canSave
+        onMoveToPool={handleMoveMemberToPool}
+        onDelete={handleDeleteMember}
+      />
       <RelationshipPicker
         open={relPicker.open}
         fromName={displayMemberName(members.find(m => m.id === relPicker.source))}
