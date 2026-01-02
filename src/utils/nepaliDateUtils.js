@@ -191,8 +191,33 @@ export function parseNepaliDate(dateStr) {
     normalizedStr = normalizedStr.replace(new RegExp(nepaliNumbers[i], 'g'), i.toString());
   }
   
-  // Try MM-DD-YYYY format first
-  let match = normalizedStr.match(/^(\d{1,2})-(\d{1,2})-(\d{4})$/);
+  // Try YYYY-MM-DD format (Nepali date) first - this is the new standard format
+  let match = normalizedStr.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+  if (match) {
+    const bsYear = parseInt(match[1]);
+    const bsMonth = parseInt(match[2]);
+    const bsDay = parseInt(match[3]);
+    
+    // Validate BS date
+    if (bsYear < minBsYear || bsYear > maxBsYear) return null;
+    if (bsMonth < 1 || bsMonth > 12) return null;
+    
+    const yearData = bsCalendarData[bsYear];
+    if (!yearData) return null;
+    
+    const maxDay = yearData.daysInMonths[bsMonth - 1];
+    if (bsDay < 1 || bsDay > maxDay) return null;
+    
+    // Convert to AD
+    const ad = convertBsToAd(bsYear, bsMonth, bsDay);
+    if (!ad) return null;
+    
+    // Return YYYY-MM-DD format for Firestore
+    return `${ad.year}-${String(ad.month + 1).padStart(2, '0')}-${String(ad.day).padStart(2, '0')}`;
+  }
+  
+  // Try MM-DD-YYYY format (legacy Nepali date format)
+  match = normalizedStr.match(/^(\d{1,2})-(\d{1,2})-(\d{4})$/);
   if (match) {
     const bsMonth = parseInt(match[1]);
     const bsDay = parseInt(match[2]);
@@ -214,12 +239,6 @@ export function parseNepaliDate(dateStr) {
     
     // Return YYYY-MM-DD format for Firestore
     return `${ad.year}-${String(ad.month + 1).padStart(2, '0')}-${String(ad.day).padStart(2, '0')}`;
-  }
-  
-  // Try YYYY-MM-DD format (AD date)
-  match = normalizedStr.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
-  if (match) {
-    return normalizedStr; // Already in correct format
   }
   
   return null;

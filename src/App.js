@@ -396,7 +396,7 @@ function AppContent() {
                             e.currentTarget.style.boxShadow = '0 2px 4px rgba(102, 126, 234, 0.3)';
                         }}
                     >
-                        Home
+                        FamilyTree
                     </button>
                 </div>
                 <div className="flex items-center gap-4">
