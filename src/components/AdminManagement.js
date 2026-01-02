@@ -341,9 +341,9 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
     if (activeTab === 'tithis') {
       // Tithis template with examples using Nepali dates
       const wsData = [
-        ['Tithi*', 'Pakshya*', 'Start Date* (MM-DD-YYYY Nepali)', 'Start Time* (HH:MM)', 'End Date* (MM-DD-YYYY Nepali)', 'End Time* (HH:MM)', 'AddOrReplace*', 'Category (optional)'],
-        ['एकादशी', 'शुक्लपक्ष', '०७-३१-२०८२', '06:00', '०८-०१-२०८२', '18:00', 'ADD', 'Festival'],
-        ['अष्टमी', 'कृष्णपक्ष', '०८-०६-२०८२', '10:00', '०८-०६-२०८२', '22:00', 'ADD', ''],
+        ['Tithi*', 'Pakshya*', 'Start Date* (YYYY-MM-DD Nepali)', 'Start Time* (HH:MM)', 'End Date* (YYYY-MM-DD Nepali)', 'End Time* (HH:MM)', 'AddOrReplace*', 'Category (optional)'],
+        ['एकादशी', 'शुक्लपक्ष', '२०८२-०७-३१', '06:00', '२०८२-०८-०१', '18:00', 'ADD', 'Festival'],
+        ['अष्टमी', 'कृष्णपक्ष', '२०८२-०८-०६', '10:00', '२०८२-०८-०६', '22:00', 'ADD', ''],
       ];
       const ws = XLSX.utils.aoa_to_sheet(wsData);
       ws['!cols'] = [{ wch: 25 }, { wch: 15 }, { wch: 30 }, { wch: 20 }, { wch: 30 }, { wch: 20 }, { wch: 15 }, { wch: 20 }];
@@ -398,7 +398,7 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
         ['Instructions:', '', ''],
         ['1. Enter only the Tithi name (e.g., एकादशी) in Tithi column', '', ''],
         ['2. Select Pakshya from dropdown', '', ''],
-        ['3. Date format: MM-DD-YYYY Nepali (e.g., ०७-३१-२०८२)', '', ''],
+        ['3. Date format: YYYY-MM-DD Nepali (e.g., २०८२-०७-३१)', '', ''],
         ['4. Time format: HH:MM in 24-hour (e.g., 06:00, 18:00)', '', ''],
         ['5. End Date can be same as Start Date or next day', '', ''],
         ['6. AddOrReplace: ADD (append) or REPLACE (delete existing for date & add new)', '', ''],
@@ -410,9 +410,9 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
     } else {
       // Events template with validation using Nepali dates
       const wsData = [
-        ['Title*', 'Description', 'Date* (MM-DD-YYYY Nepali)', 'Is Public* (TRUE/FALSE)', 'AddOrReplace*', 'Associated Person (optional)'],
-        ['Family Gathering', 'Annual family reunion', '०९-१०-२०८२', 'TRUE', 'ADD', 'John Doe'],
-        ['Birthday Celebration', 'Grandmother\'s birthday', '०८-१६-२०८२', 'FALSE', 'ADD', 'Mary Smith'],
+        ['Title*', 'Description', 'Date* (YYYY-MM-DD Nepali)', 'Is Public* (TRUE/FALSE)', 'AddOrReplace*', 'Associated Person (optional)'],
+        ['Family Gathering', 'Annual family reunion', '२०८२-०९-१०', 'TRUE', 'ADD', 'John Doe'],
+        ['Birthday Celebration', 'Grandmother\'s birthday', '२०८२-०८-१६', 'FALSE', 'ADD', 'Mary Smith'],
       ];
       const ws = XLSX.utils.aoa_to_sheet(wsData);
       ws['!cols'] = [{ wch: 25 }, { wch: 35 }, { wch: 30 }, { wch: 25 }, { wch: 15 }, { wch: 25 }];
@@ -439,7 +439,7 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
         ['Instructions:', ''],
         ['1. Title is required - brief event name', ''],
         ['2. Description is optional - detailed information', ''],
-        ['3. Date format: MM-DD-YYYY Nepali (e.g., ०९-१०-२०८२)', ''],
+        ['3. Date format: YYYY-MM-DD Nepali (e.g., २०८२-०९-१०)', ''],
         ['4. Is Public: Select TRUE or FALSE from dropdown', ''],
         ['   - TRUE: Visible to all users', ''],
         ['   - FALSE: Only visible to you', ''],
@@ -469,14 +469,13 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
         const pakshya = nameParts[0] || '';
         const tithi = nameParts.slice(1).join(' ') || t.name || '';
         const row = [
-          t.id,
           tithi,
           pakshya,
           formatAdDateToNepaliStringWithNumerals(t.startDate),
           t.startTime || '',
           formatAdDateToNepaliStringWithNumerals(t.endDate),
           t.endTime || '',
-          t.createdAt || ''
+          'ADD'
         ];
         const key = `${tithi}|${pakshya}|${t.startDate || ''}|${t.startTime || ''}|${t.endDate || ''}|${t.endTime || ''}`;
         if (!seen.has(key)) {
@@ -486,30 +485,28 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
       });
 
       const wsData = [
-        ['ID', 'Tithi', 'Pakshya', 'Start Date (Nepali)', 'Start Time', 'End Date (Nepali)', 'End Time', 'Created At'],
+        ['Tithi*', 'Pakshya*', 'Start Date* (YYYY-MM-DD Nepali)', 'Start Time* (HH:MM)', 'End Date* (YYYY-MM-DD Nepali)', 'End Time* (HH:MM)', 'AddOrReplace*'],
         ...uniqueRows
       ];
       const ws = XLSX.utils.aoa_to_sheet(wsData);
-      ws['!cols'] = [{ wch: 25 }, { wch: 20 }, { wch: 15 }, { wch: 20 }, { wch: 15 }, { wch: 20 }, { wch: 15 }, { wch: 25 }];
+      ws['!cols'] = [{ wch: 25 }, { wch: 15 }, { wch: 30 }, { wch: 20 }, { wch: 30 }, { wch: 20 }, { wch: 15 }];
       XLSX.utils.book_append_sheet(wb, ws, 'Tithis');
       XLSX.writeFile(wb, 'Tithis_Export.xlsx');
       const removed = tithis.length - uniqueRows.length;
       setUploadStatus(`✅ Exported ${uniqueRows.length} tithis to Tithis_Export.xlsx${removed > 0 ? ` (removed ${removed} duplicate rows)` : ''}`);
     } else {
       const wsData = [
-        ['ID', 'Title', 'Description', 'Date (Nepali)', 'Is Public', 'Created By Admin', 'Created At'],
+        ['Title*', 'Description', 'Date* (YYYY-MM-DD Nepali)', 'Is Public* (TRUE/FALSE)', 'AddOrReplace*'],
         ...events.map(e => [
-          e.id,
           e.title || '',
           e.description || '',
           formatAdDateToNepaliStringWithNumerals(e.dateKey),
           e.isPublic ? 'TRUE' : 'FALSE',
-          e.createdByAdmin ? 'TRUE' : 'FALSE',
-          e.createdAt || ''
+          'ADD'
         ])
       ];
       const ws = XLSX.utils.aoa_to_sheet(wsData);
-      ws['!cols'] = [{ wch: 25 }, { wch: 25 }, { wch: 40 }, { wch: 20 }, { wch: 12 }, { wch: 18 }, { wch: 25 }];
+      ws['!cols'] = [{ wch: 25 }, { wch: 40 }, { wch: 30 }, { wch: 25 }, { wch: 15 }];
       XLSX.utils.book_append_sheet(wb, ws, 'Events');
       XLSX.writeFile(wb, 'Events_Export.xlsx');
       setUploadStatus(`✅ Exported ${events.length} events to Events_Export.xlsx`);
@@ -702,7 +699,7 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
 
       const wb = XLSX.utils.book_new();
       const wsData = [
-        ['Tithi*', 'Pakshya*', 'Start Date* (MM-DD-YYYY Nepali)', 'Start Time* (HH:MM)', 'End Date* (MM-DD-YYYY Nepali)', 'End Time* (HH:MM)', 'AddOrReplace*', 'Category (optional)'],
+        ['Tithi*', 'Pakshya*', 'Start Date* (YYYY-MM-DD Nepali)', 'Start Time* (HH:MM)', 'End Date* (YYYY-MM-DD Nepali)', 'End Time* (HH:MM)', 'AddOrReplace*', 'Category (optional)'],
         ...candidateRows.map(c => c.row)
       ];
 
@@ -856,9 +853,9 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
       // Required fields
       const tithi = row['Tithi*']?.toString().trim();
       const pakshya = row['Pakshya*']?.toString().trim();
-      const startDateRaw = row['Start Date* (MM-DD-YYYY Nepali)']?.toString().trim();
+      const startDateRaw = row['Start Date* (YYYY-MM-DD Nepali)']?.toString().trim();
       const startTime = row['Start Time* (HH:MM)']?.toString().trim();
-      const endDateRaw = row['End Date* (MM-DD-YYYY Nepali)']?.toString().trim();
+      const endDateRaw = row['End Date* (YYYY-MM-DD Nepali)']?.toString().trim();
       const endTime = row['End Time* (HH:MM)']?.toString().trim();
       const addOrReplace = row['AddOrReplace*']?.toString().trim().toUpperCase();
 
@@ -885,10 +882,10 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
       const endDate = endDateRaw ? parseNepaliDate(endDateRaw) : null;
 
       if (startDateRaw && !startDate) {
-        errors.push('Start Date must be in MM-DD-YYYY format (Nepali)');
+        errors.push('Start Date must be in YYYY-MM-DD format (Nepali)');
       }
       if (endDateRaw && !endDate) {
-        errors.push('End Date must be in MM-DD-YYYY format (Nepali)');
+        errors.push('End Date must be in YYYY-MM-DD format (Nepali)');
       }
 
       // Normalize and validate time formats. Accept both 24-hour (HH:MM) and 12-hour with AM/PM.
@@ -1004,7 +1001,7 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
       const dateKey = dateRaw ? parseNepaliDate(dateRaw) : null;
 
       if (dateRaw && !dateKey) {
-        errors.push('Date must be in MM-DD-YYYY format (Nepali)');
+        errors.push('Date must be in YYYY-MM-DD format (Nepali)');
       }
 
       // Validate boolean
