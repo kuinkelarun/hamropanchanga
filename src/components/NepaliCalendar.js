@@ -9,11 +9,16 @@ import ConfirmModal from './ConfirmModal';
 import bsCalendarData from '../data/bsCalendarData';
 import { useSettings } from '../contexts/SettingsContext';
 import NepaliDatePicker from './NepaliDatePicker';
+import { 
+  getTithiLunarMonthName, 
+  getTithiIndexByName, 
+  nepaliMonths as utilNepaliMonths, 
+  formatAdDateToNepaliStringWithNumerals,
+  convertAdToBs,
+  convertBsToAd
+} from '../utils/nepaliDateUtils';
 
-const nepaliMonths = [
-  "वैशाख", "जेठ", "असार", "साउन", "भदौ", "असोज",
-  "कात्तिक", "मंसिर", "पुस", "माघ", "फागुन", "चैत"
-];
+const nepaliMonths = utilNepaliMonths;
 const englishMonths = [
   "January", "February", "March", "April", "May", "June",
   "July", "August", "September", "October", "November", "December"
@@ -54,9 +59,8 @@ function toNepaliNumber(num){
 
 function getNepalDate(){
   const now = new Date();
-  const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
   const nptOffset = 5.75 * 3600000;
-  return new Date(utc + nptOffset);
+  return new Date(now.getTime() + nptOffset);
 }
 
 // Convert 24-hour time (HH:MM) to 12-hour format with AM/PM
@@ -84,41 +88,10 @@ function formatTime24Hour(time12) {
   return `${String(hours).padStart(2, '0')}:${minutes}`;
 }
 
-function convertAdToBs(year, month, day){
-  const adDate = new Date(year, month, day);
-  let bsYear = null, totalDays = 0;
-  for (const y of Object.keys(mergedCalendarData).sort()) {
-    const startAd = getCalendarData(+y).startAdDate;
-    if (adDate >= startAd) {
-      bsYear = +y;
-      totalDays = Math.floor((adDate - startAd) / (1000*60*60*24)) + 1;
-    } else break;
-  }
-  if (!bsYear) {
-    bsYear = minBsYear;
-    totalDays = 1;
-  }
-  let bsMonth = 1;
-  let bsDay = totalDays;
-  const months = getCalendarData(bsYear).daysInMonths;
-  for (let i=0;i<months.length;i++){
-    if (bsDay <= months[i]) { bsMonth = i+1; break; }
-    bsDay -= months[i];
-  }
-  return { year: bsYear, month: bsMonth, day: bsDay, dayOfWeek: adDate.getDay() };
-}
-
-function convertBsToAd(year, month, day){
-  const yearData = getCalendarData(year);
-  const start = yearData?.startAdDate;
-  if (!start) return null;
-  let totalDays = 0;
-  for (let i=0;i<month-1;i++) totalDays += yearData.daysInMonths[i];
-  totalDays += day - 1;
-  const adDate = new Date(start);
-  adDate.setDate(start.getDate() + totalDays);
-  return { year: adDate.getFullYear(), month: adDate.getMonth(), day: adDate.getDate() };
-}
+// Note: AD↔BS conversions are centralized in nepaliDateUtils to ensure
+// consistent, Nepal-time-based handling across the app. We import and use
+// convertAdToBs / convertBsToAd from there instead of maintaining a
+// separate implementation here.
 
 export default function NepaliCalendar({ user: propUser, isAdmin, treeMembers = [], onTreeEventClick }) {
   const { isEditMode } = useSettings();
@@ -126,43 +99,30 @@ export default function NepaliCalendar({ user: propUser, isAdmin, treeMembers = 
   const [authLoading, setAuthLoading] = useState(!propUser);
   // Track "today" in Nepal timezone and update daily so the topbar reflects the real current Nepali month/year
   const [todayAd, setTodayAd] = useState(() => getNepalDate());
-  const [todayBs, setTodayBs] = useState(() => convertAdToBs(todayAd.getFullYear(), todayAd.getMonth(), todayAd.getDate()));
+  const [todayBs, setTodayBs] = useState(() => convertAdToBs(todayAd.getUTCFullYear(), todayAd.getUTCMonth(), todayAd.getUTCDate()));
 
   // Keep todayAd/todayBs in sync with the real current time.
-  // Instead of polling every minute, schedule a single timeout that fires exactly at the next NPT midnight.
+  // Update every second to show accurate time in the header
   useEffect(() => {
-    let timeoutId = null;
-
-    function refreshToday() {
+    const updateTime = () => {
       const nowAd = getNepalDate();
       setTodayAd(nowAd);
-      const bs = convertAdToBs(nowAd.getFullYear(), nowAd.getMonth(), nowAd.getDate());
-      setTodayBs(bs);
-
-      // Calculate milliseconds until next NPT midnight using the NPT fields (use UTC getters because getNepalDate()'s UTC fields represent NPT)
-      const hours = nowAd.getUTCHours();
-      const mins = nowAd.getUTCMinutes();
-      const secs = nowAd.getUTCSeconds();
-      const ms = nowAd.getUTCMilliseconds();
-      const msSinceMidnight = ((hours * 60 + mins) * 60 + secs) * 1000 + ms;
-      const msInDay = 24 * 60 * 60 * 1000;
-      let msUntilNextMidnight = msInDay - msSinceMidnight;
-
-      // Safety: if computed time is very small or negative, schedule a short delay
-      if (msUntilNextMidnight <= 0) msUntilNextMidnight = 1000;
-
-      // Add a small buffer (200ms) to avoid race conditions around the exact boundary
-      timeoutId = setTimeout(() => {
-        refreshToday();
-      }, msUntilNextMidnight + 200);
-    }
-
-    // Initialize
-    refreshToday();
-
-    return () => {
-      if (timeoutId) clearTimeout(timeoutId);
+      const bs = convertAdToBs(nowAd.getUTCFullYear(), nowAd.getUTCMonth(), nowAd.getUTCDate());
+      
+      // Only update todayBs if the day has actually changed to avoid unnecessary effect triggers
+      setTodayBs(prevBs => {
+        if (prevBs.year === bs.year && prevBs.month === bs.month && prevBs.day === bs.day) {
+          return prevBs;
+        }
+        return bs;
+      });
     };
+
+    // Update immediately and then every second
+    updateTime();
+    const intervalId = setInterval(updateTime, 1000);
+
+    return () => clearInterval(intervalId);
   }, []);
 
   const [currentBsYear, setCurrentBsYear] = useState(() => todayBs.year);
@@ -1250,9 +1210,71 @@ export default function NepaliCalendar({ user: propUser, isAdmin, treeMembers = 
 
   // Helper function to get events for a specific date
   const getEventsForDate = useCallback((adYear, adMonthZeroBased, adDay) => {
-    const dateKey = `${adYear}-${adMonthZeroBased + 1}-${adDay}`;
-    return calendarEvents.filter(event => event.dateKey === dateKey);
-  }, [calendarEvents]);
+    const dateKey = `${adYear}-${String(adMonthZeroBased + 1).padStart(2, '0')}-${String(adDay).padStart(2, '0')}`;
+    const targetTithis = findTithisForAdDate(adYear, adMonthZeroBased, adDay) || [];
+    
+    return calendarEvents.filter(event => {
+      // 1. Exact Date Match
+      if (event.dateKey === dateKey) return true;
+      
+      // 2. Recurrence Logic
+      if (event.repetition === 'monthly' || event.repetition === 'yearly') {
+        
+        // A. Tithi-based Recurrence
+        if (event.tithi) {
+          // Check if any tithi on this day matches the event's tithi
+          return targetTithis.some(t => {
+            const { pakshya: tPaksha, tithi: tName } = parseTithiName(t.name);
+            
+            // Match Paksha and Tithi Name
+            // Note: event.tithi.paksha is 'Shukla'/'Krishna', tPaksha is 'शुक्लपक्ष'/'कृष्णपक्ष'
+            const eventPakshaNepali = event.tithi.paksha === 'Shukla' ? 'शुक्लपक्ष' : 'कृष्णपक्ष';
+            if (tPaksha !== eventPakshaNepali) return false;
+            
+            // Match Tithi Name (e.g., 'Pratipada')
+            // event.tithi.name might be 'Pratipada', tName might be 'प्रतिपदा' or 'Pratipada' depending on data
+            // Let's use getTithiIndexByName to normalize
+            const eventTithiIndex = getTithiIndexByName(event.tithi.name);
+            const currentTithiIndex = getTithiIndexByName(tName);
+            
+            if (eventTithiIndex !== currentTithiIndex) return false;
+            
+            // If Monthly, we are done (matches Paksha + Tithi)
+            if (event.repetition === 'monthly') return true;
+            
+            // If Yearly, check Tithi Month
+            if (event.repetition === 'yearly') {
+              const lunarMonthName = getTithiLunarMonthName(event.tithi.paksha, eventTithiIndex, dateKey);
+              // event.tithi.month is now stored as the actual tithi lunar month name (e.g., 'वैशाख')
+              // It could be either a string (month name) or a number (if legacy data)
+              let eventMonthName = event.tithi.month;
+              if (typeof eventMonthName === 'number') {
+                eventMonthName = nepaliMonths[eventMonthName - 1];
+              }
+              return lunarMonthName === eventMonthName;
+            }
+            
+            return false;
+          });
+        }
+        
+        // B. Solar Date Recurrence (if no tithi info)
+        const eventDateParts = event.dateKey.split('-').map(Number);
+        const eventDay = eventDateParts[2];
+        const eventMonth = eventDateParts[1];
+        
+        if (event.repetition === 'monthly') {
+          return adDay === eventDay;
+        }
+        
+        if (event.repetition === 'yearly') {
+          return adDay === eventDay && (adMonthZeroBased + 1) === eventMonth;
+        }
+      }
+      
+      return false;
+    });
+  }, [calendarEvents, findTithisForAdDate]);
 
   // Helper function to get tree member name
   const getTreeMemberName = useCallback((memberId) => {
@@ -1290,6 +1312,28 @@ export default function NepaliCalendar({ user: propUser, isAdmin, treeMembers = 
       return { pakshya, tithi };
     }
     return { pakshya: '', tithi: fullName };
+  };
+
+  // Helper function to get tithi display name with lunar month
+  const getTithiDisplayName = (tithi) => {
+    const { pakshya, tithi: tithiName } = parseTithiName(tithi.name);
+    if (!tithi.startDate) {
+      return tithi.name; // Fallback if no date
+    }
+    
+    // Get the tithi lunar month for the start date
+    // const [y, m, d] = tithi.startDate.split('-').map(Number);
+    const pakshaNormalized = pakshya === 'शुक्लपक्ष' ? 'Shukla' : 'Krishna';
+    const tithiIndex = getTithiIndexByName(tithiName);
+    
+    if (tithiIndex) {
+      const lunarMonth = getTithiLunarMonthName(pakshaNormalized, tithiIndex, tithi.startDate);
+      if (lunarMonth) {
+        return `${lunarMonth} ${pakshya} ${tithiName}`;
+      }
+    }
+    
+    return tithi.name; // Fallback to original name if calculation fails
   };
 
   // Helper function to format tithi datetime display
@@ -1480,7 +1524,7 @@ function compareTithisByStart(a,b){
           onKeyDown={(e)=> { if (e.key === 'Enter') openDetailsModalForDate(ad.year, ad.month, ad.day); }}
           data-date={dateKey}
         >
-          {(canManageTithis) && (
+          {(canManageTithis && isEditMode) && (
             <button
               className="nt-quick-add-btn"
               aria-label="Quick add tithi"
@@ -1606,22 +1650,26 @@ function compareTithisByStart(a,b){
   // Get events for the active date in modal (all public events and admin private events)
   const modalEvents = useMemo(() => {
     if (!activeDate || !calendarEvents.length) return [];
-    return calendarEvents.filter(event => 
-      event.dateKey === activeDate && 
+    const [y, m, d] = activeDate.split('-').map(Number);
+    const eventsOnDate = getEventsForDate(y, m - 1, d);
+    
+    return eventsOnDate.filter(event => 
       (event.isPublic || event.createdByAdmin)
     );
-  }, [activeDate, calendarEvents]);
+  }, [activeDate, calendarEvents, getEventsForDate]);
 
   // Get personal events for the active date in modal (user's own private events)
   const modalPersonalEvents = useMemo(() => {
     if (!activeDate || !calendarEvents.length || !user) return [];
-    return calendarEvents.filter(event => 
-      event.dateKey === activeDate && 
+    const [y, m, d] = activeDate.split('-').map(Number);
+    const eventsOnDate = getEventsForDate(y, m - 1, d);
+    
+    return eventsOnDate.filter(event => 
       !event.isPublic && 
       !event.createdByAdmin &&
       event.createdBy === user.uid
     );
-  }, [activeDate, calendarEvents, user]);
+  }, [activeDate, calendarEvents, user, getEventsForDate]);
 
   // Expose manual debug helpers to window during development so they're usable and not flagged as unused
   useEffect(() => {
@@ -1705,9 +1753,49 @@ function compareTithisByStart(a,b){
         <button
           className="nc-topbar-btn"
           onClick={handleGoToToday}
-          title={`Go to today's date: ${toNepaliNumber(todayBs.day)} ${nepaliMonths[todayBs.month-1]} ${toNepaliNumber(todayBs.year)}, ${nepaliWeekdays[todayBs.dayOfWeek]}`}
+          title="Go to today"
+          style={{ flexDirection: 'column', gap: '2px', alignItems: 'flex-start', padding: '6px 16px', height: 'auto', textAlign: 'left' }}
         >
-          आज {toNepaliNumber(todayBs.day)} {nepaliMonths[todayBs.month-1]} {toNepaliNumber(todayBs.year)}, {nepaliWeekdays[todayBs.dayOfWeek]}
+          <div style={{ fontSize: '1.5rem', fontWeight: 'bold', lineHeight: '1.4' }}>
+            {toNepaliNumber(todayBs.day)} {nepaliMonths[todayBs.month-1]} {toNepaliNumber(todayBs.year)}, {nepaliWeekdays[todayBs.dayOfWeek]}
+          </div>
+          <div style={{ fontSize: '0.85rem', opacity: 0.9 }}>
+            {(() => {
+              const h = todayAd.getUTCHours();
+              const m = todayAd.getUTCMinutes();
+              const s = todayAd.getUTCSeconds();
+              // Determine time of day in Nepali
+              let timeOfDay = '';
+              if (h >= 0 && h < 12) {
+                timeOfDay = 'बिहान'; // Morning (midnight to noon)
+              } else if (h >= 12 && h < 17) {
+                timeOfDay = 'दिउँसो'; // Afternoon (noon to 5 PM)
+              } else if (h >= 17 && h < 19) {
+                timeOfDay = 'साँझ'; // Evening (5 PM to 7 PM)
+              } else {
+                timeOfDay = 'रात'; // Night (7 PM to midnight)
+              }
+              const h12 = h % 12 || 12;
+              return `${timeOfDay} ${toNepaliNumber(h12)}:${toNepaliNumber(String(m).padStart(2, '0'))}:${toNepaliNumber(String(s).padStart(2, '0'))}`;
+            })()}
+          </div>
+          {(() => {
+             const tithis = findTithisForAdDate(todayAd.getUTCFullYear(), todayAd.getUTCMonth(), todayAd.getUTCDate()) || [];
+             if (tithis.length > 0) {
+               // Sort to find the most relevant tithi if multiple (usually one per day or spanning)
+               // Just taking the first one is usually fine for display
+               const t = tithis[0]; 
+               return (
+                 <div style={{ fontSize: '0.8rem', marginTop: '2px', opacity: 0.9 }}>
+                   {getTithiDisplayName(t)}
+                 </div>
+               );
+             }
+             return null;
+          })()}
+          <div style={{ fontSize: '0.8rem', marginTop: '2px', opacity: 0.9 }}>
+            {englishMonths[todayAd.getUTCMonth()]} {todayAd.getUTCDate()}, {todayAd.getUTCFullYear()}
+          </div>
         </button>
       </div>
       <div className="nc-header">
@@ -1784,17 +1872,20 @@ function compareTithisByStart(a,b){
         <div className="nc-modal-backdrop" onClick={()=> setDetailsModalOpen(false)}>
           <div className="nc-modal" onClick={(e)=>e.stopPropagation()} style={{ maxWidth: '600px' }}>
             <div className="nc-modal-header">
-              <h3 className="nc-modal-title">{
-                (() => {
-                  if (!activeDate) return '';
-                  const parts = activeDate.split('-').map(p=>+p);
-                  const adYear = parts[0];
-                  const adMonthZeroBased = parts[1]-1;
-                  const adDay = parts[2];
-                  const bs = convertAdToBs(adYear, adMonthZeroBased, adDay);
-                  return `${nepaliMonths[bs.month-1]} ${toNepaliNumber(bs.day)}, ${toNepaliNumber(bs.year)}`;
-                })()
-              }</h3>
+              <h3 className="nc-modal-title" style={{ fontSize: '0.95rem', color: '#666' }}>
+                Selected Date: {
+                  (() => {
+                    if (!activeDate) return '';
+                    
+                    // eslint-disable-next-line no-unused-vars
+                    const [year, month, day] = activeDate.split('-').map(Number);
+                    // const bs = convertAdToBs(year, month - 1, day);
+                    
+                    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                    return `${monthNames[month - 1]} ${day}`;
+                  })()
+                }
+              </h3>
               <button onClick={()=> setDetailsModalOpen(false)} aria-label="Close">✕</button>
             </div>
 
@@ -1807,7 +1898,7 @@ function compareTithisByStart(a,b){
                 .map(t => (
                 <div key={t.id} className="nc-item">
                   <div>
-                    <div className="nc-item-title">{t.name}</div>
+                    <div className="nc-item-title">{getTithiDisplayName(t)}</div>
                     <div className="muted">{formatTithiDateTime(t)}</div>
                   </div>
                   {/* Delete functionality removed - admins should use Admin Management page */}
@@ -1819,7 +1910,9 @@ function compareTithisByStart(a,b){
             <div className="nc-modal-section" style={{ borderTop: '1px solid #eee', paddingTop: '1rem' }}>
               <h4>Public Events</h4>
               {modalEvents.length===0 && <div className="muted">No public events for this date</div>}
-              {modalEvents.map(event => (
+              {modalEvents.map(event => {
+                console.log('Rendering public event:', { title: event.title, dateKey: event.dateKey, activeDate, matches: event.dateKey === activeDate });
+                return (
                 <div key={event.id} className="nc-item" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '0.5rem' }}>
                   <div style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
                     <div style={{ flex: 1 }}>
@@ -1834,7 +1927,8 @@ function compareTithisByStart(a,b){
                     {/* Delete functionality removed - users/admins should use Admin Management page */}
                   </div>
                 </div>
-              ))}
+                );
+              })}
             </div>
 
             {/* Personal Events Section - user's own private events */}
@@ -1847,6 +1941,13 @@ function compareTithisByStart(a,b){
               {modalPersonalEvents.map(event => {
                 const memberName = getTreeMemberName(event.memberId);
                 const isTreeEvent = !!event.treeId;
+
+                // Use the same AD->BS formatting as Tree Detail page, based on event.dateKey
+                const eventNepaliDate = event.dateKey 
+                  ? formatAdDateToNepaliStringWithNumerals(event.dateKey) 
+                  : '';
+
+                console.log('Rendering personal event:', { title: event.title, dateKey: event.dateKey, activeDate, matches: event.dateKey === activeDate });
                 return (
                   <div 
                     key={event.id} 
@@ -1878,6 +1979,14 @@ function compareTithisByStart(a,b){
                             For: {memberName}
                           </div>
                         )}
+                        {event.dateKey && (
+                          <div style={{ marginTop: '0.5rem', fontSize: '0.875rem', color: '#666' }}>
+                            📅 {event.dateKey}
+                            {eventNepaliDate && (
+                              <div style={{ color: '#7c3aed', marginTop: '0.25rem' }}>🗓️ {eventNepaliDate}</div>
+                            )}
+                          </div>
+                        )}
                         {event.description && <div className="muted" style={{ marginTop: '0.25rem' }}>{event.description}</div>}
                       </div>
                     </div>
@@ -1906,7 +2015,7 @@ function compareTithisByStart(a,b){
               )}
               
               {/* For Logged-in Users: Show "Add Event" button */}
-              {user && (
+              {user && isEditMode && (
                 <button 
                   onClick={() => {
                     if (!activeDate) return;

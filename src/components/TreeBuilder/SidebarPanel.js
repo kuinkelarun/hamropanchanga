@@ -54,7 +54,10 @@ export default function SidebarPanel({
           ${isVisible ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
           ${modalOpen ? 'pointer-events-none' : ''}
         `}
-        style={modalOpen ? { filter: 'brightness(0.85)', opacity: 0.7 } : {}}
+        style={{
+          ...(modalOpen ? { filter: 'brightness(0.85)', opacity: 0.7 } : {}),
+          height: '100vh' // Force full viewport height
+        }}
         onMouseEnter={() => {
           if (window.innerWidth >= 1024 && !isVisible) onToggle?.();
         }}

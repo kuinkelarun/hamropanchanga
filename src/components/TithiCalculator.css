@@ -205,6 +205,30 @@
   font-weight: 600;
 }
 
+/* Month Banner */
+.tc-month-banner {
+  background: linear-gradient(135deg, #765ba2 0%, #667eea 100%);
+  color: white;
+  padding: 12px 16px;
+  border-radius: 8px;
+  margin-bottom: 16px;
+  text-align: center;
+  box-shadow: 0 2px 4px rgba(102, 126, 234, 0.15);
+}
+
+.tc-month-name {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin: 0;
+  letter-spacing: 1px;
+}
+
+.tc-month-number {
+  font-size: 0.85rem;
+  opacity: 0.9;
+  margin-top: 4px;
+}
+
 .tc-main-tithi {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;

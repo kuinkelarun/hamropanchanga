@@ -85,7 +85,7 @@ const bsCalendarData = {
     2080: { startAdDate: new Date(2023, 3, 14), daysInMonths: [31, 32, 31, 32, 31, 30, 30, 30, 29, 29, 30, 30] }, // Apr 14, 2023
     2081: { startAdDate: new Date(2024, 3, 13), daysInMonths: [31, 32, 31, 32, 31, 30, 30, 30, 29, 30, 29, 31] }, // Apr 13, 2024
     2082: { startAdDate: new Date(2025, 3, 14), daysInMonths: [31, 31, 32, 31, 31, 31, 30, 29, 30, 29, 30, 30] },  // Apr 14, 2025
-    2083: { startAdDate: new Date(2026, 3, 14), daysInMonths: [31,31,31,32,31,30,29,30,29,30,30,30] },
+    2083: { startAdDate: new Date(2026, 3, 14), daysInMonths: [31,31,31,32,31,30,29,30,29,30,30,31] },
     2084: { startAdDate: new Date(2027, 3, 14), daysInMonths: [31,32,30,32,31,30,29,30,29,30,30,30] },
     2085: { startAdDate: new Date(2028, 3, 13), daysInMonths: [31,31,31,32,31,30,29,30,29,30,30,30] },
     2086: { startAdDate: new Date(2029, 3, 14), daysInMonths: [31,31,31,32,31,30,29,30,29,30,30,30] },

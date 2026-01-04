@@ -6,7 +6,7 @@ import * as XLSX from 'xlsx';
 import './AdminManagement.css';
 import NepaliDatePicker from './NepaliDatePicker';
 import NepaliCalendarManagement from './NepaliCalendarManagement';
-import { convertAdToBs, toNepaliNumber, nepaliMonths, parseNepaliDate, formatAdDateToNepaliStringWithNumerals, formatNepaliDateTime } from '../utils/nepaliDateUtils';
+import { convertAdToBs, toNepaliNumber, nepaliMonths, parseNepaliDate, formatAdDateToNepaliStringWithNumerals, formatNepaliDateTime, getTithiYearFromAdDate, getTithiLunarMonthName, getTithiIndexByName, getTithisForMonth } from '../utils/nepaliDateUtils';
 import { getEphemerisData, computeTithiFromLongitudes } from '../utils/ephemeris';
 import { useUserPermissions } from '../hooks/usePermissions';
 import { PERMISSIONS } from '../constants/roles';
@@ -86,6 +86,8 @@ function getTithiEndMillis_Admin(tithi) {
   }
 }
 
+// Helper to get tithis for a given month
+// Imported from nepaliDateUtils
 
 export default function AdminManagement({ user, isAdmin, onBack }) {
   console.log('AdminManagement loaded - version 2025-11-14-v4', { isAdmin });
@@ -148,6 +150,10 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
   const [autoProgress, setAutoProgress] = useState(null);
   const [autoStatus, setAutoStatus] = useState(null);
   
+  // Event Entry Mode state (for events tab)
+  const [eventEntryMode, setEventEntryMode] = useState('date'); // 'date' or 'tithi'
+  const [newRecordTithiMonth, setNewRecordTithiMonth] = useState('');
+  const [newRecordTithiName, setNewRecordTithiName] = useState('');
   const fileInputRef = useRef(null);
   const hasLoadedData = useRef(false);
 
@@ -341,12 +347,12 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
     if (activeTab === 'tithis') {
       // Tithis template with examples using Nepali dates
       const wsData = [
-        ['Tithi*', 'Pakshya*', 'Start Date* (YYYY-MM-DD Nepali)', 'Start Time* (HH:MM)', 'End Date* (YYYY-MM-DD Nepali)', 'End Time* (HH:MM)', 'AddOrReplace*', 'Category (optional)'],
-        ['एकादशी', 'शुक्लपक्ष', '२०८२-०७-३१', '06:00', '२०८२-०८-०१', '18:00', 'ADD', 'Festival'],
-        ['अष्टमी', 'कृष्णपक्ष', '२०८२-०८-०६', '10:00', '२०८२-०८-०६', '22:00', 'ADD', ''],
+        ['Tithi*', 'Pakshya*', 'Tithi Year*', 'Tithi Month (Nepali)*', 'Start Date* (YYYY-MM-DD Nepali)', 'Start Time* (HH:MM)', 'End Date* (YYYY-MM-DD Nepali)', 'End Time* (HH:MM)', 'AddOrReplace*', 'Category (optional)'],
+        ['एकादशी', 'शुक्लपक्ष', '2082', 'आषाढ', '२०८२-०७-३१', '06:00', '२०८२-०८-०१', '18:00', 'ADD', 'Festival'],
+        ['अष्टमी', 'कृष्णपक्ष', '2082', 'श्रावण', '२०८२-०८-०६', '10:00', '२०८२-०८-०६', '22:00', 'ADD', ''],
       ];
       const ws = XLSX.utils.aoa_to_sheet(wsData);
-      ws['!cols'] = [{ wch: 25 }, { wch: 15 }, { wch: 30 }, { wch: 20 }, { wch: 30 }, { wch: 20 }, { wch: 15 }, { wch: 20 }];
+      ws['!cols'] = [{ wch: 25 }, { wch: 15 }, { wch: 15 }, { wch: 20 }, { wch: 30 }, { wch: 20 }, { wch: 30 }, { wch: 20 }, { wch: 15 }, { wch: 20 }];
       
       // Add data validation for Pakshya column (column B, starting from row 2)
       // eslint-disable-next-line no-unused-vars
@@ -370,41 +376,50 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
       ws['!dataValidation'].push({
         type: 'list',
         allowBlank: false,
-        sqref: 'G2:G1000',
+        sqref: 'I2:I1000',
         formulas: ['"ADD,REPLACE"']
       });
       
       XLSX.utils.book_append_sheet(wb, ws, 'Tithis');
       
-      // Add reference sheet with all valid tithi names
+      // Add reference sheet with all valid tithi names and Tithi Month explanation
       const tithiReference = [
-        ['Pakshya Values', 'Shukla Pakshya Tithis', 'Krishna Pakshya Tithis'],
-        ['शुक्लपक्ष', 'प्रतिपदा', 'प्रतिपदा'],
-        ['कृष्णपक्ष', 'द्वितीया', 'द्वितीया'],
-        ['', 'तृतीया', 'तृतीया'],
-        ['', 'चतुर्थी', 'चतुर्थी'],
-        ['', 'पञ्चमी', 'पञ्चमी'],
-        ['', 'षष्ठी', 'षष्ठी'],
-        ['', 'सप्तमी', 'सप्तमी'],
-        ['', 'अष्टमी', 'अष्टमी'],
-        ['', 'नवमी', 'नवमी'],
-        ['', 'दशमी', 'दशमी'],
-        ['', 'एकादशी', 'एकादशी'],
-        ['', 'द्वादशी', 'द्वादशी'],
-        ['', 'त्रयोदशी', 'त्रयोदशी'],
-        ['', 'चतुर्दशी', 'चतुर्दशी'],
-        ['', 'पूर्णिमा', 'औंसी'],
-        ['', '', ''],
-        ['Instructions:', '', ''],
-        ['1. Enter only the Tithi name (e.g., एकादशी) in Tithi column', '', ''],
-        ['2. Select Pakshya from dropdown', '', ''],
-        ['3. Date format: YYYY-MM-DD Nepali (e.g., २०८२-०७-३१)', '', ''],
-        ['4. Time format: HH:MM in 24-hour (e.g., 06:00, 18:00)', '', ''],
-        ['5. End Date can be same as Start Date or next day', '', ''],
-        ['6. AddOrReplace: ADD (append) or REPLACE (delete existing for date & add new)', '', ''],
+        ['Tithi Month System', '', '', ''],
+        ['', '', '', ''],
+        ['About Tithi Months:', '', '', ''],
+        ['Tithi Months are lunar cycles, NOT Nepali calendar months', '', '', ''],
+        ['Each Tithi Month runs from:', 'कृष्णपक्ष प्रतिपदा (Krishna day 1)', 'to', 'शुक्लपक्ष पूर्णिमा (Shukla day 15)'],
+        ['Tithi Year starts:', 'वैशाख कृष्णपक्ष प्रतिपदा', 'and ends with', 'चैत शुक्लपक्ष पूर्णिमा'],
+        ['', '', '', ''],
+        ['Nepali Months', 'Pakshya Values', 'Shukla Pakshya Tithis', 'Krishna Pakshya Tithis'],
+        ['वैशाख', 'शुक्लपक्ष', 'प्रतिपदा', 'प्रतिपदा'],
+        ['जेठ', 'कृष्णपक्ष', 'द्वितीया', 'द्वितीया'],
+        ['असार', '', 'तृतीया', 'तृतीया'],
+        ['साउन', '', 'चतुर्थी', 'चतुर्थी'],
+        ['भदौ', '', 'पञ्चमी', 'पञ्चमी'],
+        ['असोज', '', 'षष्ठी', 'षष्ठी'],
+        ['कात्तिक', '', 'सप्तमी', 'सप्तमी'],
+        ['मंसिर', '', 'अष्टमी', 'अष्टमी'],
+        ['पुस', '', 'नवमी', 'नवमी'],
+        ['माघ', '', 'दशमी', 'दशमी'],
+        ['फागुन', '', 'एकादशी', 'एकादशी'],
+        ['चैत', '', 'द्वादशी', 'द्वादशी'],
+        ['', '', 'त्रयोदशी', 'त्रयोदशी'],
+        ['', '', 'चतुर्दशी', 'चतुर्दशी'],
+        ['', '', 'पूर्णिमा', 'औंसी'],
+        ['', '', '', ''],
+        ['Instructions:', '', '', ''],
+        ['1. Enter only the Tithi name (e.g., एकादशी) in Tithi column', '', '', ''],
+        ['2. Select Pakshya from dropdown: शुक्लपक्ष or कृष्णपक्ष', '', '', ''],
+        ['3. Month Name MUST match a Nepali month where that Tithi Month begins', '', '', ''],
+        ['   (determined by when कृष्णपक्ष प्रतिपदा of that cycle occurs)', '', '', ''],
+        ['4. Date format: YYYY-MM-DD Nepali (e.g., २०८२-०७-३१)', '', '', ''],
+        ['5. Time format: HH:MM in 24-hour (e.g., 06:00, 18:00)', '', '', ''],
+        ['6. Tithi months may span calendar month boundaries', '', '', ''],
+        ['7. AddOrReplace: ADD (append) or REPLACE (delete existing for date & add new)', '', '', ''],
       ];
       const wsRef = XLSX.utils.aoa_to_sheet(tithiReference);
-      wsRef['!cols'] = [{ wch: 20 }, { wch: 25 }, { wch: 25 }];
+      wsRef['!cols'] = [{ wch: 30 }, { wch: 25 }, { wch: 30 }, { wch: 25 }];
       XLSX.utils.book_append_sheet(wb, wsRef, 'Reference');
       
     } else {
@@ -468,9 +483,28 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
         const nameParts = (t.name || '').split(' ');
         const pakshya = nameParts[0] || '';
         const tithi = nameParts.slice(1).join(' ') || t.name || '';
+        
+        // Get solar month from start date
+        // const tithiMonthInfo = getTithiMonthFromAdDate(t.startDate || '');
+        // const solarMonth = tithiMonthInfo.month || 1;
+        
+        // Extract paksha and tithi index from name (approximate from first word)
+        // Format is typically "शुक्लपक्ष प्रतिपदा" or "कृष्णपक्ष द्वितीया"
+        const pakshType = pakshya === 'शुक्लपक्ष' ? 'Shukla' : 'Krishna';
+        const tithiIndex = getTithiIndexByName(tithi);
+        
+        // Get Tithi Lunar Month name
+        const tithiLunarMonthName = getTithiLunarMonthName(pakshType, tithiIndex, t.startDate || '');
+        
+        // Calculate Tithi Year from start date, passing paksha for accuracy
+        const tithiYearInfo = getTithiYearFromAdDate(t.startDate || '', null, pakshType, tithiIndex);
+        const tithiYear = tithiYearInfo.tithiYear || '';
+        
         const row = [
           tithi,
           pakshya,
+          tithiYear,
+          tithiLunarMonthName,
           formatAdDateToNepaliStringWithNumerals(t.startDate),
           t.startTime || '',
           formatAdDateToNepaliStringWithNumerals(t.endDate),
@@ -485,11 +519,11 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
       });
 
       const wsData = [
-        ['Tithi*', 'Pakshya*', 'Start Date* (YYYY-MM-DD Nepali)', 'Start Time* (HH:MM)', 'End Date* (YYYY-MM-DD Nepali)', 'End Time* (HH:MM)', 'AddOrReplace*'],
+        ['Tithi*', 'Pakshya*', 'Tithi Year*', 'Tithi Month (Nepali)*', 'Start Date* (YYYY-MM-DD Nepali)', 'Start Time* (HH:MM)', 'End Date* (YYYY-MM-DD Nepali)', 'End Time* (HH:MM)', 'AddOrReplace*'],
         ...uniqueRows
       ];
       const ws = XLSX.utils.aoa_to_sheet(wsData);
-      ws['!cols'] = [{ wch: 25 }, { wch: 15 }, { wch: 30 }, { wch: 20 }, { wch: 30 }, { wch: 20 }, { wch: 15 }];
+      ws['!cols'] = [{ wch: 25 }, { wch: 15 }, { wch: 15 }, { wch: 20 }, { wch: 30 }, { wch: 20 }, { wch: 30 }, { wch: 20 }, { wch: 15 }];
       XLSX.utils.book_append_sheet(wb, ws, 'Tithis');
       XLSX.writeFile(wb, 'Tithis_Export.xlsx');
       const removed = tithis.length - uniqueRows.length;
@@ -679,7 +713,20 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
           duplicatesSkipped++;
         } else {
           seenStartIsos.add(startIso);
-          candidateRows.push({ startIsoUtc: startIso, endIsoUtc: endIso, startEpoch, row: [tithiName, pakshya, startNepaliDate, startTimeStr, endNepaliDate, endTimeStr, 'ADD', ''] });
+          
+          // Get solar month from start date
+          // const tithiMonthInfo = getTithiMonthFromAdDate(startFmtLocal?.adDateIso || '');
+          // const solarMonth = tithiMonthInfo.month || 1;
+          
+          // Get Tithi Lunar Month name based on paksha and solar month
+          const tithiLunarMonthName = getTithiLunarMonthName(finalTithiResult.paksha, finalTithiResult.pakshaIndex, startFmtLocal?.adDateIso || '');
+          
+          // Get Tithi Year from tithi start date, passing paksha for accuracy
+          const tithiYearInfo = getTithiYearFromAdDate(startFmtLocal?.adDateIso || '', null, finalTithiResult.paksha, finalTithiResult.pakshaIndex);
+          const tithiYear = tithiYearInfo.tithiYear || '';
+          
+          // Include Tithi Year and Tithi Month in data columns
+          candidateRows.push({ startIsoUtc: startIso, endIsoUtc: endIso, startEpoch, row: [tithiName, pakshya, tithiYear, tithiLunarMonthName, startNepaliDate, startTimeStr, endNepaliDate, endTimeStr, 'ADD', ''] });
         }
 
         // Advance current to just after this tithi's end to find the next tithi
@@ -699,12 +746,12 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
 
       const wb = XLSX.utils.book_new();
       const wsData = [
-        ['Tithi*', 'Pakshya*', 'Start Date* (YYYY-MM-DD Nepali)', 'Start Time* (HH:MM)', 'End Date* (YYYY-MM-DD Nepali)', 'End Time* (HH:MM)', 'AddOrReplace*', 'Category (optional)'],
+        ['Tithi*', 'Pakshya*', 'Tithi Year*', 'Tithi Month (Nepali)*', 'Start Date* (YYYY-MM-DD Nepali)', 'Start Time* (HH:MM)', 'End Date* (YYYY-MM-DD Nepali)', 'End Time* (HH:MM)', 'AddOrReplace*', 'Category (optional)'],
         ...candidateRows.map(c => c.row)
       ];
 
       const ws = XLSX.utils.aoa_to_sheet(wsData);
-      ws['!cols'] = [{ wch: 25 }, { wch: 15 }, { wch: 30 }, { wch: 20 }, { wch: 30 }, { wch: 20 }, { wch: 15 }, { wch: 20 }];
+      ws['!cols'] = [{ wch: 25 }, { wch: 15 }, { wch: 15 }, { wch: 20 }, { wch: 30 }, { wch: 20 }, { wch: 30 }, { wch: 20 }, { wch: 15 }, { wch: 20 }];
 
       // Add data validation
       if (!ws['!dataValidation']) ws['!dataValidation'] = [];
@@ -853,6 +900,8 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
       // Required fields
       const tithi = row['Tithi*']?.toString().trim();
       const pakshya = row['Pakshya*']?.toString().trim();
+      // Support both old 'Month Name (Nepali)*' and new 'Tithi Month (Nepali)*'
+      const monthName = (row['Tithi Month (Nepali)*'] || row['Month Name (Nepali)*'])?.toString().trim();
       const startDateRaw = row['Start Date* (YYYY-MM-DD Nepali)']?.toString().trim();
       const startTime = row['Start Time* (HH:MM)']?.toString().trim();
       const endDateRaw = row['End Date* (YYYY-MM-DD Nepali)']?.toString().trim();
@@ -861,6 +910,7 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
 
       if (!tithi) errors.push('Tithi is required');
       if (!pakshya) errors.push('Pakshya is required');
+      if (!monthName) errors.push('Month Name (Nepali) is required');
       if (!startDateRaw) errors.push('Start Date is required');
       if (!startTime) errors.push('Start Time is required');
       if (!endDateRaw) errors.push('End Date is required');
@@ -870,6 +920,11 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
       // Validate pakshya value
       if (pakshya && pakshya !== 'शुक्लपक्ष' && pakshya !== 'कृष्णपक्ष') {
         errors.push('Pakshya must be either शुक्लपक्ष or कृष्णपक्ष');
+      }
+
+      // Validate month name
+      if (monthName && !nepaliMonths.includes(monthName)) {
+        errors.push(`Month Name must be one of: ${nepaliMonths.join(', ')}`);
       }
 
       // Validate AddOrReplace value
@@ -926,6 +981,23 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
       // Validate date range (only if both dates are valid)
       if (startDate && endDate && new Date(endDate) < new Date(startDate)) {
         errors.push('End Date cannot be before Start Date');
+      }
+
+      // Validate Tithi Month registration: Check if the start date's calculated tithi lunar month matches the provided month
+      if (startDate && pakshya && tithi && monthName && errors.length === 0) {
+        const tithiIndex = getTithiIndexByName(tithi);
+        const pakshaNormalized = pakshya === 'शुक्लपक्ष' ? 'Shukla' : 'Krishna';
+        
+        if (tithiIndex) {
+          const calculatedLunarMonth = getTithiLunarMonthName(pakshaNormalized, tithiIndex, startDate);
+          if (calculatedLunarMonth && calculatedLunarMonth !== monthName) {
+            errors.push(
+              `Tithi Month Mismatch: ${tithi} (${pakshya}) on ${startDate} falls in "${calculatedLunarMonth}" ` +
+              `Tithi Month, but you specified "${monthName}". This tithi may not occur in the specified month. ` +
+              `Verify the dates are correct for this tithi.`
+            );
+          }
+        }
       }
 
       // If dates are equal, check time ordering. If end time is earlier than start time
@@ -1356,6 +1428,56 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
         await loadTithis();
         
       } else {
+        // Event logic
+        
+        // Resolve date from Tithi if in tithi mode
+        let tithiInfo = null;
+        if (eventEntryMode === 'tithi') {
+           if (!newRecordTithiMonth || !newRecordTithiName) {
+             setUploadStatus('❌ Please select Month and Tithi');
+             return;
+           }
+           
+           const [pakshaKey, tithiName] = newRecordTithiName.split('-');
+           const paksha = pakshaKey === 'shukla' ? 'Shukla' : 'Krishna';
+           const pakshaNepali = pakshaKey === 'shukla' ? 'शुक्लपक्ष' : 'कृष्णपक्ष';
+           
+           // Determine current BS Year
+           const today = new Date();
+           const bsToday = convertAdToBs(today.getFullYear(), today.getMonth(), today.getDate());
+           const currentBsYear = bsToday.year;
+           const selectedMonthName = nepaliMonths[parseInt(newRecordTithiMonth) - 1];
+           
+           // Find matching tithi
+           const matchingTithi = tithis.find(t => {
+             if (!t.name.includes(tithiName) || !t.name.includes(pakshaNepali)) return false;
+             
+             // Calculate Tithi Lunar Month & Year
+             const tithiIndex = getTithiIndexByName(tithiName);
+             const lunarMonthName = getTithiLunarMonthName(paksha, tithiIndex, t.startDate);
+             const tithiYearInfo = getTithiYearFromAdDate(t.startDate, null, paksha, tithiIndex);
+             
+             return lunarMonthName === selectedMonthName && tithiYearInfo.tithiYear === currentBsYear;
+           });
+           
+           if (matchingTithi) {
+             newRecordData.dateKey = matchingTithi.startDate;
+             const tithiIndex = getTithiIndexByName(tithiName);
+             const lunarMonthName = getTithiLunarMonthName(paksha, tithiIndex, matchingTithi.startDate);
+             
+             // Store tithi info for the event
+             tithiInfo = {
+               month: lunarMonthName,
+               id: newRecordTithiName,  // e.g., 'shukla-Pratipada'
+               name: tithiName,
+               paksha: paksha
+             };
+           } else {
+             setUploadStatus(`❌ Could not find date for ${selectedMonthName} ${pakshaNepali} ${tithiName} in year ${currentBsYear}. Please ensure Tithis are generated.`);
+             return;
+           }
+        }
+
         if (!newRecordData.title || !newRecordData.dateKey) {
           setUploadStatus('❌ Please fill all required fields');
           return;
@@ -1370,8 +1492,14 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
           associatedPerson: '',
           createdAt: new Date().toISOString(),
           createdByAdmin: true,
-          createdBy: user?.uid || ''
+          createdBy: user?.uid || '',
+          repetition: newRecordData.repetition || 'none'  // Default to no repeat
         };
+        
+        // Add tithi info if provided
+        if (tithiInfo) {
+          eventData.tithi = tithiInfo;
+        }
         
         await addDoc(collection(db, 'calendarEvents'), eventData);
         setUploadStatus('✅ Event added successfully');
@@ -1381,6 +1509,9 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
       // Reset inline form
       setIsAddingNew(false);
       setNewRecordData({});
+      setEventEntryMode('date');  // Reset to date mode
+      setNewRecordTithiMonth('');  // Reset tithi fields
+      setNewRecordTithiName('');
       
     } catch (error) {
       console.error('Error adding record:', error);
@@ -1392,6 +1523,9 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
   function cancelAddNew() {
     setIsAddingNew(false);
     setNewRecordData({});
+    setEventEntryMode('date');  // Reset to date mode
+    setNewRecordTithiMonth('');  // Reset tithi fields
+    setNewRecordTithiName('');
   }
 
   // Update new record field
@@ -2159,6 +2293,26 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
       <div className="admin-section">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
           <h2>📝 Manual Management</h2>
+          {activeTab === 'events' && (
+            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+              <span style={{ fontSize: '0.9rem', color: '#6b7280' }}>Entry Mode:</span>
+              <select 
+                value={eventEntryMode} 
+                onChange={(e) => setEventEntryMode(e.target.value)}
+                style={{
+                  padding: '0.5rem 1rem',
+                  borderRadius: '6px',
+                  border: '1px solid #d1d5db',
+                  backgroundColor: 'white',
+                  cursor: 'pointer',
+                  fontSize: '0.9rem'
+                }}
+              >
+                <option value="date">📅 By Calendar Date</option>
+                <option value="tithi">🔱 By Tithi + Month</option>
+              </select>
+            </div>
+          )}
           <button 
             onClick={() => {
               setIsAddingNew(true);
@@ -2440,21 +2594,60 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
                         />
                       </td>
                       <td>
-                        {newRecordData.dateKey ? (
-                          <NepaliDatePicker
-                            value={newRecordData.dateKey}
-                            onChange={(adDate) => updateNewRecordField('dateKey', adDate)}
-                          />
+                        {eventEntryMode === 'date' ? (
+                          // Calendar date mode
+                          <>
+                            {newRecordData.dateKey ? (
+                              <NepaliDatePicker
+                                value={newRecordData.dateKey}
+                                onChange={(adDate) => updateNewRecordField('dateKey', adDate)}
+                              />
+                            ) : (
+                              <div 
+                                className="date-placeholder"
+                                onClick={() => {
+                                  const today = new Date();
+                                  const adDate = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+                                  updateNewRecordField('dateKey', adDate);
+                                }}
+                              >
+                                📅 Select Date
+                              </div>
+                            )}
+                          </>
                         ) : (
-                          <div 
-                            className="date-placeholder"
-                            onClick={() => {
-                              const today = new Date();
-                              const adDate = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
-                              updateNewRecordField('dateKey', adDate);
-                            }}
-                          >
-                            -- -- ----
+                          // Tithi + Month mode
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                            <select 
+                              value={newRecordTithiMonth} 
+                              onChange={(e) => setNewRecordTithiMonth(e.target.value)}
+                              className="edit-input"
+                              style={{ fontSize: '0.85rem', padding: '0.4rem' }}
+                            >
+                              <option value="">Select Month</option>
+                              {nepaliMonths.map((month, idx) => (
+                                <option key={idx} value={idx + 1}>{month}</option>
+                              ))}
+                            </select>
+                            <select 
+                              value={newRecordTithiName} 
+                              onChange={(e) => setNewRecordTithiName(e.target.value)}
+                              className="edit-input"
+                              style={{ fontSize: '0.85rem', padding: '0.4rem' }}
+                              disabled={!newRecordTithiMonth}
+                            >
+                              <option value="">Select Tithi</option>
+                              {newRecordTithiMonth && getTithisForMonth(newRecordTithiMonth).map(tithi => (
+                                <option key={tithi.tithiId} value={tithi.tithiId}>
+                                  {tithi.name} ({tithi.pakshya})
+                                </option>
+                              ))}
+                            </select>
+                            {newRecordTithiMonth && newRecordTithiName && (
+                              <small style={{ color: '#666', fontSize: '0.75rem' }}>
+                                Note: Date will be looked up from calendar
+                              </small>
+                            )}
                           </div>
                         )}
                       </td>

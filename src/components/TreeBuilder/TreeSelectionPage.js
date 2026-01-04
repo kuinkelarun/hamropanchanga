@@ -4,7 +4,7 @@ import { Trees, Members } from './utils/firestoreTreeApi';
 import AddEventForm from '../AddEventForm';
 import { signInWithGoogle } from '../../firebase';
 
-export default function TreeSelectionPage({ user }) {
+export default function TreeSelectionPage({ user, isAdmin }) {
   const navigate = useNavigate();
   const [trees, setTrees] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -34,7 +34,8 @@ export default function TreeSelectionPage({ user }) {
       }
       setLoading(true);
       try {
-        const all = await Trees.list(user.uid);
+        // If admin, fetch all trees (pass null). Otherwise fetch only user's trees.
+        const all = await Trees.list(isAdmin ? null : user.uid);
         const active = (all || []).filter(t => !t.deleted);
         setTrees(active);
       } catch (err) {
@@ -45,7 +46,7 @@ export default function TreeSelectionPage({ user }) {
       }
     }
     loadTrees();
-  }, [user]);
+  }, [user, isAdmin]);
 
   const handleRequireAuth = async () => {
     if (user) return true;
@@ -196,7 +197,7 @@ export default function TreeSelectionPage({ user }) {
     }
   };
 
-  const handleAddEventFromModal = async ({ name, date, personId, repetition }) => {
+  const handleAddEventFromModal = async ({ name, date, personId, repetition, tithi }) => {
     try {
       if (!eventModal.treeId || !user) return;
       const { db } = await import('../../firebase');
@@ -206,6 +207,7 @@ export default function TreeSelectionPage({ user }) {
         description: '',
         dateKey: date,
         repetition,
+        tithi: tithi || null,
         isPublic: false,
         createdBy: user.uid,
         createdByAdmin: false,
@@ -253,6 +255,9 @@ export default function TreeSelectionPage({ user }) {
     );
   }
 
+  const myTrees = trees.filter(t => t.ownerUid === user.uid);
+  const otherTrees = trees.filter(t => t.ownerUid !== user.uid);
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50">
       {/* Header */}
@@ -284,7 +289,7 @@ export default function TreeSelectionPage({ user }) {
           </div>
         )}
 
-        {/* Trees Grid */}
+        {/* My Trees Grid */}
         <div className="bg-white rounded-2xl shadow-md p-6 mb-6 border border-gray-200">
           <div className="flex items-center justify-between mb-6">
             <h3 className="text-xl font-bold text-gray-800">Your Trees</h3>
@@ -297,9 +302,9 @@ export default function TreeSelectionPage({ user }) {
             </button>
           </div>
 
-          {trees.length > 0 ? (
+          {myTrees.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {trees.map(tree => (
+              {myTrees.map(tree => (
                 <div key={tree.id} className="relative bg-gradient-to-br from-white to-gray-50 p-6 rounded-xl shadow-md border border-gray-200 hover:shadow-lg transition-shadow">
                   <div className="cursor-pointer" onClick={() => handleOpenTree(tree.id)}>
                     <div className="flex items-start justify-between mb-3">
@@ -341,6 +346,47 @@ export default function TreeSelectionPage({ user }) {
             </div>
           )}
         </div>
+
+        {/* Other Users' Trees Grid (Admin Only) */}
+        {isAdmin && otherTrees.length > 0 && (
+          <div className="bg-white rounded-2xl shadow-md p-6 mb-6 border border-gray-200">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-xl font-bold text-gray-800">Other Users' Trees</h3>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {otherTrees.map(tree => (
+                <div key={tree.id} className="relative bg-gradient-to-br from-white to-gray-50 p-6 rounded-xl shadow-md border border-gray-200 hover:shadow-lg transition-shadow">
+                  <div className="cursor-pointer" onClick={() => handleOpenTree(tree.id)}>
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="flex-1">
+                        <h4 className="text-lg font-bold text-gray-800 mb-1">{tree.title || 'Untitled Tree'}</h4>
+                        <p className="text-xs text-gray-500">ID: {tree.id}</p>
+                        {tree.ownerUid && <p className="text-xs text-gray-400 mt-1">Owner: {tree.ownerUid}</p>}
+                      </div>
+                    </div>
+                    {tree.location && (
+                      <p className="text-sm text-gray-600 mb-2">📍 {tree.location}</p>
+                    )}
+                    {tree.contact && (
+                      <a 
+                        href={`tel:${tree.contact.replace(/\D/g, '')}`}
+                        className="text-sm text-gray-600 mb-2 block hover:text-blue-600 transition-colors"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        📞 {tree.contact}
+                      </a>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2 mt-4 pt-4 border-t border-gray-200">
+                    <button className="flex-1 px-3 py-2 text-xs bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium" onClick={() => handleOpenTree(tree.id)}>View Details</button>
+                    <button className="px-3 py-2 text-xs bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium" onClick={(e) => { e.stopPropagation(); handleEditTree(tree); }}>Edit</button>
+                    <button className="px-3 py-2 text-xs bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium" onClick={(e) => { e.stopPropagation(); handleDeleteTree(tree.id); }}>Delete</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Create Tree Modal */}

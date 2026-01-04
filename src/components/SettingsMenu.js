@@ -26,7 +26,7 @@ const SettingsMenu = ({
     const canManageTithis = hasPermission(PERMISSIONS.MANAGE_TITHIS);
     const canManageEvents = hasPermission(PERMISSIONS.MANAGE_EVENTS);
     const canManageCalendar = hasPermission(PERMISSIONS.MANAGE_CALENDAR);
-    const canEditCalendar = canManageTithis || canManageEvents;
+    const canEditCalendar = isAdmin || isSuperUser || canManageTithis || canManageEvents;
     
     const showAdminSection = isAdmin || isSuperUser || canManageHomeCards || canAccessBulkUpload || canManageTithis || canManageEvents || canManageCalendar;
 
@@ -58,29 +58,30 @@ const SettingsMenu = ({
         setShowConfirmation(false);
     };
 
+    // Calculate user initials
+    const getInitials = () => {
+        if (!user) return '?';
+        if (user.displayName) {
+            const names = user.displayName.split(' ');
+            if (names.length >= 2) {
+                return (names[0][0] + names[names.length - 1][0]).toUpperCase();
+            }
+            return names[0].substring(0, 2).toUpperCase();
+        }
+        return user.email ? user.email.substring(0, 2).toUpperCase() : '?';
+    };
+
     return (
     <div className="settings-root relative" ref={menuRef}>
-            {/* Menu Button */}
+            {/* Menu Button - Profile Circle */}
             <button
                 onClick={() => setIsOpen(!isOpen)}
-                className="text-white font-semibold py-2 px-4 rounded-lg shadow-md transition-all duration-200 flex items-center space-x-2 text-sm"
-                style={{
-                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
-                }}
-                onMouseEnter={(e) => {
-                    e.currentTarget.style.transform = 'translateY(-2px)';
-                    e.currentTarget.style.boxShadow = '0 4px 8px rgba(102, 126, 234, 0.4)';
-                }}
-                onMouseLeave={(e) => {
-                    e.currentTarget.style.transform = 'translateY(0)';
-                    e.currentTarget.style.boxShadow = '0 2px 4px rgba(102, 126, 234, 0.3)';
-                }}
+                className="flex items-center gap-2 rounded-full hover:bg-gray-100 transition-all duration-200 group p-1"
+                title="User Profile & Settings"
             >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                </svg>
-                <span>Settings</span>
+                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-600 to-blue-600 flex items-center justify-center text-white shadow-md group-hover:shadow-lg transition-all transform group-hover:scale-105 border-2 border-white">
+                    <span className="font-bold text-sm tracking-wide">{getInitials()}</span>
+                </div>
             </button>
 
             {/* Dropdown Menu */}

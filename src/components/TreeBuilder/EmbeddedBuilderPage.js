@@ -1133,24 +1133,26 @@ export default function EmbeddedBuilderPage({ user }) {
   }
 
   return (
-    <div className="min-h-screen bg-gray-100 flex">
-      {/* Sidebar Panel - Fixed on the left */}
-      <SidebarPanel
-        members={members}
-        onAddNewMember={handleAddNodeToCanvas}
-        onAddMemberToCanvas={handleAddMemberToCanvas}
-        onSelectMember={handleSelectMember}
-        canAddMember={!!tree}
-        isVisible={sidebarVisible}
-        onToggle={() => setSidebarVisible(!sidebarVisible)}
-        modalOpen={memberModalOpen}
-      />
+    <div className="h-screen w-full overflow-hidden bg-gray-100 flex">
+      {/* Sidebar Panel - Fixed on the left, full height */}
+      <div className="h-full flex-shrink-0 bg-white border-r border-gray-200 z-20">
+        <SidebarPanel
+          members={members}
+          onAddNewMember={handleAddNodeToCanvas}
+          onAddMemberToCanvas={handleAddMemberToCanvas}
+          onSelectMember={handleSelectMember}
+          canAddMember={!!tree}
+          isVisible={sidebarVisible}
+          onToggle={() => setSidebarVisible(!sidebarVisible)}
+          modalOpen={memberModalOpen}
+        />
+      </div>
       
       {/* Canvas Area - Takes remaining space */}
-      <div className="flex flex-1 flex-col min-h-screen">
+      <div className="flex flex-1 flex-col h-full overflow-hidden relative">
         {/* Canvas Header */}
         <div 
-          className="h-14 bg-white border-b border-gray-200 flex items-center justify-center gap-4 shadow-sm px-4"
+          className="h-14 bg-white border-b border-gray-200 flex items-center justify-center gap-4 shadow-sm px-4 shrink-0 z-10"
           onClick={() => {
             // Hide sidebar on click (mobile-friendly auto-hide)
             if (window.innerWidth < 1024) {

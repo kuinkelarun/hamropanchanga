@@ -70,10 +70,10 @@ export default function TreeDetailPage({ user }) {
     }
   };
 
-  const handleAddEvent = async ({ name, date, personId, repetition }) => {
+  const handleAddEvent = async ({ name, date, personId, repetition, tithi }) => {
     if (!user || !treeId) return;
     try {
-      await addDoc(collection(db, 'calendarEvents'), {
+      const eventData = {
         title: name,
         description: '',
         dateKey: date,
@@ -84,7 +84,14 @@ export default function TreeDetailPage({ user }) {
         treeId: treeId,
         memberId: personId,
         createdAt: serverTimestamp(),
-      });
+      };
+      
+      // Add tithi info if provided
+      if (tithi) {
+        eventData.tithi = tithi;
+      }
+      
+      await addDoc(collection(db, 'calendarEvents'), eventData);
       setIsAddingEvent(false);
       loadTreeData(); // Refresh events
     } catch (err) {
@@ -98,23 +105,46 @@ export default function TreeDetailPage({ user }) {
     setIsAddingEvent(true);
   };
 
-  const handleUpdateEvent = async ({ name, date, personId, repetition }) => {
+  const handleUpdateEvent = async ({ name, date, personId, repetition, tithi }) => {
     if (!user || !treeId || !editingEvent) return;
     try {
       const { doc, updateDoc } = await import('firebase/firestore');
       const eventRef = doc(db, 'calendarEvents', editingEvent.id);
-      await updateDoc(eventRef, {
+      
+      const updateData = {
         title: name,
         dateKey: date,
         repetition,
         memberId: personId,
-      });
+      };
+      
+      // Update tithi info if provided
+      if (tithi) {
+        updateData.tithi = tithi;
+      } else {
+        // Clear tithi if switching from tithi mode to date mode
+        updateData.tithi = null;
+      }
+      
+      await updateDoc(eventRef, updateData);
       setIsAddingEvent(false);
       setEditingEvent(null);
       loadTreeData(); // Refresh events
     } catch (err) {
       console.error('Error updating event:', err);
       alert('Failed to update event: ' + (err.message || 'unknown error'));
+    }
+  };
+
+  const handleDeleteEvent = async (eventId) => {
+    if (!window.confirm('Are you sure you want to delete this event?')) return;
+    try {
+      const { doc, deleteDoc } = await import('firebase/firestore');
+      await deleteDoc(doc(db, 'calendarEvents', eventId));
+      loadTreeData(); // Refresh events
+    } catch (err) {
+      console.error('Error deleting event:', err);
+      alert('Failed to delete event');
     }
   };
 
@@ -201,7 +231,7 @@ export default function TreeDetailPage({ user }) {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50">
       {/* Header */}
       <div className="bg-white shadow-sm border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-6 py-4">
+        <div className="max-w-6xl mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-2xl font-bold text-gray-800">{tree.title || 'Untitled Tree'}</h1>
@@ -222,7 +252,7 @@ export default function TreeDetailPage({ user }) {
       </div>
 
       {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-6 py-8">
+      <div className="max-w-6xl mx-auto px-6 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Left Column - Tree Preview */}
           <div className="lg:col-span-1">
@@ -278,13 +308,13 @@ export default function TreeDetailPage({ user }) {
                         <div className="flex gap-2 ml-2">
                           <button
                             onClick={() => handleEditMember(member)}
-                            className="px-2 py-1 text-xs bg-blue-600 hover:bg-blue-700 text-white rounded"
+                            className="px-3 py-1.5 text-xs bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-lg font-medium transition-colors"
                           >
                             Edit
                           </button>
                           <button
                             onClick={() => handleDeleteMember(member.id)}
-                            className="px-2 py-1 text-xs bg-red-600 hover:bg-red-700 text-white rounded"
+                            className="px-3 py-1.5 text-xs bg-red-100 hover:bg-red-200 text-red-700 rounded-lg font-medium transition-colors"
                           >
                             Delete
                           </button>
@@ -334,12 +364,20 @@ export default function TreeDetailPage({ user }) {
                               </span>
                             )}
                           </div>
-                          <button
-                            onClick={() => handleEditEvent(event)}
-                            className="ml-3 px-3 py-1.5 text-sm bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium"
-                          >
-                            Edit
-                          </button>
+                          <div className="flex gap-2 ml-3">
+                            <button
+                              onClick={() => handleEditEvent(event)}
+                              className="px-3 py-1.5 text-sm bg-purple-100 hover:bg-purple-200 text-purple-700 rounded-lg font-medium transition-colors"
+                            >
+                              Edit
+                            </button>
+                            <button
+                              onClick={() => handleDeleteEvent(event.id)}
+                              className="px-3 py-1.5 text-sm bg-red-100 hover:bg-red-200 text-red-700 rounded-lg font-medium transition-colors"
+                            >
+                              Delete
+                            </button>
+                          </div>
                         </div>
                       </div>
                     );
