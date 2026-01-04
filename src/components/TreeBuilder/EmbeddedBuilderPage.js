@@ -1134,25 +1134,27 @@ export default function EmbeddedBuilderPage({ user }) {
 
   return (
     <div className="h-screen w-full overflow-hidden bg-gray-100 flex">
-      {/* Sidebar Panel - Fixed on the left, full height */}
-      <div className="h-full flex-shrink-0 bg-white border-r border-gray-200 z-20">
-        <SidebarPanel
-          members={members}
-          onAddNewMember={handleAddNodeToCanvas}
-          onAddMemberToCanvas={handleAddMemberToCanvas}
-          onSelectMember={handleSelectMember}
-          canAddMember={!!tree}
-          isVisible={sidebarVisible}
-          onToggle={() => setSidebarVisible(!sidebarVisible)}
-          modalOpen={memberModalOpen}
-        />
-      </div>
+      {/* Sidebar Panel - Desktop only, toggleable */}
+      {sidebarVisible && (
+        <div className="h-full flex-shrink-0 bg-white border-r border-gray-200 z-20 hidden lg:block">
+          <SidebarPanel
+            members={members}
+            onAddNewMember={handleAddNodeToCanvas}
+            onAddMemberToCanvas={handleAddMemberToCanvas}
+            onSelectMember={handleSelectMember}
+            canAddMember={!!tree}
+            isVisible={sidebarVisible}
+            onToggle={() => setSidebarVisible(!sidebarVisible)}
+            modalOpen={memberModalOpen}
+          />
+        </div>
+      )}
       
       {/* Canvas Area - Takes remaining space */}
       <div className="flex flex-1 flex-col h-full overflow-hidden relative">
         {/* Canvas Header */}
         <div 
-          className="h-14 bg-white border-b border-gray-200 flex items-center justify-center gap-4 shadow-sm px-4 shrink-0 z-10"
+          className="min-h-14 bg-white border-b border-gray-200 flex flex-wrap items-center justify-center gap-2 sm:gap-4 shadow-sm px-2 sm:px-4 py-2 shrink-0 z-30"
           onClick={() => {
             // Hide sidebar on click (mobile-friendly auto-hide)
             if (window.innerWidth < 1024) {
@@ -1163,23 +1165,37 @@ export default function EmbeddedBuilderPage({ user }) {
           <button
             onClick={handleAddNodeToCanvas}
             disabled={!tree}
-            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white rounded-lg shadow font-medium text-sm transition-all"
+            className="px-3 sm:px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white rounded-lg shadow font-medium text-xs sm:text-sm transition-all whitespace-nowrap"
             title="Add a new node to the canvas"
           >
             + Add Node
           </button>
-          <div className="text-center flex-1">
-            <h1 className="text-lg font-semibold text-gray-800">{tree.title || 'Untitled Tree'}</h1>
-            <p className="text-xs text-gray-500">Tree ID: {tree.id}</p>
+          <div className="text-center flex-1 min-w-0">
+            <h1 className="text-base sm:text-lg font-semibold text-gray-800 truncate">{tree.title || 'Untitled Tree'}</h1>
+            <p className="text-xs text-gray-500 truncate">Tree ID: <span className="hidden sm:inline">{tree.id}</span><span className="sm:hidden">{tree.id.substring(0, 8)}...</span></p>
           </div>
           <button
             onClick={handleExportPng}
             disabled={!tree || !nodes || nodes.length === 0}
-            className="px-4 py-2 bg-sky-500 hover:bg-sky-600 disabled:bg-gray-400 text-white rounded-lg shadow font-medium text-sm transition-all"
+            className="px-3 sm:px-4 py-2 bg-sky-500 hover:bg-sky-600 disabled:bg-gray-400 text-white rounded-lg shadow font-medium text-xs sm:text-sm transition-all whitespace-nowrap"
             title="Export the tree as PNG"
           >
             Export PNG
           </button>
+        </div>
+
+        {/* Mobile Sidebar - Positioned below header on mobile only */}
+        <div className="absolute top-0 left-0 h-full z-20 lg:hidden">
+          <SidebarPanel
+            members={members}
+            onAddNewMember={handleAddNodeToCanvas}
+            onAddMemberToCanvas={handleAddMemberToCanvas}
+            onSelectMember={handleSelectMember}
+            canAddMember={!!tree}
+            isVisible={sidebarVisible}
+            onToggle={() => setSidebarVisible(!sidebarVisible)}
+            modalOpen={memberModalOpen}
+          />
         </div>
 
         {/* Canvas Area - Takes remaining height */}

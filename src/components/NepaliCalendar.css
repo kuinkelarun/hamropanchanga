@@ -15,6 +15,13 @@
     transition: padding 0.3s ease, min-height 0.3s ease, border-radius 0.3s ease;
 }
 
+/* Mobile: Increase padding to accommodate larger header */
+@media (max-width: 640px) {
+    .nepali-calendar-container {
+        padding-top: 130px; /* Extra padding for mobile header */
+    }
+}
+
 /* Calendar Header */
 .nc-header { 
     display:flex; 
@@ -314,12 +321,11 @@
     color: #111827;
 }
 @media (max-width: 640px) {
-    .nc-topbar { height: 80px; padding: 6px 16px; } /* adjusted height for mobile */
+    .nc-topbar { height: 120px; padding: 6px 16px; } /* increased height for mobile to prevent overflow */
     .nc-topbar-right { gap:8px; margin-top: 4px; }
     .nc-topbar-bs { font-size: 15px; }
     .nc-topbar-ad { font-size: 12px; }
-    .nc-topbar-btn { font-size: 16px; padding: 6px 8px; }
-    .nepali-calendar-container { padding-top: 80px; } /* adjusted padding-top */
+    .nc-topbar-btn { font-size: 14px; padding: 6px 8px; line-height: 1.3; } /* smaller font and tighter line height */
 }
 
 /* Day Tiles */

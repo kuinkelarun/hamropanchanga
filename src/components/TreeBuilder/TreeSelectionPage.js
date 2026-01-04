@@ -260,16 +260,6 @@ export default function TreeSelectionPage({ user, isAdmin }) {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50">
-      {/* Header */}
-      <div className="bg-white shadow-sm border-b border-gray-200">
-        <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-800">Your Family Trees</h1>
-            <p className="text-sm text-gray-600 mt-1">Connect your past. Branch out your future.</p>
-          </div>
-        </div>
-      </div>
-
       {/* Main Content */}
       <div className="max-w-6xl mx-auto px-6 py-10">
         {/* Hero Message */}
