@@ -52,7 +52,9 @@ export default function SidebarPanel({
           ${modalOpen ? 'pointer-events-none' : ''}
         `}
         style={{
-          ...(modalOpen ? { filter: 'brightness(0.85)', opacity: 0.7 } : {})
+          ...(modalOpen ? { filter: 'brightness(0.85)', opacity: 0.7 } : {}),
+          // Conditionally add extra top padding on mobile to prevent header from blocking content
+          paddingTop: window.innerWidth < 1024 ? '8px' : undefined
         }}
         onMouseEnter={() => {
           if (window.innerWidth >= 1024 && !isVisible) onToggle?.();

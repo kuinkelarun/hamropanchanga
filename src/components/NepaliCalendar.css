@@ -2,8 +2,7 @@
 .nepali-calendar-container { 
     position: relative; /* allow positioning of inner elements */
     background: #cab5ef; 
-    /* increase top padding to accommodate the absolute topbar so content sits below it */
-    padding: 100px 16px 16px 16px; 
+    padding: 16px; 
     border-radius: 8px; 
     box-shadow: 0 6px 18px rgba(0,0,0,0.06); 
     margin-bottom: 18px;
@@ -13,13 +12,6 @@
     margin-right: auto;
     /* Smooth transitions for responsive changes */
     transition: padding 0.3s ease, min-height 0.3s ease, border-radius 0.3s ease;
-}
-
-/* Mobile: Increase padding to accommodate larger header */
-@media (max-width: 640px) {
-    .nepali-calendar-container {
-        padding-top: 130px; /* Extra padding for mobile header */
-    }
 }
 
 /* Calendar Header */
@@ -269,11 +261,8 @@
 
 /* Today quick-jump button (top-right) */
 .nc-topbar {
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 100px; /* increased height for two-row layout */
+    position: relative;
+    height: auto; /* let content define height to avoid overlap */
     display:flex;
     flex-direction: column; /* stack items vertically */
     justify-content: center;
@@ -281,6 +270,8 @@
     color: #fff;
     padding: 8px 18px;
     border-radius: 8px 8px 0 0; /* round top corners flush with card */
+    /* stretch to container edges even though container has padding */
+    margin: -16px -16px 12px -16px;
 }
 
 /* Keep rounded top corners on mobile to match calendar container */
@@ -288,6 +279,9 @@
     .nc-topbar {
         border-radius: 8px 8px 0 0; /* Keep top corners rounded on mobile */
         padding: 6px 8px; /* Reduce horizontal padding */
+        /* On mobile the container has no inner padding; avoid negative margins that can create
+           apparent blank space above the header and/or horizontal overflow. */
+        margin: 0 0 12px 0;
     }
 }
 .nc-topbar-btn {
@@ -321,7 +315,7 @@
     color: #111827;
 }
 @media (max-width: 640px) {
-    .nc-topbar { height: 120px; padding: 6px 16px; } /* increased height for mobile to prevent overflow */
+    .nc-topbar { padding: 6px 16px; }
     .nc-topbar-right { gap:8px; margin-top: 4px; }
     .nc-topbar-bs { font-size: 15px; }
     .nc-topbar-ad { font-size: 12px; }
@@ -957,7 +951,7 @@
 @media (max-width: 768px) {
     .nepali-calendar-container {
         /* Expand to cover most of the viewport on mobile */
-        padding: 100px 0 0 0; /* Remove horizontal padding for full-width */
+        padding: 0; /* No extra top padding now that the topbar is in normal flow */
         margin-bottom: 0; /* Remove bottom margin */
         border-radius: 8px; /* More visible rounded corners for mobile */
         /* Use more of the available width */
@@ -1135,7 +1129,7 @@
 
 @media (max-width: 480px) {
     .nepali-calendar-container {
-        padding: 100px 0 0 0; /* Remove all horizontal padding */
+        padding: 0; /* No extra top padding now that the topbar is in normal flow */
         margin-bottom: 0;
         border-radius: 8px; /* More visible rounded corners for mobile */
         /* Nearly full viewport coverage */
@@ -1331,7 +1325,7 @@
 
 @media (max-width:420px) {
     .nepali-calendar-container {
-        padding: 100px 0 0 0; /* Remove all padding for absolute full width */
+        padding: 0; /* No extra top padding now that the topbar is in normal flow */
         margin-bottom: 0;
         border-radius: 8px; /* More visible rounded corners for mobile */
         /* Full viewport utilization */

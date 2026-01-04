@@ -73,6 +73,10 @@ function AppContent() {
     const [treeMembers, setTreeMembers] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isAdmin, setIsAdmin] = useState(false);
+    
+    // Smart home button state
+    const [lastLogoClickTime, setLastLogoClickTime] = useState(null);
+    const [savedScrollPosition, setSavedScrollPosition] = useState(0);
 
     // Use the new permissions hook
     useUserPermissions(user);
@@ -304,6 +308,40 @@ function AppContent() {
         loadTreeMembers();
     }, [user, trees]);
 
+    // Track scroll position when navigating away from home page
+    useEffect(() => {
+        // Listen for scroll changes
+        const handleScroll = () => {
+            setSavedScrollPosition(window.scrollY);
+        };
+
+        window.addEventListener('scroll', handleScroll);
+        return () => window.removeEventListener('scroll', handleScroll);
+    }, []);
+
+    // Smart home button handler
+    const handleLogoClick = () => {
+        const now = Date.now();
+        const doubleClickWindow = 500; // 500ms window for double-click
+
+        // Check if this is a double-click (within 500ms)
+        if (lastLogoClickTime && (now - lastLogoClickTime) < doubleClickWindow) {
+            // Double-click: go to home and scroll to top
+            navigate('/');
+            setTimeout(() => {
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }, 0);
+            setLastLogoClickTime(null);
+        } else {
+            // First click: go to home and restore last scroll position
+            navigate('/');
+            setTimeout(() => {
+                window.scrollTo({ top: savedScrollPosition, behavior: 'smooth' });
+            }, 0);
+            setLastLogoClickTime(now);
+        }
+    };
+
     // --- HANDLERS ---
     const handleLogout = async () => {
         try {
@@ -381,7 +419,7 @@ function AppContent() {
                 <div className="w-full px-4 sm:px-6 lg:px-8">
                     <div className="flex justify-between items-center h-16">
                         {/* Logo Section */}
-                        <div className="flex-shrink-0 flex items-center cursor-pointer group" onClick={() => navigate('/')}>
+                        <div className="flex-shrink-0 flex items-center cursor-pointer group" onClick={handleLogoClick}>
                             <span className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-gray-800 to-gray-600 group-hover:from-purple-600 group-hover:to-blue-600 transition-all duration-300 pl-2">
                                 FamilyTree
                             </span>
