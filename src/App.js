@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, useNavigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import { collection, query, where, onSnapshot, doc, getDoc, setDoc, updateDoc, getDocs } from 'firebase/firestore';
 import { onAuthStateChanged, signOut, getIdTokenResult } from 'firebase/auth';
 import { auth, signInWithGoogle, db } from './firebase';
@@ -17,8 +17,8 @@ import TithiCalculatorPage from './components/TithiCalculatorPage';
 import EmbeddedBuilderPage from './components/TreeBuilder/EmbeddedBuilderPage';
 import TreeSelectionPage from './components/TreeBuilder/TreeSelectionPage';
 import TreeDetailPage from './components/TreeBuilder/TreeDetailPage';
-import { Trees } from './components/TreeBuilder/utils/firestoreTreeApi';
 import { useUserPermissions } from './hooks/usePermissions';
+import { USER_ROLES, DEFAULT_ROLE_PERMISSIONS } from './constants/roles';
 
 // Tithi Calculator Button Component with visibility control
 function TithiCalculatorButton({ onClick }) {
@@ -65,6 +65,7 @@ export default function App() {
 
 function AppContent() {
     const navigate = useNavigate();
+    const location = useLocation();
     
     // STATE MANAGEMENT
     const [user, setUser] = useState(null);
@@ -75,7 +76,6 @@ function AppContent() {
     const [isAdmin, setIsAdmin] = useState(false);
     
     // Smart home button state
-    const [lastLogoClickTime, setLastLogoClickTime] = useState(null);
     const [savedScrollPosition, setSavedScrollPosition] = useState(0);
 
     // Use the new permissions hook
@@ -188,6 +188,27 @@ function AppContent() {
                         }
                     } else {
                         console.log('No invitation found for', rawEmail);
+                        // User signed in without invitation - create default user document
+                        try {
+                            const userDocRef = doc(db, 'users', currentUser.uid);
+                            const existingUserDoc = await getDoc(userDocRef);
+                            
+                            if (!existingUserDoc.exists()) {
+                                console.log('Creating default user document for:', currentUser.email);
+                                await setDoc(userDocRef, {
+                                    email: currentUser.email,
+                                    displayName: currentUser.displayName || '',
+                                    role: USER_ROLES.USER,
+                                    permissions: DEFAULT_ROLE_PERMISSIONS[USER_ROLES.USER],
+                                    active: true,
+                                    createdAt: new Date().toISOString(),
+                                    updatedAt: new Date().toISOString()
+                                });
+                                console.log('Successfully created default user document');
+                            }
+                        } catch (defaultUserErr) {
+                            console.error('Error creating default user document:', defaultUserErr);
+                        }
                     }
                 } catch (err) {
                     console.error('Error processing user invitation:', err.code || err.message || err);
@@ -321,24 +342,17 @@ function AppContent() {
 
     // Smart home button handler
     const handleLogoClick = () => {
-        const now = Date.now();
-        const doubleClickWindow = 500; // 500ms window for double-click
+        const isOnHomePage = location.pathname === '/';
 
-        // Check if this is a double-click (within 500ms)
-        if (lastLogoClickTime && (now - lastLogoClickTime) < doubleClickWindow) {
-            // Double-click: go to home and scroll to top
-            navigate('/');
-            setTimeout(() => {
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-            }, 0);
-            setLastLogoClickTime(null);
+        if (isOnHomePage) {
+            // Already on home page: scroll to top
+            window.scrollTo({ top: 0, behavior: 'smooth' });
         } else {
-            // First click: go to home and restore last scroll position
+            // Not on home page: navigate to home and restore scroll position
             navigate('/');
             setTimeout(() => {
                 window.scrollTo({ top: savedScrollPosition, behavior: 'smooth' });
             }, 0);
-            setLastLogoClickTime(now);
         }
     };
 
