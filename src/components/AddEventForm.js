@@ -17,6 +17,7 @@ const AddEventForm = ({ onAdd, familyMembers, onCancel, editingEvent }) => {
     };
     
     const [name, setName] = useState('');
+    const [description, setDescription] = useState('');
     const [date, setDate] = useState(getTodayDate());
     const [selectedPersonId, setSelectedPersonId] = useState('');
     const [repetition, setRepetition] = useState('none');
@@ -31,6 +32,7 @@ const AddEventForm = ({ onAdd, familyMembers, onCancel, editingEvent }) => {
     useEffect(() => {
         if (editingEvent) {
             setName(editingEvent.title || '');
+            setDescription(editingEvent.description || '');
             setDate(editingEvent.dateKey || getTodayDate());
             setSelectedPersonId(editingEvent.memberId || '');
             setRepetition(editingEvent.repetition || 'none');
@@ -119,6 +121,7 @@ const AddEventForm = ({ onAdd, familyMembers, onCancel, editingEvent }) => {
 
         onAdd({ 
             name, 
+            description: description.trim(),
             date: finalDate, 
             personId: selectedPersonId, 
             repetition,
@@ -126,6 +129,7 @@ const AddEventForm = ({ onAdd, familyMembers, onCancel, editingEvent }) => {
         });
         
         setName('');
+        setDescription('');
         setDate(getTodayDate());
         setSelectedPersonId('');
         setRepetition('none');
@@ -172,6 +176,20 @@ const AddEventForm = ({ onAdd, familyMembers, onCancel, editingEvent }) => {
                             onChange={(e) => setName(e.target.value)}
                             className="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-green-500"
                             required
+                        />
+                    </div>
+
+                    <div>
+                        <label htmlFor="event-description" className="block text-gray-700 font-semibold mb-1 text-sm">
+                            Description (Optional)
+                        </label>
+                        <textarea
+                            id="event-description"
+                            placeholder="Add details (optional)"
+                            value={description}
+                            onChange={(e) => setDescription(e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-green-500"
+                            rows={3}
                         />
                     </div>
                     

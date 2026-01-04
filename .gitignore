@@ -24,3 +24,10 @@ yarn-error.log*
 
 # ignore tool dependencies
 /tools/node_modules
+
+# Firebase service account keys (NEVER commit)
+/service-account.json
+/tools/service-account.json
+/serviceAccountKey.json
+serviceAccountKey.json
+*.service-account.json

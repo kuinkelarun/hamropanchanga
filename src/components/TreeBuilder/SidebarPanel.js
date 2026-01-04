@@ -112,7 +112,7 @@ export default function SidebarPanel({
                       e.dataTransfer.effectAllowed = 'move';
                     }}
                     className="group flex items-center justify-between px-2 py-1.5 rounded-md border border-gray-200 bg-white text-xs text-gray-800 cursor-grab hover:bg-gray-100 hover:border-orange-500 active:cursor-grabbing relative"
-                    title="Drag to canvas or click '+ Add' to place on canvas"
+                    title="Drag to canvas or click 'Add' to place on canvas"
                     onClick={() => onSelectMember && onSelectMember(m.id)}
                   >
                     <span className="font-medium truncate mr-2">{displayMemberName(m)}</span>
@@ -145,7 +145,7 @@ export default function SidebarPanel({
             </div>
             {membersOnCanvas.length === 0 ? (
               <div className="mt-2 p-2 rounded-md bg-gray-50 text-gray-500 italic text-xs">
-                No members on canvas yet. Drag members from pool or click "+ Add" button.
+                No members on canvas yet. Drag members from pool or click "Add" button.
               </div>
             ) : (
               <ul className="mt-2 space-y-1 overflow-y-auto pr-1 text-xs">

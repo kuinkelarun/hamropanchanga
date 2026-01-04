@@ -278,7 +278,7 @@ export default function TreeBuilderPage({ user }) {
                className="w-full py-2 px-4 bg-blue-50 text-blue-600 rounded-lg text-sm font-medium hover:bg-blue-100 transition-colors"
                onClick={handleAddNewMember}
              >
-               + Add New Member
+               Add New Member
              </button>
           </div>
         </div>

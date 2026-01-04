@@ -1,8 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Trees, Members } from './utils/firestoreTreeApi';
 import AddEventForm from '../AddEventForm';
 import { signInWithGoogle } from '../../firebase';
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '../../firebase';
 
 export default function TreeSelectionPage({ user, isAdmin }) {
   const navigate = useNavigate();
@@ -26,6 +28,9 @@ export default function TreeSelectionPage({ user, isAdmin }) {
     location: ''
   });
 
+  // Cache owner email lookups for admin display in Other Users section
+  const [ownerEmailByUid, setOwnerEmailByUid] = useState({});
+
   useEffect(() => {
     async function loadTrees() {
       if (!user) {
@@ -47,6 +52,44 @@ export default function TreeSelectionPage({ user, isAdmin }) {
     }
     loadTrees();
   }, [user, isAdmin]);
+
+  const myTrees = useMemo(() => trees.filter(t => t.ownerUid === user?.uid), [trees, user]);
+  const otherTrees = useMemo(() => trees.filter(t => t.ownerUid !== user?.uid), [trees, user]);
+
+  // For admins, resolve owner email for other trees
+  useEffect(() => {
+    async function loadOwnerEmails() {
+      if (!isAdmin) return;
+      const uniqueOwnerUids = Array.from(new Set((otherTrees || []).map(t => t.ownerUid).filter(Boolean)));
+      const missing = uniqueOwnerUids.filter(uid => ownerEmailByUid[uid] === undefined);
+      if (missing.length === 0) return;
+
+      try {
+        const results = await Promise.all(
+          missing.map(async (uid) => {
+            try {
+              const snap = await getDoc(doc(db, 'users', uid));
+              if (snap.exists()) {
+                const data = snap.data() || {};
+                return [uid, data.email || data.displayName || uid];
+              }
+            } catch (e) {
+              // ignore individual lookup failures
+            }
+            return [uid, uid];
+          })
+        );
+        setOwnerEmailByUid(prev => {
+          const next = { ...prev };
+          for (const [uid, email] of results) next[uid] = email;
+          return next;
+        });
+      } catch (e) {
+        // Ignore batch failures; UI will fall back to UID
+      }
+    }
+    loadOwnerEmails();
+  }, [isAdmin, otherTrees, ownerEmailByUid]);
 
   const handleRequireAuth = async () => {
     if (user) return true;
@@ -171,7 +214,7 @@ export default function TreeSelectionPage({ user, isAdmin }) {
       });
       
       // Refresh list
-      const all = await Trees.list(user.uid);
+      const all = await Trees.list(isAdmin ? null : user.uid);
       setTrees((all || []).filter(t => !t.deleted));
       
       setEditingModalOpen(false);
@@ -189,7 +232,7 @@ export default function TreeSelectionPage({ user, isAdmin }) {
     try {
       await Trees.delete(treeId);
       // Refresh list
-      const all = await Trees.list(user.uid);
+      const all = await Trees.list(isAdmin ? null : user.uid);
       setTrees((all || []).filter(t => !t.deleted));
     } catch (err) {
       console.error('Error deleting tree:', err);
@@ -197,14 +240,14 @@ export default function TreeSelectionPage({ user, isAdmin }) {
     }
   };
 
-  const handleAddEventFromModal = async ({ name, date, personId, repetition, tithi }) => {
+  const handleAddEventFromModal = async ({ name, description, date, personId, repetition, tithi }) => {
     try {
       if (!eventModal.treeId || !user) return;
       const { db } = await import('../../firebase');
       const { addDoc, collection, serverTimestamp } = await import('firebase/firestore');
       await addDoc(collection(db, 'calendarEvents'), {
         title: name,
-        description: '',
+        description: description || '',
         dateKey: date,
         repetition,
         tithi: tithi || null,
@@ -255,9 +298,6 @@ export default function TreeSelectionPage({ user, isAdmin }) {
     );
   }
 
-  const myTrees = trees.filter(t => t.ownerUid === user.uid);
-  const otherTrees = trees.filter(t => t.ownerUid !== user.uid);
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50">
       {/* Main Content */}
@@ -288,7 +328,7 @@ export default function TreeSelectionPage({ user, isAdmin }) {
               disabled={creating}
               className="px-6 py-2.5 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 disabled:opacity-60 disabled:cursor-not-allowed text-white rounded-lg font-semibold shadow-md transition-all transform hover:scale-105"
             >
-              {creating ? 'Creating...' : '+ Build New Tree'}
+              {creating ? 'Creating...' : 'Build New Tree'}
             </button>
           </div>
 
@@ -351,7 +391,11 @@ export default function TreeSelectionPage({ user, isAdmin }) {
                       <div className="flex-1">
                         <h4 className="text-lg font-bold text-gray-800 mb-1">{tree.title || 'Untitled Tree'}</h4>
                         <p className="text-xs text-gray-500">ID: {tree.id}</p>
-                        {tree.ownerUid && <p className="text-xs text-gray-400 mt-1">Owner: {tree.ownerUid}</p>}
+                        {tree.ownerUid && (
+                          <p className="text-xs text-gray-400 mt-1">
+                            Owner: {ownerEmailByUid[tree.ownerUid] || tree.ownerEmail || tree.ownerUid}
+                          </p>
+                        )}
                       </div>
                     </div>
                     {tree.location && (

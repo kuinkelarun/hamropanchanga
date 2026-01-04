@@ -35,11 +35,21 @@ export default function TreeDetailPage({ user }) {
 
   const loadTreeData = async () => {
     if (!treeId) return;
+    
+    // Wait for user authentication to be resolved before attempting to fetch data
+    // This prevents "Missing or insufficient permissions" errors during initial load
+    if (!user) return;
+
     setLoading(true);
     setError('');
     try {
+      if (process.env.NODE_ENV !== 'production') {
+        console.log('Loading tree data for:', { treeId });
+      }
+      
       // Load tree metadata
       const treeData = await Trees.get(treeId);
+      console.log('Tree loaded:', treeData);
       setTree(treeData);
 
       // Load members
@@ -70,14 +80,16 @@ export default function TreeDetailPage({ user }) {
     }
   };
 
-  const handleAddEvent = async ({ name, date, personId, repetition, tithi }) => {
+  const handleAddEvent = async ({ name, description, date, personId, repetition, tithi }) => {
     if (!user || !treeId) return;
     try {
       const eventData = {
         title: name,
-        description: '',
+        description: description || '',
         dateKey: date,
         repetition,
+        // Standardize: always set `tithi` field; null when not used.
+        tithi: tithi || null,
         isPublic: false,
         createdBy: user.uid,
         createdByAdmin: false,
@@ -85,11 +97,6 @@ export default function TreeDetailPage({ user }) {
         memberId: personId,
         createdAt: serverTimestamp(),
       };
-      
-      // Add tithi info if provided
-      if (tithi) {
-        eventData.tithi = tithi;
-      }
       
       await addDoc(collection(db, 'calendarEvents'), eventData);
       setIsAddingEvent(false);
@@ -105,7 +112,7 @@ export default function TreeDetailPage({ user }) {
     setIsAddingEvent(true);
   };
 
-  const handleUpdateEvent = async ({ name, date, personId, repetition, tithi }) => {
+  const handleUpdateEvent = async ({ name, description, date, personId, repetition, tithi }) => {
     if (!user || !treeId || !editingEvent) return;
     try {
       const { doc, updateDoc } = await import('firebase/firestore');
@@ -113,6 +120,7 @@ export default function TreeDetailPage({ user }) {
       
       const updateData = {
         title: name,
+        description: description || '',
         dateKey: date,
         repetition,
         memberId: personId,
@@ -284,7 +292,7 @@ export default function TreeDetailPage({ user }) {
                   onClick={handleAddMember}
                   className="px-4 py-2 text-sm bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium"
                 >
-                  + Add Member
+                  Add Member
                 </button>
               </div>
               {members.length > 0 ? (
@@ -339,7 +347,7 @@ export default function TreeDetailPage({ user }) {
                   onClick={() => setIsAddingEvent(true)}
                   className="px-4 py-2 text-sm bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium"
                 >
-                  + Add Event
+                  Add Event
                 </button>
               </div>
               {events.length > 0 ? (
