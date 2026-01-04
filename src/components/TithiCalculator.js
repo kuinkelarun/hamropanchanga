@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import './TithiCalculator.css';
 import { computeTithiFromLongitudes, getEphemerisData } from '../utils/ephemeris';
-import { toNepaliNumber, formatNepaliDateTime } from '../utils/nepaliDateUtils';
+import { toNepaliNumber, formatNepaliDateTime, nepaliMonths, convertAdToBs, getTithiYearFromAdDate, getTithiLunarMonthName } from '../utils/nepaliDateUtils';
 
 // Nepali Tithi names
 const shuklaNames = ["प्रतिपदा", "द्वितीया", "तृतीया", "चतुर्थी", "पञ्चमी", "षष्ठी", "सप्तमी", "अष्टमी", "नवमी", "दशमी", "एकादशी", "द्वादशी", "त्रयोदशी", "चतुर्दशी", "पूर्णिमा"];
@@ -19,6 +19,24 @@ export default function TithiCalculator() {
   const [locationStatus, setLocationStatus] = useState('detecting');
   const [locationMode, setLocationMode] = useState('kathmandu'); // 'current' or 'kathmandu'
   const [showInfo, setShowInfo] = useState(false);
+  const [currentMonth, setCurrentMonth] = useState(null);
+  const [currentMonthName, setCurrentMonthName] = useState('');
+
+  // Helper function to get BS month from AD date
+  function getBsMonthFromAdDate(adYear, adMonth, adDay) {
+    const bsDate = convertAdToBs(adYear, adMonth, adDay);
+    return bsDate.month;
+  }
+  
+  // Helper function to update month based on a date
+  function updateMonthForDate(date) {
+    const adYear = date.getFullYear();
+    const adMonth = date.getMonth();
+    const adDay = date.getDate();
+    const bsMonth = getBsMonthFromAdDate(adYear, adMonth, adDay);
+    setCurrentMonth(bsMonth);
+    setCurrentMonthName(nepaliMonths[bsMonth - 1]);
+  }
 
   // Initialize date/time to now and detect location
   useEffect(() => {
@@ -28,6 +46,9 @@ export default function TithiCalculator() {
     const hh = String(now.getHours()).padStart(2, '0');
     const mm = String(now.getMinutes()).padStart(2, '0');
     setTimeStr(`${hh}:${mm}`);
+    
+    // Initialize current month based on today's date
+    updateMonthForDate(now);
 
     // Detect user location
     if (navigator.geolocation) {
@@ -54,6 +75,14 @@ export default function TithiCalculator() {
       setLocationStatus('not supported');
     }
   }, []);
+
+  // Update month when date changes
+  useEffect(() => {
+    if (dateStr) {
+      const selectedDate = new Date(dateStr);
+      updateMonthForDate(selectedDate);
+    }
+  }, [dateStr]);
 
   async function onCompute(e) {
     e && e.preventDefault();
@@ -108,6 +137,29 @@ export default function TithiCalculator() {
       res.startTime = eph.tithiStart;
       res.endTime = eph.tithiEnd;
     }
+    // Add month information to result
+    res.monthNumber = currentMonth;
+    res.monthName = currentMonthName;
+    
+    // Add Tithi Year information
+    // Use the start time of the tithi for Tithi Year determination
+    try {
+      const tithiStartDate = res.startTime ? new Date(res.startTime) : new Date(`${dateStr}T${timeStr}:00Z`);
+      const adDateStr = tithiStartDate.toISOString().split('T')[0]; // YYYY-MM-DD
+      
+      // Pass the calculated paksha to get accurate year
+      const tithiYearInfo = getTithiYearFromAdDate(adDateStr, null, res.paksha, res.pakshaIndex);
+      res.tithiYear = tithiYearInfo.tithiYear;
+      
+      // Get Tithi Lunar Month name based on paksha and current solar month
+      const lunarMonthName = getTithiLunarMonthName(res.paksha, res.pakshaIndex, adDateStr);
+      res.tithiLunarMonthName = lunarMonthName;
+    } catch (err) {
+      console.error('Error calculating Tithi Year/Month:', err);
+      res.tithiYear = null;
+      res.tithiLunarMonthName = null;
+    }
+    
     setResult(res);
   }
 
@@ -121,6 +173,7 @@ export default function TithiCalculator() {
     const hh = String(now.getHours()).padStart(2, '0');
     const mm = String(now.getMinutes()).padStart(2, '0');
     setTimeStr(`${hh}:${mm}`);
+    updateMonthForDate(now);
   }
 
   return (
@@ -226,6 +279,14 @@ export default function TithiCalculator() {
 
       {result && (
         <div className="tc-output">
+          {/* Tithi Year Display */}
+          {result.tithiYear && (
+            <div className="tc-month-banner" style={{background: '#e8f4f8', borderColor: '#0891b2'}}>
+              <div className="tc-month-name" style={{color: '#0891b2'}}>Tithi Year {result.tithiYear}</div>
+              <div className="tc-month-number" style={{color: '#0891b2'}}>({result.tithiLunarMonthName || 'Unknown'})</div>
+            </div>
+          )}
+
           {/* Main Tithi Display */}
           <div className="tc-main-tithi">
             <div className="tithi-number">{toNepaliNumber(result.tithi)}</div>

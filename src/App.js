@@ -43,25 +43,12 @@ function TithiCalculatorButton({ onClick }) {
     return (
         <button
             onClick={onClick}
-            className="text-sm text-white px-4 py-2 rounded-lg shadow-md transition-all duration-200 hover:shadow-lg flex items-center gap-2 font-semibold"
-            style={{
-                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                transform: 'translateY(0)',
-                transition: 'all 0.2s ease'
-            }}
-            onMouseEnter={(e) => {
-                e.currentTarget.style.transform = 'translateY(-2px)';
-                e.currentTarget.style.boxShadow = '0 4px 8px rgba(102, 126, 234, 0.4)';
-            }}
-            onMouseLeave={(e) => {
-                e.currentTarget.style.transform = 'translateY(0)';
-                e.currentTarget.style.boxShadow = '0 2px 4px rgba(102, 126, 234, 0.3)';
-            }}
+            className="group flex items-center gap-2 px-4 py-2 text-gray-600 hover:text-purple-600 font-medium transition-all duration-200 rounded-full hover:bg-purple-50"
         >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-5 h-5 text-gray-400 group-hover:text-purple-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
             </svg>
-            Tithi Calculator
+            <span>Tithi Calculator</span>
         </button>
     );
 }
@@ -242,17 +229,28 @@ function AppContent() {
 
     // Load trees for current user
     useEffect(() => {
-        const loadTrees = async () => {
-            try {
-                if (!user) { setTrees([]); return; }
-                const all = await Trees.list(user.uid);
-                setTrees((all || []).filter(t => !t.deleted));
-            } catch (err) {
-                console.error('Error loading trees:', err);
-            }
-        };
-        loadTrees();
-    }, [user]);
+        if (!user) { setTrees([]); return; }
+
+        const colRef = collection(db, 'trees');
+        let qRef = colRef;
+        
+        // If not admin, filter by ownerUid
+        if (!isAdmin) {
+            qRef = query(colRef, where('ownerUid', '==', user.uid));
+        }
+
+        const unsubscribe = onSnapshot(qRef, (snapshot) => {
+            const allTrees = snapshot.docs.map(doc => ({
+                id: doc.id,
+                ...doc.data()
+            }));
+            setTrees(allTrees.filter(t => !t.deleted));
+        }, (error) => {
+            console.error('Error listening to trees:', error);
+        });
+
+        return () => unsubscribe();
+    }, [user, isAdmin]);
 
     // Load calendar events (including tree member events)
     useEffect(() => {
@@ -378,54 +376,52 @@ function AppContent() {
     }));
 
     return (
-        <div className="min-h-screen bg-gray-100">
-            <header className="sticky top-0 z-50 flex justify-between items-center p-4 bg-white shadow-md" role="banner">
-                <div className="flex items-center gap-4">
-                    <button
-                        onClick={() => navigate('/')}
-                        className="text-sm font-semibold text-white px-4 py-2 rounded-lg shadow-md transition-all duration-200"
-                        style={{
-                            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
-                        }}
-                        onMouseEnter={(e) => {
-                            e.currentTarget.style.transform = 'translateY(-2px)';
-                            e.currentTarget.style.boxShadow = '0 4px 8px rgba(102, 126, 234, 0.4)';
-                        }}
-                        onMouseLeave={(e) => {
-                            e.currentTarget.style.transform = 'translateY(0)';
-                            e.currentTarget.style.boxShadow = '0 2px 4px rgba(102, 126, 234, 0.3)';
-                        }}
-                    >
-                        FamilyTree
-                    </button>
-                </div>
-                <div className="flex items-center gap-4">
-                    {user ? (
-                        <>
-                            <TithiCalculatorButton onClick={handleTithiCalculator} />
-                            <SettingsMenu 
-                                user={user} 
-                                onSignOut={handleSignOut} 
-                                isAdmin={isAdmin}
-                                onAdminEditCards={handleAdminEditCards}
-                                onAdminManagement={handleAdminManagement}
-                                onUserManagement={handleUserManagement}
-                            />
-                        </>
-                    ) : (
-                        <button
-                            onClick={async () => {
-                                try {
-                                    await signInWithGoogle();
-                                } catch (err) {
-                                    // logged in helper handles logging
-                                }
-                            }}
-                            className="text-sm bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded-md shadow-sm"
-                        >
-                            Login
-                        </button>
-                    )}
+        <div className="min-h-screen bg-gray-50">
+            <header className="sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b border-gray-200 shadow-sm" role="banner">
+                <div className="w-full px-4 sm:px-6 lg:px-8">
+                    <div className="flex justify-between items-center h-16">
+                        {/* Logo Section */}
+                        <div className="flex-shrink-0 flex items-center cursor-pointer group" onClick={() => navigate('/')}>
+                            <span className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-gray-800 to-gray-600 group-hover:from-purple-600 group-hover:to-blue-600 transition-all duration-300 pl-2">
+                                FamilyTree
+                            </span>
+                        </div>
+
+                        {/* Navigation Section */}
+                        <div className="flex items-center gap-2 sm:gap-4">
+                            {user ? (
+                                <>
+                                    <div className="hidden sm:block">
+                                        <TithiCalculatorButton onClick={handleTithiCalculator} />
+                                    </div>
+                                    {/* Mobile Tithi Button (Icon only) could go here if needed, but keeping simple for now */}
+                                    <div className="pl-2 border-l border-gray-200 ml-2">
+                                        <SettingsMenu 
+                                            user={user} 
+                                            onSignOut={handleSignOut} 
+                                            isAdmin={isAdmin}
+                                            onAdminEditCards={handleAdminEditCards}
+                                            onAdminManagement={handleAdminManagement}
+                                            onUserManagement={handleUserManagement}
+                                        />
+                                    </div>
+                                </>
+                            ) : (
+                                <button
+                                    onClick={async () => {
+                                        try {
+                                            await signInWithGoogle();
+                                        } catch (err) {
+                                            // logged in helper handles logging
+                                        }
+                                    }}
+                                    className="text-sm font-medium bg-gray-900 text-white px-5 py-2.5 rounded-full hover:bg-gray-800 transition-all shadow-sm hover:shadow-md transform hover:-translate-y-0.5"
+                                >
+                                    Sign In
+                                </button>
+                            )}
+                        </div>
+                    </div>
                 </div>
             </header>
 
@@ -515,6 +511,7 @@ function AppContent() {
                     <Route path="/trees" element={
                         <TreeSelectionPage
                             user={user}
+                            isAdmin={isAdmin}
                         />
                     } />
 

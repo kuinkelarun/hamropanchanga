@@ -113,7 +113,7 @@
 .nc-header-month-select,
 .nc-header-year-select {
     font-weight: 700;
-    font-size: 16px;
+    font-size: 20px;
     color: #0f172a;
     background: rgba(255, 255, 255, 0.9);
     border: 1px solid #d1d5db;
@@ -133,13 +133,13 @@
 @media (max-width: 768px) {
     .nc-header-selectors { padding-top: 6px; gap: 6px; }
     .nc-header-month-select,
-    .nc-header-year-select { font-size: 14px; padding: 3px 6px; min-width: 70px; }
+    .nc-header-year-select { font-size: 18px; padding: 3px 6px; min-width: 70px; }
 }
 
 @media (max-width: 480px) {
     .nc-header-selectors { padding-top: 4px; gap: 4px; }
     .nc-header-month-select,
-    .nc-header-year-select { font-size: 13px; padding: 2px 4px; min-width: 60px; }
+    .nc-header-year-select { font-size: 16px; padding: 2px 4px; min-width: 60px; }
 }
 
 /* Make the AD (English) line slightly smaller on narrower screens for better vertical rhythm */

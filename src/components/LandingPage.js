@@ -57,34 +57,40 @@ const LandingPage = ({ user, isAdmin, trees = [], treeMembers = [], events, fami
         navigate('/trees');
     };
 
+    // Filter trees to show only those owned by the current user
+    const myTrees = user ? trees.filter(tree => tree.ownerUid === user.uid) : [];
+
         // Note: BlockTithi has its own visibility loader; we render it alongside Block1
     
         return (
             <div className="landing-container">
                 {/* HERO: full-width container - visible to all users */}
                 <div className="hero-full edgefull">
-                    <section className="hero-section" aria-label="Hero section">
-                        <div className="hero-content">
-                            <h1 className="app-name">My Family Tree</h1>
-                            <p className="tagline">Connect your past. Branch out your future.</p>
-                            <button 
-                                className="cta-button" 
-                                onClick={handleStartTree}
-                                aria-label="Start building your family tree"
-                            >
-                                Build Your Tree
-                            </button>
+                    <section 
+                        className="hero-section" 
+                        aria-label="Hero section"
+                        style={{ 
+                            backgroundImage: `url(${heroAnimation})`, 
+                            backgroundSize: 'cover', 
+                            backgroundPosition: 'center',
+                            backgroundRepeat: 'no-repeat'
+                        }}
+                    >
+                        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 w-full h-full flex items-center">
+                            <div className="hero-content">
+                                <h1 className="app-name">My Family Tree</h1>
+                                <p className="tagline">Connect your past. Branch out your future.</p>
+                                <button 
+                                    className="cta-button" 
+                                    onClick={handleStartTree}
+                                    aria-label="Start building your family tree"
+                                >
+                                    Build Your Tree
+                                </button>
+                            </div>
                         </div>
-                        <div className="hero-illustration">
-                            <img
-                                src={heroAnimation}
-                                alt="Family tree illustration"
-                                className="hero-images"
-                                loading="lazy"
-                            />
-                        </div>
-                            </section>
-                        </div>
+                    </section>
+                </div>
 
                 {/* Block 1: Horizontal Scrolling Cards - Conditionally visible */}
             {block1Visible === true && (
@@ -108,7 +114,7 @@ const LandingPage = ({ user, isAdmin, trees = [], treeMembers = [], events, fami
             </div>
 
             {/* Your Trees Section */}
-            {user && trees.length > 0 && (
+            {user && myTrees.length > 0 && (
                 <div className="edgefull">
                     <div className="section-content-centered">
                         <div className="section-card branches-section">
@@ -124,7 +130,7 @@ const LandingPage = ({ user, isAdmin, trees = [], treeMembers = [], events, fami
                                     />
                                 </div>
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                    {trees.filter(tree => {
+                                    {myTrees.filter(tree => {
                                         if (!searchQuery) return true;
                                         const search = searchQuery.toLowerCase();
                                         return (

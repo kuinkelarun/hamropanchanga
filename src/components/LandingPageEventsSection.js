@@ -41,7 +41,19 @@ const LandingPageEventsSection = ({ events, familyMembers, onDoubleClickEvent })
     // Filter and sort events based on the selected filter
     const sortedAndFilteredEvents = events
         .map(event => {
-            const originalDate = new Date(event.date);
+            // Use dateKey if available (standard), fallback to date (legacy)
+            const dateStr = event.dateKey || event.date;
+            let originalDate;
+            
+            if (dateStr && typeof dateStr === 'string' && dateStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
+                // Parse YYYY-MM-DD as local date, set to NOON (12:00) to avoid timezone edge cases
+                // where local midnight might fall into the previous day in NPT or UTC
+                const [y, m, d] = dateStr.split('-').map(Number);
+                originalDate = new Date(y, m - 1, d, 12, 0, 0);
+            } else {
+                originalDate = new Date(event.date || event.dateKey);
+            }
+
             const displayDate = (event.repetition && event.repetition !== 'none') ?
                 getNextOccurrence(originalDate, event.repetition) :
                 originalDate;
@@ -49,7 +61,14 @@ const LandingPageEventsSection = ({ events, familyMembers, onDoubleClickEvent })
             // Find the associated person to display their name and relation
             const person = familyMembers.find(member => member.id === event.personId);
 
-            return { ...event, originalDate, displayDate, personName: person?.name, personRelation: person?.relation };
+            return { 
+                ...event, 
+                name: event.title || event.name, // Ensure title is used if name is missing
+                originalDate, 
+                displayDate, 
+                personName: person?.name, 
+                personRelation: person?.relation 
+            };
         })
         .filter(event => {
             switch (eventFilter) {
