@@ -151,13 +151,28 @@ export default function EmbeddedBuilderPage({ user }) {
     setSidebarVisible(true);
   }, [tree, loading]);
 
+  // Handle zoom and viewport resize to show sidebar on large screens
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth >= 1024) {
+        setSidebarVisible(true);
+      }
+    };
+    
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   useEffect(() => {
     async function ensureTree() {
       if (!user) {
+        console.warn('[EmbeddedBuilderPage] No user found');
         setError('You must be signed in to use the tree builder.');
         setLoading(false);
         return;
       }
+      
+      console.log('[EmbeddedBuilderPage] User authenticated:', { uid: user.uid });
       setLoading(true);
       try {
         const treeIdParam = searchParams.get('treeId');
@@ -165,6 +180,7 @@ export default function EmbeddedBuilderPage({ user }) {
         if (treeIdParam) {
           // If a specific treeId is provided (from the selection page),
           // load that tree directly.
+          console.log('[EmbeddedBuilderPage] Loading specific tree:', treeIdParam);
           const selectedTree = await Trees.get(treeIdParam);
           if (selectedTree.deleted) {
             throw new Error('This tree has been archived.');
@@ -172,15 +188,20 @@ export default function EmbeddedBuilderPage({ user }) {
           if (selectedTree.ownerUid && selectedTree.ownerUid !== user.uid) {
             throw new Error('You do not have access to this tree.');
           }
+          console.log('[EmbeddedBuilderPage] Tree loaded:', { id: selectedTree.id, title: selectedTree.title });
           setTree(selectedTree);
         } else {
           // Fallback: try to find an existing tree for this user, or
           // create a default one if none exists.
+          console.log('[EmbeddedBuilderPage] Looking for existing trees...');
           const existing = await Trees.list(user.uid);
+          console.log('[EmbeddedBuilderPage] Found trees:', { count: existing?.length || 0 });
           let activeTree = existing && existing.length > 0 ? existing[0] : null;
 
           if (!activeTree) {
+            console.log('[EmbeddedBuilderPage] Creating new default tree...');
             activeTree = await Trees.create('My Family Tree', user.uid);
+            console.log('[EmbeddedBuilderPage] Default tree created:', { id: activeTree.id });
 
             // Seed the new tree with a single "Self" member so the
             // builder has an initial node to work with.
@@ -193,15 +214,17 @@ export default function EmbeddedBuilderPage({ user }) {
                 position: { x: 0, y: 0 },
                 archived: false,
               });
+              console.log('[EmbeddedBuilderPage] Initial member created');
             } catch (seedErr) {
-              console.error('Error seeding initial member:', seedErr);
+              console.error('[EmbeddedBuilderPage] Error seeding initial member:', seedErr);
             }
           }
 
+          console.log('[EmbeddedBuilderPage] Setting tree:', { id: activeTree.id });
           setTree(activeTree);
         }
       } catch (err) {
-        console.error('Error initializing tree:', err);
+        console.error('[EmbeddedBuilderPage] Error initializing tree:', err);
         setError(err.message || 'Failed to initialize tree');
       } finally {
         setLoading(false);
@@ -1185,7 +1208,7 @@ export default function EmbeddedBuilderPage({ user }) {
         </div>
 
         {/* Mobile Sidebar - Positioned below header on mobile only */}
-        <div className="absolute top-0 left-0 h-full z-20 lg:hidden">
+        <div className="absolute left-0 h-full z-20 lg:hidden" style={{ top: '56px' }}>
           <SidebarPanel
             members={members}
             onAddNewMember={handleAddNodeToCanvas}
