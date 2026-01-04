@@ -18,7 +18,7 @@ import {
 import { useUserPermissions } from '../hooks/usePermissions';
 import './UserManagement.css';
 
-export default function UserManagement({ currentUser, onBack }) {
+export default function UserManagement({ currentUser }) {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -51,8 +51,10 @@ export default function UserManagement({ currentUser, onBack }) {
       // Get all users from Firestore users collection
       const usersData = await getAllUsers();
       const userMap = new Map(usersData.map(user => [user.uid, user]));
-      
-      console.log('Loaded users from users collection:', usersData.map(u => ({ uid: u.uid, email: u.email })));
+
+      if (process.env.NODE_ENV !== 'production') {
+        console.log('Loaded users from users collection:', { count: usersData.length });
+      }
       
       // Get adminList to find users who may not be in users collection
       const adminListSnapshot = await getDocs(collection(db, 'adminList'));
@@ -354,9 +356,6 @@ export default function UserManagement({ currentUser, onBack }) {
     <div className="user-management">
       <div className="user-management-header">
         <div className="header-top">
-          <button onClick={onBack} className="back-button">
-            ← Back to Home
-          </button>
           <h2>User Management</h2>
         </div>
         
@@ -397,7 +396,7 @@ export default function UserManagement({ currentUser, onBack }) {
             onClick={() => setShowAddUser(!showAddUser)}
             className="add-user-button"
           >
-            {showAddUser ? 'Cancel' : '+ Add New User'}
+            {showAddUser ? 'Cancel' : 'Add New User'}
           </button>
         </div>
       </div>

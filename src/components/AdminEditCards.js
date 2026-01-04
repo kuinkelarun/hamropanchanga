@@ -6,7 +6,7 @@ import './AdminEditCards.css';
 import { useUserPermissions } from '../hooks/usePermissions';
 import { PERMISSIONS } from '../constants/roles';
 
-const AdminEditCards = ({ user, isAdmin, onBack }) => {
+const AdminEditCards = ({ user, isAdmin }) => {
     const [cards, setCards] = useState([]);
     const [isEditing, setIsEditing] = useState(false);
     const [currentCard, setCurrentCard] = useState(null);
@@ -300,7 +300,6 @@ const AdminEditCards = ({ user, isAdmin, onBack }) => {
             <div className="admin-access-denied">
                 <h2>Access Denied</h2>
                 <p>You must have permission to manage home cards to access this page.</p>
-                <button onClick={onBack}>Go Back</button>
             </div>
         );
     }
@@ -317,7 +316,6 @@ const AdminEditCards = ({ user, isAdmin, onBack }) => {
             {/* Header */}
             <div className="admin-header">
                 <div className="admin-header-left">
-                    <button onClick={onBack} className="admin-back-btn">← Back</button>
                     <h1>Manage Home Cards</h1>
                 </div>
                 <div className="admin-header-right">
@@ -350,7 +348,7 @@ const AdminEditCards = ({ user, isAdmin, onBack }) => {
                         </>
                         )}
                     <button onClick={handleAddNew} className="admin-add-btn">
-                        + Add New Card
+                        Add New Card
                     </button>
                 </div>
             </div>

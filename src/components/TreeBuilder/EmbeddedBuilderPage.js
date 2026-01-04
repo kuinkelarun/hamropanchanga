@@ -117,7 +117,7 @@ function svgDataUrlToPng(svgUrl, pixelRatio = 2) {
 
 // Temporary shell component that will host the ported standalone Tree Builder UI.
 // For now, it simply ensures a tree exists for the current user and displays its id.
-export default function EmbeddedBuilderPage({ user }) {
+export default function EmbeddedBuilderPage({ user, isAdmin }) {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [loading, setLoading] = useState(true);
@@ -172,7 +172,9 @@ export default function EmbeddedBuilderPage({ user }) {
         return;
       }
       
-      console.log('[EmbeddedBuilderPage] User authenticated:', { uid: user.uid });
+      if (process.env.NODE_ENV !== 'production') {
+        console.log('[EmbeddedBuilderPage] User authenticated');
+      }
       setLoading(true);
       try {
         const treeIdParam = searchParams.get('treeId');
@@ -185,7 +187,7 @@ export default function EmbeddedBuilderPage({ user }) {
           if (selectedTree.deleted) {
             throw new Error('This tree has been archived.');
           }
-          if (selectedTree.ownerUid && selectedTree.ownerUid !== user.uid) {
+          if (!isAdmin && selectedTree.ownerUid && selectedTree.ownerUid !== user.uid) {
             throw new Error('You do not have access to this tree.');
           }
           console.log('[EmbeddedBuilderPage] Tree loaded:', { id: selectedTree.id, title: selectedTree.title });
@@ -231,7 +233,7 @@ export default function EmbeddedBuilderPage({ user }) {
       }
     }
     ensureTree();
-  }, [user, searchParams]);
+  }, [user, searchParams, isAdmin]);
 
   function hasPosVal(pos) {
     return pos && typeof pos.x === 'number' && typeof pos.y === 'number';
@@ -1191,7 +1193,7 @@ export default function EmbeddedBuilderPage({ user }) {
             className="px-3 sm:px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white rounded-lg shadow font-medium text-xs sm:text-sm transition-all whitespace-nowrap"
             title="Add a new node to the canvas"
           >
-            + Add Node
+            Add Node
           </button>
           <div className="text-center flex-1 min-w-0">
             <h1 className="text-base sm:text-lg font-semibold text-gray-800 truncate">{tree.title || 'Untitled Tree'}</h1>

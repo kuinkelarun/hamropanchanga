@@ -270,7 +270,7 @@ const NepaliCalendarManagement = ({ hasPermission, PERMISSIONS }) => {
           onClick={handleAddYear}
           disabled={!hasPermission(PERMISSIONS.MANAGE_CALENDAR)}
         >
-          ➕ Add Year
+          Add Year
         </button>
         <button 
           className={`mode-btn ${mode === 'edit' ? 'active' : ''}`}
@@ -464,7 +464,7 @@ const NepaliCalendarManagement = ({ hasPermission, PERMISSIONS }) => {
                 className="btn-save" 
                 onClick={handleSaveYear}
               >
-                {mode === 'add' ? '➕ Add Year' : '💾 Save Changes'}
+                {mode === 'add' ? 'Add Year' : '💾 Save Changes'}
               </button>
             </div>
           </div>

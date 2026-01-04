@@ -2,13 +2,10 @@ import React from 'react';
 import TithiCalculator from './TithiCalculator';
 import './TithiCalculatorPage.css';
 
-const TithiCalculatorPage = ({ onBack }) => {
+const TithiCalculatorPage = () => {
     return (
         <div className="tithi-calculator-page">
             <div className="tithi-page-header">
-                <button onClick={onBack} className="tithi-back-btn">
-                    ← Back
-                </button>
                 <h1 className="tithi-page-title">Tithi Calculator</h1>
             </div>
             

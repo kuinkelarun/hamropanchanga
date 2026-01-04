@@ -1496,10 +1496,8 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
           repetition: newRecordData.repetition || 'none'  // Default to no repeat
         };
         
-        // Add tithi info if provided
-        if (tithiInfo) {
-          eventData.tithi = tithiInfo;
-        }
+        // Standardize: always set `tithi` field; null when not used.
+        eventData.tithi = tithiInfo || null;
         
         await addDoc(collection(db, 'calendarEvents'), eventData);
         setUploadStatus('✅ Event added successfully');

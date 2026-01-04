@@ -70,7 +70,8 @@ function AppContent() {
     // STATE MANAGEMENT
     const [user, setUser] = useState(null);
     const [trees, setTrees] = useState([]);
-    const [calendarEvents, setCalendarEvents] = useState([]);
+    const [treeCalendarEvents, setTreeCalendarEvents] = useState([]);
+    const [personalCalendarEvents, setPersonalCalendarEvents] = useState([]);
     const [treeMembers, setTreeMembers] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isAdmin, setIsAdmin] = useState(false);
@@ -91,7 +92,9 @@ function AppContent() {
                 try {
                     const rawEmail = currentUser.email || '';
                     const lowerEmail = rawEmail.toLowerCase();
-                    console.log('Processing potential invitation for', rawEmail, 'lower:', lowerEmail);
+                    if (process.env.NODE_ENV !== 'production') {
+                        console.log('Processing potential invitation for signed-in user');
+                    }
 
                     // Try both possible document IDs: lowercased email and raw email
                     const invitationRefs = [
@@ -112,14 +115,18 @@ function AppContent() {
                             }
                         } catch (readErr) {
                             // Log read error for diagnostics but continue to try other refs
-                            console.warn('Invitation read attempt failed for', ref.path, readErr.code, readErr.message);
+                            if (process.env.NODE_ENV !== 'production') {
+                                console.warn('Invitation read attempt failed for', ref.path, readErr.code, readErr.message);
+                            }
                         }
                     }
 
                     if (invitationSnap && invitationSnap.exists()) {
                         const invitationData = invitationSnap.data();
                         const isProcessed = invitationData.processed;
-                        console.log('Found invitation doc (using):', invitationRefUsed.path, 'processed:', isProcessed, invitationData);
+                        if (process.env.NODE_ENV !== 'production') {
+                            console.log('Found invitation doc (using):', invitationRefUsed.path, 'processed:', isProcessed);
+                        }
 
                         const userDocRef = doc(db, 'users', currentUser.uid);
                         
@@ -139,7 +146,9 @@ function AppContent() {
                                         active: true,
                                         updatedAt: new Date().toISOString()
                                     });
-                                    console.log('Updated existing user document with invitation data');
+                                    if (process.env.NODE_ENV !== 'production') {
+                                        console.log('Updated existing user document with invitation data');
+                                    }
                                 } else {
                                     // Create new user document
                                     await setDoc(userDocRef, {
@@ -151,7 +160,9 @@ function AppContent() {
                                         createdAt: new Date().toISOString(),
                                         updatedAt: new Date().toISOString()
                                     });
-                                    console.log('Created new user document from invitation');
+                                    if (process.env.NODE_ENV !== 'production') {
+                                        console.log('Created new user document from invitation');
+                                    }
                                 }
 
                                 // If invited as admin, also add to adminList
@@ -163,7 +174,9 @@ function AppContent() {
                                             email: currentUser.email,
                                             addedAt: new Date().toISOString()
                                         });
-                                        console.log('Added user to adminList');
+                                        if (process.env.NODE_ENV !== 'production') {
+                                            console.log('Added user to adminList');
+                                        }
                                     }
                                 }
 
@@ -175,7 +188,9 @@ function AppContent() {
                                             processedAt: new Date().toISOString(),
                                             processedUid: currentUser.uid
                                         });
-                                        console.log('User invitation processed successfully for', currentUser.email);
+                                        if (process.env.NODE_ENV !== 'production') {
+                                            console.log('User invitation processed successfully');
+                                        }
                                     } catch (udErr) {
                                         console.error('Failed to mark invitation processed for', invitationRefUsed.path, udErr.code, udErr.message);
                                     }
@@ -184,17 +199,23 @@ function AppContent() {
                                 console.error('Error creating/updating user document:', userDocErr);
                             }
                         } else {
-                            console.log('User document already exists and invitation already processed for', rawEmail);
+                            if (process.env.NODE_ENV !== 'production') {
+                                console.log('User document already exists and invitation already processed');
+                            }
                         }
                     } else {
-                        console.log('No invitation found for', rawEmail);
+                        if (process.env.NODE_ENV !== 'production') {
+                            console.log('No invitation found for signed-in user');
+                        }
                         // User signed in without invitation - create default user document
                         try {
                             const userDocRef = doc(db, 'users', currentUser.uid);
                             const existingUserDoc = await getDoc(userDocRef);
                             
                             if (!existingUserDoc.exists()) {
-                                console.log('Creating default user document for:', currentUser.email);
+                                if (process.env.NODE_ENV !== 'production') {
+                                    console.log('Creating default user document for signed-in user');
+                                }
                                 await setDoc(userDocRef, {
                                     email: currentUser.email,
                                     displayName: currentUser.displayName || '',
@@ -204,7 +225,9 @@ function AppContent() {
                                     createdAt: new Date().toISOString(),
                                     updatedAt: new Date().toISOString()
                                 });
-                                console.log('Successfully created default user document');
+                                if (process.env.NODE_ENV !== 'production') {
+                                    console.log('Successfully created default user document');
+                                }
                             }
                         } catch (defaultUserErr) {
                             console.error('Error creating default user document:', defaultUserErr);
@@ -277,28 +300,69 @@ function AppContent() {
         return () => unsubscribe();
     }, [user, isAdmin]);
 
-    // Load calendar events (including tree member events)
+    // Load calendar events for the landing-page feed:
+    // - tree-linked events (treeId != null)
+    // - user's own private calendar events (treeId == null)
     useEffect(() => {
         if (!user) {
-            setCalendarEvents([]);
+            setTreeCalendarEvents([]);
+            setPersonalCalendarEvents([]);
             return;
         }
 
         const eventsCollection = collection(db, 'calendarEvents');
-        const eventsQuery = query(eventsCollection, where('treeId', '!=', null));
         
-        const unsubscribe = onSnapshot(eventsQuery, (snapshot) => {
+        // FIX: Regular users cannot query ALL tree events because some might be private to other users.
+        // We must restrict the query to what the user is allowed to see.
+        // Since we can't easily do "OR" queries (public OR mine) in a single listener without composite indexes,
+        // we'll fetch based on the user's role.
+        
+        let treeEventsQuery;
+        if (isAdmin) {
+            // Admins can see all tree-linked events
+            treeEventsQuery = query(eventsCollection, where('treeId', '!=', null));
+        } else {
+            // Avoid `treeId != null` + `createdBy == uid` which requires a composite index.
+            // Fetch the user's events and keep only tree-linked ones client-side.
+            treeEventsQuery = query(eventsCollection, where('createdBy', '==', user.uid));
+        }
+
+        // User's own private events (includes calendar day-card private events).
+        // Avoid relying on `treeId == null` since the field can be missing.
+        const personalEventsQuery = query(
+            eventsCollection,
+            where('createdBy', '==', user.uid),
+            where('isPublic', '==', false)
+        );
+
+        const unsubscribeTree = onSnapshot(treeEventsQuery, (snapshot) => {
+            const events = snapshot.docs
+                .map(doc => ({
+                    id: doc.id,
+                    ...doc.data()
+                }))
+                .filter((e) => !!e.treeId);
+
+            setTreeCalendarEvents(events);
+        }, (error) => {
+            console.error("Error fetching tree calendar events: ", error);
+        });
+
+        const unsubscribePersonal = onSnapshot(personalEventsQuery, (snapshot) => {
             const events = snapshot.docs.map(doc => ({
                 id: doc.id,
                 ...doc.data()
             }));
-            setCalendarEvents(events);
+            setPersonalCalendarEvents(events);
         }, (error) => {
-            console.error("Error fetching calendar events: ", error);
+            console.error("Error fetching personal calendar events: ", error);
         });
 
-        return () => unsubscribe();
-    }, [user]);
+        return () => {
+            unsubscribeTree();
+            unsubscribePersonal();
+        };
+    }, [user, isAdmin]);
 
     // Load tree members for all user's trees
     useEffect(() => {
@@ -411,14 +475,19 @@ function AppContent() {
         }
     };
 
-    // Only tree member events
-    const allEvents = calendarEvents.map(event => ({
+    const mergedCalendarEventsById = new Map();
+    [...treeCalendarEvents, ...personalCalendarEvents].forEach((event) => {
+        if (event?.id) mergedCalendarEventsById.set(event.id, event);
+    });
+
+    // Events for LandingPageEventsSection
+    const allEvents = Array.from(mergedCalendarEventsById.values()).map(event => ({
         id: event.id,
         name: event.title,
         date: event.dateKey,
-        personId: event.memberId,
+        personId: event.memberId || event.personId || '',
         repetition: event.repetition || 'none',
-        treeId: event.treeId
+        treeId: event.treeId || null
     }));
     
     const allFamilyMembers = treeMembers.map(member => ({
@@ -593,6 +662,7 @@ function AppContent() {
                     <Route path="/builder" element={
                         <EmbeddedBuilderPage
                             user={user}
+                            isAdmin={isAdmin}
                         />
                     } />
                 </Routes>

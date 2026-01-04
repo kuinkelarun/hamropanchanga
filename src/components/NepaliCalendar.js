@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react';
-import { collection, addDoc, deleteDoc, doc, onSnapshot, query, orderBy, getDocs, where, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, addDoc, deleteDoc, doc, onSnapshot, query, orderBy, getDocs, where, serverTimestamp } from 'firebase/firestore';
 import { onAuthStateChanged } from 'firebase/auth';
 import { db, auth, signInWithGoogle } from '../firebase';
 import { useUserPermissions } from '../hooks/usePermissions';
@@ -95,6 +95,7 @@ function formatTime24Hour(time12) {
 
 export default function NepaliCalendar({ user: propUser, isAdmin, treeMembers = [], onTreeEventClick }) {
   const { isEditMode } = useSettings();
+  const isDev = process.env.NODE_ENV !== 'production';
   const [user, setUser] = useState(propUser || null);
   const [authLoading, setAuthLoading] = useState(!propUser);
   // Track "today" in Nepal timezone and update daily so the topbar reflects the real current Nepali month/year
@@ -123,7 +124,7 @@ export default function NepaliCalendar({ user: propUser, isAdmin, treeMembers = 
     const intervalId = setInterval(updateTime, 1000);
 
     return () => clearInterval(intervalId);
-  }, []);
+  }, [isDev]);
 
   const [currentBsYear, setCurrentBsYear] = useState(() => todayBs.year);
   const [currentBsMonth, setCurrentBsMonth] = useState(() => todayBs.month);
@@ -152,29 +153,27 @@ export default function NepaliCalendar({ user: propUser, isAdmin, treeMembers = 
 
   const tithiInputRef = useRef(null);
 
-  // Load tithis from Firebase on component mount - only after authentication
+  // Load tithis from Firebase on component mount.
+  // Note: `tithis` is public-read in Firestore rules, so this should not wait for auth.
   useEffect(() => {
-    if (authLoading) {
-      console.log('Auth still loading, waiting...');
-      return; // Wait for auth to complete
-    }
-
-    console.log('Setting up Firebase listener for tithis...', { user: !!user, authLoading });
+    if (isDev) console.log('Setting up Firebase listener for tithis...');
     const tithisCollection = collection(db, 'tithis');
     const q = query(tithisCollection, orderBy('startDate'), orderBy('startTime'));
     
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      console.log('Firebase snapshot received:', {
-        docsCount: snapshot.docs.length,
-        hasPendingWrites: snapshot.metadata.hasPendingWrites,
-        fromCache: snapshot.metadata.fromCache,
-        timestamp: new Date().toLocaleTimeString()
-      });
+      if (isDev) {
+        console.log('Firebase snapshot received:', {
+          docsCount: snapshot.docs.length,
+          hasPendingWrites: snapshot.metadata.hasPendingWrites,
+          fromCache: snapshot.metadata.fromCache,
+          timestamp: new Date().toLocaleTimeString()
+        });
+      }
       
       const tithisData = {};
       snapshot.docs.forEach((doc, index) => {
         const tithi = { id: doc.id, ...doc.data() };
-        console.log(`Processing tithi ${index + 1}:`, tithi);
+        if (isDev) console.log(`Processing tithi ${index + 1}:`, tithi);
         
         // Calculate all dates this tithi spans (inclusive)
         if (tithi.startDate && tithi.endDate) {
@@ -221,19 +220,23 @@ export default function NepaliCalendar({ user: propUser, isAdmin, treeMembers = 
         }
       });
       
-      console.log('Final tithisData being set:', tithisData);
-      console.log('Total dates with tithis:', Object.keys(tithisData).length);
+      if (isDev) {
+        console.log('Final tithisData being set:', tithisData);
+        console.log('Total dates with tithis:', Object.keys(tithisData).length);
+      }
       setTithisByDate(tithisData);
     }, (error) => {
       console.error('Firebase onSnapshot error:', error);
-      console.error('This could be a permissions issue. Check Firestore rules and authentication.');
+      if (isDev) {
+        console.error('This could be a permissions issue. Check Firestore rules and authentication.');
+      }
     });
 
     return () => {
-      console.log('Cleaning up Firebase listener');
+      if (isDev) console.log('Cleaning up Firebase listener');
       unsubscribe();
     };
-  }, [authLoading, user]); // Re-run when auth state changes
+  }, [isDev]);
 
   // Load Nepali calendar configuration from Firestore and merge with bsCalendarData
   // This allows admin edits to be reflected in the calendar
@@ -242,7 +245,7 @@ export default function NepaliCalendar({ user: propUser, isAdmin, treeMembers = 
       try {
         const calendarYearsSnapshot = await getDocs(collection(db, 'nepaliCalendarYears'));
         if (calendarYearsSnapshot.empty) {
-          console.log('No custom calendar years found in Firestore, using defaults only');
+          if (isDev) console.log('No custom calendar years found in Firestore, using defaults only');
           return;
         }
 
@@ -265,19 +268,19 @@ export default function NepaliCalendar({ user: propUser, isAdmin, treeMembers = 
             daysInMonths: data.daysInMonths || []
           };
           
-          console.log(`Loaded custom calendar year ${year} from Firestore:`, mergedCalendarData[year]);
+          if (isDev) console.log(`Loaded custom calendar year ${year} from Firestore:`, mergedCalendarData[year]);
         });
       } catch (error) {
         if (error.message && error.message.includes('permission')) {
-          console.log('No permission to read nepaliCalendarYears collection');
+          if (isDev) console.log('No permission to read nepaliCalendarYears collection');
         } else {
-          console.log('Calendar configuration load error (using defaults):', error.message);
+          if (isDev) console.log('Calendar configuration load error (using defaults):', error.message);
         }
       }
     };
 
     loadCalendarConfiguration();
-  }, []);
+  }, [isDev]);
 
   // Authentication state listener - only set up if user not passed as prop
   useEffect(() => {
@@ -290,13 +293,17 @@ export default function NepaliCalendar({ user: propUser, isAdmin, treeMembers = 
 
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       if (currentUser) {
-        // Test Firestore permissions
-        try {
-          const testCollection = collection(db, 'tithis');
-          const testQuery = query(testCollection, orderBy('dateKey'));
-          await getDocs(testQuery);
-        } catch (permissionError) {
-          console.error('Firestore permissions test: FAILED', permissionError);
+        // Dev-only: optional permissions smoke test (do not block auth resolution)
+        if (isDev) {
+          void (async () => {
+            try {
+              const testCollection = collection(db, 'tithis');
+              const testQuery = query(testCollection, orderBy('startDate'), orderBy('startTime'));
+              await getDocs(testQuery);
+            } catch (permissionError) {
+              console.error('Firestore permissions test: FAILED', permissionError);
+            }
+          })();
         }
       }
       setUser(currentUser);
@@ -304,7 +311,7 @@ export default function NepaliCalendar({ user: propUser, isAdmin, treeMembers = 
     });
 
     return () => unsubscribe();
-  }, [propUser]);
+  }, [propUser, isDev]);
 
   // Sync user state when prop changes
   useEffect(() => {
@@ -317,11 +324,11 @@ export default function NepaliCalendar({ user: propUser, isAdmin, treeMembers = 
   // Load calendar events from Firebase - fetch public events + user's own private events
   useEffect(() => {
     if (authLoading) {
-      console.log('Auth still loading for events, waiting...');
+      if (isDev) console.log('Auth still loading for events, waiting...');
       return;
     }
 
-    console.log('Setting up Firebase listener for calendar events...', { user: !!user, isAdmin });
+    if (isDev) console.log('Setting up Firebase listener for calendar events...', { user: !!user, isAdmin });
     const eventsCollection = collection(db, 'calendarEvents');
     
     if (!user) {
@@ -338,33 +345,44 @@ export default function NepaliCalendar({ user: propUser, isAdmin, treeMembers = 
         orderBy('dateKey')
       );
       
-      const eventsByIdMap = new Map();
+      let publicEventsById = new Map();
+      let treeEventsById = new Map();
+
+      const emitMergedEvents = () => {
+        const merged = new Map();
+        [publicEventsById, treeEventsById].forEach((m) => {
+          m.forEach((value, key) => merged.set(key, value));
+        });
+        setCalendarEvents(Array.from(merged.values()));
+      };
       
       const unsubscribe1 = onSnapshot(publicQuery, (snapshot) => {
-        console.log('Public events snapshot (guest):', snapshot.docs.length);
-        snapshot.docs.forEach(docSnap => {
-          eventsByIdMap.set(docSnap.id, { id: docSnap.id, ...docSnap.data() });
-        });
-        setCalendarEvents(Array.from(eventsByIdMap.values()));
+        if (isDev) console.log('Public events snapshot (guest):', snapshot.docs.length);
+        publicEventsById = new Map(
+          snapshot.docs.map((docSnap) => [docSnap.id, { id: docSnap.id, ...docSnap.data() }])
+        );
+        emitMergedEvents();
       }, (error) => {
         console.error('Public events error:', error);
       });
 
       const unsubscribe2 = onSnapshot(treeQuery, (snapshot) => {
-        console.log('Tree events snapshot (guest):', snapshot.docs.length);
+        if (isDev) console.log('Tree events snapshot (guest):', snapshot.docs.length);
+        const nextTreeEventsById = new Map();
         snapshot.docs.forEach(docSnap => {
           const data = docSnap.data();
           if (data.treeId) { // Only include if treeId exists
-            eventsByIdMap.set(docSnap.id, { id: docSnap.id, ...data });
+            nextTreeEventsById.set(docSnap.id, { id: docSnap.id, ...data });
           }
         });
-        setCalendarEvents(Array.from(eventsByIdMap.values()));
+        treeEventsById = nextTreeEventsById;
+        emitMergedEvents();
       }, (error) => {
         console.error('Tree events error:', error);
       });
 
       return () => {
-        console.log('Cleaning up calendar events listener');
+        if (isDev) console.log('Cleaning up calendar events listener');
         unsubscribe1();
         unsubscribe2();
       };
@@ -385,45 +403,71 @@ export default function NepaliCalendar({ user: propUser, isAdmin, treeMembers = 
       );
 
       // Simplified treeQuery: only order by dateKey; filter treeId client-side to avoid composite index
-      const treeQuery = query(
-        eventsCollection,
-        orderBy('dateKey')
-      );
+      // FIX: Regular users cannot query ALL events because some might be private to other users.
+      // We must restrict the query to what the user is allowed to see.
+      let treeQuery;
+      if (isAdmin) {
+        treeQuery = query(
+          eventsCollection,
+          orderBy('dateKey')
+        );
+      } else {
+        // For regular users, we can't just fetch "all events" and filter client-side.
+        // We must fetch only what they are allowed to see.
+        // Since we already fetch public events (publicQuery) and their own events (userQuery),
+        // we don't need a broad "treeQuery" that fails permissions.
+        // If we want to show events for trees they belong to, we'd need a specific query for that.
+        // For now, we'll skip this broad query for regular users to avoid errors.
+        treeQuery = null;
+      }
       
-      const eventsByIdMap = new Map();
+      let publicEventsById = new Map();
+      let userEventsById = new Map();
+      let treeEventsById = new Map();
+      let adminPrivateEventsById = new Map();
+
+      const emitMergedEvents = () => {
+        const merged = new Map();
+        [publicEventsById, userEventsById, treeEventsById, adminPrivateEventsById].forEach((m) => {
+          m.forEach((value, key) => merged.set(key, value));
+        });
+        setCalendarEvents(Array.from(merged.values()));
+      };
       
       const unsubscribe1 = onSnapshot(publicQuery, (snapshot) => {
-        console.log('Public events snapshot:', snapshot.docs.length);
-        snapshot.docs.forEach(docSnap => {
-          eventsByIdMap.set(docSnap.id, { id: docSnap.id, ...docSnap.data() });
-        });
-        setCalendarEvents(Array.from(eventsByIdMap.values()));
+        if (isDev) console.log('Public events snapshot:', snapshot.docs.length);
+        publicEventsById = new Map(
+          snapshot.docs.map((docSnap) => [docSnap.id, { id: docSnap.id, ...docSnap.data() }])
+        );
+        emitMergedEvents();
       }, (error) => {
         console.error('Public events error:', error);
       });
       
       const unsubscribe2 = onSnapshot(userQuery, (snapshot) => {
-        console.log('User events snapshot:', snapshot.docs.length);
-        snapshot.docs.forEach(docSnap => {
-          eventsByIdMap.set(docSnap.id, { id: docSnap.id, ...docSnap.data() });
-        });
-        setCalendarEvents(Array.from(eventsByIdMap.values()));
+        if (isDev) console.log('User events snapshot:', snapshot.docs.length);
+        userEventsById = new Map(
+          snapshot.docs.map((docSnap) => [docSnap.id, { id: docSnap.id, ...docSnap.data() }])
+        );
+        emitMergedEvents();
       }, (error) => {
         console.error('User events error:', error);
       });
 
-      const unsubscribe3 = onSnapshot(treeQuery, (snapshot) => {
-        console.log('Tree events snapshot:', snapshot.docs.length);
+      const unsubscribe3 = treeQuery ? onSnapshot(treeQuery, (snapshot) => {
+        if (isDev) console.log('Tree events snapshot:', snapshot.docs.length);
+        const nextTreeEventsById = new Map();
         snapshot.docs.forEach(docSnap => {
           const data = docSnap.data();
           if (data.treeId) { // Only include if treeId exists
-            eventsByIdMap.set(docSnap.id, { id: docSnap.id, ...data });
+            nextTreeEventsById.set(docSnap.id, { id: docSnap.id, ...data });
           }
         });
-        setCalendarEvents(Array.from(eventsByIdMap.values()));
+        treeEventsById = nextTreeEventsById;
+        emitMergedEvents();
       }, (error) => {
         console.error('Tree events error:', error);
-      });
+      }) : () => {}; // No-op unsubscribe if treeQuery is null
 
       // If admin, also fetch all admin-created private events
       let unsubscribe4 = null;
@@ -436,25 +480,25 @@ export default function NepaliCalendar({ user: propUser, isAdmin, treeMembers = 
         );
         
         unsubscribe4 = onSnapshot(adminPrivateQuery, (snapshot) => {
-          console.log('Admin private events snapshot:', snapshot.docs.length);
-          snapshot.docs.forEach(docSnap => {
-            eventsByIdMap.set(docSnap.id, { id: docSnap.id, ...docSnap.data() });
-          });
-          setCalendarEvents(Array.from(eventsByIdMap.values()));
+          if (isDev) console.log('Admin private events snapshot:', snapshot.docs.length);
+          adminPrivateEventsById = new Map(
+            snapshot.docs.map((docSnap) => [docSnap.id, { id: docSnap.id, ...docSnap.data() }])
+          );
+          emitMergedEvents();
         }, (error) => {
           console.error('Admin private events error:', error);
         });
       }
 
       return () => {
-        console.log('Cleaning up calendar events listeners');
+        if (isDev) console.log('Cleaning up calendar events listeners');
         unsubscribe1();
         unsubscribe2();
         unsubscribe3();
         if (unsubscribe4) unsubscribe4();
       };
     }
-  }, [authLoading, user, isAdmin]);
+  }, [authLoading, user, isAdmin, isDev]);
 
   useEffect(()=>{
     if (currentBsYear < minBsYear) setCurrentBsYear(minBsYear);
@@ -522,7 +566,7 @@ export default function NepaliCalendar({ user: propUser, isAdmin, treeMembers = 
 
   // Manual refresh function to force reload tithis data
   const refreshTithis = useCallback(async () => {
-    console.log('Manual refresh triggered...');
+    if (isDev) console.log('Manual refresh triggered...');
     try {
       const tithisCollection = collection(db, 'tithis');
       const q = query(tithisCollection, orderBy('startDate'), orderBy('startTime'));
@@ -577,12 +621,12 @@ export default function NepaliCalendar({ user: propUser, isAdmin, treeMembers = 
         }
       });
       
-      console.log('Manual refresh completed, updating state with:', tithisData);
+      if (isDev) console.log('Manual refresh completed, updating state with:', tithisData);
       setTithisByDate(tithisData);
     } catch (error) {
       console.error('Error in manual refresh:', error);
     }
-  }, [setTithisByDate]);
+  }, [setTithisByDate, isDev]);
 
   const [confirmOpen, setConfirmOpen] = useState(false);
 
@@ -613,6 +657,7 @@ export default function NepaliCalendar({ user: propUser, isAdmin, treeMembers = 
 
   // Debug function to check what's actually in Firestore
   const debugFirestore = useCallback(async () => {
+    if (!isDev) return;
     try {
       console.log('=== FIRESTORE DEBUG CHECK ===');
       const tithisCollection = collection(db, 'tithis');
@@ -627,7 +672,7 @@ export default function NepaliCalendar({ user: propUser, isAdmin, treeMembers = 
     } catch (error) {
       console.error('Debug check failed:', error);
     }
-  }, []);
+  }, [isDev]);
 
   function handlePrev(){
     let m = currentBsMonth - 1;
@@ -664,7 +709,7 @@ export default function NepaliCalendar({ user: propUser, isAdmin, treeMembers = 
 
   // open add tithi modal from + button or details modal
   function openAddTithiModalForDate(adYear, adMonthZeroBased, adDay, focusHint = null){
-    console.log('openAddTithiModalForDate called with:', { adYear, adMonthZeroBased, adDay });
+    if (isDev) console.log('openAddTithiModalForDate called with:', { adYear, adMonthZeroBased, adDay });
     // Use consistently padded YYYY-MM-DD for activeDate
     const key = `${adYear}-${String(adMonthZeroBased + 1).padStart(2, '0')}-${String(adDay).padStart(2, '0')}`;
     setActiveDate(key);
@@ -672,7 +717,7 @@ export default function NepaliCalendar({ user: propUser, isAdmin, treeMembers = 
     
     // Set default start and end dates to the selected date (in YYYY-MM-DD format)
     const defaultDate = `${adYear}-${String(adMonthZeroBased + 1).padStart(2, '0')}-${String(adDay).padStart(2, '0')}`;
-    console.log('openAddTithiModalForDate: Setting defaultDate to:', defaultDate);
+    if (isDev) console.log('openAddTithiModalForDate: Setting defaultDate to:', defaultDate);
     setStartDate(defaultDate);
     setEndDate(defaultDate);
     
@@ -682,7 +727,7 @@ export default function NepaliCalendar({ user: propUser, isAdmin, treeMembers = 
 
   // open add event modal from + button or details modal
   function openAddEventModalForDate(adYear, adMonthZeroBased, adDay){
-    console.log('openAddEventModalForDate called with:', { adYear, adMonthZeroBased, adDay });
+    if (isDev) console.log('openAddEventModalForDate called with:', { adYear, adMonthZeroBased, adDay });
     // Use consistently padded YYYY-MM-DD for activeDate
     const key = `${adYear}-${String(adMonthZeroBased + 1).padStart(2, '0')}-${String(adDay).padStart(2, '0')}`;
     setActiveDate(key);
@@ -696,8 +741,10 @@ export default function NepaliCalendar({ user: propUser, isAdmin, treeMembers = 
     setEventDescription('');
     setEventRepetition('none');
     setEventType('private'); // Default to private events
-    setSelectedCustomerId('');
-    setSelectedPersonId('');
+    setEventAssociateMode('date');
+    setSelectedEventTithiId('');
+    setSelectedTreeId('');
+    setSelectedTreeMemberId('');
     setEventValidation('');
     
     setDetailsModalOpen(false); // Close details modal if open
@@ -705,7 +752,7 @@ export default function NepaliCalendar({ user: propUser, isAdmin, treeMembers = 
   }
 
   async function addTithi(dateKey, name, startDate, startTime='', endDate, endTime=''){
-    console.log('addTithi called with:', { dateKey, name, startDate, startTime, endDate, endTime, user: !!user });
+    if (isDev) console.log('addTithi called with:', { dateKey, name, startDate, startTime, endDate, endTime, user: !!user });
 
     if (!user) {
       setValidation('Please log in to add tithis.');
@@ -741,10 +788,14 @@ export default function NepaliCalendar({ user: propUser, isAdmin, treeMembers = 
         currentDate.setDate(currentDate.getDate() + 1);
       }
 
-      console.log('Tithi spans dates:', affectedDates);
+      if (process.env.NODE_ENV !== 'production') {
+        console.log('Tithi spans dates:', affectedDates);
+      }
 
       // Update local state immediately - add to all affected dates
-      console.log('Updating local state immediately...');
+      if (process.env.NODE_ENV !== 'production') {
+        console.log('Updating local state immediately...');
+      }
       setTithisByDate(prevTithis => {
         const updatedTithis = { ...prevTithis };
         
@@ -762,13 +813,17 @@ export default function NepaliCalendar({ user: propUser, isAdmin, treeMembers = 
           }];
         });
         
-        console.log('Local state updated with new tithi across dates:', affectedDates);
+        if (process.env.NODE_ENV !== 'production') {
+          console.log('Local state updated with new tithi across dates:', affectedDates);
+        }
         return updatedTithis;
       });
 
       // Then sync to Firebase
-      console.log('Syncing to Firestore...');
-      console.log('User authenticated:', !!user, 'User ID:', user?.uid);
+      if (process.env.NODE_ENV !== 'production') {
+        console.log('Syncing to Firestore...');
+        console.log('User authenticated:', !!user);
+      }
       
       // Create data for Firestore (without the temporary ID)
       const tithiData = {
@@ -780,11 +835,15 @@ export default function NepaliCalendar({ user: propUser, isAdmin, treeMembers = 
         createdAt: newTithi.createdAt
       };
       
-      console.log('Data to save:', tithiData);
+      if (process.env.NODE_ENV !== 'production') {
+        console.log('Data to save:', tithiData);
+      }
       
       const tithisCollection = collection(db, 'tithis');
       const docRef = await addDoc(tithisCollection, tithiData);
-      console.log('Successfully added tithi to Firestore at', new Date().toLocaleTimeString(), 'with ID:', docRef.id);
+      if (process.env.NODE_ENV !== 'production') {
+        console.log('Successfully added tithi to Firestore at', new Date().toLocaleTimeString(), 'with ID:', docRef.id);
+      }
       
       // Update the local state with the real Firebase ID across all affected dates
       setTithisByDate(prevTithis => {
@@ -797,15 +856,19 @@ export default function NepaliCalendar({ user: propUser, isAdmin, treeMembers = 
             }
           }
         });
-        console.log('Updated local state with real Firebase ID:', docRef.id);
+        if (process.env.NODE_ENV !== 'production') {
+          console.log('Updated local state with real Firebase ID:', docRef.id);
+        }
         return updatedTithis;
       });
 
     } catch (error) {
       console.error('Error adding tithi:', error);
-      console.error('Error code:', error.code);
-      console.error('Error message:', error.message);
-      console.error('Full error object:', error);
+      if (isDev) {
+        console.error('Error code:', error.code);
+        console.error('Error message:', error.message);
+        console.error('Full error object:', error);
+      }
       setValidation(`Error adding tithi: ${error.message}`);
       
       // Revert local state on error - remove from all affected dates
@@ -854,69 +917,82 @@ export default function NepaliCalendar({ user: propUser, isAdmin, treeMembers = 
       return;
     }
 
-    // Validate customer selection for customer events
-    if (eventType === 'customer' && !selectedCustomerId) {
-      setEventValidation('Please select a customer for customer events.');
-      return;
+    // Optional tithi association (used for recurring events)
+    let tithiPayload = null;
+    if (eventAssociateMode === 'tithi') {
+      const [y, m, d] = eventDate.split('-').map(Number);
+      const tithisForEventDate = findTithisForAdDate(y, m - 1, d) || [];
+
+      if (tithisForEventDate.length === 0) {
+        setEventValidation('No tithi is available for the selected date.');
+        return;
+      }
+
+      const selectedTithi = tithisForEventDate.find(t => t.id === selectedEventTithiId) || tithisForEventDate[0];
+      if (!selectedTithi) {
+        setEventValidation('Please select a tithi.');
+        return;
+      }
+
+      const { pakshya, tithi: tithiName } = parseTithiName(selectedTithi.name);
+      const pakshaNormalized = pakshya === 'शुक्लपक्ष' ? 'Shukla' : 'Krishna';
+      const tithiIndex = getTithiIndexByName(tithiName);
+      const lunarMonthName = tithiIndex ? getTithiLunarMonthName(pakshaNormalized, tithiIndex, eventDate) : null;
+
+      tithiPayload = {
+        id: selectedTithi.id,
+        name: tithiName,
+        paksha: pakshaNormalized,
+        month: lunarMonthName || null
+      };
+    }
+
+    // Validate selection for family-member events
+    if (eventType === 'customer') {
+      if (!selectedTreeId) {
+        setEventValidation('Please select a tree.');
+        return;
+      }
+      if (!selectedTreeMemberId) {
+        setEventValidation('Please select a family member.');
+        return;
+      }
     }
 
     setIsAddingEvent(true);
     setEventValidation('');
 
     try {
+      // Add to calendarEvents collection
+      // - public: isPublic === true
+      // - private (self): isPublic === false, no treeId/memberId
+      // - family member (tree-linked): isPublic === false, with treeId + memberId
+      const isPublic = eventType === 'public';
+      const createdByAdmin = isAdmin || isSuperUser;
+
+      const payload = {
+        title: eventTitle.trim(),
+        description: eventDescription.trim(),
+        dateKey: eventDate,
+        // Standardize: always set `tithi` field; null when not used.
+        tithi: tithiPayload || null,
+        repetition: eventRepetition,
+        isPublic: isPublic,
+        createdBy: user.uid,
+        createdByAdmin: createdByAdmin,
+        createdAt: serverTimestamp()
+      };
+
       if (eventType === 'customer') {
-        // Add to customer's events array
-        const customerRef = doc(db, 'customers', selectedCustomerId);
-        const customerDoc = await getDoc(customerRef);
-        
-        if (!customerDoc.exists()) {
-          throw new Error('Customer not found');
-        }
+        payload.treeId = selectedTreeId;
+        payload.memberId = selectedTreeMemberId;
+      }
 
-        const customerData = customerDoc.data();
-        const currentEvents = customerData.events || [];
-        
-        // Find person name if person selected
-        let personName = '';
-        if (selectedPersonId && customerData.familyMembers) {
-          const person = customerData.familyMembers[selectedPersonId];
-          if (person) {
-            personName = person.name || '';
-          }
-        }
+      await addDoc(collection(db, 'calendarEvents'), payload);
 
-        const newEvent = {
-          title: eventTitle.trim(),
-          description: eventDescription.trim(),
-          date: eventDate,
-          personId: selectedPersonId || '',
-          personName: personName,
-          repetition: eventRepetition,
-          createdAt: Date.now()
-        };
-
-        await updateDoc(customerRef, {
-          events: [...currentEvents, newEvent]
-        });
-
-        console.log('Customer event added successfully');
-      } else {
-        // Add to calendarEvents collection (public or private)
-        const isPublic = eventType === 'public';
-        const createdByAdmin = isAdmin || isSuperUser;
-
-        await addDoc(collection(db, 'calendarEvents'), {
-          title: eventTitle.trim(),
-          description: eventDescription.trim(),
-          dateKey: eventDate,
-          repetition: eventRepetition,
-          isPublic: isPublic,
-          createdBy: user.uid,
-          createdByAdmin: createdByAdmin,
-          createdAt: serverTimestamp()
-        });
-
-        console.log(`${isPublic ? 'Public' : 'Private'} event added successfully`);
+      if (isDev) {
+        if (eventType === 'customer') console.log('Family member (tree) event added successfully');
+        else console.log(`${isPublic ? 'Public' : 'Private'} event added successfully`);
       }
 
       // Close modal and reset form
@@ -926,8 +1002,10 @@ export default function NepaliCalendar({ user: propUser, isAdmin, treeMembers = 
       setEventDate('');
       setEventRepetition('none');
       setEventType('private');
-      setSelectedCustomerId('');
-      setSelectedPersonId('');
+      setEventAssociateMode('date');
+      setSelectedEventTithiId('');
+      setSelectedTreeId('');
+      setSelectedTreeMemberId('');
       setEventValidation('');
     } catch (error) {
       console.error('Error adding event:', error);
@@ -985,7 +1063,7 @@ export default function NepaliCalendar({ user: propUser, isAdmin, treeMembers = 
         affectedDates = [dateKey];
       }
 
-      console.log('Deleting tithi from dates:', affectedDates);
+      if (isDev) console.log('Deleting tithi from dates:', affectedDates);
       
       // Update local state immediately - remove from all affected dates
       setTithisByDate(prevTithis => {
@@ -1001,13 +1079,13 @@ export default function NepaliCalendar({ user: propUser, isAdmin, treeMembers = 
             }
           }
         });
-        console.log('Local state updated after delete');
+        if (isDev) console.log('Local state updated after delete');
         return updatedTithis;
       });
 
       // Then sync to Firebase
       await deleteDoc(doc(db, 'tithis', id));
-      console.log('Successfully deleted tithi from Firestore');
+      if (isDev) console.log('Successfully deleted tithi from Firestore');
     } catch (error) {
       console.error('Error deleting tithi:', error);
       
@@ -1045,35 +1123,84 @@ export default function NepaliCalendar({ user: propUser, isAdmin, treeMembers = 
   const [eventDate, setEventDate] = useState('');
   const [eventRepetition, setEventRepetition] = useState('none'); // 'none', 'monthly', 'yearly'
   const [eventType, setEventType] = useState('private'); // 'public', 'private', 'customer'
-  const [selectedCustomerId, setSelectedCustomerId] = useState('');
-  const [selectedPersonId, setSelectedPersonId] = useState('');
+  const [eventAssociateMode, setEventAssociateMode] = useState('date'); // 'date' | 'tithi'
+  const [selectedEventTithiId, setSelectedEventTithiId] = useState('');
+  const [selectedTreeId, setSelectedTreeId] = useState('');
+  const [selectedTreeMemberId, setSelectedTreeMemberId] = useState('');
   const [eventValidation, setEventValidation] = useState('');
   const [isAddingEvent, setIsAddingEvent] = useState(false);
-  
-  // Load customers for customer event selection
-  const [customers, setCustomers] = useState([]);
-  
+
+  // Tree + family member selection for "For Family Member" events
+  const [availableTrees, setAvailableTrees] = useState([]);
+  const [availableTreeMembers, setAvailableTreeMembers] = useState([]);
+
   useEffect(() => {
     if (!user) {
-      setCustomers([]);
+      setAvailableTrees([]);
       return;
     }
-    
-    const customersCollection = collection(db, 'customers');
-    const q = isAdmin 
-      ? query(customersCollection) 
-      : query(customersCollection, where('userId', '==', user.uid));
-    
+
+    const treesCol = collection(db, 'trees');
+    const q = isAdmin
+      ? query(treesCol)
+      : query(treesCol, where('ownerUid', '==', user.uid));
+
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const customersList = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
-      setCustomers(customersList);
+      const treesList = snapshot.docs
+        .map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }))
+        .filter((t) => !t.deleted);
+
+      treesList.sort((a, b) => String(a.title || '').localeCompare(String(b.title || '')));
+      setAvailableTrees(treesList);
     });
-    
+
     return () => unsubscribe();
   }, [user, isAdmin]);
+
+  useEffect(() => {
+    // Only load members while the add-event modal is open and "For Family Member" is selected.
+    if (!addEventModalOpen || eventType !== 'customer') {
+      setAvailableTreeMembers([]);
+      return;
+    }
+    if (!selectedTreeId) {
+      setAvailableTreeMembers([]);
+      return;
+    }
+
+    const membersCol = collection(db, 'trees', selectedTreeId, 'members');
+    const unsubscribe = onSnapshot(membersCol, (snapshot) => {
+      const membersList = snapshot.docs
+        .map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }))
+        .filter((m) => !m.archived);
+
+      membersList.sort((a, b) => String(a.name || '').localeCompare(String(b.name || '')));
+      setAvailableTreeMembers(membersList);
+    });
+
+    return () => unsubscribe();
+  }, [addEventModalOpen, eventType, selectedTreeId]);
+
+  // Keep selected tithi in sync with the selected event date when associating by tithi
+  useEffect(() => {
+    if (eventAssociateMode !== 'tithi') return;
+    if (!eventDate) {
+      setSelectedEventTithiId('');
+      return;
+    }
+
+    const [y, m, d] = eventDate.split('-').map(Number);
+    const tithisForEventDate = findTithisForAdDate(y, m - 1, d) || [];
+
+    if (tithisForEventDate.length === 0) {
+      setSelectedEventTithiId('');
+      return;
+    }
+
+    if (!selectedEventTithiId || !tithisForEventDate.some(t => t.id === selectedEventTithiId)) {
+      setSelectedEventTithiId(tithisForEventDate[0].id);
+    }
+  }, [eventAssociateMode, eventDate, findTithisForAdDate, selectedEventTithiId]);
 
   useEffect(() => {
     if (addTithiModalOpen && modalFocusHint === 'tithi') {
@@ -1104,8 +1231,10 @@ export default function NepaliCalendar({ user: propUser, isAdmin, treeMembers = 
       setEventDate('');
       setEventRepetition('none');
       setEventType('private');
-      setSelectedCustomerId('');
-      setSelectedPersonId('');
+      setEventAssociateMode('date');
+      setSelectedEventTithiId('');
+      setSelectedTreeId('');
+      setSelectedTreeMemberId('');
       setEventValidation('');
       setIsAddingEvent(false);
     }
@@ -1128,21 +1257,21 @@ export default function NepaliCalendar({ user: propUser, isAdmin, treeMembers = 
   async function submitAdd(){
     if (isLoading) return; // Prevent double submission
     
-    console.log('submitAdd called with:', { newPakshya, newTithi, startDate, startTime, endDate, endTime, activeDate });
+    if (isDev) console.log('submitAdd called with:', { newPakshya, newTithi, startDate, startTime, endDate, endTime, activeDate });
     
     setValidation('');
     if (!newPakshya) { 
-      console.log('Validation failed: No pakshya selected');
+      if (isDev) console.log('Validation failed: No pakshya selected');
       setValidation('Select a Pakshya'); 
       return; 
     }
     if (!newTithi) { 
-      console.log('Validation failed: No tithi selected');
+      if (isDev) console.log('Validation failed: No tithi selected');
       setValidation('Select a Tithi'); 
       return; 
     }
     if (!startDate || !endDate) {
-      console.log('Validation failed: Missing date fields', { startDate, endDate });
+      if (isDev) console.log('Validation failed: Missing date fields', { startDate, endDate });
       if (!startDate) {
         setValidation('Please select a start date');
       } else {
@@ -1151,7 +1280,7 @@ export default function NepaliCalendar({ user: propUser, isAdmin, treeMembers = 
       return;
     }
     if (!startTime || !endTime) { 
-      console.log('Validation failed: Missing time fields', { startTime, endTime });
+      if (isDev) console.log('Validation failed: Missing time fields', { startTime, endTime });
       if (!startTime) {
         setValidation('Please select a start time'); 
       } else {
@@ -1163,7 +1292,7 @@ export default function NepaliCalendar({ user: propUser, isAdmin, treeMembers = 
     // Validate time format (HH:MM)
     const timePattern = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
     if (!timePattern.test(startTime) || !timePattern.test(endTime)) {
-      console.log('Validation failed: Invalid time format', { startTime, endTime });
+      if (isDev) console.log('Validation failed: Invalid time format', { startTime, endTime });
       setValidation('Please enter valid time format (HH:MM)');
       return;
     }
@@ -1172,24 +1301,24 @@ export default function NepaliCalendar({ user: propUser, isAdmin, treeMembers = 
     const startDateObj = new Date(startDate);
     const endDateObj = new Date(endDate);
     if (endDateObj < startDateObj) {
-      console.log('Validation failed: End date before start date', { startDate, endDate });
+      if (isDev) console.log('Validation failed: End date before start date', { startDate, endDate });
       setValidation('End date cannot be before start date');
       return;
     }
     
     // If same date, validate time range
     if (startDate === endDate && endTime <= startTime) { 
-      console.log('Validation failed: End time before start time on same date', { startTime, endTime });
+      if (isDev) console.log('Validation failed: End time before start time on same date', { startTime, endTime });
       setValidation('End time must be after start time'); 
       return; 
     }
     
-    console.log('Validation passed, attempting to add tithi...');
+    if (isDev) console.log('Validation passed, attempting to add tithi...');
     setIsLoading(true);
     try {
       const fullTithiName = `${newPakshya} ${newTithi}`;
       await addTithi(activeDate, fullTithiName, startDate, startTime, endDate, endTime);
-      console.log('Tithi added successfully, clearing form and closing modal');
+      if (isDev) console.log('Tithi added successfully, clearing form and closing modal');
       
       // Clear form and close modal on success
       setNewPakshya('शुक्लपक्ष'); 
@@ -1499,15 +1628,15 @@ function compareTithisByStart(a,b){
       const events = getEventsForDate(ad.year, ad.month, ad.day) || [];
       
       // Debug: Log tile rendering with dateKey and tithis
-      if (day <= 5 || tithis.length > 0 || events.length > 0) { // Only log first few days and days with content
-        console.log(`Rendering tile for day ${day}:`, {
-          dateKey,
-          tithisCount: tithis.length,
-          eventsCount: events.length,
-          tithisNames: tithis.map(t => t.name),
-          eventTitles: events.map(e => e.title)
-        });
-      }
+      // if (day <= 5 || tithis.length > 0 || events.length > 0) { // Only log first few days and days with content
+      //   console.log(`Rendering tile for day ${day}:`, {
+      //     dateKey,
+      //     tithisCount: tithis.length,
+      //     eventsCount: events.length,
+      //     tithisNames: tithis.map(t => t.name),
+      //     eventTitles: events.map(e => e.title)
+      //   });
+      // }
 
       // Parse tithis to separate pakshya and tithi names
       const parsedTithis = tithis.map(t => ({
@@ -1536,7 +1665,7 @@ function compareTithisByStart(a,b){
           <div className="nt-nepali-date" aria-hidden>{toNepaliNumber(day)}</div>
           <div className="nt-english-date" aria-hidden>{ad.day}</div>
           
-          {/* Card body - shows events and customer events */}
+          {/* Card body - shows events and family member events */}
           <div className="nt-summary" aria-hidden>
             {(() => {
               const { publicEvents, personalEvents } = categorizeEvents(events);
@@ -1647,18 +1776,16 @@ function compareTithisByStart(a,b){
     return findTithisForAdDate(adYear, adMonthZeroBased, adDay) || [];
   }, [activeDate, findTithisForAdDate]);
 
-  // Get events for the active date in modal (all public events and admin private events)
+  // Get events for the active date in modal (public events only)
   const modalEvents = useMemo(() => {
     if (!activeDate || !calendarEvents.length) return [];
     const [y, m, d] = activeDate.split('-').map(Number);
     const eventsOnDate = getEventsForDate(y, m - 1, d);
     
-    return eventsOnDate.filter(event => 
-      (event.isPublic || event.createdByAdmin)
-    );
+    return eventsOnDate.filter(event => event.isPublic === true);
   }, [activeDate, calendarEvents, getEventsForDate]);
 
-  // Get personal events for the active date in modal (user's own private events)
+  // Get private events for the active date in modal (user's own private events)
   const modalPersonalEvents = useMemo(() => {
     if (!activeDate || !calendarEvents.length || !user) return [];
     const [y, m, d] = activeDate.split('-').map(Number);
@@ -1666,95 +1793,29 @@ function compareTithisByStart(a,b){
     
     return eventsOnDate.filter(event => 
       !event.isPublic && 
-      !event.createdByAdmin &&
       event.createdBy === user.uid
     );
   }, [activeDate, calendarEvents, user, getEventsForDate]);
 
-  // Expose manual debug helpers to window during development so they're usable and not flagged as unused
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      window.refreshTithis = refreshTithis;
-      window.debugFirestore = debugFirestore;
-      // Temporary debug helper: get tithis for a specific AD date key (try both padded and unpadded keys)
-      window.getTithisForDate = (dateKey) => {
-        console.log('Requested dateKey:', dateKey);
-        const k1 = dateKey;
-        const k2 = (() => {
-          const parts = String(dateKey).split('-').map(p => p.padStart(2,'0'));
-          if (parts.length === 3) return `${parts[0]}-${parts[1]}-${parts[2]}`;
-          return dateKey;
-        })();
-        const result = tithisByDate[k1] || tithisByDate[k2] || tithisByDate[dateKey] || null;
-        console.log('Found tithis:', result);
-        return result;
-      };
-      window.listTithisKeys = () => {
-        const keys = Object.keys(tithisByDate || {});
-        console.log('tithisByDate keys count:', keys.length);
-        console.log(keys.slice(0,200));
-        return keys;
-      };
-      window.getTithisForDateLoose = (dateKey) => {
-        // Try multiple common formats and substring matches
-        const candidates = [];
-        const asParts = String(dateKey).split('-').map(p => p.replace(/^0+/, ''));
-        const variants = [
-          `${asParts[0]}-${asParts[1]}-${asParts[2]}`,
-          `${asParts[0]}-${String(asParts[1]).padStart(2,'0')}-${String(asParts[2]).padStart(2,'0')}`,
-          `${asParts[0]}-${String(asParts[1])}-${String(asParts[2]).padStart(2,'0')}`,
-          `${asParts[0]}-${String(asParts[1]).padStart(2,'0')}-${asParts[2]}`
-        ];
-        const keys = Object.keys(tithisByDate || {});
-        for (const k of keys) {
-          if (variants.includes(k)) candidates.push({ key: k, tithis: tithisByDate[k] });
-          if (k.includes(dateKey) || k.includes(dateKey.replace(/0/g, ''))) candidates.push({ key: k, tithis: tithisByDate[k] });
-        }
-        console.log('Loose search candidates:', candidates.slice(0,50));
-        return candidates;
-      };
-    }
-    return () => {
-      if (typeof window !== 'undefined') {
-        try { delete window.refreshTithis; } catch (e) { window.refreshTithis = undefined; }
-        try { delete window.debugFirestore; } catch (e) { window.debugFirestore = undefined; }
-        try { delete window.getTithisForDate; } catch (e) { window.getTithisForDate = undefined; }
-        try { delete window.listTithisKeys; } catch (e) { window.listTithisKeys = undefined; }
-        try { delete window.getTithisForDateLoose; } catch (e) { window.getTithisForDateLoose = undefined; }
-      }
-    };
-  }, [refreshTithis, debugFirestore, tithisByDate]);
+  // Debug helpers previously exposed on window have been removed.
   
   
-  // Debug: Log when tithisByDate state changes
-  useEffect(() => {
-    console.log('=== TITHIS STATE UPDATE ===');
-    console.log('tithisByDate changed:', tithisByDate);
-    console.log('Total dates with tithis:', Object.keys(tithisByDate).length);
-    Object.entries(tithisByDate).forEach(([dateKey, tithis]) => {
-      console.log(`Date ${dateKey}: ${tithis.length} tithis`, tithis.map(t => t.name));
-    });
-    console.log('=== END STATE UPDATE ===');
-  }, [tithisByDate]);
-  
-  // Debug: Log modal tithis when modal is open and activeDate changes
-  useEffect(() => {
-    if ((detailsModalOpen || addTithiModalOpen) && activeDate) {
-      console.log('Modal opened for date:', activeDate);
-      console.log('tithisByDate keys:', Object.keys(tithisByDate));
-      console.log('modalTithis for', activeDate, ':', modalTithis);
-    }
-  }, [detailsModalOpen, addTithiModalOpen, activeDate, tithisByDate, modalTithis]);
+  // Debug logging removed (was too noisy for production)
 
   return (
     <div className="nepali-calendar-container">
       {/* Top bar above the calendar header */}
-      <div className="nc-topbar">
-        <button
-          className="nc-topbar-btn"
-          onClick={handleGoToToday}
-          title="Go to today"
-          style={{ flexDirection: 'column', gap: '2px', alignItems: 'flex-start', padding: '6px 16px', height: 'auto', textAlign: 'left' }}
+      <div 
+        className="nc-topbar"
+        onClick={handleGoToToday}
+        title="Go to today"
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleGoToToday(); }}
+      >
+        <div
+          className="nc-topbar-content"
+          style={{ display: 'flex', flexDirection: 'column', gap: '2px', alignItems: 'flex-start', width: '100%' }}
         >
           <div style={{ fontSize: '1.5rem', fontWeight: 'bold', lineHeight: '1.4' }}>
             {toNepaliNumber(todayBs.day)} {nepaliMonths[todayBs.month-1]} {toNepaliNumber(todayBs.year)}, {nepaliWeekdays[todayBs.dayOfWeek]}
@@ -1796,7 +1857,7 @@ function compareTithisByStart(a,b){
           <div style={{ fontSize: '0.8rem', marginTop: '2px', opacity: 0.9 }}>
             {englishMonths[todayAd.getUTCMonth()]} {todayAd.getUTCDate()}, {todayAd.getUTCFullYear()}
           </div>
-        </button>
+        </div>
       </div>
       <div className="nc-header">
         <button
@@ -1889,6 +1950,8 @@ function compareTithisByStart(a,b){
               <button onClick={()=> setDetailsModalOpen(false)} aria-label="Close">✕</button>
             </div>
 
+            <div className="nc-modal-body">
+
             {/* Tithis Section */}
             <div className="nc-modal-section">
               <h4>Tithis</h4>
@@ -1911,7 +1974,6 @@ function compareTithisByStart(a,b){
               <h4>Public Events</h4>
               {modalEvents.length===0 && <div className="muted">No public events for this date</div>}
               {modalEvents.map(event => {
-                console.log('Rendering public event:', { title: event.title, dateKey: event.dateKey, activeDate, matches: event.dateKey === activeDate });
                 return (
                 <div key={event.id} className="nc-item" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '0.5rem' }}>
                   <div style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
@@ -1919,8 +1981,6 @@ function compareTithisByStart(a,b){
                       <div className="nc-item-title">
                         {event.title}
                         {event.createdByAdmin && <span style={{ marginLeft: '0.5rem', fontSize: '0.75rem', padding: '0.125rem 0.375rem', background: '#fbbf24', color: '#78350f', borderRadius: '0.25rem', fontWeight: '600' }}>Admin</span>}
-                        {!event.isPublic && event.createdByAdmin && <span style={{ marginLeft: '0.5rem', fontSize: '0.75rem', padding: '0.125rem 0.375rem', background: '#e9d5ff', color: '#6b21a8', borderRadius: '0.25rem', fontWeight: '600' }}>Admin Private</span>}
-                        {!event.isPublic && !event.createdByAdmin && <span style={{ marginLeft: '0.5rem', fontSize: '0.75rem', padding: '0.125rem 0.375rem', background: '#dbeafe', color: '#1e40af', borderRadius: '0.25rem', fontWeight: '600' }}>Private</span>}
                       </div>
                       {event.description && <div className="muted" style={{ marginTop: '0.25rem' }}>{event.description}</div>}
                     </div>
@@ -1931,13 +1991,12 @@ function compareTithisByStart(a,b){
               })}
             </div>
 
-            {/* Personal Events Section - user's own private events */}
+            {/* Private Events Section - user's own private events */}
             <div className="nc-modal-section" style={{ borderTop: '1px solid #eee', paddingTop: '1rem' }}>
               <h4 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                Personal Events
-                <span style={{ fontSize: '0.75rem', padding: '0.125rem 0.375rem', background: '#dbeafe', color: '#1e40af', borderRadius: '0.25rem', fontWeight: '600' }}>Private</span>
+                Private Events
               </h4>
-              {modalPersonalEvents.length===0 && <div className="muted">No personal events for this date</div>}
+              {modalPersonalEvents.length===0 && <div className="muted">No private events for this date</div>}
               {modalPersonalEvents.map(event => {
                 const memberName = getTreeMemberName(event.memberId);
                 const isTreeEvent = !!event.treeId;
@@ -1946,8 +2005,6 @@ function compareTithisByStart(a,b){
                 const eventNepaliDate = event.dateKey 
                   ? formatAdDateToNepaliStringWithNumerals(event.dateKey) 
                   : '';
-
-                console.log('Rendering personal event:', { title: event.title, dateKey: event.dateKey, activeDate, matches: event.dateKey === activeDate });
                 return (
                   <div 
                     key={event.id} 
@@ -1989,6 +2046,35 @@ function compareTithisByStart(a,b){
                         )}
                         {event.description && <div className="muted" style={{ marginTop: '0.25rem' }}>{event.description}</div>}
                       </div>
+                      {!isTreeEvent && (
+                        <button
+                          onClick={async (e) => {
+                            e.stopPropagation();
+                            if (window.confirm('Are you sure you want to delete this event?')) {
+                              try {
+                                await deleteDoc(doc(db, 'calendarEvents', event.id));
+                                setCalendarEvents((prev) => prev.filter((e) => e.id !== event.id));
+                              } catch (err) {
+                                console.error('Error deleting event:', err);
+                                alert('Failed to delete event');
+                              }
+                            }
+                          }}
+                          style={{ 
+                            background: 'none', 
+                            border: 'none', 
+                            cursor: 'pointer', 
+                            fontSize: '1.1rem',
+                            padding: '0 0 0 8px',
+                            opacity: 0.7
+                          }}
+                          title="Delete Event"
+                          onMouseOver={(e) => e.target.style.opacity = 1}
+                          onMouseOut={(e) => e.target.style.opacity = 0.7}
+                        >
+                          🗑️
+                        </button>
+                      )}
                     </div>
                   </div>
                 );
@@ -2015,7 +2101,7 @@ function compareTithisByStart(a,b){
               )}
               
               {/* For Logged-in Users: Show "Add Event" button */}
-              {user && isEditMode && (
+              {user && (
                 <button 
                   onClick={() => {
                     if (!activeDate) return;
@@ -2050,7 +2136,15 @@ function compareTithisByStart(a,b){
                 </button>
               )}
               
-              <button onClick={()=> setDetailsModalOpen(false)} style={{ flex: '1 1 auto' }}>Close</button>
+              <button
+                type="button"
+                className="nc-cancel-btn"
+                onClick={()=> setDetailsModalOpen(false)}
+                style={{ flex: '1 1 auto' }}
+              >
+                Close
+              </button>
+            </div>
             </div>
           </div>
         </div>
@@ -2085,7 +2179,8 @@ function compareTithisByStart(a,b){
               <button onClick={()=> setAddTithiModalOpen(false)} aria-label="Close">✕</button>
             </div>
 
-            <div className="nc-modal-section">
+            <div className="nc-modal-body">
+              <div className="nc-modal-section">
               {/* Pakshya Field */}
               <div className="nc-form-row">
                 <label className="nc-label">पक्ष (Pakshya):</label>
@@ -2226,6 +2321,7 @@ function compareTithisByStart(a,b){
                 <button onClick={()=>{ setAddTithiModalOpen(false); setValidation(''); }}>Cancel</button>
               </div>
             </div>
+            </div>
           </div>
         </div>
       )}
@@ -2243,119 +2339,102 @@ function compareTithisByStart(a,b){
                   const adMonthZeroBased = parts[1]-1;
                   const adDay = parts[2];
                   const bs = convertAdToBs(adYear, adMonthZeroBased, adDay);
-                  return `Add Event - ${nepaliMonths[bs.month-1]} ${toNepaliNumber(bs.day)}, ${toNepaliNumber(bs.year)}`;
+                  return `${nepaliMonths[bs.month-1]} ${toNepaliNumber(bs.day)}, ${toNepaliNumber(bs.year)}`;
                 })()
               }</h3>
               <button onClick={()=> setAddEventModalOpen(false)} aria-label="Close">✕</button>
             </div>
 
-            <div className="nc-modal-section">
+            <div className="nc-modal-body">
+              <div className="nc-modal-section">
               {/* Event Type Selection */}
               <div className="nc-form-row" style={{ marginBottom: '1rem' }}>
-                <label className="nc-label">Event Type:</label>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                  {/* Public Event - Only for admins */}
+                <label className="nc-label">Add Event:</label>
+                <div className="nc-event-type-tabs" role="tablist" aria-label="Event type">
+                  <button
+                    type="button"
+                    className={`nc-event-type-tab ${eventType === 'private' ? 'active' : ''}`}
+                    onClick={() => {
+                      setEventType('private');
+                      setSelectedTreeId('');
+                      setSelectedTreeMemberId('');
+                    }}
+                    aria-selected={eventType === 'private'}
+                    role="tab"
+                  >
+                    For Self
+                  </button>
+                  <button
+                    type="button"
+                    className={`nc-event-type-tab ${eventType === 'customer' ? 'active' : ''}`}
+                    onClick={() => {
+                      setEventType('customer');
+                    }}
+                    aria-selected={eventType === 'customer'}
+                    role="tab"
+                  >
+                    For Family Member
+                  </button>
                   {(isAdmin || isSuperUser) && (
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
-                      <input
-                        type="radio"
-                        name="eventType"
-                        value="public"
-                        checked={eventType === 'public'}
-                        onChange={(e) => {
-                          setEventType(e.target.value);
-                          setSelectedCustomerId('');
-                          setSelectedPersonId('');
-                        }}
-                      />
-                      <span>Public Event <span style={{ fontSize: '0.75rem', padding: '0.125rem 0.375rem', background: '#fbbf24', color: '#78350f', borderRadius: '0.25rem', fontWeight: '600' }}>Admin</span></span>
-                      <span style={{ fontSize: '0.875rem', color: '#6b7280' }}>(Visible to all users)</span>
-                    </label>
+                    <button
+                      type="button"
+                      className={`nc-event-type-tab ${eventType === 'public' ? 'active' : ''}`}
+                      onClick={() => {
+                        setEventType('public');
+                        setSelectedTreeId('');
+                        setSelectedTreeMemberId('');
+                      }}
+                      aria-selected={eventType === 'public'}
+                      role="tab"
+                    >
+                      Public
+                    </button>
                   )}
-                  
-                  {/* Private Event - For all users */}
-                  <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
-                    <input
-                      type="radio"
-                      name="eventType"
-                      value="private"
-                      checked={eventType === 'private'}
-                      onChange={(e) => {
-                        setEventType(e.target.value);
-                        setSelectedCustomerId('');
-                        setSelectedPersonId('');
-                      }}
-                    />
-                    <span>Personal Event <span style={{ fontSize: '0.75rem', padding: '0.125rem 0.375rem', background: '#dbeafe', color: '#1e40af', borderRadius: '0.25rem', fontWeight: '600' }}>Private</span></span>
-                    <span style={{ fontSize: '0.875rem', color: '#6b7280' }}>(Only visible to you)</span>
-                  </label>
-                  
-                  {/* Customer Event - For all users */}
-                  <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
-                    <input
-                      type="radio"
-                      name="eventType"
-                      value="customer"
-                      checked={eventType === 'customer'}
-                      onChange={(e) => {
-                        setEventType(e.target.value);
-                      }}
-                    />
-                    <span>Customer Event <span style={{ fontSize: '0.75rem', padding: '0.125rem 0.375rem', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', color: 'white', borderRadius: '0.25rem', fontWeight: '600' }}>Family</span></span>
-                    <span style={{ fontSize: '0.875rem', color: '#6b7280' }}>(For a family member)</span>
-                  </label>
                 </div>
               </div>
 
-              {/* Customer Selection - shown when eventType is 'customer' */}
+              {/* Tree + Family Member Selection - shown when eventType is 'customer' */}
               {eventType === 'customer' && (
-                <div className="nc-form-row" style={{ marginBottom: '1rem' }}>
-                  <label className="nc-label">Select Customer:</label>
-                  <select
-                    value={selectedCustomerId}
-                    onChange={(e) => {
-                      setSelectedCustomerId(e.target.value);
-                      setSelectedPersonId(''); // Reset person selection when customer changes
-                    }}
-                    className="nc-select"
-                  >
-                    <option value="">-- Select a customer --</option>
-                    {customers.map(customer => (
-                      <option key={customer.id} value={customer.id}>
-                        {customer.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
+                <>
+                  <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1rem' }}>
+                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+                      <label className="nc-label">Select Tree:</label>
+                      <select
+                        value={selectedTreeId}
+                        onChange={(e) => {
+                          setSelectedTreeId(e.target.value);
+                          setSelectedTreeMemberId('');
+                        }}
+                        className="nc-select"
+                      >
+                        <option value="">-- Select a tree --</option>
+                        {availableTrees.map((tree) => (
+                          <option key={tree.id} value={tree.id}>
+                            {tree.title || 'Untitled Tree'}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
 
-              {/* Family Member Selection - shown when customer is selected */}
-              {eventType === 'customer' && selectedCustomerId && (() => {
-                const selectedCustomer = customers.find(c => c.id === selectedCustomerId);
-                const familyMembers = selectedCustomer?.familyMembers || {};
-                const familyMembersList = Object.entries(familyMembers).map(([id, member]) => ({
-                  id,
-                  name: member.name || 'Unknown'
-                }));
-                
-                return familyMembersList.length > 0 && (
-                  <div className="nc-form-row" style={{ marginBottom: '1rem' }}>
-                    <label className="nc-label">Select Family Member (Optional):</label>
-                    <select
-                      value={selectedPersonId}
-                      onChange={(e) => setSelectedPersonId(e.target.value)}
-                      className="nc-select"
-                    >
-                      <option value="">-- Select a family member (optional) --</option>
-                      {familyMembersList.map(person => (
-                        <option key={person.id} value={person.id}>
-                          {person.name}
-                        </option>
-                      ))}
-                    </select>
+                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+                      <label className="nc-label">Select Family Member:</label>
+                      <select
+                        value={selectedTreeMemberId}
+                        onChange={(e) => setSelectedTreeMemberId(e.target.value)}
+                        className="nc-select"
+                        disabled={!selectedTreeId}
+                      >
+                        <option value="">-- Select a family member --</option>
+                        {availableTreeMembers.map((m) => (
+                          <option key={m.id} value={m.id}>
+                            {m.name || 'Unknown'}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
                   </div>
-                );
-              })()}
+                </>
+              )}
 
               {/* Event Title */}
               <div className="nc-form-row" style={{ marginBottom: '1rem' }}>
@@ -2381,6 +2460,63 @@ function compareTithisByStart(a,b){
                   style={{ resize: 'vertical' }}
                 />
               </div>
+
+              {/* Associate event with date or tithi */}
+              <div className="nc-form-row" style={{ marginBottom: '1rem' }}>
+                <label className="nc-label">Associate With:</label>
+                <div className="nc-event-type-tabs" role="tablist" aria-label="Associate event with">
+                  <button
+                    type="button"
+                    className={`nc-event-type-tab ${eventAssociateMode === 'date' ? 'active' : ''}`}
+                    onClick={() => setEventAssociateMode('date')}
+                    aria-selected={eventAssociateMode === 'date'}
+                    role="tab"
+                  >
+                    Date
+                  </button>
+                  <button
+                    type="button"
+                    className={`nc-event-type-tab ${eventAssociateMode === 'tithi' ? 'active' : ''}`}
+                    onClick={() => setEventAssociateMode('tithi')}
+                    aria-selected={eventAssociateMode === 'tithi'}
+                    role="tab"
+                  >
+                    Tithi
+                  </button>
+                </div>
+              </div>
+
+              {eventAssociateMode === 'tithi' && (
+                <div className="nc-form-row" style={{ marginBottom: '1rem' }}>
+                  <label className="nc-label">Select Tithi:</label>
+                  {(() => {
+                    if (!eventDate) {
+                      return <div className="muted">Select a date to choose a tithi.</div>;
+                    }
+
+                    const [y, m, d] = eventDate.split('-').map(Number);
+                    const tithisForEventDate = (findTithisForAdDate(y, m - 1, d) || []).slice().sort(compareTithisByStart);
+
+                    if (tithisForEventDate.length === 0) {
+                      return <div className="muted">No tithi found for the selected date.</div>;
+                    }
+
+                    return (
+                      <select
+                        value={selectedEventTithiId}
+                        onChange={(e) => setSelectedEventTithiId(e.target.value)}
+                        className="nc-select"
+                      >
+                        {tithisForEventDate.map(t => (
+                          <option key={t.id} value={t.id}>
+                            {getTithiDisplayName(t)}
+                          </option>
+                        ))}
+                      </select>
+                    );
+                  })()}
+                </div>
+              )}
 
               {/* Event Date - using NepaliDatePicker */}
               <div className="nc-form-row" style={{ marginBottom: '1rem' }}>
@@ -2417,8 +2553,15 @@ function compareTithisByStart(a,b){
                 >
                   {isAddingEvent ? 'Adding...' : !user ? 'Log in to Add' : 'Add Event'}
                 </button>
-                <button onClick={()=>{ setAddEventModalOpen(false); setEventValidation(''); }}>Cancel</button>
+                <button
+                  type="button"
+                  className="nc-cancel-btn"
+                  onClick={()=>{ setAddEventModalOpen(false); setEventValidation(''); }}
+                >
+                  Cancel
+                </button>
               </div>
+            </div>
             </div>
           </div>
         </div>

@@ -38,6 +38,14 @@ service cloud.firestore {
       return isAuthenticated() && userId == request.auth.uid;
     }
 
+    // Tree ownership check (used for calendarEvents access)
+    function isTreeOwner(treeId) {
+      return isAuthenticated() &&
+        treeId != null &&
+        exists(/databases/$(database)/documents/trees/$(treeId)) &&
+        get(/databases/$(database)/documents/trees/$(treeId)).data.ownerUid == request.auth.uid;
+    }
+
     match /customers/{customerId} {
       // Admins can read/write any customer (they have viewAllCustomers permission)
       // Super Users and regular users can only access their own customers
@@ -86,9 +94,10 @@ service cloud.firestore {
     match /calendarEvents/{eventId} {
       // Public events visible to everyone
       // Private events visible only to creator and admins
-      // Allow reading if public, if creator, if admin, or if user has manageEvents permission
+          // Allow reading if public, if creator, if tree owner (tree-linked events), if admin, or if user has manageEvents permission
       allow read: if resource.data.isPublic == true ||
              (isAuthenticated() && resource.data.createdBy == request.auth.uid) ||
+            (resource.data.treeId != null && isTreeOwner(resource.data.treeId)) ||
              isAdmin() ||
              hasPermission('manageEvents');
       
@@ -115,6 +124,11 @@ service cloud.firestore {
     match /userInvitations/{emailId} {
       // Admins can create/read/update/delete invitations
       allow create, read, update, delete: if isAdmin();
+
+      // Allow an authenticated user to GET their own invitation doc by document ID.
+      // This avoids permission-denied when the invitation doesn't exist (resource == null).
+      // Note: This does not enable listing invitations.
+      allow get: if isAuthenticated() && emailId == request.auth.token.email;
 
       // Allow the invited user (authenticated) to read/update their own invitation
       // Compare the authenticated user's email with the `email` field stored in the
