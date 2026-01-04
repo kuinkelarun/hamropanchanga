@@ -43,20 +43,16 @@ export default function SidebarPanel({
 
       <aside
         className={`
-          absolute lg:relative
-          top-0 left-0
           h-full
-          w-56 sm:w-64 lg:w-64
+          w-56 sm:w-64
           border-r border-gray-200 bg-white
           flex flex-col p-3 text-sm overflow-hidden
-          z-10
           transition-transform duration-300 ease-in-out
-          ${isVisible ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
+          ${isVisible ? 'translate-x-0' : '-translate-x-full'}
           ${modalOpen ? 'pointer-events-none' : ''}
         `}
         style={{
-          ...(modalOpen ? { filter: 'brightness(0.85)', opacity: 0.7 } : {}),
-          height: '100vh' // Force full viewport height
+          ...(modalOpen ? { filter: 'brightness(0.85)', opacity: 0.7 } : {})
         }}
         onMouseEnter={() => {
           if (window.innerWidth >= 1024 && !isVisible) onToggle?.();
