@@ -443,7 +443,7 @@ export default function TreeSelectionPage({ user, isAdmin }) {
           </div>
         </div>
       )}
-Edit Tree Modal */}
+      {/* Edit Tree Modal */}
       {editingModalOpen && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md">
