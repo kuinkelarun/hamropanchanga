@@ -2289,45 +2289,11 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
       {/* Manual Management Section - Only show for tithis/events tabs */}
       {(activeTab === 'tithis' || activeTab === 'events') && (
       <div className="admin-section">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-          <h2>📝 Manual Management</h2>
-          {activeTab === 'events' && (
-            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-              <span style={{ fontSize: '0.9rem', color: '#6b7280' }}>Entry Mode:</span>
-              <select 
-                value={eventEntryMode} 
-                onChange={(e) => setEventEntryMode(e.target.value)}
-                style={{
-                  padding: '0.5rem 1rem',
-                  borderRadius: '6px',
-                  border: '1px solid #d1d5db',
-                  backgroundColor: 'white',
-                  cursor: 'pointer',
-                  fontSize: '0.9rem'
-                }}
-              >
-                <option value="date">📅 By Calendar Date</option>
-                <option value="tithi">🔱 By Tithi + Month</option>
-              </select>
-            </div>
-          )}
-          <button 
-            onClick={() => {
-              setIsAddingNew(true);
-              setNewRecordData(activeTab === 'tithis' 
-                ? { pakshya: 'शुक्लपक्ष', tithi: allTithis[0], startDate: '', endDate: '', startTime: '', endTime: '' } 
-                : { isPublic: false, title: '', description: '', dateKey: '' });
-            }}
-            className="btn-primary"
-            style={{ padding: '0.5rem 1rem', fontSize: '1.2rem', borderRadius: '50%', width: '40px', height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-            title={`Add new ${activeTab === 'tithis' ? 'Tithi' : 'Event'}`}
-            disabled={isAddingNew}
-          >
-            +
-          </button>
+        <div className="manual-mgmt-header">
+          <h2 className="manual-mgmt-title">📝 Manual Management</h2>
         </div>
         
-        <div className="filter-bar">
+        <div className="manual-mgmt-search-filters-container">
           <input
             type="text"
             placeholder={`Search ${activeTab}...`}
@@ -2336,36 +2302,82 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
             className="search-input"
           />
           
-          <select
-            value={yearFilter}
-            onChange={(e) => {
-              setYearFilter(e.target.value);
-              setMonthFilter('all'); // Reset month when year changes
-            }}
-            className="year-filter"
-          >
-            <option value="all">सबै वर्ष (All Years)</option>
-            {getUniqueYears().map(year => (
-              <option key={year} value={year}>
-                {toNepaliNumber(year)}
-              </option>
-            ))}
-          </select>
-
-          <select
-            value={monthFilter}
-            onChange={(e) => setMonthFilter(e.target.value)}
-            className="month-filter"
-            disabled={yearFilter === 'all'}
-          >
-            <option value="all">सबै महिना (All Months)</option>
-            {nepaliMonths.map((month, idx) => (
-              <option key={idx + 1} value={idx + 1}>
-                {month}
-              </option>
-            ))}
-          </select>
+          <div className="manual-mgmt-filters-section">
+            <div className="manual-mgmt-filter-item">
+              <div className="manual-mgmt-filters-label">🔍 FILTERS</div>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <select
+                  value={yearFilter}
+                  onChange={(e) => {
+                    setYearFilter(e.target.value);
+                    setMonthFilter('all');
+                  }}
+                  className="manual-mgmt-filter-compact"
+                >
+                  <option value="all">All Years</option>
+                  {getUniqueYears().map(year => (
+                    <option key={year} value={year}>
+                      {toNepaliNumber(year)}
+                    </option>
+                  ))}
+                </select>
+                <select
+                  value={monthFilter}
+                  onChange={(e) => setMonthFilter(e.target.value)}
+                  className="manual-mgmt-filter-compact"
+                  disabled={yearFilter === 'all'}
+                >
+                  <option value="all">All Months</option>
+                  {nepaliMonths.map((month, idx) => (
+                    <option key={idx + 1} value={idx + 1}>
+                      {month}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          </div>
         </div>
+
+        {activeTab === 'events' && (
+          <div className="manual-mgmt-entry-row">
+            <span className="manual-mgmt-entry-label">Entry Mode:</span>
+            <select 
+              value={eventEntryMode} 
+              onChange={(e) => setEventEntryMode(e.target.value)}
+              className="manual-mgmt-entry-select"
+            >
+              <option value="date">📅 By Calendar Date</option>
+              <option value="tithi">🔱 By Tithi + Month</option>
+            </select>
+            <button 
+              onClick={() => {
+                setIsAddingNew(true);
+                setNewRecordData({ isPublic: false, title: '', description: '', dateKey: '' });
+              }}
+              className="btn-primary manual-mgmt-add-btn"
+              title="Add new Event"
+              disabled={isAddingNew}
+            >
+              Add Event
+            </button>
+          </div>
+        )}
+        {activeTab === 'tithis' && (
+          <div style={{ marginBottom: '1rem' }}>
+            <button 
+              onClick={() => {
+                setIsAddingNew(true);
+                setNewRecordData({ pakshya: 'शुक्लपक्ष', tithi: allTithis[0], startDate: '', endDate: '', startTime: '', endTime: '' });
+              }}
+              className="btn-primary manual-mgmt-add-btn"
+              title="Add new Tithi"
+              disabled={isAddingNew}
+            >
+              Add Tithi
+            </button>
+          </div>
+        )}
 
         <div className="data-table-container">
           <table className="data-table">

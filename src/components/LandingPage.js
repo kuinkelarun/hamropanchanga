@@ -119,14 +119,14 @@ const LandingPage = ({ user, isAdmin, trees = [], treeMembers = [], events, fami
                     <div className="section-content-centered">
                         <div className="section-card branches-section">
                             <div className="space-y-4">
-                                <div className="flex items-center justify-between mb-4">
-                                    <h2 className="section-title">Your Trees</h2>
+                                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4">
+                                    <h2 className="section-title whitespace-nowrap">Your Trees</h2>
                                     <input
                                         type="text"
                                         placeholder="Search trees..."
                                         value={searchQuery}
                                         onChange={(e) => setSearchQuery(e.target.value)}
-                                        className="border rounded-xl px-3 py-2 text-sm w-64"
+                                        className="border rounded-xl px-3 py-2 text-sm w-2/5 self-end sm:w-64"
                                     />
                                 </div>
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
