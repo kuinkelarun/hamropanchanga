@@ -106,12 +106,12 @@ const LandingPageEventsSection = ({ events, familyMembers, onDoubleClickEvent })
 
     return (
         <div className="events-section">
-            <div className="flex items-center justify-between mb-4">
-                <h2 className="section-title">Events & Reminders</h2>
+            <div className="flex flex-col gap-2 mb-4 sm:flex-row sm:items-center sm:justify-between">
+                <h2 className="section-title whitespace-nowrap">Events & Reminders</h2>
                 <select
                     value={eventFilter}
                     onChange={(e) => setEventFilter(e.target.value)}
-                    className="border rounded-xl p-1 text-sm"
+                    className="w-2/5 self-end border rounded-xl p-1 text-sm sm:w-auto"
                 >
                     <option value="upcoming">Upcoming</option>
                     <option value="all">All Events</option>
