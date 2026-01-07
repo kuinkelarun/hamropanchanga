@@ -28,6 +28,20 @@ body {
     sans-serif;
 }
 
+/* Mobile touch optimizations */
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+.touch-manipulation {
+  touch-action: manipulation;
+}
+
+.smooth-scroll {
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+}
+
 input, textarea, select, button {
   font-family: inherit;
 }
