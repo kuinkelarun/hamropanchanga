@@ -5,6 +5,7 @@ import AddEventForm from '../AddEventForm';
 import { signInWithGoogle } from '../../firebase';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../../firebase';
+import { normalizeForCompare } from '../../utils/textNormalize';
 
 export default function TreeSelectionPage({ user, isAdmin }) {
   const navigate = useNavigate();
@@ -243,11 +244,12 @@ export default function TreeSelectionPage({ user, isAdmin }) {
   const handleAddEventFromModal = async ({ name, description, date, personId, repetition, tithi }) => {
     try {
       if (!eventModal.treeId || !user) return;
-      const { db } = await import('../../firebase');
       const { addDoc, collection, serverTimestamp } = await import('firebase/firestore');
       await addDoc(collection(db, 'calendarEvents'), {
         title: name,
+        titleNormalized: normalizeForCompare(name),
         description: description || '',
+        descriptionNormalized: normalizeForCompare(description || ''),
         dateKey: date,
         repetition,
         tithi: tithi || null,

@@ -17,6 +17,7 @@ import {
   convertAdToBs,
   convertBsToAd
 } from '../utils/nepaliDateUtils';
+import { normalizeForCompare } from '../utils/textNormalize';
 
 const nepaliMonths = utilNepaliMonths;
 const englishMonths = [
@@ -936,8 +937,12 @@ export default function NepaliCalendar({ user: propUser, isAdmin, treeMembers = 
 
       const { pakshya, tithi: tithiName } = parseTithiName(selectedTithi.name);
       const pakshaNormalized = pakshya === 'शुक्लपक्ष' ? 'Shukla' : 'Krishna';
-      const tithiIndex = getTithiIndexByName(tithiName);
-      const lunarMonthName = tithiIndex ? getTithiLunarMonthName(pakshaNormalized, tithiIndex, eventDate) : null;
+      const tithiIndex = getTithiIndexByName(tithiName, { fallbackToOne: false });
+      if (!tithiIndex) {
+        setEventValidation('Could not determine the selected tithi. Please try selecting the tithi again.');
+        return;
+      }
+      const lunarMonthName = tithiIndex != null ? getTithiLunarMonthName(pakshaNormalized, tithiIndex, eventDate) : null;
 
       tithiPayload = {
         id: selectedTithi.id,
@@ -993,8 +998,10 @@ export default function NepaliCalendar({ user: propUser, isAdmin, treeMembers = 
       }
 
       const payload = {
-        title: eventTitle.trim(),
-        description: eventDescription.trim(),
+        title: eventTitle,
+        titleNormalized: normalizeForCompare(eventTitle),
+        description: eventDescription,
+        descriptionNormalized: normalizeForCompare(eventDescription),
         dateKey: eventDate,
         // Standardize: always set `tithi` field; null when not used.
         tithi: tithiPayload || null,
@@ -1399,9 +1406,13 @@ export default function NepaliCalendar({ user: propUser, isAdmin, treeMembers = 
             // Match Tithi Name (e.g., 'Pratipada')
             // event.tithi.name might be 'Pratipada', tName might be 'प्रतिपदा' or 'Pratipada' depending on data
             // Let's use getTithiIndexByName to normalize
-            const eventTithiIndex = getTithiIndexByName(event.tithi.name);
-            const currentTithiIndex = getTithiIndexByName(tName);
-            
+            const eventTithiIndex = getTithiIndexByName(event.tithi.name, { fallbackToOne: false });
+            const currentTithiIndex = getTithiIndexByName(tName, { fallbackToOne: false });
+
+            // If we can't confidently parse either tithi index, do NOT match (prevents false positives
+            // that can show up as events appearing on wrong tithis/dates).
+            if (!eventTithiIndex || !currentTithiIndex) return false;
+
             if (eventTithiIndex !== currentTithiIndex) return false;
             
             // If Monthly, we are done (matches Paksha + Tithi)
@@ -1484,9 +1495,9 @@ export default function NepaliCalendar({ user: propUser, isAdmin, treeMembers = 
   }, [calendarEvents, findTithisForAdDate]);
 
   // Helper function to get tree member name
-  const getTreeMemberName = useCallback((memberId) => {
+  const getTreeMemberName = useCallback((treeId, memberId) => {
     if (!memberId || !treeMembers) return null;
-    const member = treeMembers.find(m => m.id === memberId);
+    const member = treeMembers.find(m => m.id === memberId && (!treeId || m.treeId === treeId));
     return member ? member.name : null;
   }, [treeMembers]);
 
@@ -2076,7 +2087,7 @@ function compareTithisByStart(a,b){
               </h4>
               {modalPersonalEvents.length===0 && <div className="muted">No private events for this date</div>}
               {modalPersonalEvents.map(event => {
-                const memberName = getTreeMemberName(event.memberId);
+                const memberName = getTreeMemberName(event.treeId, event.memberId);
                 const isTreeEvent = !!event.treeId;
 
                 // Use the same AD->BS formatting as Tree Detail page, based on event.dateKey
@@ -2569,7 +2580,7 @@ function compareTithisByStart(a,b){
                   <label className="nc-label">Select Tithi:</label>
                   {(() => {
                     if (!eventDate) {
-                      return <div className="muted">Select a date to choose a tithi.</div>;
+                      return <div className="muted">No day selected. Close and reopen from a calendar day.</div>;
                     }
 
                     const [y, m, d] = eventDate.split('-').map(Number);
@@ -2596,15 +2607,16 @@ function compareTithisByStart(a,b){
                 </div>
               )}
 
-              {/* Event Date - using NepaliDatePicker */}
-              <div className="nc-form-row" style={{ marginBottom: '1rem' }}>
-                <NepaliDatePicker
-                  value={eventDate}
-                  onChange={setEventDate}
-                  label="Event Date"
-                  required
-                />
-              </div>
+              {eventAssociateMode === 'date' && (
+                <div className="nc-form-row" style={{ marginBottom: '1rem' }}>
+                  <NepaliDatePicker
+                    value={eventDate}
+                    onChange={setEventDate}
+                    label="Event Date"
+                    required
+                  />
+                </div>
+              )}
 
               {/* Event Repetition */}
               <div className="nc-form-row" style={{ marginBottom: '1rem' }}>

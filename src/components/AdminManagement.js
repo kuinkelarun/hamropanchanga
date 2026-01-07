@@ -7,6 +7,7 @@ import './AdminManagement.css';
 import NepaliDatePicker from './NepaliDatePicker';
 import NepaliCalendarManagement from './NepaliCalendarManagement';
 import { convertAdToBs, toNepaliNumber, nepaliMonths, parseNepaliDate, formatAdDateToNepaliStringWithNumerals, formatNepaliDateTime, getTithiYearFromAdDate, getTithiLunarMonthName, getTithiIndexByName, getTithisForMonth } from '../utils/nepaliDateUtils';
+import { normalizeForCompare } from '../utils/textNormalize';
 import { getEphemerisData, computeTithiFromLongitudes } from '../utils/ephemeris';
 import { useUserPermissions } from '../hooks/usePermissions';
 import { PERMISSIONS } from '../constants/roles';
@@ -1462,7 +1463,11 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
            
            if (matchingTithi) {
              newRecordData.dateKey = matchingTithi.startDate;
-             const tithiIndex = getTithiIndexByName(tithiName);
+             const tithiIndex = getTithiIndexByName(tithiName, { fallbackToOne: false });
+             if (!tithiIndex) {
+               setUploadStatus(`❌ Could not determine tithi index for "${tithiName}". Please re-select the tithi.`);
+               return;
+             }
              const lunarMonthName = getTithiLunarMonthName(paksha, tithiIndex, matchingTithi.startDate);
              
              // Store tithi info for the event
@@ -1486,7 +1491,9 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
         // Create Event record
         const eventData = {
           title: newRecordData.title,
+          titleNormalized: normalizeForCompare(newRecordData.title),
           description: newRecordData.description || '',
+          descriptionNormalized: normalizeForCompare(newRecordData.description || ''),
           dateKey: newRecordData.dateKey,
           isPublic: newRecordData.isPublic || false,
           associatedPerson: '',
