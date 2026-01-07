@@ -2121,7 +2121,7 @@ function compareTithisByStart(a,b){
                       <div style={{ flex: 1 }}>
                         <div className="nc-item-title">{event.title}</div>
                         {memberName && (
-                          <div className="muted" style={{ marginTop: '0.25rem', fontSize: '0.875rem' }}>
+                          <div style={{ marginTop: '0.25rem', fontSize: '0.875rem', color: '#7c3aed', fontWeight: '500' }}>
                             For: {memberName}
                           </div>
                         )}
@@ -2129,7 +2129,7 @@ function compareTithisByStart(a,b){
                           <div style={{ marginTop: '0.5rem', fontSize: '0.875rem', color: '#666' }}>
                             📅 {event.dateKey}
                             {eventNepaliDate && (
-                              <div style={{ color: '#7c3aed', marginTop: '0.25rem' }}>🗓️ {eventNepaliDate}</div>
+                              <div style={{ color: '#7c3aed', marginTop: '0.25rem', fontWeight: '500' }}>🗓️ {eventNepaliDate}</div>
                             )}
                           </div>
                         )}

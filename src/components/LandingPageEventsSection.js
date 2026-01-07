@@ -159,7 +159,7 @@ const LandingPageEventsSection = ({ events, familyMembers, onDoubleClickEvent })
                                             </div>
                                         </div>
                                         {event.personName && (
-                                            <div className="text-xs text-gray-400 mt-1">For: {event.personName} ({event.personRelation})</div>
+                                            <div className="font-medium text-gray-700 text-xs mt-1">For: {event.personName} ({event.personRelation})</div>
                                         )}
                                     </div>
                                 ))}
@@ -195,7 +195,7 @@ const LandingPageEventsSection = ({ events, familyMembers, onDoubleClickEvent })
                                     </div>
                                 </div>
                                 {event.personName && (
-                                    <div className="text-xs text-gray-400 mt-1">For: {event.personName} ({event.personRelation})</div>
+                                    <div className="font-medium text-gray-700 text-xs mt-1">For: {event.personName} ({event.personRelation})</div>
                                 )}
                             </div>
                         ))}

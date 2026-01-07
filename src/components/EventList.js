@@ -133,7 +133,7 @@ const EventList = ({ events, eventFilter, onEdit, onDelete }) => {
                                                 </div>
                                             </div>
                                             {event.personName && (
-                                                <div className="text-xs text-gray-400 mt-1">For: {event.personName} ({event.personRelation})</div>
+                                                <div className="font-medium text-gray-700 text-xs mt-1">For: {event.personName} ({event.personRelation})</div>
                                             )}
                                         </div>
                                         <EventMenu
@@ -178,7 +178,7 @@ const EventList = ({ events, eventFilter, onEdit, onDelete }) => {
                                         </div>
                                     </div>
                                     {event.personName && (
-                                        <div className="text-xs text-gray-400 mt-1">For: {event.personName} ({event.personRelation})</div>
+                                        <div className="font-medium text-gray-700 text-xs mt-1">For: {event.personName} ({event.personRelation})</div>
                                     )}
                                     </div>
                                     <EventMenu
