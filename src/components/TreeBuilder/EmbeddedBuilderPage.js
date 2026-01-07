@@ -302,8 +302,119 @@ export default function EmbeddedBuilderPage({ user, isAdmin }) {
     if (!activeTree) return;
     try {
       const memberList = await Members.list(activeTree.id);
-      const rels = await Relationships.list(activeTree.id).catch(() => []);
+      let rels = await Relationships.list(activeTree.id).catch(() => []);
       const savedMarriagePoints = await MarriagePoints.list(activeTree.id).catch(() => []);
+
+      // Clean up dangling relationships that reference deleted/non-existent members.
+      // These can cause marriage points to be re-derived even after deleting the mp record.
+      const membersSet = new Set(memberList.map(m => String(m.id)));
+      const danglingRelIds = (rels || [])
+        .filter(r => {
+          const from = String(r.fromMemberId || '');
+          const to = String(r.toMemberId || '');
+          if (!from || !to) return true;
+          return !membersSet.has(from) || !membersSet.has(to);
+        })
+        .map(r => String(r.id))
+        .filter(Boolean);
+
+      if (danglingRelIds.length > 0) {
+        console.warn(`[Cleanup] Found ${danglingRelIds.length} dangling relationship(s) referencing missing members. Deleting...`, danglingRelIds);
+        await Promise.all(
+          danglingRelIds.map(id =>
+            Relationships.delete(id, activeTree.id).catch(err => {
+              console.warn(`[Cleanup] Failed to delete dangling relationship ${id}:`, err);
+            })
+          )
+        );
+        // Reload relationships after cleanup so downstream computations use the clean set
+        rels = await Relationships.list(activeTree.id).catch(() => []);
+      }
+
+      // Clean up orphaned marriage points (those with no common children between parents)
+      const orphanedMpIds = [];
+      
+      for (const mp of savedMarriagePoints) {
+        const parents = (mp.parents || []).map(p => String(p));
+        
+        // Mark for deletion if:
+        // 1. Missing parents array or wrong number of parents
+        // 2. Parents don't exist as members
+        // 3. No common children between the two parents
+        // 4. No spouse relationship between parents
+        
+        if (parents.length !== 2) {
+          console.warn(`[Cleanup] Marriage point ${mp.id} has invalid parent count: ${parents.length}`, mp);
+          orphanedMpIds.push(mp.id);
+          continue;
+        }
+
+        const [p1Id, p2Id] = parents;
+        
+        // Check if both parents still exist as members
+        if (!membersSet.has(p1Id) || !membersSet.has(p2Id)) {
+          console.warn(`[Cleanup] Marriage point ${mp.id} has non-existent parent(s): ${p1Id}, ${p2Id}`, mp);
+          orphanedMpIds.push(mp.id);
+          continue;
+        }
+        
+        // Check if spouse relationship exists between parents
+        const spouseRelExists = (rels || []).some(r => {
+          const a = String(r.fromMemberId || '');
+          const b = String(r.toMemberId || '');
+          return r.type === 'spouse' && (
+            (a === p1Id && b === p2Id) || 
+            (a === p2Id && b === p1Id)
+          );
+        });
+        
+        if (!spouseRelExists) {
+          console.warn(`[Cleanup] Marriage point ${mp.id} has no spouse relationship between ${p1Id} and ${p2Id}`, mp);
+          orphanedMpIds.push(mp.id);
+          continue;
+        }
+        
+        // Find children of both parents
+        const p1Children = new Set();
+        const p2Children = new Set();
+        
+        (rels || []).forEach(r => {
+          if ((r.type === 'parent' || r.type === 'child') && String(r.fromMemberId || '') === p1Id) {
+            p1Children.add(String(r.toMemberId || ''));
+          }
+          if ((r.type === 'parent' || r.type === 'child') && String(r.fromMemberId || '') === p2Id) {
+            p2Children.add(String(r.toMemberId || ''));
+          }
+        });
+        
+        // Find common children
+        const commonChildren = [...p1Children].filter(c => p2Children.has(c));
+        
+        // If no common children, mark for deletion
+        if (commonChildren.length === 0) {
+          console.warn(`[Cleanup] Marriage point ${mp.id} has no common children between ${p1Id} and ${p2Id}`, {
+            parent1Children: [...p1Children],
+            parent2Children: [...p2Children]
+          });
+          orphanedMpIds.push(mp.id);
+        }
+      }
+
+      // Delete orphaned marriage points
+      if (orphanedMpIds.length > 0) {
+        console.log(`[Cleanup] Found ${orphanedMpIds.length} orphaned marriage point(s):`, orphanedMpIds);
+        for (const mpId of orphanedMpIds) {
+          try {
+            await MarriagePoints.delete(activeTree.id, mpId);
+            console.log(`[Cleanup] Deleted orphaned marriage point: ${mpId}`);
+          } catch (err) {
+            console.warn(`[Cleanup] Failed to delete orphaned marriage point ${mpId}:`, err);
+          }
+        }
+      }
+
+      // Reload marriage points after cleanup
+      const cleanedMarriagePoints = await MarriagePoints.list(activeTree.id).catch(() => []);
 
       setMembers(memberList);
       const baseNodes = memberList
@@ -381,7 +492,7 @@ export default function EmbeddedBuilderPage({ user, isAdmin }) {
         }
       });
 
-      const savedMpPos = new Map((savedMarriagePoints || [])
+      const savedMpPos = new Map((cleanedMarriagePoints || [])
         .map(mp => [String(mp.id), mp.position])
         .filter(([, pos]) => hasPosVal(pos))
       );
@@ -705,6 +816,62 @@ export default function EmbeddedBuilderPage({ user, isAdmin }) {
     }
   };
 
+  const createMarriagePointChildRelationships = async ({ mpId, childId, type, label }) => {
+    if (!tree) return;
+
+    const mpIdStr = String(mpId || '');
+    const childIdStr = String(childId || '');
+    if (!mpIdStr.startsWith('mp-') || !childIdStr) {
+      console.warn('Invalid marriage point child connection; cannot resolve parents.', { mpId: mpIdStr, childId: childIdStr });
+      return;
+    }
+
+    const requestedType = type || 'child';
+    if (requestedType === 'spouse' || requestedType === 'sibling') {
+      alert('Spouse/sibling relationships cannot be created from a marriage point. Please connect member-to-member instead.');
+      return;
+    }
+
+    const nextType = (requestedType === 'parent' || requestedType === 'child') ? requestedType : 'child';
+
+    // Parse parent IDs from mp id: mp-<p1|p2>
+    const pairStr = mpIdStr.slice(3);
+    const [p1Id, p2Id] = pairStr
+      .split('|')
+      .map(s => String(s || '').trim())
+      .filter(Boolean);
+    if (!p1Id || !p2Id) {
+      console.warn('Invalid marriage point id; cannot resolve parents.', { mpId: mpIdStr, childId: childIdStr });
+      return;
+    }
+
+    // Remove any existing parent/child relationships between each parent and the child (either direction)
+    // so the new type/optional label is applied consistently.
+    const existing = await Relationships.list(tree.id).catch(() => []);
+    const toDelete = (existing || []).filter(r => {
+      const a = String(r.fromMemberId || '');
+      const b = String(r.toMemberId || '');
+      const endpointsMatch =
+        (a === p1Id && b === childIdStr) ||
+        (a === childIdStr && b === p1Id) ||
+        (a === p2Id && b === childIdStr) ||
+        (a === childIdStr && b === p2Id);
+      const isParentChild = r.type === 'parent' || r.type === 'child';
+      return endpointsMatch && isParentChild;
+    });
+    await Promise.all(toDelete.map(r => Relationships.delete(r.id, tree.id)));
+
+    // Create parent/child relationships from both parents to the child.
+    const payloads = [p1Id, p2Id].map(parentId => ({
+      treeId: tree.id,
+      fromMemberId: parentId,
+      toMemberId: childIdStr,
+      type: nextType,
+      label,
+    }));
+    await Promise.all(payloads.map(p => Relationships.create(p)));
+  };
+
   const handleConnect = async params => {
     if (!tree) return;
     const { source, target, sourceHandle, targetHandle } = params || {};
@@ -716,6 +883,23 @@ export default function EmbeddedBuilderPage({ user, isAdmin }) {
       (e.source === target && e.target === source)
     );
     if (hasEdge) return;
+
+    // Auto-confirm as 'child' if connecting from/to a marriage point (no picker needed)
+    const fromIsMp = String(source).startsWith('mp-');
+    const toIsMp = String(target).startsWith('mp-');
+    if (fromIsMp || toIsMp) {
+      const mpId = fromIsMp ? String(source) : String(target);
+      const childId = fromIsMp ? String(target) : String(source);
+      try {
+        await createMarriagePointChildRelationships({ mpId, childId, type: 'child', label: '' });
+        setPreviewEdge(null);
+        await loadGraph(tree);
+      } catch (err) {
+        console.error('Error creating marriage point child relationship:', err);
+      }
+      return;
+    }
+
     setRelPicker({ open: true, source, target, sourceHandle: sourceHandle || '', targetHandle: targetHandle || '' });
     setPreviewEdge(null);
   };
@@ -748,8 +932,30 @@ export default function EmbeddedBuilderPage({ user, isAdmin }) {
   };
 
   const handleNodeDoubleClick = (_event, node) => {
-    if (!node || node.type !== 'familyNode') return;
+    if (!node || !node.type) return;
     if (!node.id) return;
+
+    // Manual cleanup: allow deleting a marriage point record if it is dangling.
+    // Note: marriage points are also derived from spouse+common-children; if the underlying
+    // relationships still imply a marriage point, it may reappear (without a saved position).
+    if (node.type === 'marriagePoint') {
+      if (!tree) return;
+      const ok = window.confirm(
+        'Delete this marriage point?\n\nThis removes the stored marriage point record/position. If the parents still share common children, it may reappear automatically.'
+      );
+      if (!ok) return;
+      (async () => {
+        try {
+          await MarriagePoints.delete(tree.id, String(node.id));
+          await loadGraph(tree);
+        } catch (err) {
+          console.error('Error deleting marriage point:', err);
+        }
+      })();
+      return;
+    }
+
+    if (node.type !== 'familyNode') return;
     handleSelectMember(node.id);
   };
 
@@ -831,8 +1037,28 @@ export default function EmbeddedBuilderPage({ user, isAdmin }) {
     );
     if (!ok) return;
     try {
+      // Get marriage points to clean up
+      const memberId_str = String(memberId);
+
+      // Get all marriage points and find ones involving this member
+      const allMarriagePoints = await MarriagePoints.list(tree.id);
+      const mpToDelete = allMarriagePoints.filter(mp => {
+        const parents = (mp.parents || []).map(p => String(p));
+        return parents.includes(memberId_str);
+      });
+
+      // Delete all relationships involving this member
       await Relationships.removeByMember(tree.id, memberId);
+      
+      // Delete marriage points that involve this member
+      for (const mp of mpToDelete) {
+        await MarriagePoints.delete(tree.id, mp.id);
+      }
+      
+      // Delete the member
       await Members.delete(memberId, tree.id);
+      
+      // Reload graph
       await loadGraph(tree);
       handleCloseMemberModal();
     } catch (err) {
@@ -860,47 +1086,7 @@ export default function EmbeddedBuilderPage({ user, isAdmin }) {
         const mpId = fromIsMp ? from : to;
         const childId = fromIsMp ? to : from;
 
-        // Marriage point -> child connections must be parent/child relationships (for traversal/highlighting).
-        // Optional labels still work for custom text.
-        const requestedType = type || 'child';
-        if (requestedType === 'spouse' || requestedType === 'sibling') {
-          alert('Spouse/sibling relationships cannot be created from a marriage point. Please connect member-to-member instead.');
-          setRelPicker({ open: false, source: '', target: '', sourceHandle: '', targetHandle: '' });
-          return;
-        }
-
-        const nextType = (requestedType === 'parent' || requestedType === 'child') ? requestedType : 'child';
-
-        // Parse parent IDs from mp id: mp-<p1|p2>
-        const pairStr = mpId.slice(3);
-        const [p1Id, p2Id] = pairStr.split('|').map(s => String(s || '').trim()).filter(Boolean);
-        if (!p1Id || !p2Id || !childId) {
-          console.warn('Invalid marriage point connection; cannot resolve parents.', { mpId, childId });
-          setRelPicker({ open: false, source: '', target: '', sourceHandle: '', targetHandle: '' });
-          return;
-        }
-
-        // Remove any existing parent/child relationships between each parent and the child (either direction)
-        // so the new type/optional label is applied consistently.
-        const existing = await Relationships.list(tree.id).catch(() => []);
-        const toDelete = (existing || []).filter(r => {
-          const a = String(r.fromMemberId || '');
-          const b = String(r.toMemberId || '');
-          const endpointsMatch = (a === p1Id && b === childId) || (a === childId && b === p1Id) || (a === p2Id && b === childId) || (a === childId && b === p2Id);
-          const isParentChild = r.type === 'parent' || r.type === 'child';
-          return endpointsMatch && isParentChild;
-        });
-        await Promise.all(toDelete.map(r => Relationships.delete(r.id, tree.id)));
-
-        // Create parent/child relationships from both parents to the child.
-        const payloads = [p1Id, p2Id].map(parentId => ({
-          treeId: tree.id,
-          fromMemberId: parentId,
-          toMemberId: childId,
-          type: nextType,
-          label,
-        }));
-        await Promise.all(payloads.map(p => Relationships.create(p)));
+        await createMarriagePointChildRelationships({ mpId, childId, type, label });
 
         setRelPicker({ open: false, source: '', target: '', sourceHandle: '', targetHandle: '' });
         setPreviewEdge(null);
@@ -1141,19 +1327,55 @@ export default function EmbeddedBuilderPage({ user, isAdmin }) {
     const ok = window.confirm('Delete this relationship? This cannot be undone.');
     if (!ok) return;
     try {
+      let mpToDelete = null;
+
       // If deleting a child edge from a marriage point, also remove both parent-child docs
       if (editPicker.fromMarriagePoint && editPicker.target && editPicker.source && String(editPicker.source).startsWith('mp-')) {
         const childId = String(editPicker.target);
-        const pairStr = String(editPicker.source).slice(3); // after 'mp-'
+        const mpId = String(editPicker.source);
+        const pairStr = mpId.slice(3); // after 'mp-'
         const [p1Id, p2Id] = pairStr.split('|');
+        
         // Remove any relationships between the child and both parents (both directions, any type)
         await Promise.all([
           Relationships.removeBetweenEndpoints(tree.id, p1Id, childId),
           Relationships.removeBetweenEndpoints(tree.id, p2Id, childId),
         ]);
+        
+        // Mark marriage point for deletion after removing the child edge
+        mpToDelete = mpId;
       }
+      
       // Also delete the specific relationship by id if present
       await Relationships.delete(editPicker.relationshipId, tree.id);
+      
+      // Check if we should delete the marriage point
+      // A marriage point should only exist if both parents have at least one common child
+      if (mpToDelete) {
+        const allRels = await Relationships.list(tree.id);
+        const pairStr = mpToDelete.slice(3); // after 'mp-'
+        const [p1Id, p2Id] = pairStr.split('|');
+        
+        // Find common children between both parents
+        const p1Children = new Set();
+        const p2Children = new Set();
+        
+        allRels.forEach(r => {
+          if ((r.type === 'parent' || r.type === 'child') && r.fromMemberId === p1Id) {
+            p1Children.add(String(r.toMemberId));
+          }
+          if ((r.type === 'parent' || r.type === 'child') && r.fromMemberId === p2Id) {
+            p2Children.add(String(r.toMemberId));
+          }
+        });
+        
+        // If no common children exist, delete the marriage point
+        const commonChildren = [...p1Children].filter(c => p2Children.has(c));
+        if (commonChildren.length === 0) {
+          await MarriagePoints.delete(tree.id, mpToDelete);
+        }
+      }
+      
       setEditPicker({ open: false, relationshipId: '', type: 'custom', label: '' });
       await loadGraph(tree);
     } catch (err) {

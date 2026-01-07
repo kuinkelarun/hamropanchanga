@@ -298,6 +298,14 @@ export const MarriagePoints = {
     const snap = await getDoc(ref);
     return { id: snap.id, ...(snap.data() || {}) };
   },
+
+  async delete(treeId, id) {
+    if (!treeId) throw new Error('treeId is required for MarriagePoints.delete');
+    if (!id) throw new Error('id is required for MarriagePoints.delete');
+    const ref = doc(db, 'trees', treeId, 'marriagePoints', id);
+    await deleteDoc(ref);
+    return { ok: true };
+  },
 };
 
 // Validation, kinship, admin, etc. from the original API will be added later
