@@ -58,6 +58,17 @@ export const Trees = {
     return { id: snap.id, ...snap.data() };
   },
 
+  async update(id, payload) {
+    const ref = doc(db, 'trees', id);
+    const updatePayload = {
+      ...payload,
+      updatedAt: serverTimestamp(),
+    };
+    await updateDoc(ref, updatePayload);
+    const snap = await getDoc(ref);
+    return { id: snap.id, ...(snap.data() || {}) };
+  },
+
   async delete(id) {
     // Soft delete by default (mark deleted = true)
     const ref = doc(db, 'trees', id);

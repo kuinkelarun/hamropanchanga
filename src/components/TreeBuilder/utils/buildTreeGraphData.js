@@ -128,7 +128,8 @@ export function buildTreeGraphData(members = [], relationships = [], marriagePoi
   });
   
   // Track processed node pairs to avoid duplicate edges
-  const seenPairs = new Set();
+  // Use Map to store edge metadata for intelligent deduplication
+  const pairMap = new Map();
   
   // Add direct relationship edges
   if (Array.isArray(relationships)) {
@@ -142,12 +143,14 @@ export function buildTreeGraphData(members = [], relationships = [], marriagePoi
       // Skip if this pair is handled via marriage point
       if (processedPairs.has(`${source}-${target}`)) return;
       
-      // Skip if we've already shown this node pair
-      const pairKey = source < target ? `${source}|${target}` : `${target}|${source}`;
-      if (seenPairs.has(pairKey)) return;
-      seenPairs.add(pairKey);
-      
       const relType = rel.type || 'custom';
+      
+      // For parent/child relationships, deduplicate using sorted IDs (one direction only)
+      // For sibling/spouse/custom, use directional key to preserve both directions with different labels
+      const pairKey = (relType === 'parent' || relType === 'child')
+        ? (source < target ? `${source}|${target}` : `${target}|${source}`)
+        : `${source}|${target}`; // Keep directional for sibling/spouse/custom
+      
       const color = getEdgeColor(relType);
       
       let sourceHandle = 'bottom-source';
@@ -179,7 +182,7 @@ export function buildTreeGraphData(members = [], relationships = [], marriagePoi
         }
       }
       
-      edges.push({
+      const candidate = {
         id: rel.id || `rel-${source}-${target}`,
         source: source,
         target: target,
@@ -189,15 +192,52 @@ export function buildTreeGraphData(members = [], relationships = [], marriagePoi
         data: {
           type: relType,
           label: rel.label || relType,
+          relationshipId: rel.id,
         },
         label: rel.label || relType,
         animated: false,
         selectable: false,
         style: { stroke: color, strokeWidth: 2 },
         markerEnd: { type: 'arrowclosed', color },
-      });
+      };
+      
+      const current = pairMap.get(pairKey);
+      const hasLabel = !!rel.label;
+      
+      if (!current) {
+        // First edge for this pair
+        pairMap.set(pairKey, { edge: candidate, hasLabel, type: relType });
+      } else {
+        // Decide which edge to keep based on preference:
+        // 1. Custom label beats default label
+        // 2. For parent/child: keep the one that respects visual hierarchy
+        let preferThis = false;
+        
+        if (relType === 'parent' || relType === 'child') {
+          // For parent/child, prefer the one with custom label, or keep existing
+          if (hasLabel && !current.hasLabel) preferThis = true;
+          else preferThis = false;
+        } else if (relType === 'sibling' || relType === 'spouse') {
+          // For sibling/spouse, prefer custom labels
+          if (hasLabel && !current.hasLabel) preferThis = true;
+          else if (!hasLabel && current.hasLabel) preferThis = false;
+          else preferThis = false; // Keep existing if both have or don't have labels
+        } else {
+          // For custom relationships, prefer custom labels
+          preferThis = hasLabel && !current.hasLabel;
+        }
+        
+        if (preferThis) {
+          pairMap.set(pairKey, { edge: candidate, hasLabel, type: relType });
+        }
+      }
     });
   }
+  
+  // Add all edges from pairMap
+  pairMap.forEach((value) => {
+    edges.push(value.edge);
+  });
   
   // Add marriage point edges (parent connectors and child edges)
   (marriagePoints || []).forEach(mp => {

@@ -6,7 +6,7 @@ import TreePreview from './TreePreview';
 import MemberModal from './MemberModal';
 import { db } from '../../firebase';
 import { collection, addDoc, serverTimestamp, query, where, getDocs } from 'firebase/firestore';
-import { formatAdDateToNepaliStringWithNumerals } from '../../utils/nepaliDateUtils';
+import { formatAdDateToNepaliStringWithNumerals, convertAdToBs } from '../../utils/nepaliDateUtils';
 
 export default function TreeDetailPage({ user }) {
   const { treeId } = useParams();
@@ -83,6 +83,27 @@ export default function TreeDetailPage({ user }) {
   const handleAddEvent = async ({ name, description, date, personId, repetition, tithi }) => {
     if (!user || !treeId) return;
     try {
+      // For any repeating non-tithi events, store the original Nepali date
+      // so we can match it correctly across repetitions (same logic as NepaliCalendar.js)
+      let nepaliDateForRecurrence = null;
+      if ((repetition === 'yearly' || repetition === 'monthly') && !tithi) {
+        // Extract Nepali date from the AD date selected
+        const [adY, adM, adD] = date.split('-').map(Number);
+        const bsDate = convertAdToBs(adY, adM - 1, adD);
+        nepaliDateForRecurrence = {
+          year: bsDate.year,
+          month: bsDate.month,
+          day: bsDate.day
+        };
+        if (process.env.NODE_ENV !== 'production') {
+          console.log(`[TreeDetailPage] Storing Nepali date for ${repetition} recurrence:`, {
+            nepaliDate: `${bsDate.year}/${bsDate.month}/${bsDate.day}`,
+            adDate: date,
+            title: name
+          });
+        }
+      }
+
       const eventData = {
         title: name,
         description: description || '',
@@ -90,6 +111,8 @@ export default function TreeDetailPage({ user }) {
         repetition,
         // Standardize: always set `tithi` field; null when not used.
         tithi: tithi || null,
+        // Store original Nepali date for yearly/monthly recurrence (non-tithi events)
+        nepaliDateForRecurrence: nepaliDateForRecurrence || null,
         isPublic: false,
         createdBy: user.uid,
         createdByAdmin: false,
@@ -118,12 +141,34 @@ export default function TreeDetailPage({ user }) {
       const { doc, updateDoc } = await import('firebase/firestore');
       const eventRef = doc(db, 'calendarEvents', editingEvent.id);
       
+      // For any repeating non-tithi events, store the original Nepali date
+      // (same logic as handleAddEvent and NepaliCalendar.js)
+      let nepaliDateForRecurrence = null;
+      if ((repetition === 'yearly' || repetition === 'monthly') && !tithi) {
+        const [adY, adM, adD] = date.split('-').map(Number);
+        const bsDate = convertAdToBs(adY, adM - 1, adD);
+        nepaliDateForRecurrence = {
+          year: bsDate.year,
+          month: bsDate.month,
+          day: bsDate.day
+        };
+        if (process.env.NODE_ENV !== 'production') {
+          console.log(`[TreeDetailPage] Updating Nepali date for ${repetition} recurrence:`, {
+            nepaliDate: `${bsDate.year}/${bsDate.month}/${bsDate.day}`,
+            adDate: date,
+            title: name
+          });
+        }
+      }
+      
       const updateData = {
         title: name,
         description: description || '',
         dateKey: date,
         repetition,
         memberId: personId,
+        // Update nepaliDateForRecurrence for recurring events
+        nepaliDateForRecurrence: nepaliDateForRecurrence || null,
       };
       
       // Update tithi info if provided

@@ -970,6 +970,28 @@ export default function NepaliCalendar({ user: propUser, isAdmin, treeMembers = 
       const isPublic = eventType === 'public';
       const createdByAdmin = isAdmin || isSuperUser;
 
+      // For any repeating non-tithi events, we need to store the original Nepali date
+      // so we can match it correctly across repetitions
+      let nepaliDateForRecurrence = null;
+      if ((eventRepetition === 'yearly' || eventRepetition === 'monthly') && !tithiPayload) {
+        // Always store Nepali date for recurrence (user is selecting Nepali date via NepaliDatePicker)
+        // Extract Nepali date from the AD date selected
+        const [adY, adM, adD] = eventDate.split('-').map(Number);
+        const bsDate = convertAdToBs(adY, adM - 1, adD);
+        nepaliDateForRecurrence = {
+          year: bsDate.year,
+          month: bsDate.month,
+          day: bsDate.day
+        };
+        if (isDev) {
+          console.log(`[submitAddEvent] Storing Nepali date for ${eventRepetition} recurrence:`, {
+            nepaliDate: `${bsDate.year}/${bsDate.month}/${bsDate.day}`,
+            adDate: eventDate,
+            title: eventTitle.trim()
+          });
+        }
+      }
+
       const payload = {
         title: eventTitle.trim(),
         description: eventDescription.trim(),
@@ -977,6 +999,8 @@ export default function NepaliCalendar({ user: propUser, isAdmin, treeMembers = 
         // Standardize: always set `tithi` field; null when not used.
         tithi: tithiPayload || null,
         repetition: eventRepetition,
+        // Store original Nepali date for yearly recurrence (non-tithi events)
+        nepaliDateForRecurrence: nepaliDateForRecurrence || null,
         isPublic: isPublic,
         createdBy: user.uid,
         createdByAdmin: createdByAdmin,
@@ -1342,9 +1366,21 @@ export default function NepaliCalendar({ user: propUser, isAdmin, treeMembers = 
     const dateKey = `${adYear}-${String(adMonthZeroBased + 1).padStart(2, '0')}-${String(adDay).padStart(2, '0')}`;
     const targetTithis = findTithisForAdDate(adYear, adMonthZeroBased, adDay) || [];
     
+    // Convert current AD date to Nepali for comparison
+    const currentBsDate = convertAdToBs(adYear, adMonthZeroBased, adDay);
+    
+    if (isDev && currentBsDate) {
+      console.log(`[getEventsForDate] Checking events for AD ${dateKey} = Nepali ${currentBsDate.year}/${currentBsDate.month}/${currentBsDate.day}`);
+    }
+    
     return calendarEvents.filter(event => {
       // 1. Exact Date Match
-      if (event.dateKey === dateKey) return true;
+      if (event.dateKey === dateKey) {
+        if (isDev) {
+          console.log(`  ✓ Exact match: "${event.title}" (dateKey: ${event.dateKey})`);
+        }
+        return true;
+      }
       
       // 2. Recurrence Logic
       if (event.repetition === 'monthly' || event.repetition === 'yearly') {
@@ -1388,16 +1424,58 @@ export default function NepaliCalendar({ user: propUser, isAdmin, treeMembers = 
         }
         
         // B. Solar Date Recurrence (if no tithi info)
-        const eventDateParts = event.dateKey.split('-').map(Number);
-        const eventDay = eventDateParts[2];
-        const eventMonth = eventDateParts[1];
-        
-        if (event.repetition === 'monthly') {
-          return adDay === eventDay;
-        }
-        
-        if (event.repetition === 'yearly') {
-          return adDay === eventDay && (adMonthZeroBased + 1) === eventMonth;
+        // IMPORTANT: For yearly/monthly recurrence, use Nepali dates if available, otherwise fallback to AD dates
+        if (event.nepaliDateForRecurrence && event.nepaliDateForRecurrence.month && event.nepaliDateForRecurrence.day) {
+          // This event was saved with a Nepali date and wants Nepali-based recurrence
+          const origNepaliMonth = event.nepaliDateForRecurrence.month;
+          const origNepaliDay = event.nepaliDateForRecurrence.day;
+          
+          if (event.repetition === 'yearly') {
+            // Match on Nepali month and day, but allow any year
+            const matches = currentBsDate.month === origNepaliMonth && currentBsDate.day === origNepaliDay;
+            if (isDev && matches) {
+              console.log(`  ✓ Yearly Nepali match: "${event.title}" (Nepali ${origNepaliMonth}/${origNepaliDay})`);
+            }
+            return matches;
+          }
+          
+          if (event.repetition === 'monthly') {
+            // Match every 30 days from the original date
+            const eventDateParts = event.dateKey.split('-').map(Number);
+            const eventDate = new Date(eventDateParts[0], eventDateParts[1] - 1, eventDateParts[2]);
+            const currentDate = new Date(adYear, adMonthZeroBased, adDay);
+            const daysDiff = Math.floor((currentDate - eventDate) / (1000 * 60 * 60 * 24));
+            const matches = daysDiff >= 0 && daysDiff % 30 === 0;
+            if (isDev && matches) {
+              console.log(`  ✓ Monthly 30-day match: "${event.title}" (${daysDiff} days from original)`);
+            }
+            return matches;
+          }
+        } else {
+          // Fallback: Use the original AD date from dateKey (for events created before nepaliDateForRecurrence was added)
+          const eventDateParts = event.dateKey.split('-').map(Number);
+          const eventDay = eventDateParts[2];
+          const eventMonth = eventDateParts[1];
+          
+          if (event.repetition === 'monthly') {
+            // Match every 30 days from the original date
+            const eventDate = new Date(eventDateParts[0], eventDateParts[1] - 1, eventDateParts[2]);
+            const currentDate = new Date(adYear, adMonthZeroBased, adDay);
+            const daysDiff = Math.floor((currentDate - eventDate) / (1000 * 60 * 60 * 24));
+            const matches = daysDiff >= 0 && daysDiff % 30 === 0;
+            if (isDev && matches) {
+              console.log(`  ✓ Monthly AD fallback 30-day match: "${event.title}" (${daysDiff} days from original)`);
+            }
+            return matches;
+          }
+          
+          if (event.repetition === 'yearly') {
+            const matches = adDay === eventDay && (adMonthZeroBased + 1) === eventMonth;
+            if (isDev && matches) {
+              console.log(`  ✓ Yearly AD fallback: "${event.title}" (${eventMonth}/${eventDay})`);
+            }
+            return matches;
+          }
         }
       }
       
