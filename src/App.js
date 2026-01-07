@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, useNavigate, useLocation } from 'react-router-dom';
-import { collection, query, where, onSnapshot, doc, getDoc, setDoc, updateDoc, getDocs } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
 import { onAuthStateChanged, signOut, getIdTokenResult } from 'firebase/auth';
 import { auth, signInWithGoogle, db } from './firebase';
 import { SettingsProvider } from './contexts/SettingsContext';
@@ -364,33 +364,53 @@ function AppContent() {
         };
     }, [user, isAdmin]);
 
-    // Load tree members for all user's trees
+    // Load tree members for all user's trees (realtime)
     useEffect(() => {
-        const loadTreeMembers = async () => {
-            if (!user || !trees || trees.length === 0) {
-                setTreeMembers([]);
-                return;
-            }
+        if (!user || !trees || trees.length === 0) {
+            setTreeMembers([]);
+            return;
+        }
 
-            try {
-                const allMembers = [];
-                for (const tree of trees) {
-                    const membersRef = collection(db, 'trees', tree.id, 'members');
-                    const membersSnapshot = await getDocs(membersRef);
-                    const members = membersSnapshot.docs.map(doc => ({
-                        id: doc.id,
-                        treeId: tree.id,
-                        ...doc.data()
-                    }));
-                    allMembers.push(...members);
-                }
-                setTreeMembers(allMembers);
-            } catch (err) {
-                console.error('Error loading tree members:', err);
-            }
+        const unsubs = [];
+        const byTreeId = new Map();
+
+        const publish = () => {
+            const merged = [];
+            byTreeId.forEach((members) => {
+                merged.push(...members);
+            });
+            setTreeMembers(merged);
         };
 
-        loadTreeMembers();
+        trees.forEach((tree) => {
+            const membersRef = collection(db, 'trees', tree.id, 'members');
+            const unsub = onSnapshot(
+                membersRef,
+                (snap) => {
+                    const members = snap.docs.map((docSnap) => ({
+                        id: docSnap.id,
+                        treeId: tree.id,
+                        ...docSnap.data(),
+                    }));
+                    byTreeId.set(tree.id, members);
+                    publish();
+                },
+                (err) => {
+                    console.error('Error loading tree members:', err);
+                }
+            );
+            unsubs.push(unsub);
+        });
+
+        return () => {
+            unsubs.forEach((u) => {
+                try {
+                    u();
+                } catch (e) {
+                    // ignore
+                }
+            });
+        };
     }, [user, trees]);
 
     // Track scroll position when navigating away from home page
@@ -490,10 +510,41 @@ function AppContent() {
         treeId: event.treeId || null
     }));
     
+    const getCreatedAtMillis = (createdAt) => {
+        if (!createdAt) return Number.POSITIVE_INFINITY;
+        // Firestore Timestamp
+        if (typeof createdAt === 'object' && createdAt.seconds != null) {
+            const seconds = Number(createdAt.seconds) || 0;
+            const nanos = Number(createdAt.nanoseconds) || 0;
+            return seconds * 1000 + Math.floor(nanos / 1e6);
+        }
+        // ISO string or Date-parsable
+        const ms = new Date(createdAt).getTime();
+        return Number.isFinite(ms) ? ms : Number.POSITIVE_INFINITY;
+    };
+
+    const derivedPrimaryMemberByTreeId = new Map();
+    (treeMembers || []).forEach((m) => {
+        if (!m?.treeId || !m?.name) return;
+        const ms = getCreatedAtMillis(m.createdAt);
+        const existing = derivedPrimaryMemberByTreeId.get(m.treeId);
+        if (!existing || ms < existing.ms) {
+            derivedPrimaryMemberByTreeId.set(m.treeId, { name: m.name, ms });
+        }
+    });
+
+    const treePrimaryMemberNameById = new Map();
+    (trees || []).forEach((t) => {
+        const fromTree = (t.primaryMemberName || '').trim();
+        const fromMembers = (derivedPrimaryMemberByTreeId.get(t.id)?.name || '').trim();
+        treePrimaryMemberNameById.set(t.id, fromTree || fromMembers || 'Tree Member');
+    });
+
     const allFamilyMembers = treeMembers.map(member => ({
         id: member.id,
         name: member.name,
-        relation: 'Tree Member'
+        relation: treePrimaryMemberNameById.get(member.treeId) || 'Tree Member',
+        treeId: member.treeId,
     }));
 
     return (

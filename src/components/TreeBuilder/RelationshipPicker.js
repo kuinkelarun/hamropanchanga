@@ -82,6 +82,8 @@ export default function RelationshipPicker({
             onChange={e => {
               const nextType = e.target.value;
               setType(nextType);
+              // Optional label should be cleared when relationship type changes.
+              setLabel('');
               if (onTypePreview) onTypePreview(nextType);
             }}
             className="w-full rounded-md border border-gray-300 px-2 py-1.5 text-xs bg-white"

@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { normalizeForCompare } from '../../utils/textNormalize';
 
 // Lightweight member editor modal inspired by the standalone builder's MemberModal.
 // Fields: name (required), nickname, gender, dob, location, notes, photo (URL).
@@ -40,7 +41,7 @@ export default function MemberModal({
     }
   }, [open, member]);
 
-  const normalize = value => String(value || '').trim().toLocaleLowerCase();
+  const normalize = value => normalizeForCompare(value);
 
   const duplicateExact = (() => {
     const nm = normalize(name);
@@ -58,8 +59,8 @@ export default function MemberModal({
   const handleSubmit = event => {
     event.preventDefault();
     const payload = {
-      name: name.trim(),
-      nickname: nickname.trim(),
+      name,
+      nickname,
       gender,
     };
     if (dob && String(dob).trim()) payload.dob = dob;

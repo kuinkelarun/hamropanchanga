@@ -85,7 +85,8 @@ const AddEventForm = ({ onAdd, familyMembers, onCancel, editingEvent }) => {
                     const t = doc.data();
                     if (!t.name.includes(tithiName) || !t.name.includes(pakshaNepali)) return;
                     
-                    const tithiIndex = getTithiIndexByName(tithiName);
+                    const tithiIndex = getTithiIndexByName(tithiName, { fallbackToOne: false });
+                    if (!tithiIndex) return;
                     const lunarMonthName = getTithiLunarMonthName(paksha, tithiIndex, t.startDate);
                     const tithiYearInfo = getTithiYearFromAdDate(t.startDate, null, paksha, tithiIndex);
                     

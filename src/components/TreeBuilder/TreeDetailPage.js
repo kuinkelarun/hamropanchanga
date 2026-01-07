@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { normalizeForCompare } from '../../utils/textNormalize';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Trees, Members, Relationships, MarriagePoints } from './utils/firestoreTreeApi';
 import AddEventForm from '../AddEventForm';
@@ -106,7 +107,9 @@ export default function TreeDetailPage({ user }) {
 
       const eventData = {
         title: name,
+        titleNormalized: normalizeForCompare(name),
         description: description || '',
+        descriptionNormalized: normalizeForCompare(description || ''),
         dateKey: date,
         repetition,
         // Standardize: always set `tithi` field; null when not used.
@@ -163,7 +166,9 @@ export default function TreeDetailPage({ user }) {
       
       const updateData = {
         title: name,
+        titleNormalized: normalizeForCompare(name),
         description: description || '',
+        descriptionNormalized: normalizeForCompare(description || ''),
         dateKey: date,
         repetition,
         memberId: personId,

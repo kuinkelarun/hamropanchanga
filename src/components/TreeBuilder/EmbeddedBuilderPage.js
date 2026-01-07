@@ -65,21 +65,61 @@ function bundleEdges(edgesIn, nodesIn) {
       }
       
       const sorted = [...arr].sort((a, b) => (a.orient === 'vertical' ? a.midY - b.midY : a.midX - b.midX));
-      const primary = sorted[Math.floor(sorted.length / 2)].edge;
+      
+      // Determine preference: edges with custom labels should be prioritized
+      // If multiple have custom labels, or none do, pick middle one as primary
+      let primary = null;
+      
+      // Look for an edge where the label differs from the type (indicating a custom label)
+      const edgesWithCustomLabels = arr.filter(({edge}) => {
+         const type = edge.data?.type || 'custom';
+         const label = edge.label || '';
+         // It's a custom label if it's not empty and not equal to type
+         return label && label !== type;
+      });
+
+      if (edgesWithCustomLabels.length > 0) {
+        // If we have edges with custom labels, prioritize them
+        // If there are multiple, verify if all are same? But grouping collapses them visually
+        // We pick the first one with a custom label as primary to ensure label visibility
+        primary = edgesWithCustomLabels[0].edge;
+      } else {
+        // Fallback to geometric middle
+        primary = sorted[Math.floor(sorted.length / 2)].edge;
+      }
       
       for (const { edge } of arr) {
         if (edge === primary) {
           output.push({ ...edge, data: { ...edge.data, bundlePrimary: true } });
         } else {
-          // Hide duplicate labels for bundled edges
-          output.push({ ...edge, label: '', data: { ...edge.data, bundleMember: true } });
+            // For bundle members, if it has a custom label that differs from primary, we should probably keep it?
+            // But bundling implies they overlap. If they overlap, showing multiple labels is messy.
+            // HOWEVER, the user asked for "labels are visible on all edges".
+            // If they are bundled, they are overlapping.
+            // Maybe we should NOT bundle edges that have distinct custom labels?
+            
+            // Re-evaluating: If I have A->B (Bro) and C->D (Sis) nearby, they bundle.
+            // User wants to see "Bro" and "Sis".
+            // Currently: One label hides.
+            
+            // Fix: Do NOT hide label if it is a custom label!
+            const type = edge.data?.type || 'custom';
+            const label = edge.label || '';
+            const isCustom = label && label !== type;
+            
+            if (isCustom) {
+               output.push({ ...edge, data: { ...edge.data, bundleMember: true } });
+            } else {
+               output.push({ ...edge, label: '', data: { ...edge.data, bundleMember: true } });
+            }
         }
       }
     }
     
     return output;
-  } catch (e) {
-    return edgesIn; // Fallback on error
+  } catch (err) {
+    console.error('Error bundling edges:', err);
+    return edgesIn || [];
   }
 }
 
@@ -394,12 +434,18 @@ export default function EmbeddedBuilderPage({ user, isAdmin }) {
         // Marriage point -> children edges (single logical parent-child with arrow)
         commonChildren.forEach(childId => {
           const edgeId = `e-${marriagePointId}-${childId}`;
-          const labelText = 'child';
+          // Display label should prefer a user-provided optional label if available.
+          // The optional label itself should be blank in edit UI when not provided.
           const color = RELATIONSHIP_COLORS.child || RELATIONSHIP_COLORS.parent;
           // Prefer the first parent's relationship doc for editing/deletion
           const key1 = p1Id < childId ? `${p1Id}|${childId}` : `${childId}|${p1Id}`;
           const key2 = p2Id < childId ? `${p2Id}|${childId}` : `${childId}|${p2Id}`;
           const relForChild = relByPair.get(key1) || relByPair.get(key2) || null;
+
+          const relTypeForDisplay = (relForChild && relForChild.type) ? relForChild.type : 'child';
+          const optionalLabel = (relForChild && typeof relForChild.label === 'string') ? relForChild.label : '';
+          const labelText = (optionalLabel || relTypeForDisplay);
+
           marriageEdges.push({
             id: edgeId,
             source: marriagePointId,
@@ -411,8 +457,9 @@ export default function EmbeddedBuilderPage({ user, isAdmin }) {
             style: { stroke: color, strokeWidth: 2 },
             markerEnd: { type: 'arrowclosed', color },
             data: {
-              type: 'child',
-              label: labelText,
+              type: relTypeForDisplay,
+              // Store the optional label only (blank if not provided)
+              label: optionalLabel,
               fromMarriagePoint: true,
               relationshipId: relForChild ? relForChild.id : undefined,
             },
@@ -444,8 +491,9 @@ export default function EmbeddedBuilderPage({ user, isAdmin }) {
           const current = pairMap.get(sortedKey);
 
           const type = r.type || 'custom';
-          const label = r.label || type;
-          console.log('[loadGraph] Processing relationship:', { id: r.id, type: r.type, resolved: type, label, fromMemberId: src, toMemberId: dst });
+          // Display label uses type when optional label is blank.
+          const displayLabel = (typeof r.label === 'string' && r.label.trim() !== '') ? r.label : type;
+          console.log('[loadGraph] Processing relationship:', { id: r.id, type: r.type, resolved: type, label: displayLabel, fromMemberId: src, toMemberId: dst });
           const edgeColor = RELATIONSHIP_COLORS[type] || RELATIONSHIP_COLORS.custom;
 
           const srcPos = posById.get(String(src)) || { x: 0, y: 0 };
@@ -462,7 +510,7 @@ export default function EmbeddedBuilderPage({ user, isAdmin }) {
           let edgeSourceId = displaySourceId;
           let edgeTargetId = displayTargetId;
           let edgeType = type;
-          let edgeLabel = label;
+          let edgeLabel = displayLabel;
 
           if (type === 'parent' || type === 'child') {
             if (type === 'child') {
@@ -490,6 +538,10 @@ export default function EmbeddedBuilderPage({ user, isAdmin }) {
 
           const edgeId = `${edgeSourceId}-${edgeTargetId}-${edgeType}-${r.id}`;
 
+          // Check if this edge involves a marriage point
+          const involvesMarriagePoint = String(src).startsWith('mp-') || String(dst).startsWith('mp-');
+          const isChildEdge = type === 'child' || type === 'parent';
+
           const candidate = {
             id: edgeId,
             source: edgeSourceId,
@@ -500,7 +552,14 @@ export default function EmbeddedBuilderPage({ user, isAdmin }) {
             targetHandle,
             style: { stroke: edgeColor, strokeWidth: 2 },
             markerEnd: { type: 'arrowclosed', color: edgeColor },
-            data: { type: edgeType, label: edgeLabel, relationshipId: r.id },
+            data: { 
+              type: edgeType, 
+              // Store only the optional label for editing; keep blank when not provided.
+              label: (typeof r.label === 'string' ? r.label : ''),
+              relationshipId: r.id,
+              // Mark edges from/to marriage points as fromMarriagePoint for animation
+              fromMarriagePoint: involvesMarriagePoint && isChildEdge,
+            },
           };
 
           if (!current) {
@@ -788,10 +847,71 @@ export default function EmbeddedBuilderPage({ user, isAdmin }) {
       return;
     }
     try {
+      const from = String(relPicker.source);
+      const to = String(relPicker.target);
+      const fromIsMp = from.startsWith('mp-');
+      const toIsMp = to.startsWith('mp-');
+
+      // If user connects from a marriage point to a child, we should NOT persist mp-* as an endpoint.
+      // Instead, create the real parent/child relationships for both parents so:
+      // - the marriage-point->child visual edge is auto-generated
+      // - highlighting/animation works when clicking other related edges
+      if (fromIsMp || toIsMp) {
+        const mpId = fromIsMp ? from : to;
+        const childId = fromIsMp ? to : from;
+
+        // Marriage point -> child connections must be parent/child relationships (for traversal/highlighting).
+        // Optional labels still work for custom text.
+        const requestedType = type || 'child';
+        if (requestedType === 'spouse' || requestedType === 'sibling') {
+          alert('Spouse/sibling relationships cannot be created from a marriage point. Please connect member-to-member instead.');
+          setRelPicker({ open: false, source: '', target: '', sourceHandle: '', targetHandle: '' });
+          return;
+        }
+
+        const nextType = (requestedType === 'parent' || requestedType === 'child') ? requestedType : 'child';
+
+        // Parse parent IDs from mp id: mp-<p1|p2>
+        const pairStr = mpId.slice(3);
+        const [p1Id, p2Id] = pairStr.split('|').map(s => String(s || '').trim()).filter(Boolean);
+        if (!p1Id || !p2Id || !childId) {
+          console.warn('Invalid marriage point connection; cannot resolve parents.', { mpId, childId });
+          setRelPicker({ open: false, source: '', target: '', sourceHandle: '', targetHandle: '' });
+          return;
+        }
+
+        // Remove any existing parent/child relationships between each parent and the child (either direction)
+        // so the new type/optional label is applied consistently.
+        const existing = await Relationships.list(tree.id).catch(() => []);
+        const toDelete = (existing || []).filter(r => {
+          const a = String(r.fromMemberId || '');
+          const b = String(r.toMemberId || '');
+          const endpointsMatch = (a === p1Id && b === childId) || (a === childId && b === p1Id) || (a === p2Id && b === childId) || (a === childId && b === p2Id);
+          const isParentChild = r.type === 'parent' || r.type === 'child';
+          return endpointsMatch && isParentChild;
+        });
+        await Promise.all(toDelete.map(r => Relationships.delete(r.id, tree.id)));
+
+        // Create parent/child relationships from both parents to the child.
+        const payloads = [p1Id, p2Id].map(parentId => ({
+          treeId: tree.id,
+          fromMemberId: parentId,
+          toMemberId: childId,
+          type: nextType,
+          label,
+        }));
+        await Promise.all(payloads.map(p => Relationships.create(p)));
+
+        setRelPicker({ open: false, source: '', target: '', sourceHandle: '', targetHandle: '' });
+        setPreviewEdge(null);
+        await loadGraph(tree);
+        return;
+      }
+
       const relationshipData = {
         treeId: tree.id,
-        fromMemberId: relPicker.source,
-        toMemberId: relPicker.target,
+        fromMemberId: from,
+        toMemberId: to,
         type: type || 'custom',
         label,
       };
@@ -971,11 +1091,36 @@ export default function EmbeddedBuilderPage({ user, isAdmin }) {
       return;
     }
     try {
-      await Relationships.update(editPicker.relationshipId, {
-        treeId: tree.id,
-        type: type || 'custom',
-        label,
-      });
+      // If editing a marriage-point->child edge, apply the update to both parent-child docs.
+      if (editPicker.fromMarriagePoint && editPicker.target && editPicker.source && (String(editPicker.source).startsWith('mp-') || String(editPicker.target).startsWith('mp-'))) {
+        const requestedType = type || 'child';
+        const normalizedType = (requestedType === 'parent' || requestedType === 'child') ? requestedType : 'child';
+        const mpId = String(editPicker.source).startsWith('mp-') ? String(editPicker.source) : String(editPicker.target);
+        const childId = String(editPicker.source).startsWith('mp-') ? String(editPicker.target) : String(editPicker.source);
+        const pairStr = mpId.slice(3);
+        const [p1Id, p2Id] = pairStr.split('|').map(s => String(s || '').trim()).filter(Boolean);
+
+        const existing = await Relationships.list(tree.id).catch(() => []);
+        const matches = (existing || []).filter(r => {
+          const a = String(r.fromMemberId || '');
+          const b = String(r.toMemberId || '');
+          const endpointsMatch = (a === p1Id && b === childId) || (a === childId && b === p1Id) || (a === p2Id && b === childId) || (a === childId && b === p2Id);
+          const isParentChild = r.type === 'parent' || r.type === 'child';
+          return endpointsMatch && isParentChild;
+        });
+
+        await Promise.all(matches.map(r => Relationships.update(r.id, {
+          treeId: tree.id,
+          type: normalizedType,
+          label,
+        })));
+      } else {
+        await Relationships.update(editPicker.relationshipId, {
+          treeId: tree.id,
+          type: type || 'custom',
+          label,
+        });
+      }
       setEditPicker({ open: false, relationshipId: '', type: 'custom', label: '' });
       await loadGraph(tree);
     } catch (err) {
@@ -1030,21 +1175,27 @@ export default function EmbeddedBuilderPage({ user, isAdmin }) {
       const addMemberSeed = (id) => {
         if (!id) return;
         const s = String(id);
-        if (!s.startsWith('mp-')) seeds.add(s);
+        
+        // If the ID refers to a marriage point, resolve it to its parent members
+        if (s.startsWith('mp-')) {
+          const mpNode = nodes.find(n => String(n.id) === s && n.type === 'marriagePoint');
+          if (mpNode && mpNode.data && Array.isArray(mpNode.data.parents)) {
+            mpNode.data.parents.forEach(p => seeds.add(String(p)));
+          }
+        } else {
+          // Otherwise it's a regular member
+          seeds.add(s);
+        }
       };
 
       if (type === 'parent-connector') {
         // Use parent and both parents of the marriage point as seeds
         addMemberSeed(sourceId);
-        const mpNode = nodes.find(n => String(n.id) === targetId && n.type === 'marriagePoint');
-        const parents = (mpNode && Array.isArray(mpNode.data?.parents)) ? mpNode.data.parents : [];
-        parents.forEach(p => addMemberSeed(p));
+        addMemberSeed(targetId);
       } else {
-        // For parent/child/custom edges, seed from member endpoints
+        // For parent/child/custom edges, seed from endpoints
         addMemberSeed(sourceId);
         addMemberSeed(targetId);
-        // If edge originates from a marriage point to a child, ensure child is a seed
-        if (edge?.data?.fromMarriagePoint) addMemberSeed(targetId);
       }
 
       // BFS over parent/child adjacency (compute distance by levels)
@@ -1085,20 +1236,29 @@ export default function EmbeddedBuilderPage({ user, isAdmin }) {
         const t = String(e.target || '');
         let select = false;
         let animDelayMs = null;
-        if (et === 'parent' || et === 'child') {
-          const sMember = !s.startsWith('mp-');
-          const tMember = !t.startsWith('mp-');
-          if (sMember && tMember) {
-            const ds = dist.get(s);
-            const dt = dist.get(t);
-            select = dist.has(s) && dist.has(t);
-            if (select) animDelayMs = Math.min(ds ?? 0, dt ?? 0) * PHASE_MS;
-          } else if (!sMember && tMember && e?.data?.fromMarriagePoint) {
-            // mp -> child edge: select if child is visited
-            const dt = dist.get(t);
-            select = dist.has(t);
-            if (select) animDelayMs = (dt ?? 0) * PHASE_MS;
+        const isMpEdge = !!e?.data?.fromMarriagePoint || s.startsWith('mp-') || t.startsWith('mp-');
+        if (isMpEdge) {
+          // Marriage point -> child edge: select if child is visited and at least one parent is visited.
+          const mpId = s.startsWith('mp-') ? s : (t.startsWith('mp-') ? t : null);
+          const childId = mpId === s ? t : (mpId === t ? s : null);
+          if (mpId && childId) {
+            const mpNode = nodes.find(n => String(n.id) === mpId && n.type === 'marriagePoint');
+            const parents = (mpNode?.data?.parents || []).map(String);
+            const childVisited = dist.has(String(childId));
+            const parentVisited = parents.some(p => dist.has(String(p)));
+            select = childVisited && parentVisited;
+            if (select) {
+              const childDist = dist.get(String(childId)) ?? Infinity;
+              const parentDists = parents.map(p => dist.get(String(p)) ?? Infinity);
+              const minDist = Math.min(childDist, ...parentDists);
+              animDelayMs = minDist * PHASE_MS;
+            }
           }
+        } else if (et === 'parent' || et === 'child') {
+          const ds = dist.get(s);
+          const dt = dist.get(t);
+          select = dist.has(s) && dist.has(t);
+          if (select) animDelayMs = Math.min(ds ?? 0, dt ?? 0) * PHASE_MS;
         } else if (et === 'parent-connector') {
           // select if parent endpoint is visited
           const parentId = !s.startsWith('mp-') ? s : (!t.startsWith('mp-') ? t : '');

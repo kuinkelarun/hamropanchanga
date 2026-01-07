@@ -15,6 +15,7 @@ import {
   serverTimestamp,
   setDoc,
 } from 'firebase/firestore';
+import { buildSearchFields, normalizeForCompare } from '../../../utils/textNormalize';
 
 // Helper to get trees collection
 function treesCollection() {
@@ -26,11 +27,17 @@ function treesCollection() {
 export const Trees = {
   async create(title, ownerUid, metadata = {}) {
     const colRef = treesCollection();
+    const safeTitle = title || 'My Tree';
     const payload = {
-      title: title || 'My Tree',
+      title: safeTitle,
+      titleNormalized: normalizeForCompare(safeTitle),
       ownerUid: ownerUid || null,
       contact: metadata.contact || '',
       location: metadata.location || '',
+      primaryMemberName: metadata.primaryMemberName || '',
+      contactNormalized: normalizeForCompare(metadata.contact || ''),
+      locationNormalized: normalizeForCompare(metadata.location || ''),
+      primaryMemberNameNormalized: normalizeForCompare(metadata.primaryMemberName || ''),
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
       deleted: false,
@@ -60,8 +67,38 @@ export const Trees = {
 
   async update(id, payload) {
     const ref = doc(db, 'trees', id);
+    const sanitized = { ...(payload || {}) };
+    if (Object.prototype.hasOwnProperty.call(sanitized, 'contact')) {
+      sanitized.contact = String(sanitized.contact || '').trim();
+    }
+    if (Object.prototype.hasOwnProperty.call(sanitized, 'contactInfo')) {
+      sanitized.contactInfo = String(sanitized.contactInfo || '').trim();
+    }
+    if (Object.prototype.hasOwnProperty.call(sanitized, 'location')) {
+      sanitized.location = String(sanitized.location || '').trim();
+    }
+    if (Object.prototype.hasOwnProperty.call(sanitized, 'primaryMemberName')) {
+      sanitized.primaryMemberName = String(sanitized.primaryMemberName || '').trim();
+    }
+    const normalized = {};
+    if (Object.prototype.hasOwnProperty.call(sanitized, 'title')) {
+      normalized.titleNormalized = normalizeForCompare(sanitized.title || '');
+    }
+    if (Object.prototype.hasOwnProperty.call(sanitized, 'contact')) {
+      normalized.contactNormalized = normalizeForCompare(sanitized.contact || '');
+    }
+    if (Object.prototype.hasOwnProperty.call(sanitized, 'contactInfo')) {
+      normalized.contactInfoNormalized = normalizeForCompare(sanitized.contactInfo || '');
+    }
+    if (Object.prototype.hasOwnProperty.call(sanitized, 'location')) {
+      normalized.locationNormalized = normalizeForCompare(sanitized.location || '');
+    }
+    if (Object.prototype.hasOwnProperty.call(sanitized, 'primaryMemberName')) {
+      normalized.primaryMemberNameNormalized = normalizeForCompare(sanitized.primaryMemberName || '');
+    }
     const updatePayload = {
-      ...payload,
+      ...sanitized,
+      ...normalized,
       updatedAt: serverTimestamp(),
     };
     await updateDoc(ref, updatePayload);
@@ -90,8 +127,11 @@ export const Members = {
     const { treeId, ...memberData } = payload;
     if (!treeId) throw new Error('treeId is required for Members.create');
     const colRef = membersCollection(treeId);
+
+    const sanitizedMember = { ...memberData };
     const docRef = await addDoc(colRef, {
-      ...memberData,
+      ...sanitizedMember,
+      ...buildSearchFields(sanitizedMember, ['name', 'nickname', 'notes', 'location']),
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     });
@@ -110,7 +150,13 @@ export const Members = {
     const { treeId, ...memberData } = payload;
     if (!treeId) throw new Error('treeId is required for Members.update');
     const ref = doc(db, 'trees', treeId, 'members', id);
-    await updateDoc(ref, { ...memberData, updatedAt: serverTimestamp() });
+
+    const sanitizedMember = { ...memberData };
+    await updateDoc(ref, {
+      ...sanitizedMember,
+      ...buildSearchFields(sanitizedMember, ['name', 'nickname', 'notes', 'location']),
+      updatedAt: serverTimestamp(),
+    });
     const snap = await getDoc(ref);
     return { id: snap.id, ...(snap.data() || {}) };
   },

@@ -767,18 +767,34 @@ export const tithiNameMapping = {
   'Ekadashi': 11, 'Dwadashi': 12, 'Trayodashi': 13, 'Chaturdashi': 14,
   'Purnima': 15, 'Amavasya': 15, 'Aunsi': 15,
   'प्रतिपदा': 1, 'द्वितीया': 2, 'तृतीया': 3, 'चतुर्थी': 4, 'पंचमी': 5,
+  'पञ्चमी': 5,
   'षष्ठी': 6, 'सप्तमी': 7, 'अष्टमी': 8, 'नवमी': 9, 'दशमी': 10,
   'एकादशी': 11, 'द्वादशी': 12, 'त्रयोदशी': 13, 'चतुर्दशी': 14,
-  'पूर्णिमा': 15, 'औंसी': 15
+  'पूर्णिमा': 15, 'औंसी': 15, 'अमावस्या': 15
 };
 
-export function getTithiIndexByName(name) {
-  if (!name) return 1;
-  const parts = name.split(/[\s-]+/);
+export function getTithiIndexByName(name, options = {}) {
+  const { fallbackToOne = true } = options;
+
+  if (!name) return fallbackToOne ? 1 : null;
+
+  // Normalize to improve matching across punctuation/variants.
+  // Keep Devanagari + ASCII letters; strip common punctuation.
+  const normalized = String(name)
+    .replace(/[()[\]{},.]/g, ' ')
+    .replace(/["'“”]/g, ' ')
+    .replace(/[:;/\\|]/g, ' ')
+    .replace(/[\u200c\u200d]/g, '')
+    .trim();
+
+  const parts = normalized.split(/[\s-]+/).map(p => p.trim()).filter(Boolean);
   for (const part of parts) {
+    const cleaned = part.replace(/[^A-Za-z\u0900-\u097F]/g, '');
+    if (tithiNameMapping[cleaned]) return tithiNameMapping[cleaned];
     if (tithiNameMapping[part]) return tithiNameMapping[part];
   }
-  return 1;
+
+  return fallbackToOne ? 1 : null;
 }
 
 export function getTithiYearFromAdDate(adDateStr, tithiLookupFn = null, paksha = null, pakshaIndex = null) {
