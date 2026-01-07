@@ -4,7 +4,7 @@ import { useSettings } from '../contexts/SettingsContext';
 import { formatNepaliDate, formatEnglishDate, formatNepaliMonthYear, formatGregorianMonthYear } from '../utils/nepaliDateUtils';
 
 const LandingPageEventsSection = ({ events, familyMembers, onDoubleClickEvent }) => {
-    const [eventFilter, setEventFilter] = useState('upcoming');
+    const [eventFilter, setEventFilter] = useState('next-week');
     const { isNepaliCalendar } = useSettings(); // Use global settings
 
     // Helper function to calculate the next occurrence of a repeating event

@@ -395,9 +395,10 @@ export default function TreeDetailPage({ user }) {
                 {tree.contact && (
                   <a 
                     href={`tel:${tree.contact.replace(/\D/g, '')}`}
-                    className="hover:text-blue-600 transition-colors"
+                    className="inline-flex items-center gap-1 hover:text-blue-600 transition-colors max-w-fit"
+                    title={tree.contact}
                   >
-                    📞 {tree.contact}
+                    📞 <span className="truncate">{tree.contact}</span>
                   </a>
                 )}
               </div>

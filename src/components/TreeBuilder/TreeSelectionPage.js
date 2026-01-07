@@ -351,10 +351,11 @@ export default function TreeSelectionPage({ user, isAdmin }) {
                     {tree.contact && (
                       <a 
                         href={`tel:${tree.contact.replace(/\D/g, '')}`}
-                        className="text-sm text-gray-600 mb-2 block hover:text-blue-600 transition-colors"
+                        className="inline-flex items-center gap-1 text-sm text-gray-600 mb-2 hover:text-blue-600 transition-colors max-w-fit"
+                        title={tree.contact}
                         onClick={(e) => e.stopPropagation()}
                       >
-                        📞 {tree.contact}
+                        📞 <span className="truncate">{tree.contact}</span>
                       </a>
                     )}
                   </div>
@@ -406,10 +407,11 @@ export default function TreeSelectionPage({ user, isAdmin }) {
                     {tree.contact && (
                       <a 
                         href={`tel:${tree.contact.replace(/\D/g, '')}`}
-                        className="text-sm text-gray-600 mb-2 block hover:text-blue-600 transition-colors"
+                        className="inline-flex items-center gap-1 text-sm text-gray-600 mb-2 hover:text-blue-600 transition-colors max-w-fit"
+                        title={tree.contact}
                         onClick={(e) => e.stopPropagation()}
                       >
-                        📞 {tree.contact}
+                        📞 <span className="truncate">{tree.contact}</span>
                       </a>
                     )}
                   </div>

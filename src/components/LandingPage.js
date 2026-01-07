@@ -156,10 +156,11 @@ const LandingPage = ({ user, isAdmin, trees = [], treeMembers = [], events, fami
                                             {tree.contactInfo && (
                                                 <a 
                                                     href={`tel:${tree.contactInfo.replace(/\D/g, '')}`}
-                                                    className="text-sm text-gray-500 mt-1 block hover:text-blue-600 transition-colors"
+                                                    className="inline-flex items-center gap-1 text-sm text-gray-500 mt-1 hover:text-blue-600 transition-colors max-w-fit"
+                                                    title={tree.contactInfo}
                                                     onClick={(e) => e.stopPropagation()}
                                                 >
-                                                    📞 {tree.contactInfo}
+                                                    📞 <span className="truncate">{tree.contactInfo}</span>
                                                 </a>
                                             )}
                                             {tree.location && (
