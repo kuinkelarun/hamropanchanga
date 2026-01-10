@@ -725,7 +725,7 @@ export default function TreeDetailPage({ user }) {
             onClick={e => e.stopPropagation()}
           >
             <div className="flex items-center justify-between border-b px-4 py-3 rounded-t-2xl bg-gradient-to-r from-slate-400 to-slate-500 text-white">
-              <h3 className="text-sm font-semibold">{getMemberName(previewingEvent.memberId) || 'Event Details'}</h3>
+              <h3 className="text-sm font-semibold">{previewingEvent.title || 'Event Details'}</h3>
               <button
                 type="button"
                 onClick={() => {
@@ -740,12 +740,14 @@ export default function TreeDetailPage({ user }) {
             </div>
             
             <div className="px-4 py-4 space-y-3 max-h-[70vh] overflow-y-auto">
-              <div>
-                <label className="text-xs font-semibold text-gray-700">Title</label>
-                <div className="mt-1 px-3 py-2 bg-white text-gray-900 rounded-md text-sm border border-gray-300">
-                  {previewingEvent.title || '—'}
+              {previewingEvent.memberId && (
+                <div>
+                  <label className="text-xs font-semibold text-gray-700">Associated Member</label>
+                  <div className="mt-1 px-3 py-2 bg-white text-gray-900 rounded-md text-sm border border-gray-300">
+                    {getMemberName(previewingEvent.memberId) || '—'}
+                  </div>
                 </div>
-              </div>
+              )}
 
               <div>
                 <label className="text-xs font-semibold text-gray-700">Description</label>
