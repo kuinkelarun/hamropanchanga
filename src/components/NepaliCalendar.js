@@ -1748,6 +1748,32 @@ function getTithiEndMillis(tithi){
   }
 }
 
+  // Format tithi display for calendar day cards with paksha information
+  // Handles edge cases where paksha changes within the same day
+  const formatTithiForDayCard = (sortedParsedTithis) => {
+    if (sortedParsedTithis.length === 0) return '';
+    
+    if (sortedParsedTithis.length === 1) {
+      const t = sortedParsedTithis[0];
+      return `${t.pakshya} ${t.tithi}`;
+    }
+    
+    // Multiple tithis - check if paksha changes
+    const pakshyaSet = new Set(sortedParsedTithis.map(t => t.pakshya));
+    
+    if (pakshyaSet.size === 1) {
+      // Same paksha for all tithis: "कृष्णपक्ष पञ्चमी / षष्ठी"
+      const pakshya = sortedParsedTithis[0].pakshya;
+      const tithiNames = sortedParsedTithis.map(t => t.tithi).join(' / ');
+      return `${pakshya} ${tithiNames}`;
+    } else {
+      // Paksha changes: "कृष्णपक्ष औंसी / शुक्लपक्ष प्रतिपदा"
+      return sortedParsedTithis
+        .map(t => `${t.pakshya} ${t.tithi}`)
+        .join(' / ');
+    }
+  };
+
 function compareTithisByStart(a,b){
   const sa = getTithiStartMillis(a);
   const sb = getTithiStartMillis(b);
@@ -1802,11 +1828,7 @@ function compareTithisByStart(a,b){
             </div>
             {parsedTithis.length > 0 && (
               <div className="nt-tithi-bottom" aria-hidden>
-                {parsedTithis
-                  .sort(compareTithisByStart)
-                  .map(t => t.tithi)
-                  .join(' / ')
-                }
+                {formatTithiForDayCard(parsedTithis.sort(compareTithisByStart))}
               </div>
             )}
           </div>
@@ -1885,11 +1907,7 @@ function compareTithisByStart(a,b){
           {/* Tithi at bottom left */}
           {parsedTithis.length > 0 && (
             <div className="nt-tithi-bottom" aria-hidden>
-              {parsedTithis
-                .sort(compareTithisByStart)
-                .map(t => t.tithi)
-                .join(' / ')
-              }
+              {formatTithiForDayCard(parsedTithis.sort(compareTithisByStart))}
             </div>
           )}
         </div>
@@ -1949,11 +1967,7 @@ function compareTithisByStart(a,b){
           </div>
           {parsedTithis.length > 0 && (
             <div className="nt-tithi-bottom" aria-hidden>
-              {parsedTithis
-                .sort(compareTithisByStart)
-                .map(t => t.tithi)
-                .join(' / ')
-              }
+              {formatTithiForDayCard(parsedTithis.sort(compareTithisByStart))}
             </div>
           )}
         </div>
