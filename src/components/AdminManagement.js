@@ -155,6 +155,7 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
   const [eventEntryMode, setEventEntryMode] = useState('date'); // 'date' or 'tithi'
   const [newRecordTithiMonth, setNewRecordTithiMonth] = useState('');
   const [newRecordTithiName, setNewRecordTithiName] = useState('');
+  const [adminCalendarData, setAdminCalendarData] = useState(null);
   const fileInputRef = useRef(null);
   const hasLoadedData = useRef(false);
 
@@ -302,6 +303,31 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
       setLoading(false);
     });
   }, [canAccessAdminPage, loadTithis, loadEvents]);
+
+  // Load admin calendar data for validation
+  useEffect(() => {
+    async function loadAdminCalendar() {
+      try {
+        const calendarSnap = await getDocs(collection(db, 'nepaliCalendarYears'));
+        if (calendarSnap.size > 0) {
+          const calendarData = {};
+          calendarSnap.docs.forEach(doc => {
+            const year = parseInt(doc.id);
+            const yearData = doc.data() || {};
+            calendarData[year] = {
+              startAdDate: yearData.startAdDate,
+              daysInMonths: yearData.daysInMonths
+            };
+          });
+          setAdminCalendarData(calendarData);
+          console.log('Loaded admin calendar data for years:', Object.keys(calendarData).sort((a, b) => a - b).join(', '));
+        }
+      } catch (error) {
+        console.error('Error loading admin calendar data:', error);
+      }
+    }
+    loadAdminCalendar();
+  }, []);
 
   // Reset filters when switching tabs
   useEffect(() => {
@@ -607,6 +633,26 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
     setAutoStatus('🔄 Calculating Tithis...');
 
     try {
+      // Load calendar configuration from Firestore
+      let adminCalendarData = null;
+      try {
+        const calendarSnap = await getDocs(collection(db, 'nepaliCalendarYears'));
+        if (!calendarSnap.empty) {
+          adminCalendarData = {};
+          calendarSnap.docs.forEach(doc => {
+            const year = parseInt(doc.id);
+            adminCalendarData[year] = {
+              startAdDate: doc.data().startAdDate,
+              daysInMonths: doc.data().daysInMonths || []
+            };
+          });
+          console.log('Loaded admin calendar data for years:', Object.keys(adminCalendarData).sort((a, b) => a - b).join(', '));
+        }
+      } catch (err) {
+        console.warn('Could not load admin calendar data from Firestore:', err);
+        // Will use default bsCalendarData if this fails
+      }
+      
       // We'll collect candidate rows with parsed UTC instants and epoch ms,
       // then sort them chronologically before exporting.
       const candidateRows = []; // { startIsoUtc, endIsoUtc, startEpoch, row }
@@ -674,16 +720,31 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
         }
 
         // Formatting
-        const startFmt = formatNepaliDateTime(startTimeUTC);
-        const endFmt = formatNepaliDateTime(endTimeUTC);
-        const startNepaliDate = formatAdDateToNepaliStringWithNumerals(startFmt.adDateIso);
-        const endNepaliDate = formatAdDateToNepaliStringWithNumerals(endFmt.adDateIso);
+        const startFmt = formatNepaliDateTime(startTimeUTC, adminCalendarData);
+        const endFmt = formatNepaliDateTime(endTimeUTC, adminCalendarData);
+        const startNepaliDate = formatAdDateToNepaliStringWithNumerals(startFmt.adDateIso, adminCalendarData);
+        const endNepaliDate = formatAdDateToNepaliStringWithNumerals(endFmt.adDateIso, adminCalendarData);
         const startTimeStr = startFmt.time24;
         const endTimeStr = endFmt.time24;
 
         const pakshya = finalTithiResult.paksha === 'Shukla' ? 'शुक्लपक्ष' : 'कृष्णपक्ष';
         const tithiNames = finalTithiResult.paksha === 'Shukla' ? shuklaNames : krishnaNames;
         const tithiName = tithiNames[finalTithiResult.pakshaIndex - 1] || `Tithi ${finalTithiResult.pakshaIndex}`;
+        
+        // DEBUG: Log year boundary crossing tithis
+        if (startFmt.adDateIso && endFmt.adDateIso) {
+          const startAdYear = startFmt.adDateIso.split('-')[0];
+          const endAdYear = endFmt.adDateIso.split('-')[0];
+          const startBsYear = startNepaliDate.split('-')[0];
+          const endBsYear = endNepaliDate.split('-')[0];
+          
+          if (startAdYear !== endAdYear || startBsYear !== endBsYear) {
+            console.log(`[YEAR BOUNDARY CROSSING]`);
+            console.log(`  Start UTC: ${startTimeUTC.toISOString()}, AD: ${startFmt.adDateIso}, BS: ${startNepaliDate}`);
+            console.log(`  End UTC:   ${endTimeUTC.toISOString()}, AD: ${endFmt.adDateIso}, BS: ${endNepaliDate}`);
+            console.log(`  Tithi: ${tithiName}`);
+          }
+        }
 
         const startIso = startTimeUTC.toISOString();
         const endIso = endTimeUTC.toISOString();
@@ -693,7 +754,7 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
         const isDuplicate = seenStartIsos.has(startIso);
 
         // Include Nepal local AD date and BS date in diagnostics for boundary validation
-        const startFmtLocal = formatNepaliDateTime(startTimeUTC);
+        const startFmtLocal = formatNepaliDateTime(startTimeUTC, adminCalendarData);
         diagnostics.push({
           seedDateUtc: current.toISOString(),
           tithiStartUtc: startIso,
@@ -934,8 +995,8 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
       }
 
       // Parse Nepali dates to AD format
-      const startDate = startDateRaw ? parseNepaliDate(startDateRaw) : null;
-      const endDate = endDateRaw ? parseNepaliDate(endDateRaw) : null;
+      const startDate = startDateRaw ? parseNepaliDate(startDateRaw, adminCalendarData) : null;
+      const endDate = endDateRaw ? parseNepaliDate(endDateRaw, adminCalendarData) : null;
 
       if (startDateRaw && !startDate) {
         errors.push('Start Date must be in YYYY-MM-DD format (Nepali)');
@@ -1071,7 +1132,7 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
       if (!addOrReplace) errors.push('AddOrReplace is required');
 
       // Parse Nepali date to AD format
-      const dateKey = dateRaw ? parseNepaliDate(dateRaw) : null;
+      const dateKey = dateRaw ? parseNepaliDate(dateRaw, adminCalendarData) : null;
 
       if (dateRaw && !dateKey) {
         errors.push('Date must be in YYYY-MM-DD format (Nepali)');

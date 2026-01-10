@@ -12,6 +12,7 @@ import NepaliDatePicker from './NepaliDatePicker';
 import { 
   getTithiLunarMonthName, 
   getTithiIndexByName, 
+  getTithiYearFromAdDate,
   nepaliMonths as utilNepaliMonths, 
   formatAdDateToNepaliStringWithNumerals,
   convertAdToBs,
@@ -1368,6 +1369,97 @@ export default function NepaliCalendar({ user: propUser, isAdmin, treeMembers = 
     }
   }
 
+  // State to cache resolved tithi event dates for different years
+  const [tithiEventDateCache, setTithiEventDateCache] = useState({});
+
+  // Helper function to resolve yearly tithi events - builds a cache key
+  const getTithiEventCacheKey = useCallback((eventId, bsYear) => {
+    return `${eventId}_${bsYear}`;
+  }, []);
+
+  // Effect to resolve yearly tithi events for the current viewing year
+  useEffect(() => {
+    const resolveYearlyTithiEventsForYear = async () => {
+      const yearlyTithiEvents = calendarEvents.filter(e => e.repetition === 'yearly' && e.tithi);
+      
+      if (yearlyTithiEvents.length === 0) return;
+      
+      const newCache = { ...tithiEventDateCache };
+      
+      for (const event of yearlyTithiEvents) {
+        const cacheKey = getTithiEventCacheKey(event.id, currentBsYear);
+        
+        // Skip if already cached
+        if (cacheKey in newCache) continue;
+        
+        try {
+          const { paksha, name, month: expectedTithiMonth } = event.tithi;
+          
+          // Build the full tithi name to search for
+          let pakshaNepali = paksha;
+          if (paksha === 'Shukla' || paksha === 'शुक्ल') {
+            pakshaNepali = 'शुक्लपक्ष';
+          } else if (paksha === 'Krishna' || paksha === 'कृष्ण') {
+            pakshaNepali = 'कृष्णपक्ष';
+          }
+          const fullName = `${pakshaNepali} ${name}`;
+          
+          // Query Firestore for tithis matching this name
+          const q = query(collection(db, 'tithis'), where('name', '>=', fullName), where('name', '<=', fullName + '\uf8ff'));
+          const snapshot = await getDocs(q);
+          
+          // Find the tithi that falls in the target year with matching lunar month
+          let foundDate = null;
+          snapshot.docs.forEach(doc => {
+            const t = doc.data();
+            if (!t.name.includes(name) || !t.name.includes(pakshaNepali)) return;
+            
+            const tithiIndex = getTithiIndexByName(name, { fallbackToOne: false });
+            if (!tithiIndex) return;
+            
+            // Get the date of this tithi from Firestore
+            const tithiStartDate = t.startDate; // Should be in YYYY-MM-DD format
+            if (!tithiStartDate) return;
+            
+            // Check if this tithi is in the target year and matches the expected lunar month
+            const tithiYear = getTithiYearFromAdDate(tithiStartDate, null, paksha, tithiIndex).tithiYear;
+            
+            // Check if the lunar month matches
+            const lunarMonth = getTithiLunarMonthName(paksha, tithiIndex, tithiStartDate);
+            
+            let expectedMonth = expectedTithiMonth;
+            if (typeof expectedMonth === 'number') {
+              expectedMonth = nepaliMonths[expectedMonth - 1];
+            }
+            
+            if (tithiYear === currentBsYear && lunarMonth === expectedMonth) {
+              foundDate = tithiStartDate;
+            }
+          });
+          
+          newCache[cacheKey] = foundDate || event.dateKey;
+        } catch (err) {
+          console.error(`Error resolving yearly tithi event ${event.id}:`, err);
+          newCache[cacheKey] = event.dateKey;
+        }
+      }
+      
+      setTithiEventDateCache(newCache);
+    };
+    
+    resolveYearlyTithiEventsForYear();
+  }, [currentBsYear, calendarEvents, getTithiEventCacheKey]);
+
+  // Helper function to get the resolved date for a yearly tithi event
+  const getResolvedTithiEventDate = useCallback((event) => {
+    if (!event.tithi || event.repetition !== 'yearly') {
+      return event.dateKey;
+    }
+    
+    const cacheKey = getTithiEventCacheKey(event.id, currentBsYear);
+    return tithiEventDateCache[cacheKey] || event.dateKey;
+  }, [currentBsYear, tithiEventDateCache, getTithiEventCacheKey]);
+
   // Helper function to get events for a specific date
   const getEventsForDate = useCallback((adYear, adMonthZeroBased, adDay) => {
     const dateKey = `${adYear}-${String(adMonthZeroBased + 1).padStart(2, '0')}-${String(adDay).padStart(2, '0')}`;
@@ -1381,8 +1473,14 @@ export default function NepaliCalendar({ user: propUser, isAdmin, treeMembers = 
     }
     
     return calendarEvents.filter(event => {
+      // For yearly repeating tithi events, resolve the date for the current viewing year
+      let eventDateKeyToMatch = event.dateKey;
+      if (event.repetition === 'yearly' && event.tithi && currentBsDate) {
+        eventDateKeyToMatch = getResolvedTithiEventDate(event);
+      }
+      
       // 1. Exact Date Match
-      if (event.dateKey === dateKey) {
+      if (eventDateKeyToMatch === dateKey) {
         if (isDev) {
           console.log(`  ✓ Exact match: "${event.title}" (dateKey: ${event.dateKey})`);
         }
@@ -1519,6 +1617,22 @@ export default function NepaliCalendar({ user: propUser, isAdmin, treeMembers = 
     
     return { publicEvents, personalEvents };
   }, [user]);
+
+  // Helper function to format event title with tithi information
+  const formatEventWithTithi = useCallback((event) => {
+    let display = event.title;
+    if (event.tithi) {
+      // Normalize paksha to Nepali if it's in English (legacy data)
+      let pakshaDisplay = event.tithi.paksha;
+      if (pakshaDisplay === 'Shukla' || pakshaDisplay === 'शुक्ल') {
+        pakshaDisplay = 'शुक्लपक्ष';
+      } else if (pakshaDisplay === 'Krishna' || pakshaDisplay === 'कृष्ण') {
+        pakshaDisplay = 'कृष्णपक्ष';
+      }
+      display += ` (${event.tithi.month} ${pakshaDisplay} ${event.tithi.name})`;
+    }
+    return display;
+  }, []);
 
   // Helper function to parse pakshya and tithi from full tithi name
   const parseTithiName = (fullName) => {
@@ -1689,7 +1803,7 @@ function compareTithisByStart(a,b){
             <div className="nt-summary" aria-hidden>
               {events.length > 0 && (
                 <div className="nt-summary-item event">
-                  {events.map(e => e.title).join(' | ')}
+                  {events.map(e => formatEventWithTithi(e)).join(' | ')}
                 </div>
               )}
             </div>
@@ -1762,12 +1876,12 @@ function compareTithisByStart(a,b){
                 <>
                   {publicEvents.length > 0 && (
                     <div className="nt-summary-item event-public">
-                      {publicEvents.map(e => e.title).join(' | ')}
+                      {publicEvents.map(e => formatEventWithTithi(e)).join(' | ')}
                     </div>
                   )}
                   {personalEvents.length > 0 && (
                     <div className="nt-summary-item event-personal">
-                      {personalEvents.map(e => e.title).join(' | ')}
+                      {personalEvents.map(e => formatEventWithTithi(e)).join(' | ')}
                     </div>
                   )}
                 </>
@@ -1828,12 +1942,12 @@ function compareTithisByStart(a,b){
                 <>
                   {publicEvents.length > 0 && (
                     <div className="nt-summary-item event-public">
-                      {publicEvents.map(e => e.title).join(' | ')}
+                      {publicEvents.map(e => formatEventWithTithi(e)).join(' | ')}
                     </div>
                   )}
                   {personalEvents.length > 0 && (
                     <div className="nt-summary-item event-personal">
-                      {personalEvents.map(e => e.title).join(' | ')}
+                      {personalEvents.map(e => formatEventWithTithi(e)).join(' | ')}
                     </div>
                   )}
                 </>
@@ -2090,10 +2204,36 @@ function compareTithisByStart(a,b){
                 const memberName = getTreeMemberName(event.treeId, event.memberId);
                 const isTreeEvent = !!event.treeId;
 
-                // Use the same AD->BS formatting as Tree Detail page, based on event.dateKey
-                const eventNepaliDate = event.dateKey 
-                  ? formatAdDateToNepaliStringWithNumerals(event.dateKey) 
+                // For tithi events spanning multiple days, show the date being viewed (activeDate)
+                // For other events, use their dateKey or resolved date
+                let displayDateKey = event.dateKey;
+                if (event.tithi) {
+                  // For tithi-based events, show the activeDate (day being viewed)
+                  // since tithis can span multiple days
+                  displayDateKey = activeDate;
+                } else if (event.repetition === 'yearly') {
+                  // For non-tithi yearly repeating events, use the resolved date
+                  displayDateKey = getResolvedTithiEventDate(event);
+                }
+
+                // Use the same AD->BS formatting as Tree Detail page, based on display dateKey
+                const eventNepaliDate = displayDateKey 
+                  ? formatAdDateToNepaliStringWithNumerals(displayDateKey) 
                   : '';
+                
+                // Format tithi display if present
+                let tithiDisplay = '';
+                if (event.tithi) {
+                  // Normalize paksha to Nepali if it's in English (legacy data)
+                  let pakshaDisplay = event.tithi.paksha;
+                  if (pakshaDisplay === 'Shukla' || pakshaDisplay === 'शुक्ल') {
+                    pakshaDisplay = 'शुक्लपक्ष';
+                  } else if (pakshaDisplay === 'Krishna' || pakshaDisplay === 'कृष्ण') {
+                    pakshaDisplay = 'कृष्णपक्ष';
+                  }
+                  tithiDisplay = ` (${event.tithi.month} ${pakshaDisplay} ${event.tithi.name})`;
+                }
+                
                 return (
                   <div 
                     key={event.id} 
@@ -2125,11 +2265,11 @@ function compareTithisByStart(a,b){
                             For: {memberName}
                           </div>
                         )}
-                        {event.dateKey && (
+                        {displayDateKey && (
                           <div style={{ marginTop: '0.5rem', fontSize: '0.875rem', color: '#666' }}>
-                            📅 {event.dateKey}
+                            📅 {displayDateKey}
                             {eventNepaliDate && (
-                              <div style={{ color: '#7c3aed', marginTop: '0.25rem', fontWeight: '500' }}>🗓️ {eventNepaliDate}</div>
+                              <div style={{ color: '#7c3aed', marginTop: '0.25rem', fontWeight: '500' }}>🗓️ {eventNepaliDate}{tithiDisplay}</div>
                             )}
                           </div>
                         )}

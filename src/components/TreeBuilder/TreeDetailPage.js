@@ -236,6 +236,20 @@ export default function TreeDetailPage({ user }) {
     return member ? (member.name || 'Unknown') : 'Unknown';
   };
 
+  const getTithiDisplayString = (tithiInfo) => {
+    if (!tithiInfo) return '';
+    const { month, paksha, name } = tithiInfo;
+    if (!month || !paksha || !name) return '';
+    // Normalize paksha to Nepali if it's in English (legacy data)
+    let pakshaDisplay = paksha;
+    if (paksha === 'Shukla' || paksha === 'शुक्ल') {
+      pakshaDisplay = 'शुक्लपक्ष';
+    } else if (paksha === 'Krishna' || paksha === 'कृष्ण') {
+      pakshaDisplay = 'कृष्णपक्ष';
+    }
+    return ` (${month} ${pakshaDisplay} ${name})`;
+  };
+
   const handleAddMember = () => {
     setEditingMember(null);
     setMemberModalOpen(true);
@@ -367,6 +381,7 @@ export default function TreeDetailPage({ user }) {
   const familyMembersForForm = members.map(m => ({
     id: m.id,
     name: m.name || 'Unknown',
+    nickname: m.nickname || '',
     relation: ''
   }));
 
@@ -502,6 +517,7 @@ export default function TreeDetailPage({ user }) {
                 <div className="space-y-3">
                   {events.map(event => {
                     const nepaliDate = event.dateKey ? formatAdDateToNepaliStringWithNumerals(event.dateKey) : '';
+                    const tithiDisplay = getTithiDisplayString(event.tithi);
                     return (
                       <div key={event.id} className="bg-gradient-to-r from-purple-50 to-pink-50 p-4 rounded-lg border border-purple-200">
                         <div className="flex items-start justify-between">
@@ -512,7 +528,7 @@ export default function TreeDetailPage({ user }) {
                             )}
                             <p className="text-sm text-gray-600 mt-1">📅 {event.dateKey}</p>
                             {nepaliDate && (
-                              <p className="text-sm text-purple-600 mt-0.5">🗓️ {nepaliDate}</p>
+                              <p className="text-sm text-purple-600 mt-0.5">🗓️ {nepaliDate}{tithiDisplay}</p>
                             )}
                             {event.repetition && event.repetition !== 'none' && (
                               <span className="inline-block text-xs px-2 py-0.5 bg-purple-200 text-purple-700 rounded-full mt-2">
