@@ -1,19 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { normalizeForCompare } from '../../utils/textNormalize';
 
-// Nepali numerals for conversion
-const nepaliNumbers = ["०","१","२","३","४","५","६","७","८","९"];
-
-// Convert Nepali numerals to English
-const normalizeNepaliNumerals = (str) => {
-  if (!str) return str;
-  let result = str;
-  for (let i = 0; i < 10; i++) {
-    result = result.replace(new RegExp(nepaliNumbers[i], 'g'), i.toString());
-  }
-  return result;
-};
-
 // Validate and filter to allow only English (0-9) or Nepali numerals (०-९)
 const validateNumericInput = (value) => {
   if (!value) return '';
@@ -56,6 +43,10 @@ export default function MemberModal({
   const [notes, setNotes] = useState('');
   const [location, setLocation] = useState('');
   const [gender, setGender] = useState('unknown');
+  const [status, setStatus] = useState('alive');
+  const [dodYear, setDodYear] = useState('');
+  const [dodMonth, setDodMonth] = useState('');
+  const [dodDay, setDodDay] = useState('');
 
   useEffect(() => {
     if (open) {
@@ -76,6 +67,18 @@ export default function MemberModal({
       setNotes(member?.notes || '');
       setLocation(member?.location || '');
       setGender(member?.gender || 'unknown');
+      setStatus(member?.status || 'alive');
+      // Parse dod (YYYY-MM-DD) into separate fields
+      if (member?.dod) {
+        const [year, month, day] = member.dod.split('-');
+        setDodYear(year || '');
+        setDodMonth(month || '');
+        setDodDay(day || '');
+      } else {
+        setDodYear('');
+        setDodMonth('');
+        setDodDay('');
+      }
     }
   }, [open, member]);
 
@@ -113,18 +116,45 @@ export default function MemberModal({
       name,
       nickname,
       gender,
+      status,
     };
-    // Build dob from year/month/day fields (normalize Nepali numerals to English)
-    if (dobYear && dobMonth && dobDay) {
-      const year = normalizeNepaliNumerals(dobYear.trim());
-      const month = normalizeNepaliNumerals(dobMonth.trim());
-      const day = normalizeNepaliNumerals(dobDay.trim());
+    
+    // Helper function to format date while preserving numeric format
+    const formatDateWithPreservedFormat = (year, month, day) => {
+      if (!year || !month || !day) return null;
+      const yearTrimmed = year.trim();
+      const monthTrimmed = month.trim();
+      const dayTrimmed = day.trim();
       
-      // Validate that they're valid numbers
-      if (/^\d+$/.test(year) && /^\d+$/.test(month) && /^\d+$/.test(day)) {
-        payload.dob = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+      // Validate both formats (English and Nepali digits)
+      const nepaliDigitRegex = /^[०-९]+$/;
+      const englishDigitRegex = /^[0-9]+$/;
+      
+      const yearValid = englishDigitRegex.test(yearTrimmed) || nepaliDigitRegex.test(yearTrimmed);
+      const monthValid = englishDigitRegex.test(monthTrimmed) || nepaliDigitRegex.test(monthTrimmed);
+      const dayValid = englishDigitRegex.test(dayTrimmed) || nepaliDigitRegex.test(dayTrimmed);
+      
+      if (yearValid && monthValid && dayValid) {
+        // Preserve the original format - don't convert
+        return `${yearTrimmed}-${monthTrimmed.padStart(2, '0')}-${dayTrimmed.padStart(2, '0')}`;
+      }
+      return null;
+    };
+    
+    // Build dob from year/month/day fields (preserve original format)
+    const dob = formatDateWithPreservedFormat(dobYear, dobMonth, dobDay);
+    if (dob) {
+      payload.dob = dob;
+    }
+    
+    // Build dod from year/month/day fields (preserve original format) if status is deceased
+    if (status === 'deceased') {
+      const dod = formatDateWithPreservedFormat(dodYear, dodMonth, dodDay);
+      if (dod) {
+        payload.dod = dod;
       }
     }
+    
     if (location && String(location).trim()) payload.location = location.trim();
     if (notes && String(notes).trim()) payload.notes = notes.trim();
     if (photo && String(photo).trim()) payload.photo = photo.trim();
@@ -185,7 +215,7 @@ export default function MemberModal({
                 disabled={previewMode}
                 className={`w-full rounded-md border px-2 py-1 text-xs bg-white transition-all ${
                   previewMode 
-                    ? 'border-gray-200 text-gray-600 bg-gray-50/50 cursor-default' 
+                    ? 'border-gray-300 text-gray-900 bg-white cursor-default' 
                     : 'border-gray-300 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-400'
                 }`}
                 required
@@ -201,7 +231,7 @@ export default function MemberModal({
                 disabled={previewMode}
                 className={`w-full rounded-md border px-2 py-1 text-xs bg-white transition-all ${
                   previewMode 
-                    ? 'border-gray-200 text-gray-600 bg-gray-50/50 cursor-default' 
+                    ? 'border-gray-300 text-gray-900 bg-white cursor-default' 
                     : 'border-gray-300 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-400'
                 }`}
               />
@@ -221,14 +251,16 @@ export default function MemberModal({
 
           <div className="grid grid-cols-[auto,1fr] items-center gap-3">
             <span className="text-xs font-semibold text-gray-700">Gender</span>
-            <div className="flex flex-wrap gap-3 text-xs text-gray-800">
+            <div className="flex flex-wrap gap-3 text-xs" style={{color: '#1f2937'}}>
               <label className="inline-flex items-center gap-1">
                 <input
                   type="radio"
                   name="gender"
                   value="male"
+                  disabled={previewMode}
                   checked={gender === 'male'}
                   onChange={e => setGender(e.target.value)}
+                  className={previewMode ? 'cursor-not-allowed opacity-60' : ''}
                 />
                 Male
               </label>
@@ -237,8 +269,10 @@ export default function MemberModal({
                   type="radio"
                   name="gender"
                   value="female"
+                  disabled={previewMode}
                   checked={gender === 'female'}
                   onChange={e => setGender(e.target.value)}
+                  className={previewMode ? 'cursor-not-allowed opacity-60' : ''}
                 />
                 Female
               </label>
@@ -247,8 +281,10 @@ export default function MemberModal({
                   type="radio"
                   name="gender"
                   value="nonbinary"
+                  disabled={previewMode}
                   checked={gender === 'nonbinary'}
                   onChange={e => setGender(e.target.value)}
+                  className={previewMode ? 'cursor-not-allowed opacity-60' : ''}
                 />
                 Non-binary
               </label>
@@ -257,8 +293,10 @@ export default function MemberModal({
                   type="radio"
                   name="gender"
                   value="unknown"
+                  disabled={previewMode}
                   checked={gender === 'unknown'}
                   onChange={e => setGender(e.target.value)}
+                  className={previewMode ? 'cursor-not-allowed opacity-60' : ''}
                 />
                 Prefer not to say
               </label>
@@ -266,40 +304,133 @@ export default function MemberModal({
           </div>
 
           <div className="grid grid-cols-1 gap-2">
+            <div className="flex items-center gap-3">
+              <span className="text-xs font-semibold text-gray-700">📅 Date of Birth</span>
+              <div className="flex flex-wrap gap-3 text-xs" style={{color: '#1f2937'}}>
+                <label className="inline-flex items-center gap-1">
+                  <input
+                    type="radio"
+                    name="status"
+                    value="alive"
+                    disabled={previewMode}
+                    checked={status === 'alive'}
+                    onChange={e => setStatus(e.target.value)}
+                    className={previewMode ? 'cursor-not-allowed opacity-60' : ''}
+                  />
+                  Is Alive
+                </label>
+                <label className="inline-flex items-center gap-1">
+                  <input
+                    type="radio"
+                    name="status"
+                    value="deceased"
+                    disabled={previewMode}
+                    checked={status === 'deceased'}
+                    onChange={e => setStatus(e.target.value)}
+                    className={previewMode ? 'cursor-not-allowed opacity-60' : ''}
+                  />
+                  Passed Away
+                </label>
+              </div>
+            </div>
             <label className="space-y-1">
-              <span className="text-xs font-semibold text-gray-700">📅 Date of Birth (Nepali or English)</span>
               <div className="flex gap-2">
                 <input
                   type="text"
                   value={dobYear}
                   onChange={e => setDobYear(validateNumericInput(e.target.value))}
+                  disabled={previewMode}
                   placeholder="yyyy"
-                  className="w-24 rounded-md border border-gray-300 px-2 py-1 text-xs focus:border-indigo-500 focus:ring-1 focus:ring-indigo-400 bg-white placeholder-gray-400"
+                  className={`w-24 rounded-md border px-2 py-1 text-xs bg-white placeholder-gray-400 transition-all ${
+                    previewMode 
+                      ? 'border-gray-300 text-gray-900 bg-white cursor-default' 
+                      : 'border-gray-300 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-400'
+                  }`}
                 />
                 <input
                   type="text"
                   value={dobMonth}
                   onChange={e => setDobMonth(validateNumericInput(e.target.value))}
+                  disabled={previewMode}
                   placeholder="mm"
-                  className="w-16 rounded-md border border-gray-300 px-2 py-1 text-xs focus:border-indigo-500 focus:ring-1 focus:ring-indigo-400 bg-white placeholder-gray-400"
+                  className={`w-16 rounded-md border px-2 py-1 text-xs bg-white placeholder-gray-400 transition-all ${
+                    previewMode 
+                      ? 'border-gray-300 text-gray-900 bg-white cursor-default' 
+                      : 'border-gray-300 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-400'
+                  }`}
                 />
                 <input
                   type="text"
                   value={dobDay}
                   onChange={e => setDobDay(validateNumericInput(e.target.value))}
+                  disabled={previewMode}
                   placeholder="dd"
-                  className="w-16 rounded-md border border-gray-300 px-2 py-1 text-xs focus:border-indigo-500 focus:ring-1 focus:ring-indigo-400 bg-white placeholder-gray-400"
+                  className={`w-16 rounded-md border px-2 py-1 text-xs bg-white placeholder-gray-400 transition-all ${
+                    previewMode 
+                      ? 'border-gray-300 text-gray-900 bg-white cursor-default' 
+                      : 'border-gray-300 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-400'
+                  }`}
                 />
               </div>
             </label>
+
+            {status === 'deceased' && (
+              <label className="space-y-1">
+                <span className="text-xs font-semibold text-gray-700">📅 Date of Death</span>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={dodYear}
+                    onChange={e => setDodYear(validateNumericInput(e.target.value))}
+                    disabled={previewMode}
+                    placeholder="yyyy"
+                    className={`w-24 rounded-md border px-2 py-1 text-xs bg-white placeholder-gray-400 transition-all ${
+                      previewMode 
+                        ? 'border-gray-300 text-gray-900 bg-white cursor-default' 
+                        : 'border-gray-300 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-400'
+                    }`}
+                  />
+                  <input
+                    type="text"
+                    value={dodMonth}
+                    onChange={e => setDodMonth(validateNumericInput(e.target.value))}
+                    disabled={previewMode}
+                    placeholder="mm"
+                    className={`w-16 rounded-md border px-2 py-1 text-xs bg-white placeholder-gray-400 transition-all ${
+                      previewMode 
+                        ? 'border-gray-300 text-gray-900 bg-white cursor-default' 
+                        : 'border-gray-300 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-400'
+                    }`}
+                  />
+                  <input
+                    type="text"
+                    value={dodDay}
+                    onChange={e => setDodDay(validateNumericInput(e.target.value))}
+                    disabled={previewMode}
+                    placeholder="dd"
+                    className={`w-16 rounded-md border px-2 py-1 text-xs bg-white placeholder-gray-400 transition-all ${
+                      previewMode 
+                        ? 'border-gray-300 text-gray-900 bg-white cursor-default' 
+                        : 'border-gray-300 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-400'
+                    }`}
+                  />
+                </div>
+              </label>
+            )}
+
             <label className="space-y-1">
               <span className="text-xs font-semibold text-gray-700">📍 Location</span>
               <input
                 type="text"
                 value={location}
                 onChange={e => setLocation(e.target.value)}
+                disabled={previewMode}
                 placeholder="City, Country"
-                className="w-full rounded-md border border-gray-300 px-2 py-1 text-xs focus:border-indigo-500 focus:ring-1 focus:ring-indigo-400 bg-white"
+                className={`w-full rounded-md border px-2 py-1 text-xs bg-white transition-all ${
+                  previewMode 
+                    ? 'border-gray-300 text-gray-900 bg-white cursor-default' 
+                    : 'border-gray-300 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-400'
+                }`}
               />
             </label>
           </div>
@@ -310,8 +441,13 @@ export default function MemberModal({
               type="url"
               value={photo}
               onChange={e => setPhoto(e.target.value)}
+              disabled={previewMode}
               placeholder="https://..."
-              className="w-full rounded-md border border-gray-300 px-2 py-1 text-xs focus:border-indigo-500 focus:ring-1 focus:ring-indigo-400 bg-white"
+              className={`w-full rounded-md border px-2 py-1 text-xs bg-white transition-all ${
+                previewMode 
+                  ? 'border-gray-300 text-gray-900 bg-white cursor-default' 
+                  : 'border-gray-300 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-400'
+              }`}
             />
           </label>
 
@@ -319,10 +455,16 @@ export default function MemberModal({
             <span className="text-xs font-semibold text-gray-700">📝 Notes</span>
             <textarea
               rows={2}
+              disabled={previewMode}
               value={notes}
               onChange={e => setNotes(e.target.value)}
               placeholder="Add notes, occupation, facts..."
-              className="w-full rounded-md border border-gray-300 px-2 py-1 text-xs focus:border-indigo-500 focus:ring-1 focus:ring-indigo-400 bg-white resize-none"
+              className={`w-full rounded-md border px-2 py-1 text-xs resize-none overflow-y-auto ${
+                previewMode
+                  ? 'border-gray-300 text-gray-900 bg-white cursor-default'
+                  : 'border-gray-300 bg-white focus:border-indigo-500 focus:ring-1 focus:ring-indigo-400'
+              }`}
+              style={{maxHeight: '120px'}}
             />
           </label>
 
@@ -365,15 +507,6 @@ export default function MemberModal({
                 className="px-3 py-1.5 text-xs font-semibold rounded-md border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 transition-colors"
               >
                 Cancel
-              </button>
-            )}
-            {previewMode && (
-              <button
-                type="button"
-                onClick={onClose}
-                className="px-3 py-1.5 text-xs font-semibold rounded-md text-white shadow-sm bg-indigo-600 hover:bg-indigo-700 transition-colors"
-              >
-                Done
               </button>
             )}
           </div>

@@ -490,9 +490,19 @@ function AppContent() {
         // Save scroll position before navigating
         sessionStorage.setItem('landingPageScrollPosition', window.scrollY.toString());
         
-        // Navigate to tree detail page
+        // Navigate to tree detail page with event ID to highlight
         if (event.treeId) {
-            navigate(`/tree/${event.treeId}`);
+            navigate(`/tree/${event.treeId}`, { state: { highlightEventId: event.id } });
+        }
+    };
+
+    const handleEventClick = (event) => {
+        // Save scroll position before navigating
+        sessionStorage.setItem('landingPageScrollPosition', window.scrollY.toString());
+        
+        // Navigate to tree detail page with event ID to highlight
+        if (event.treeId) {
+            navigate(`/tree/${event.treeId}`, { state: { highlightEventId: event.id } });
         }
     };
 
@@ -621,6 +631,7 @@ function AppContent() {
                             events={allEvents}
                             familyMembers={allFamilyMembers}
                             onDoubleClickEvent={handleDoubleClickEvent}
+                            onEventClick={handleEventClick}
                         />
                     } />
 

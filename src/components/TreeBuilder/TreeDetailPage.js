@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { normalizeForCompare } from '../../utils/textNormalize';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { Trees, Members, Relationships, MarriagePoints } from './utils/firestoreTreeApi';
 import AddEventForm from '../AddEventForm';
 import TreePreview from './TreePreview';
@@ -12,6 +12,7 @@ import { formatAdDateToNepaliStringWithNumerals, convertAdToBs } from '../../uti
 export default function TreeDetailPage({ user }) {
   const { treeId } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const [tree, setTree] = useState(null);
   const [members, setMembers] = useState([]);
   const [relationships, setRelationships] = useState([]);
@@ -24,6 +25,10 @@ export default function TreeDetailPage({ user }) {
   const [memberModalOpen, setMemberModalOpen] = useState(false);
   const [editingMember, setEditingMember] = useState(null);
   const [memberPreviewMode, setMemberPreviewMode] = useState(false);
+  const [eventPreviewOpen, setEventPreviewOpen] = useState(false);
+  const [previewingEvent, setPreviewingEvent] = useState(null);
+  const [highlightedEventId, setHighlightedEventId] = useState(null);
+  const [highlightedMemberId, setHighlightedMemberId] = useState(null);
   const [aboutFamilyOpen, setAboutFamilyOpen] = useState(false);
   const [aboutFamilyRows, setAboutFamilyRows] = useState([]);
   const [aboutFamilyEditMode, setAboutFamilyEditMode] = useState(false);
@@ -31,6 +36,22 @@ export default function TreeDetailPage({ user }) {
   const [aboutFamilyHeaders, setAboutFamilyHeaders] = useState({ field1: 'Field 1', field2: 'Field 2', field3: 'Field 3' });
   const [savingAboutFamily, setSavingAboutFamily] = useState(false);
   const [selectedRowIndex, setSelectedRowIndex] = useState(null);
+
+  // Check for highlighted event ID from navigation state
+  useEffect(() => {
+    if (location.state?.highlightEventId) {
+      setHighlightedEventId(location.state.highlightEventId);
+      // Clear the state to prevent persistence
+      window.history.replaceState({}, document.title);
+      // Scroll to the highlighted event after a brief delay to ensure DOM is rendered
+      setTimeout(() => {
+        const eventElement = document.getElementById(`event-${location.state.highlightEventId}`);
+        if (eventElement) {
+          eventElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }, 500);
+    }
+  }, [location.state?.highlightEventId]);
 
   useEffect(() => {
     loadTreeData();
@@ -158,6 +179,28 @@ export default function TreeDetailPage({ user }) {
   const handleEditEvent = (event) => {
     setEditingEvent(event);
     setIsAddingEvent(true);
+  };
+
+  const handlePreviewEvent = (event) => {
+    setPreviewingEvent(event);
+    setEventPreviewOpen(true);
+  };
+
+  const handleMemberNameClick = (memberId) => {
+    if (!memberId) return;
+    // Set highlighted member and clear the highlight after 3 seconds
+    setHighlightedMemberId(memberId);
+    // Scroll to the member card
+    setTimeout(() => {
+      const memberElement = document.getElementById(`member-${memberId}`);
+      if (memberElement) {
+        memberElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }, 100);
+    // Clear highlight after 3 seconds
+    setTimeout(() => {
+      setHighlightedMemberId(null);
+    }, 3000);
   };
 
   const handleUpdateEvent = async ({ name, description, date, personId, repetition, tithi }) => {
@@ -512,8 +555,13 @@ export default function TreeDetailPage({ user }) {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {members.map(member => (
                     <div 
-                      key={member.id} 
-                      className="bg-gradient-to-br from-gray-50 to-white p-4 rounded-lg border border-gray-200 hover:shadow-md transition-shadow cursor-pointer"
+                      key={member.id}
+                      id={`member-${member.id}`}
+                      className={`p-4 rounded-lg border cursor-pointer hover:shadow-md transition-all ${
+                        highlightedMemberId === member.id
+                          ? 'bg-yellow-50 border-yellow-400 shadow-lg ring-2 ring-yellow-300'
+                          : 'bg-gradient-to-br from-gray-50 to-white border-gray-200'
+                      }`}
                       onDoubleClick={() => handlePreviewMember(member)}
                     >
                       <div className="flex items-start justify-between">
@@ -573,12 +621,23 @@ export default function TreeDetailPage({ user }) {
                     const nepaliDate = event.dateKey ? formatAdDateToNepaliStringWithNumerals(event.dateKey) : '';
                     const tithiDisplay = getTithiDisplayString(event.tithi);
                     return (
-                      <div key={event.id} className="bg-gradient-to-r from-purple-50 to-pink-50 p-4 rounded-lg border border-purple-200">
+                      <div 
+                        key={event.id}
+                        id={`event-${event.id}`}
+                        className={`p-4 rounded-lg border cursor-pointer hover:shadow-md transition-all ${
+                          highlightedEventId === event.id
+                            ? 'bg-yellow-50 border-yellow-400 shadow-lg ring-2 ring-yellow-300'
+                            : 'bg-gradient-to-r from-purple-50 to-pink-50 border-purple-200'
+                        }`}
+                        onDoubleClick={() => handlePreviewEvent(event)}
+                      >
                         <div className="flex items-start justify-between">
                           <div className="flex-1">
                             <h4 className="font-semibold text-gray-800">{event.title || 'Untitled Event'}</h4>
                             {event.memberId && (
-                              <p className="text-sm text-purple-700 mt-0.5">👤 {getMemberName(event.memberId)}</p>
+                              <p className="text-sm text-purple-700 mt-0.5">
+                                <span className="cursor-pointer hover:text-purple-900 hover:underline" onClick={(e) => {e.stopPropagation(); handleMemberNameClick(event.memberId);}} title="Click to go to family member">👤 {getMemberName(event.memberId)}</span>
+                              </p>
                             )}
                             <p className="text-sm text-gray-600 mt-1">📅 {event.dateKey}</p>
                             {nepaliDate && (
@@ -651,6 +710,79 @@ export default function TreeDetailPage({ user }) {
         onDelete={editingMember ? () => handleDeleteMember(editingMember.id) : undefined}
         previewMode={memberPreviewMode}
       />
+
+      {/* Event Preview Modal */}
+      {eventPreviewOpen && previewingEvent && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm p-2"
+          onClick={() => {
+            setEventPreviewOpen(false);
+            setPreviewingEvent(null);
+          }}
+        >
+          <div
+            className="w-full max-w-sm sm:max-w-md rounded-2xl shadow-2xl backdrop-blur-xl bg-white/80 border border-white/20"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b px-4 py-3 rounded-t-2xl bg-gradient-to-r from-slate-400 to-slate-500 text-white">
+              <h3 className="text-sm font-semibold">{getMemberName(previewingEvent.memberId) || 'Event Details'}</h3>
+              <button
+                type="button"
+                onClick={() => {
+                  setEventPreviewOpen(false);
+                  setPreviewingEvent(null);
+                }}
+                className="text-xs font-medium px-2 py-1 rounded-md bg-white/20 hover:bg-white/30 transition-colors"
+                title="Press Escape or click outside to close"
+              >
+                ✕ Close
+              </button>
+            </div>
+            
+            <div className="px-4 py-4 space-y-3 max-h-[70vh] overflow-y-auto">
+              <div>
+                <label className="text-xs font-semibold text-gray-700">Title</label>
+                <div className="mt-1 px-3 py-2 bg-white text-gray-900 rounded-md text-sm border border-gray-300">
+                  {previewingEvent.title || '—'}
+                </div>
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-gray-700">Description</label>
+                <div className="mt-1 px-3 py-2 bg-white text-gray-900 rounded-md text-sm border border-gray-300 max-h-[70px] overflow-y-auto whitespace-pre-wrap">
+                  {previewingEvent.description || '—'}
+                </div>
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-gray-700">Date (Gregorian)</label>
+                <div className="mt-1 px-3 py-2 bg-white text-gray-900 rounded-md text-sm border border-gray-300">
+                  {previewingEvent.dateKey || '—'}
+                </div>
+              </div>
+
+              {previewingEvent.dateKey && (
+                <div>
+                  <label className="text-xs font-semibold text-gray-700">Date (Nepali)</label>
+                  <div className="mt-1 px-3 py-2 bg-white text-gray-900 rounded-md text-sm border border-gray-300">
+                    {formatAdDateToNepaliStringWithNumerals(previewingEvent.dateKey)}
+                    {getTithiDisplayString(previewingEvent.tithi)}
+                  </div>
+                </div>
+              )}
+
+              {previewingEvent.repetition && previewingEvent.repetition !== 'none' && (
+                <div>
+                  <label className="text-xs font-semibold text-gray-700">Repetition</label>
+                  <div className="mt-1 px-3 py-2 bg-white text-gray-900 rounded-md text-sm border border-gray-300">
+                    {previewingEvent.repetition}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* About Family Modal */}
       {aboutFamilyOpen && (
