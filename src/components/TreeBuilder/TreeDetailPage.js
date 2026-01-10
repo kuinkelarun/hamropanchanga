@@ -353,6 +353,40 @@ export default function TreeDetailPage({ user }) {
     setAboutFamilyRows(newRows);
   };
 
+  // Format date for display
+  const formatDateForDisplay = (dateObj) => {
+    if (!dateObj) return null;
+    try {
+      let date;
+      // Handle Firestore Timestamp objects
+      if (dateObj.toDate && typeof dateObj.toDate === 'function') {
+        date = dateObj.toDate();
+      } else if (dateObj instanceof Date) {
+        date = dateObj;
+      } else {
+        return null;
+      }
+      
+      const now = new Date();
+      const diffMs = now - date;
+      const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+      
+      // If less than 1 day old, show "today" or "yesterday"
+      if (diffDays === 0) {
+        const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+        if (diffHours === 0) return 'Just now';
+        return `${diffHours}h ago`;
+      }
+      if (diffDays === 1) return 'Yesterday';
+      if (diffDays < 7) return `${diffDays} days ago`;
+      if (diffDays < 30) return `${Math.floor(diffDays / 7)}w ago`;
+      if (diffDays < 365) return `${Math.floor(diffDays / 30)}m ago`;
+      return `${Math.floor(diffDays / 365)}y ago`;
+    } catch (err) {
+      return null;
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50">
@@ -415,6 +449,14 @@ export default function TreeDetailPage({ user }) {
                   >
                     📞 <span className="truncate">{tree.contact}</span>
                   </a>
+                )}
+                {tree.updatedAt && (
+                  <span 
+                    className="text-gray-500 flex items-center gap-1"
+                    title={tree.updatedAt?.toDate ? tree.updatedAt.toDate().toLocaleString() : new Date(tree.updatedAt).toLocaleString()}
+                  >
+                    📅 Updated {formatDateForDisplay(tree.updatedAt)}
+                  </span>
                 )}
               </div>
             </div>
