@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, useNavigate, useLocation } from 'react-router-dom';
-import { collection, query, where, onSnapshot, doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, doc, getDoc, setDoc, updateDoc, getDocs } from 'firebase/firestore';
 import { onAuthStateChanged, signOut, getIdTokenResult } from 'firebase/auth';
 import { auth, signInWithGoogle, db } from './firebase';
 import { SettingsProvider } from './contexts/SettingsContext';
@@ -19,6 +19,7 @@ import TreeSelectionPage from './components/TreeBuilder/TreeSelectionPage';
 import TreeDetailPage from './components/TreeBuilder/TreeDetailPage';
 import { useUserPermissions } from './hooks/usePermissions';
 import { USER_ROLES, DEFAULT_ROLE_PERMISSIONS } from './constants/roles';
+import { convertAdToBs, convertBsToAd, getTithiIndexByName, getTithiLunarMonthName } from './utils/nepaliDateUtils';
 
 // Tithi Calculator Button Component with visibility control
 function TithiCalculatorButton({ onClick }) {
@@ -505,9 +506,11 @@ function AppContent() {
         id: event.id,
         name: event.title,
         date: event.dateKey,
+        dateKey: event.dateKey,
         personId: event.memberId || event.personId || '',
         repetition: event.repetition || 'none',
-        treeId: event.treeId || null
+        treeId: event.treeId || null,
+        tithi: event.tithi || null
     }));
     
     const getCreatedAtMillis = (createdAt) => {

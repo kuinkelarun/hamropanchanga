@@ -11,6 +11,39 @@ const RELATIONSHIP_COLORS = {
   custom: '#8b5cf6',
 };
 
+function hasPosVal(pos) {
+  return pos && typeof pos.x === 'number' && typeof pos.y === 'number';
+}
+
+function normalizeParentChildOptionA({ fromMemberId, toMemberId, type, parentId, childId }) {
+  // Option A (revised):
+  // - UI/graph edge direction is always user-directed: fromMemberId -> toMemberId
+  // - canonical hierarchy is stored separately as parentId -> childId
+  const t = String(type || '').toLowerCase();
+  const from = String(fromMemberId || '');
+  const to = String(toMemberId || '');
+
+  const existingParentId = String(parentId || '').trim();
+  const existingChildId = String(childId || '').trim();
+  if (existingParentId && existingChildId) {
+    return { fromMemberId: from, toMemberId: to, type: t, parentId: existingParentId, childId: existingChildId };
+  }
+
+  if (!from || !to) {
+    return { fromMemberId: from, toMemberId: to, type: t, parentId: existingParentId, childId: existingChildId };
+  }
+
+  if (t === 'parent') {
+    // from is parent of to
+    return { fromMemberId: from, toMemberId: to, type: 'parent', parentId: from, childId: to };
+  }
+  if (t === 'child') {
+    // from is child of to
+    return { fromMemberId: from, toMemberId: to, type: 'child', parentId: to, childId: from };
+  }
+  return { fromMemberId: from, toMemberId: to, type: t, parentId: existingParentId, childId: existingChildId };
+}
+
 function getEdgeColor(type) {
   return RELATIONSHIP_COLORS[type] || RELATIONSHIP_COLORS.custom;
 }
@@ -84,51 +117,173 @@ export function buildTreeGraphData(members = [], relationships = [], marriagePoi
       label: m.name || 'Unknown',
       gender: m.gender,
       archived: m.archived,
-      connected: true,
+      connected: false,
     },
     draggable: false,
     selectable: false,
   }));
-  
-  // Build marriage point nodes - only from those with positions
-  const mpNodes = (marriagePoints || [])
-    .filter(mp => mp.position && mp.position.x !== undefined && mp.position.y !== undefined)
-    .map(mp => ({
-      id: String(mp.id),
+
+  nodes.push(...memberNodes);
+
+  const nodeIds = new Set(nodes.map(n => n.id));
+
+  // Reproduce canvas marriage-point derivation:
+  // - marriagePoints are used ONLY for saved positions (id: mp-${a|b})
+  // - actual marriage point nodes are derived from spouse pairs + shared children
+  const posById = new Map();
+  positionedMembers.forEach(m => {
+    if (hasPosVal(m.position)) {
+      posById.set(String(m.id), m.position);
+    }
+  });
+
+  const savedMpPos = new Map((marriagePoints || [])
+    .map(mp => [String(mp.id), mp.position])
+    .filter(([, pos]) => hasPosVal(pos))
+  );
+
+  const adjacency = new Map(); // memberId -> Set(connectedMemberId) for parent/child relations
+  const relByPair = new Map(); // 'a|b' (sorted) -> relationship doc (first seen)
+  const spousePairs = new Set(); // 'a|b' (sorted)
+
+  if (Array.isArray(relationships) && relationships.length > 0) {
+    for (const r of relationships) {
+      const a = String(r.fromMemberId || '');
+      const b = String(r.toMemberId || '');
+      if (!a || !b) continue;
+
+      if (r.type === 'spouse') {
+        const spouseKey = a < b ? `${a}|${b}` : `${b}|${a}`;
+        spousePairs.add(spouseKey);
+      }
+
+      if (r.type !== 'parent' && r.type !== 'child') continue;
+      const normalized = normalizeParentChildOptionA({
+        fromMemberId: r.fromMemberId,
+        toMemberId: r.toMemberId,
+        type: r.type,
+        parentId: r.parentId,
+        childId: r.childId,
+      });
+      const parentId = String(normalized.parentId || '');
+      const childId = String(normalized.childId || '');
+      if (!parentId || !childId) continue;
+
+      if (!adjacency.has(parentId)) adjacency.set(parentId, new Set());
+      if (!adjacency.has(childId)) adjacency.set(childId, new Set());
+      adjacency.get(parentId).add(childId);
+      adjacency.get(childId).add(parentId);
+
+      const key = parentId < childId ? `${parentId}|${childId}` : `${childId}|${parentId}`;
+      if (!relByPair.has(key)) {
+        relByPair.set(key, r);
+      }
+    }
+  }
+
+  const parentPairs = new Map(); // 'id1|id2' -> { parents:[id1,id2], children:Set(childIds) }
+  adjacency.forEach((neighbors, memberId) => {
+    const parents = [...neighbors];
+    if (parents.length < 2) return;
+    for (let i = 0; i < parents.length; i++) {
+      for (let j = i + 1; j < parents.length; j++) {
+        const a = String(parents[i]);
+        const b = String(parents[j]);
+        const key = a < b ? `${a}|${b}` : `${b}|${a}`;
+        if (!parentPairs.has(key)) {
+          parentPairs.set(key, { parents: [a, b], children: new Set() });
+        }
+        parentPairs.get(key).children.add(String(memberId));
+      }
+    }
+  });
+
+  const nodesWithMarriage = [...nodes];
+  const marriageEdges = [];
+  const processedPairs = new Set(); // parent-child directional pairs handled via marriage points
+
+  parentPairs.forEach(({ parents, children }, key) => {
+    const [p1Id, p2Id] = parents;
+    const commonChildren = [...children];
+    if (!commonChildren.length) return;
+
+    // Only create a marriage point when the two parents are spouses
+    if (!spousePairs.has(key)) return;
+
+    // Only render when both parents exist as positioned nodes
+    if (!nodeIds.has(String(p1Id)) || !nodeIds.has(String(p2Id))) return;
+
+    const marriagePointId = `mp-${key}`;
+
+    const p1Pos = posById.get(p1Id) || { x: 0, y: 0 };
+    const p2Pos = posById.get(p2Id) || { x: 0, y: 0 };
+    const defaultPos = {
+      x: (p1Pos.x + p2Pos.x) / 2,
+      y: Math.max(p1Pos.y, p2Pos.y) + 50,
+    };
+    const savedPos = savedMpPos.get(marriagePointId);
+    const marriagePointPos = savedPos && hasPosVal(savedPos) ? savedPos : defaultPos;
+
+    nodesWithMarriage.push({
+      id: marriagePointId,
       type: 'marriagePoint',
-      position: mp.position,
-      data: { 
-        label: '',
-        spouses: mp.spouses || [],
-        parents: mp.parents || []
-      },
+      position: marriagePointPos,
+      data: { parents: [p1Id, p2Id], type: 'marriage', hasSavedPosition: !!savedPos },
       draggable: false,
       selectable: false,
-    }));
+    });
+    nodeIds.add(String(marriagePointId));
 
-  nodes.push(...memberNodes, ...mpNodes);
-  
-  const nodeIds = new Set(nodes.map(n => n.id));
-  
-  // Mark parent-child relationships that go through marriage points
-  const processedPairs = new Set();
-  (marriagePoints || []).forEach(mp => {
-    if (Array.isArray(mp.parents) && mp.parents.length >= 2) {
-      const p1 = String(mp.parents[0]);
-      const p2 = String(mp.parents[1]);
-      
-      const children = getChildrenOfBothParents(p1, p2, relationships);
-      children.forEach(childId => {
-        processedPairs.add(`${p1}-${childId}`);
-        processedPairs.add(`${childId}-${p1}`);
-        processedPairs.add(`${p2}-${childId}`);
-        processedPairs.add(`${childId}-${p2}`);
+    // Parent -> marriage point connector edges (visual only, no arrowheads)
+    [p1Id, p2Id].forEach(parentId => {
+      marriageEdges.push({
+        id: `e-${parentId}-${marriagePointId}`,
+        source: parentId,
+        target: marriagePointId,
+        type: 'familyEdge',
+        sourceHandle: 'bottom-source',
+        targetHandle: 'top-target',
+        data: { type: 'parent-connector', virtual: false },
+        animated: false,
+        selectable: false,
       });
-    }
+    });
+
+    // Marriage point -> children edges (single logical parent-child with arrow)
+    commonChildren.forEach(childId => {
+      if (!nodeIds.has(String(childId))) return;
+      const color = getEdgeColor('child');
+
+      const key1 = p1Id < childId ? `${p1Id}|${childId}` : `${childId}|${p1Id}`;
+      const key2 = p2Id < childId ? `${p2Id}|${childId}` : `${childId}|${p2Id}`;
+      const relForChild = relByPair.get(key1) || relByPair.get(key2) || null;
+      const optionalLabel = (relForChild && typeof relForChild.label === 'string') ? relForChild.label : '';
+      const labelText = (optionalLabel || 'child');
+
+      marriageEdges.push({
+        id: `e-${marriagePointId}-${childId}`,
+        source: marriagePointId,
+        target: String(childId),
+        sourceHandle: 'bottom-source',
+        targetHandle: 'top-target',
+        type: 'familyEdge',
+        data: { type: 'child', label: optionalLabel, fromMarriagePoint: true, relationshipId: relForChild ? relForChild.id : undefined },
+        label: labelText,
+        animated: false,
+        selectable: false,
+        style: { stroke: color, strokeWidth: 2 },
+        markerEnd: { type: 'arrowclosed', color },
+      });
+
+      processedPairs.add(`${p1Id}-${childId}`);
+      processedPairs.add(`${childId}-${p1Id}`);
+      processedPairs.add(`${p2Id}-${childId}`);
+      processedPairs.add(`${childId}-${p2Id}`);
+    });
   });
   
   // Track processed node pairs to avoid duplicate edges
-  // Use Map to store edge metadata for intelligent deduplication
+  // Use Map to store edge metadata for intelligent deduplication (matches canvas preview behavior)
   const pairMap = new Map();
   
   // Add direct relationship edges
@@ -145,11 +300,8 @@ export function buildTreeGraphData(members = [], relationships = [], marriagePoi
       
       const relType = rel.type || 'custom';
       
-      // For parent/child relationships, deduplicate using sorted IDs (one direction only)
-      // For sibling/spouse/custom, use directional key to preserve both directions with different labels
-      const pairKey = (relType === 'parent' || relType === 'child')
-        ? (source < target ? `${source}|${target}` : `${target}|${source}`)
-        : `${source}|${target}`; // Keep directional for sibling/spouse/custom
+      // Deduplicate by sorted pair (same as canvas) so we don't render multiple edges between the same two nodes.
+      const pairKey = source < target ? `${source}|${target}` : `${target}|${source}`;
       
       const color = getEdgeColor(relType);
       
@@ -183,7 +335,7 @@ export function buildTreeGraphData(members = [], relationships = [], marriagePoi
       }
       
       const candidate = {
-        id: rel.id || `rel-${source}-${target}`,
+        id: `${source}-${target}-${relType}-${rel.id || 'noid'}`,
         source: source,
         target: target,
         sourceHandle: sourceHandle,
@@ -238,81 +390,24 @@ export function buildTreeGraphData(members = [], relationships = [], marriagePoi
   pairMap.forEach((value) => {
     edges.push(value.edge);
   });
-  
-  // Add marriage point edges (parent connectors and child edges)
-  (marriagePoints || []).forEach(mp => {
-    const mpId = String(mp.id);
-    if (!nodeIds.has(mpId)) return;
-    
-    // Connect parents to marriage point
-    if (Array.isArray(mp.parents)) {
-      mp.parents.forEach((parentId, idx) => {
-        const parentStr = String(parentId);
-        if (!nodeIds.has(parentStr)) return;
-        
-        edges.push({
-          id: `e-parent-${mpId}-${idx}`,
-          source: parentStr,
-          target: mpId,
-          sourceHandle: 'bottom-source',
-          targetHandle: 'top-target',
-          type: 'familyEdge',
-          data: { type: 'parent-connector', virtual: false },
-          animated: false,
-          selectable: false,
-        });
-      });
-    }
-    
-    // Find and connect children through relationships
-    // A node should only be a child of the marriage point if it's connected to BOTH parents
-    const childrenSet = new Set();
-    if (Array.isArray(relationships) && mp.parents && mp.parents.length >= 2) {
-      const p1 = String(mp.parents[0]);
-      const p2 = String(mp.parents[1]);
-      
-      childrenSet.forEach(childId => {
-        if (!nodeIds.has(childId)) return;
-        
-        const color = getEdgeColor('child');
-        edges.push({
-          id: `e-child-${mpId}-${Array.from(childrenSet).indexOf(childId)}`,
-          source: mpId,
-          target: childId,
-          sourceHandle: 'bottom-source',
-          targetHandle: 'top-target',
-          type: 'familyEdge',
-          data: { type: 'child', label: 'child', fromMarriagePoint: true },
-          label: 'child',
-          animated: false,
-          selectable: false,
-          style: { stroke: color, strokeWidth: 2 },
-          markerEnd: { type: 'arrowclosed', color },
-        });
-      });
-      
-      const children = getChildrenOfBothParents(p1, p2, relationships);
-      children.forEach((childId, idx) => {
-        if (!nodeIds.has(childId)) return;
-        
-        const color = getEdgeColor('child');
-        edges.push({
-          id: `e-child-${mpId}-${idx}`,
-          source: mpId,
-          target: childId,
-          sourceHandle: 'bottom-source',
-          targetHandle: 'top-target',
-          type: 'familyEdge',
-          data: { type: 'child', label: 'child', fromMarriagePoint: true },
-          label: 'child',
-          animated: false,
-          selectable: false,
-          style: { stroke: color, strokeWidth: 2 },
-          markerEnd: { type: 'arrowclosed', color },
-        });
-      });
-    }
-  });
-  
-  return { nodes, edges };
+
+  // Prepend marriage-derived nodes/edges so preview matches canvas
+  const allEdges = [...marriageEdges, ...edges];
+
+  // Mark nodes as connected if they appear in any edge (source or target)
+  const connectedSet = new Set();
+  for (const e of allEdges) {
+    if (e && e.source) connectedSet.add(String(e.source));
+    if (e && e.target) connectedSet.add(String(e.target));
+  }
+
+  const finalNodes = nodesWithMarriage.map(n => ({
+    ...n,
+    data: {
+      ...(n.data || {}),
+      connected: connectedSet.has(String(n.id)),
+    },
+  }));
+
+  return { nodes: finalNodes, edges: allEdges };
 }

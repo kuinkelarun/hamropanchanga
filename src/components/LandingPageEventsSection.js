@@ -1,23 +1,84 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import './LandingPageEventsSection.css';
 import { useSettings } from '../contexts/SettingsContext';
-import { formatNepaliDate, formatEnglishDate, formatNepaliMonthYear, formatGregorianMonthYear } from '../utils/nepaliDateUtils';
+import { formatNepaliDate, formatEnglishDate, formatNepaliMonthYear, formatGregorianMonthYear, convertAdToBs, convertBsToAd } from '../utils/nepaliDateUtils';
 
 const LandingPageEventsSection = ({ events, familyMembers, onDoubleClickEvent }) => {
     const [eventFilter, setEventFilter] = useState('next-week');
     const { isNepaliCalendar } = useSettings(); // Use global settings
 
+    // Helper function to get tithi display string with normalized paksha
+    const getTithiDisplayString = useCallback((event) => {
+        if (!event.tithi) return '';
+        
+        const { month, paksha, name } = event.tithi;
+        if (!month || !name) return '';
+        
+        // Normalize paksha to Nepali
+        let pakshaDisplay = paksha;
+        if (paksha === 'Shukla' || paksha === 'शुक्ल') {
+            pakshaDisplay = 'शुक्लपक्ष';
+        } else if (paksha === 'Krishna' || paksha === 'कृष्ण') {
+            pakshaDisplay = 'कृष्णपक्ष';
+        }
+        
+        return ` (${month} ${pakshaDisplay} ${name})`;
+    }, []);
+
+    // Helper function to get repetition display text in Nepali
+    const getRepetitionDisplay = useCallback((repetition) => {
+        if (!repetition || repetition === 'none') return '';
+        if (repetition === 'yearly') return 'वार्षिक';
+        if (repetition === 'monthly') return 'मासिक';
+        return repetition;
+    }, []);
+
     // Helper function to calculate the next occurrence of a repeating event
-    const getNextOccurrence = (originalDate, repetition) => {
+    const getNextOccurrence = (originalDate, repetition, event) => {
         const today = new Date();
         today.setHours(0, 0, 0, 0);
         let nextDate = new Date(originalDate);
+        nextDate.setHours(12, 0, 0, 0); // Set to noon to avoid timezone issues
 
         if (repetition === 'monthly') {
             while (nextDate < today) {
                 nextDate.setMonth(nextDate.getMonth() + 1);
             }
         } else if (repetition === 'yearly') {
+            // For Nepali date-based yearly events, use BS conversion to find next occurrence
+            const dateStr = event?.dateKey || event?.date;
+            if (dateStr && typeof dateStr === 'string' && dateStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
+                const [y, m, d] = dateStr.split('-').map(Number);
+                
+                try {
+                    // Convert AD date to BS
+                    const bsDate = convertAdToBs(y, m - 1, d);
+                    if (bsDate) {
+                        // Find next occurrence in the same BS month/day but future BS year
+                        let currentBsYear = bsDate.year;
+                        
+                        while (true) {
+                            // Try to convert BS date to AD
+                            const adDateObj = convertBsToAd(currentBsYear, bsDate.month, bsDate.day);
+                            if (adDateObj) {
+                                nextDate = new Date(adDateObj.year, adDateObj.month, adDateObj.day, 12, 0, 0);
+                                if (nextDate >= today) {
+                                    return nextDate;
+                                }
+                            }
+                            currentBsYear++;
+                            // Safety check
+                            if (currentBsYear > bsDate.year + 5) {
+                                break;
+                            }
+                        }
+                    }
+                } catch (err) {
+                    console.error('Error calculating next occurrence for yearly event:', err);
+                }
+            }
+            
+            // Fallback: simple year increment
             while (nextDate < today) {
                 nextDate.setFullYear(nextDate.getFullYear() + 1);
             }
@@ -55,7 +116,7 @@ const LandingPageEventsSection = ({ events, familyMembers, onDoubleClickEvent })
             }
 
             const displayDate = (event.repetition && event.repetition !== 'none') ?
-                getNextOccurrence(originalDate, event.repetition) :
+                getNextOccurrence(originalDate, event.repetition, event) :
                 originalDate;
 
             // Find the associated person to display their name and relation
@@ -141,7 +202,7 @@ const LandingPageEventsSection = ({ events, familyMembers, onDoubleClickEvent })
                                         <div className="event-name">
                                             {event.name}
                                             {event.repetition && event.repetition !== 'none' && (
-                                                <span className="text-xs text-gray-400 ml-2">({event.repetition} repeating)</span>
+                                                <span className="text-xs text-gray-400 ml-2">({getRepetitionDisplay(event.repetition)})</span>
                                             )}
                                         </div>
                                         <div className="text-sm text-gray-600">
@@ -156,6 +217,7 @@ const LandingPageEventsSection = ({ events, familyMembers, onDoubleClickEvent })
                                                     ? formatEnglishDate(event.displayDate).short
                                                     : formatNepaliDate(event.displayDate).shortNepali
                                                 }
+                                                {event.tithi && getTithiDisplayString(event)}
                                             </div>
                                         </div>
                                         {event.personName && (
@@ -177,7 +239,7 @@ const LandingPageEventsSection = ({ events, familyMembers, onDoubleClickEvent })
                                 <div className="event-name">
                                     {event.name}
                                     {event.repetition && event.repetition !== 'none' && (
-                                        <span className="text-xs text-gray-400 ml-2">({event.repetition} repeating)</span>
+                                        <span className="text-xs text-gray-400 ml-2">({getRepetitionDisplay(event.repetition)})</span>
                                     )}
                                 </div>
                                 <div className="text-sm text-gray-600">
@@ -192,6 +254,7 @@ const LandingPageEventsSection = ({ events, familyMembers, onDoubleClickEvent })
                                             ? formatEnglishDate(event.displayDate).short
                                             : formatNepaliDate(event.displayDate).shortNepali
                                         }
+                                        {event.tithi && getTithiDisplayString(event)}
                                     </div>
                                 </div>
                                 {event.personName && (

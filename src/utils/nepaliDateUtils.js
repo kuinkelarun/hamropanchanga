@@ -37,11 +37,15 @@ export function getNepalDate() {
   return new Date(now.getTime() + nptOffset);
 }
 
-export function convertAdToBs(year, month, day) {
+export function convertAdToBs(year, month, day, customCalendarData = null) {
   // Use Nepal Time (NPT) midnight as the reference for a calendar day.
   // This avoids local timezone differences causing off-by-one errors when callers
   // pass Y/M/D values taken from Nepal time or from local time.
   const nptOffsetMs = 5.75 * 3600000; // 5 hours 45 minutes in ms
+  
+  // Merge custom calendar data with default bsCalendarData
+  // Custom data overrides defaults for years that have been customized
+  const calendarData = customCalendarData ? { ...bsCalendarData, ...customCalendarData } : bsCalendarData;
 
   // Compute the UTC-milliseconds instant corresponding to NPT midnight for the given Y/M/D
   const adNptMidnightMs = Date.UTC(year, month, day) - nptOffsetMs;
@@ -49,9 +53,34 @@ export function convertAdToBs(year, month, day) {
   let bsYear = null, totalDays = 0;
 
   // Iterate calendar data and compare using NPT-midnight-based instants
-  const keys = Object.keys(bsCalendarData).map(Number).sort((a, b) => a - b);
+  const keys = Object.keys(calendarData).map(Number).sort((a, b) => a - b);
   for (const y of keys) {
-    const startAd = bsCalendarData[y].startAdDate;
+    const startAdData = calendarData[y];
+    let startAd;
+    
+    // Handle both Date objects and plain objects from Firestore
+    if (startAdData.startAdDate instanceof Date) {
+      startAd = startAdData.startAdDate;
+    } else if (typeof startAdData.startAdDate === 'string') {
+      const [adYear, adMonth, adDay] = startAdData.startAdDate.split('-').map(Number);
+      startAd = new Date(adYear, adMonth - 1, adDay); // months are 0-indexed in JS Date
+    } else if (startAdData.startAdDate && typeof startAdData.startAdDate === 'object') {
+      // Handle Firestore timestamp with toDate() method
+      if (typeof startAdData.startAdDate.toDate === 'function') {
+        startAd = startAdData.startAdDate.toDate();
+      } else {
+        // Try direct conversion
+        startAd = new Date(startAdData.startAdDate);
+      }
+    } else {
+      continue;
+    }
+    
+    // Validate that we got a valid date
+    if (!startAd || isNaN(startAd.getTime())) {
+      continue;
+    }
+    
     const startNptMs = Date.UTC(startAd.getFullYear(), startAd.getMonth(), startAd.getDate()) - nptOffsetMs;
 
     if (adNptMidnightMs >= startNptMs) {
@@ -68,8 +97,21 @@ export function convertAdToBs(year, month, day) {
   
   let bsMonth = 1;
   let bsDay = totalDays;
-  const months = bsCalendarData[bsYear].daysInMonths;
+  const months = calendarData[bsYear]?.daysInMonths || [];
   
+  if (months.length === 0) {
+    // Fallback if calendar data is invalid
+    return { year: bsYear, month: 1, day: 1, dayOfWeek: 0 };
+  }
+  
+  // Handle case where totalDays might exceed the year's total days
+  const totalDaysInYear = months.reduce((sum, m) => sum + m, 0);
+  while (bsDay > totalDaysInYear && calendarData[bsYear + 1]) {
+    bsDay -= totalDaysInYear;
+    bsYear += 1;
+  }
+  
+  // Calculate month and day based on the calendar data provided
   for (let i = 0; i < months.length; i++) {
     if (bsDay <= months[i]) { 
       bsMonth = i + 1; 
@@ -78,6 +120,10 @@ export function convertAdToBs(year, month, day) {
     bsDay -= months[i];
   }
   
+  // Ensure month is valid
+  if (bsMonth > 12) bsMonth = 12;
+  if (bsMonth < 1) bsMonth = 1;
+  
   // Compute dayOfWeek for the AD date represented by this NPT-midnight instant
   const adUtcMsForThis = adNptMidnightMs + nptOffsetMs; // equals Date.UTC(year, month, day)
   const dayOfWeek = new Date(adUtcMsForThis).getUTCDay();
@@ -85,14 +131,37 @@ export function convertAdToBs(year, month, day) {
   return { year: bsYear, month: bsMonth, day: bsDay, dayOfWeek };
 }
 
-export function convertBsToAd(year, month, day) {
-  const start = bsCalendarData[year]?.startAdDate;
-  if (!start) return null;
+export function convertBsToAd(year, month, day, customCalendarData = null) {
+  // Merge custom calendar data with defaults
+  const calendarData = customCalendarData ? { ...bsCalendarData, ...customCalendarData } : bsCalendarData;
+  
+  const startAdData = calendarData[year];
+  if (!startAdData) return null;
+  
+  let start;
+  // Handle both Date objects and plain objects from Firestore
+  if (startAdData.startAdDate instanceof Date) {
+    start = startAdData.startAdDate;
+  } else if (typeof startAdData.startAdDate === 'string') {
+    const [adYear, adMonth, adDay] = startAdData.startAdDate.split('-').map(Number);
+    start = new Date(adYear, adMonth - 1, adDay);
+  } else if (startAdData.startAdDate && typeof startAdData.startAdDate === 'object') {
+    if (typeof startAdData.startAdDate.toDate === 'function') {
+      start = startAdData.startAdDate.toDate();
+    } else {
+      start = new Date(startAdData.startAdDate);
+    }
+  } else {
+    return null;
+  }
+  
+  if (!start || isNaN(start.getTime())) return null;
 
   // totalDays offset from start of BS year
   let totalDays = 0;
+  const months = calendarData[year]?.daysInMonths || [];
   for (let i = 0; i < month - 1; i++) {
-    totalDays += bsCalendarData[year].daysInMonths[i];
+    totalDays += months[i];
   }
   totalDays += day - 1;
 
@@ -184,8 +253,11 @@ export function formatNepaliMonthYear(adDate) {
 }
 
 // Parse Nepali date string in MM-DD-YYYY format (with Nepali or English numerals)
-export function parseNepaliDate(dateStr) {
+export function parseNepaliDate(dateStr, customCalendarData = null) {
   if (!dateStr) return null;
+  
+  // Merge custom calendar data with defaults
+  const calendarData = customCalendarData ? { ...bsCalendarData, ...customCalendarData } : bsCalendarData;
   
   // Convert Nepali numerals to English if present
   let normalizedStr = dateStr.trim();
@@ -200,18 +272,21 @@ export function parseNepaliDate(dateStr) {
     const bsMonth = parseInt(match[2]);
     const bsDay = parseInt(match[3]);
     
-    // Validate BS date
+    // Validate BS date ranges (month must be 1-12)
     if (bsYear < minBsYear || bsYear > maxBsYear) return null;
     if (bsMonth < 1 || bsMonth > 12) return null;
+    if (bsDay < 1) return null;
     
-    const yearData = bsCalendarData[bsYear];
+    // Get the calendar data for this year
+    const yearData = calendarData[bsYear];
     if (!yearData) return null;
     
+    // Validate day against the actual configured days for this month/year
     const maxDay = yearData.daysInMonths[bsMonth - 1];
-    if (bsDay < 1 || bsDay > maxDay) return null;
+    if (bsDay > maxDay) return null;
     
     // Convert to AD
-    const ad = convertBsToAd(bsYear, bsMonth, bsDay);
+    const ad = convertBsToAd(bsYear, bsMonth, bsDay, customCalendarData);
     if (!ad) return null;
     
     // Return YYYY-MM-DD format for Firestore
@@ -225,18 +300,21 @@ export function parseNepaliDate(dateStr) {
     const bsDay = parseInt(match[2]);
     const bsYear = parseInt(match[3]);
     
-    // Validate BS date
+    // Validate BS date ranges (month must be 1-12)
     if (bsYear < minBsYear || bsYear > maxBsYear) return null;
     if (bsMonth < 1 || bsMonth > 12) return null;
+    if (bsDay < 1) return null;
     
-    const yearData = bsCalendarData[bsYear];
+    // Get the calendar data for this year
+    const yearData = calendarData[bsYear];
     if (!yearData) return null;
     
+    // Validate day against the actual configured days for this month/year
     const maxDay = yearData.daysInMonths[bsMonth - 1];
-    if (bsDay < 1 || bsDay > maxDay) return null;
+    if (bsDay > maxDay) return null;
     
     // Convert to AD
-    const ad = convertBsToAd(bsYear, bsMonth, bsDay);
+    const ad = convertBsToAd(bsYear, bsMonth, bsDay, customCalendarData);
     if (!ad) return null;
     
     // Return YYYY-MM-DD format for Firestore
@@ -247,18 +325,18 @@ export function parseNepaliDate(dateStr) {
 }
 
 // Format AD date string (YYYY-MM-DD) to Nepali date string (MM-DD-YYYY)
-export function formatAdDateToNepaliString(adDateStr) {
+export function formatAdDateToNepaliString(adDateStr, customCalendarData = null) {
   if (!adDateStr) return '';
   const [year, month, day] = adDateStr.split('-').map(Number);
   if (!year || !month || !day) return '';
   
-  const bs = convertAdToBs(year, month - 1, day);
+  const bs = convertAdToBs(year, month - 1, day, customCalendarData);
   return `${bs.year}-${String(bs.month).padStart(2, '0')}-${String(bs.day).padStart(2, '0')}`;
 }
 
-// Format AD date string to Nepali with Nepali numerals
-export function formatAdDateToNepaliStringWithNumerals(adDateStr) {
-  const formatted = formatAdDateToNepaliString(adDateStr);
+// Format AD date string to Nepali with Nepali numerals (optionally with custom calendar data)
+export function formatAdDateToNepaliStringWithNumerals(adDateStr, customCalendarData = null) {
+  const formatted = formatAdDateToNepaliString(adDateStr, customCalendarData);
   if (!formatted) return '';
   
   return formatted.split('').map(char => {
@@ -274,7 +352,7 @@ export function formatAdDateToNepaliStringWithNumerals(adDateStr) {
 // - time24: time in 24-hour HH:MM format (NPT)
 // - time12: time in 12-hour h:mm:ss AM/PM format (NPT)
 // - bsDate: { year, month, day }
-export function formatNepaliDateTime(utcDateOrIso) {
+export function formatNepaliDateTime(utcDateOrIso, customCalendarData = null) {
   if (!utcDateOrIso) return null;
   const utcDate = (utcDateOrIso instanceof Date) ? utcDateOrIso : new Date(utcDateOrIso);
   if (Number.isNaN(utcDate.getTime())) return null;
@@ -289,7 +367,7 @@ export function formatNepaliDateTime(utcDateOrIso) {
   const nptMinutes = nptShifted.getUTCMinutes();
   const nptSeconds = nptShifted.getUTCSeconds();
 
-  const bsDate = convertAdToBs(nptYear, nptMonth, nptDay);
+  const bsDate = convertAdToBs(nptYear, nptMonth, nptDay, customCalendarData);
 
   const pad = (v) => String(v).padStart(2, '0');
   const time24 = `${pad(nptHours)}:${pad(nptMinutes)}`;

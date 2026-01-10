@@ -31,12 +31,14 @@ const AddEventForm = ({ onAdd, familyMembers, onCancel, editingEvent }) => {
     // Populate form when editing
     useEffect(() => {
         if (editingEvent) {
+            console.log('[AddEventForm] Editing event:', editingEvent);
             setName(editingEvent.title || '');
             setDescription(editingEvent.description || '');
             setDate(editingEvent.dateKey || getTodayDate());
             setSelectedPersonId(editingEvent.memberId || '');
             setRepetition(editingEvent.repetition || 'none');
             if (editingEvent.tithi) {
+                console.log('[AddEventForm] Event has tithi:', editingEvent.tithi);
                 setEntryMode('tithi');
                 // If stored month is a name (string), convert to 1-based index
                 // If it's already a number (legacy), use as is
@@ -45,11 +47,32 @@ const AddEventForm = ({ onAdd, familyMembers, onCancel, editingEvent }) => {
                     const idx = nepaliMonths.indexOf(monthVal);
                     if (idx !== -1) monthVal = idx + 1;
                 }
-                setTithiMonth(monthVal);
-                setTithiId(editingEvent.tithi.id);
+                // Always store as string to match select onChange behavior
+                const monthString = String(monthVal);
+                console.log('[AddEventForm] Setting tithiMonth:', monthString, 'tithiId:', editingEvent.tithi.id);
+                setTithiMonth(monthString);
+                // Store the tithi info temporarily so we can restore it after month loads
+                // We'll restore it in a separate effect
+                sessionStorage.setItem('pendingTithiId', editingEvent.tithi.id || '');
+            } else {
+                console.log('[AddEventForm] Event has no tithi, setting date mode');
+                setEntryMode('date');
+                setTithiMonth('');
+                setTithiId('');
+                sessionStorage.removeItem('pendingTithiId');
             }
         }
-    }, [editingEvent]);
+    }, [editingEvent, nepaliMonths]);
+
+    // Restore tithiId after tithiMonth has been set
+    useEffect(() => {
+        const pendingId = sessionStorage.getItem('pendingTithiId');
+        if (pendingId && tithiMonth) {
+            console.log('[AddEventForm] Restoring tithiId:', pendingId);
+            setTithiId(pendingId);
+            sessionStorage.removeItem('pendingTithiId');
+        }
+    }, [tithiMonth]);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -102,7 +125,7 @@ const AddEventForm = ({ onAdd, familyMembers, onCancel, editingEvent }) => {
                         month: actualTithiLunarMonth,  // Save the actual tithi lunar month name, NOT calendar month
                         id: tithiId,
                         name: tithiName,
-                        paksha: paksha
+                        paksha: pakshaNepali  // Use Nepali paksha name for display
                     };
                 } else {
                     alert(`Could not find date for ${selectedMonthName} ${pakshaNepali} ${tithiName} in year ${currentBsYear}. Please ensure Tithis are generated.`);
@@ -158,11 +181,14 @@ const AddEventForm = ({ onAdd, familyMembers, onCancel, editingEvent }) => {
                             required
                         >
                             <option value="" disabled>Select a person...</option>
-                            {familyMembers.map(member => (
-                                <option key={member.id} value={member.id}>
-                                    {member.name} ({member.relation})
-                                </option>
-                            ))}
+                            {familyMembers.map(member => {
+                                const suffix = member.nickname ? ` (${member.nickname})` : '';
+                                return (
+                                    <option key={member.id} value={member.id}>
+                                        {member.name}{suffix}
+                                    </option>
+                                );
+                            })}
                         </select>
                     </div>
                     <div>
@@ -266,7 +292,7 @@ const AddEventForm = ({ onAdd, familyMembers, onCancel, editingEvent }) => {
                                     >
                                         <option value="">Select Tithi Month</option>
                                         {nepaliMonths.map((month, idx) => (
-                                            <option key={idx} value={idx + 1}>{month}</option>
+                                            <option key={idx} value={String(idx + 1)}>{month}</option>
                                         ))}
                                     </select>
                                 </div>
@@ -280,7 +306,7 @@ const AddEventForm = ({ onAdd, familyMembers, onCancel, editingEvent }) => {
                                         required
                                     >
                                         <option value="">Select Tithi</option>
-                                        {tithiMonth && getTithisForMonth(tithiMonth).map(tithi => (
+                                        {tithiMonth && getTithisForMonth(parseInt(tithiMonth)).map(tithi => (
                                             <option key={tithi.tithiId} value={tithi.tithiId}>
                                                 {tithi.name} ({tithi.pakshya})
                                             </option>

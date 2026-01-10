@@ -298,12 +298,48 @@ export default function EmbeddedBuilderPage({ user, isAdmin }) {
     return `Person ${candidate}`;
   }
 
+  function normalizeParentChildOptionA({ fromMemberId, toMemberId, type, parentId, childId }) {
+    // Option A (revised):
+    // - UI/graph edge direction is always user-directed: fromMemberId -> toMemberId
+    // - canonical hierarchy is stored separately as parentId -> childId
+    const t = String(type || '').toLowerCase();
+    const from = String(fromMemberId || '');
+    const to = String(toMemberId || '');
+
+    const existingParentId = String(parentId || '').trim();
+    const existingChildId = String(childId || '').trim();
+    if (existingParentId && existingChildId) {
+      return { fromMemberId: from, toMemberId: to, type: t, parentId: existingParentId, childId: existingChildId };
+    }
+
+    if (!from || !to) {
+      return { fromMemberId: from, toMemberId: to, type: t, parentId: existingParentId, childId: existingChildId };
+    }
+
+    if (t === 'parent') {
+      // from is parent of to
+      return { fromMemberId: from, toMemberId: to, type: 'parent', parentId: from, childId: to };
+    }
+    if (t === 'child') {
+      // from is child of to
+      return { fromMemberId: from, toMemberId: to, type: 'child', parentId: to, childId: from };
+    }
+    return { fromMemberId: from, toMemberId: to, type: t, parentId: existingParentId, childId: existingChildId };
+  }
+
   async function loadGraph(activeTree) {
     if (!activeTree) return;
     try {
       const memberList = await Members.list(activeTree.id);
       let rels = await Relationships.list(activeTree.id).catch(() => []);
       const savedMarriagePoints = await MarriagePoints.list(activeTree.id).catch(() => []);
+
+      const posById = new Map();
+      memberList.forEach(m => {
+        if (hasPosVal(m.position)) {
+          posById.set(String(m.id), m.position);
+        }
+      });
 
       // Clean up dangling relationships that reference deleted/non-existent members.
       // These can cause marriage points to be re-derived even after deleting the mp record.
@@ -328,6 +364,73 @@ export default function EmbeddedBuilderPage({ user, isAdmin }) {
           )
         );
         // Reload relationships after cleanup so downstream computations use the clean set
+        rels = await Relationships.list(activeTree.id).catch(() => []);
+      }
+
+      // Migration: legacy Option A stored parent->child as type 'child' (from=parent, to=child)
+      // and did not persist canonical parentId/childId.
+      // Only convert those legacy documents; do NOT rely on node layout heuristics,
+      // because users can position nodes arbitrarily.
+      const legacyChildAsParent = (rels || []).filter(r => {
+        const t = String(r.type || '').toLowerCase();
+        if (t !== 'child') return false;
+        if (!r.id) return false;
+        const from = String(r.fromMemberId || '');
+        const to = String(r.toMemberId || '');
+        if (!from || !to) return false;
+        const p = String(r.parentId || '').trim();
+        const c = String(r.childId || '').trim();
+        return !p || !c;
+      });
+
+      if (legacyChildAsParent.length > 0) {
+        console.warn(`[Cleanup] Converting ${legacyChildAsParent.length} legacy parent->child relationship(s) from type 'child' to type 'parent'.`);
+        await Promise.all(
+          legacyChildAsParent.map(r => {
+            const from = String(r.fromMemberId || '');
+            const to = String(r.toMemberId || '');
+            return Relationships.update(String(r.id), {
+              treeId: activeTree.id,
+              type: 'parent',
+              parentId: from,
+              childId: to,
+            }).catch(err => {
+              console.warn(`[Cleanup] Failed to convert legacy relationship ${r.id}:`, err);
+            });
+          })
+        );
+        rels = await Relationships.list(activeTree.id).catch(() => []);
+      }
+
+      // Option A migration: backfill canonical parentId/childId for all parent/child relationships.
+      const relsMissingCanonical = (rels || []).filter(r => {
+        const t = String(r.type || '').toLowerCase();
+        if (t !== 'parent' && t !== 'child') return false;
+        const p = String(r.parentId || '').trim();
+        const c = String(r.childId || '').trim();
+        return !!r.id && (!p || !c);
+      });
+      if (relsMissingCanonical.length > 0) {
+        console.warn(`[Cleanup] Backfilling parentId/childId for ${relsMissingCanonical.length} relationship(s).`);
+        await Promise.all(
+          relsMissingCanonical.map(r => {
+            const normalized = normalizeParentChildOptionA({
+              fromMemberId: r.fromMemberId,
+              toMemberId: r.toMemberId,
+              type: r.type,
+              parentId: r.parentId,
+              childId: r.childId,
+            });
+            if (!normalized.parentId || !normalized.childId) return Promise.resolve();
+            return Relationships.update(String(r.id), {
+              treeId: activeTree.id,
+              parentId: normalized.parentId,
+              childId: normalized.childId,
+            }).catch(err => {
+              console.warn(`[Cleanup] Failed to backfill relationship ${r.id}:`, err);
+            });
+          })
+        );
         rels = await Relationships.list(activeTree.id).catch(() => []);
       }
 
@@ -379,12 +482,18 @@ export default function EmbeddedBuilderPage({ user, isAdmin }) {
         const p2Children = new Set();
         
         (rels || []).forEach(r => {
-          if ((r.type === 'parent' || r.type === 'child') && String(r.fromMemberId || '') === p1Id) {
-            p1Children.add(String(r.toMemberId || ''));
-          }
-          if ((r.type === 'parent' || r.type === 'child') && String(r.fromMemberId || '') === p2Id) {
-            p2Children.add(String(r.toMemberId || ''));
-          }
+          const t = String(r.type || '').toLowerCase();
+          if (t !== 'parent' && t !== 'child') return;
+          const normalized = normalizeParentChildOptionA({
+            fromMemberId: r.fromMemberId,
+            toMemberId: r.toMemberId,
+            type: r.type,
+            parentId: r.parentId,
+            childId: r.childId,
+          });
+          if (!normalized.parentId || !normalized.childId) return;
+          if (String(normalized.parentId) === p1Id) p1Children.add(String(normalized.childId));
+          if (String(normalized.parentId) === p2Id) p2Children.add(String(normalized.childId));
         });
         
         // Find common children
@@ -426,17 +535,11 @@ export default function EmbeddedBuilderPage({ user, isAdmin }) {
           data: { label: displayMemberName(m) },
         }));
 
-      const posById = new Map();
-      memberList.forEach(m => {
-        if (hasPosVal(m.position)) {
-          posById.set(String(m.id), m.position);
-        }
-      });
+      // posById already computed above
 
-      // Build adjacency for parent/child relationships (independent of drag direction
-      // or whether the user picked "parent" vs "child" in the picker). This matches
-      // the standalone builder's behavior where multi-parent detection only cares
-      // that a child is connected to two parents, not which endpoint authored the edge.
+      // Build adjacency for parent/child relationships.
+      // We store canonical hierarchy as parentId->childId (Option A), but still keep
+      // UI direction as from->to, so we derive adjacency from parentId/childId.
       const adjacency = new Map(); // memberId -> Set(connectedMemberId) for parent/child relations
       const relByPair = new Map(); // 'a|b' (sorted) -> relationship doc (first seen)
       const spousePairs = new Set(); // 'a|b' (sorted) representing spouse connections
@@ -455,13 +558,23 @@ export default function EmbeddedBuilderPage({ user, isAdmin }) {
 
           // Only parent/child contribute to adjacency
           if (r.type !== 'parent' && r.type !== 'child') continue;
+          const normalized = normalizeParentChildOptionA({
+            fromMemberId: r.fromMemberId,
+            toMemberId: r.toMemberId,
+            type: r.type,
+            parentId: r.parentId,
+            childId: r.childId,
+          });
+          const parentId = String(normalized.parentId || '');
+          const childId = String(normalized.childId || '');
+          if (!parentId || !childId) continue;
 
-          if (!adjacency.has(a)) adjacency.set(a, new Set());
-          if (!adjacency.has(b)) adjacency.set(b, new Set());
-          adjacency.get(a).add(b);
-          adjacency.get(b).add(a);
+          if (!adjacency.has(parentId)) adjacency.set(parentId, new Set());
+          if (!adjacency.has(childId)) adjacency.set(childId, new Set());
+          adjacency.get(parentId).add(childId);
+          adjacency.get(childId).add(parentId);
 
-          const key = a < b ? `${a}|${b}` : `${b}|${a}`;
+          const key = parentId < childId ? `${parentId}|${childId}` : `${childId}|${parentId}`;
           if (!relByPair.has(key)) {
             relByPair.set(key, r);
           }
@@ -553,7 +666,10 @@ export default function EmbeddedBuilderPage({ user, isAdmin }) {
           const key2 = p2Id < childId ? `${p2Id}|${childId}` : `${childId}|${p2Id}`;
           const relForChild = relByPair.get(key1) || relByPair.get(key2) || null;
 
-          const relTypeForDisplay = (relForChild && relForChild.type) ? relForChild.type : 'child';
+          // The marriagePoint -> child edge is a derived UI edge representing "this couple has this child".
+          // Regardless of how the underlying member-to-member relationship is stored/directed (parent vs child),
+          // the derived edge should display as "child".
+          const relTypeForDisplay = 'child';
           const optionalLabel = (relForChild && typeof relForChild.label === 'string') ? relForChild.label : '';
           const labelText = (optionalLabel || relTypeForDisplay);
 
@@ -625,9 +741,11 @@ export default function EmbeddedBuilderPage({ user, isAdmin }) {
 
           if (type === 'parent' || type === 'child') {
             if (type === 'child') {
+              // Child relationship: bottom-source -> top-target
               sourceHandle = 'bottom-source';
               targetHandle = 'top-target';
             } else {
+              // Parent relationship: top-source -> bottom-target
               sourceHandle = 'top-source';
               targetHandle = 'bottom-target';
             }
@@ -832,7 +950,9 @@ export default function EmbeddedBuilderPage({ user, isAdmin }) {
       return;
     }
 
-    const nextType = (requestedType === 'parent' || requestedType === 'child') ? requestedType : 'child';
+    // Always create parent->child docs for both parents.
+    // Using type 'parent' keeps semantics correct (from is parent of to).
+    const nextType = 'parent';
 
     // Parse parent IDs from mp id: mp-<p1|p2>
     const pairStr = mpIdStr.slice(3);
@@ -867,6 +987,8 @@ export default function EmbeddedBuilderPage({ user, isAdmin }) {
       fromMemberId: parentId,
       toMemberId: childIdStr,
       type: nextType,
+      parentId,
+      childId: childIdStr,
       label,
     }));
     await Promise.all(payloads.map(p => Relationships.create(p)));
@@ -1101,6 +1223,18 @@ export default function EmbeddedBuilderPage({ user, isAdmin }) {
         type: type || 'custom',
         label,
       };
+
+      // Option A: keep edge direction as from->to, but persist canonical hierarchy as parentId/childId.
+      if (relationshipData.type === 'parent' || relationshipData.type === 'child') {
+        const normalized = normalizeParentChildOptionA({
+          fromMemberId: relationshipData.fromMemberId,
+          toMemberId: relationshipData.toMemberId,
+          type: relationshipData.type,
+        });
+        relationshipData.parentId = normalized.parentId;
+        relationshipData.childId = normalized.childId;
+      }
+
       console.log('[handleConfirmRelationship] Creating relationship:', relationshipData);
       const result = await Relationships.create(relationshipData);
       console.log('[handleConfirmRelationship] Created relationship:', result);
@@ -1277,10 +1411,10 @@ export default function EmbeddedBuilderPage({ user, isAdmin }) {
       return;
     }
     try {
-      // If editing a marriage-point->child edge, apply the update to both parent-child docs.
+      // If editing a marriage-point->child edge, apply the update to both parent-child docs (canonical parent->child).
       if (editPicker.fromMarriagePoint && editPicker.target && editPicker.source && (String(editPicker.source).startsWith('mp-') || String(editPicker.target).startsWith('mp-'))) {
-        const requestedType = type || 'child';
-        const normalizedType = (requestedType === 'parent' || requestedType === 'child') ? requestedType : 'child';
+        // For marriage-point->child edges we update both parent->child relationship docs.
+        const normalizedType = 'parent';
         const mpId = String(editPicker.source).startsWith('mp-') ? String(editPicker.source) : String(editPicker.target);
         const childId = String(editPicker.source).startsWith('mp-') ? String(editPicker.target) : String(editPicker.source);
         const pairStr = mpId.slice(3);
@@ -1295,17 +1429,49 @@ export default function EmbeddedBuilderPage({ user, isAdmin }) {
           return endpointsMatch && isParentChild;
         });
 
-        await Promise.all(matches.map(r => Relationships.update(r.id, {
-          treeId: tree.id,
-          type: normalizedType,
-          label,
-        })));
+        // Ensure each matching doc is parent->child (from=parent, to=child, type='parent')
+        await Promise.all(matches.map(r => {
+          const a = String(r.fromMemberId || '');
+          const b = String(r.toMemberId || '');
+          let parentId = null;
+          if ((a === p1Id && b === childId) || (a === childId && b === p1Id)) parentId = p1Id;
+          if ((a === p2Id && b === childId) || (a === childId && b === p2Id)) parentId = p2Id;
+          if (!parentId) {
+            return Promise.resolve();
+          }
+          return Relationships.update(r.id, {
+            treeId: tree.id,
+            type: normalizedType,
+            fromMemberId: parentId,
+            toMemberId: childId,
+            parentId,
+            childId,
+            label,
+          });
+        }));
       } else {
-        await Relationships.update(editPicker.relationshipId, {
-          treeId: tree.id,
-          type: type || 'custom',
-          label,
-        });
+        const requestedType = type || 'custom';
+        if (requestedType === 'parent' || requestedType === 'child') {
+          // In edit mode we must know the original endpoints to normalize correctly.
+          const source = String(editPicker.source || '');
+          const target = String(editPicker.target || '');
+          const normalized = normalizeParentChildOptionA({ fromMemberId: source, toMemberId: target, type: requestedType });
+          await Relationships.update(editPicker.relationshipId, {
+            treeId: tree.id,
+            type: normalized.type,
+            fromMemberId: normalized.fromMemberId,
+            toMemberId: normalized.toMemberId,
+            parentId: normalized.parentId,
+            childId: normalized.childId,
+            label,
+          });
+        } else {
+          await Relationships.update(editPicker.relationshipId, {
+            treeId: tree.id,
+            type: requestedType,
+            label,
+          });
+        }
       }
       setEditPicker({ open: false, relationshipId: '', type: 'custom', label: '' });
       await loadGraph(tree);
