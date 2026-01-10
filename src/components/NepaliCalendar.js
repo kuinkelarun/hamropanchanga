@@ -1468,10 +1468,6 @@ export default function NepaliCalendar({ user: propUser, isAdmin, treeMembers = 
     // Convert current AD date to Nepali for comparison
     const currentBsDate = convertAdToBs(adYear, adMonthZeroBased, adDay);
     
-    if (isDev && currentBsDate) {
-      console.log(`[getEventsForDate] Checking events for AD ${dateKey} = Nepali ${currentBsDate.year}/${currentBsDate.month}/${currentBsDate.day}`);
-    }
-    
     return calendarEvents.filter(event => {
       // For yearly repeating tithi events, resolve the date for the current viewing year
       let eventDateKeyToMatch = event.dateKey;
@@ -1481,9 +1477,6 @@ export default function NepaliCalendar({ user: propUser, isAdmin, treeMembers = 
       
       // 1. Exact Date Match
       if (eventDateKeyToMatch === dateKey) {
-        if (isDev) {
-          console.log(`  ✓ Exact match: "${event.title}" (dateKey: ${event.dateKey})`);
-        }
         return true;
       }
       
