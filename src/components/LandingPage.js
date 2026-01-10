@@ -9,7 +9,7 @@ import NepaliCalendar from './NepaliCalendar';
 import Block1 from './Block1';
 import Footer from './Footer';
 
-const LandingPage = ({ user, isAdmin, trees = [], treeMembers = [], events, familyMembers, onDoubleClickEvent }) => {
+const LandingPage = ({ user, isAdmin, trees = [], treeMembers = [], events, familyMembers, onDoubleClickEvent, onEventClick }) => {
     const [block1Visible, setBlock1Visible] = useState(null);
     const [searchQuery, setSearchQuery] = useState('');
     const navigate = useNavigate();
@@ -183,7 +183,8 @@ const LandingPage = ({ user, isAdmin, trees = [], treeMembers = [], events, fami
                             <LandingPageEventsSection 
                                 events={events} 
                                 familyMembers={familyMembers} 
-                                onDoubleClickEvent={onDoubleClickEvent} 
+                                onDoubleClickEvent={onDoubleClickEvent}
+                                onEventClick={onEventClick}
                             />
                         </div>
                     </div>

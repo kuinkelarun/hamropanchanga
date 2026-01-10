@@ -3,7 +3,7 @@ import './LandingPageEventsSection.css';
 import { useSettings } from '../contexts/SettingsContext';
 import { formatNepaliDate, formatEnglishDate, formatNepaliMonthYear, formatGregorianMonthYear, convertAdToBs, convertBsToAd } from '../utils/nepaliDateUtils';
 
-const LandingPageEventsSection = ({ events, familyMembers, onDoubleClickEvent }) => {
+const LandingPageEventsSection = ({ events, familyMembers, onDoubleClickEvent, onEventClick }) => {
     const [eventFilter, setEventFilter] = useState('next-week');
     const { isNepaliCalendar } = useSettings(); // Use global settings
 
@@ -196,7 +196,8 @@ const LandingPageEventsSection = ({ events, familyMembers, onDoubleClickEvent })
                                 {groupedEvents[monthYear].map((event, index) => (
                                     <div 
                                         key={index} 
-                                        className="event-card"
+                                        className="event-card cursor-pointer hover:shadow-lg transition-shadow"
+                                        onClick={() => onEventClick && onEventClick(event)}
                                         onDoubleClick={() => onDoubleClickEvent(event)}
                                     >
                                         <div className="event-name">
@@ -233,7 +234,8 @@ const LandingPageEventsSection = ({ events, familyMembers, onDoubleClickEvent })
                         {sortedAndFilteredEvents.map((event, index) => (
                             <div 
                                 key={index} 
-                                className="event-card"
+                                className="event-card cursor-pointer hover:shadow-lg transition-shadow"
+                                onClick={() => onEventClick && onEventClick(event)}
                                 onDoubleClick={() => onDoubleClickEvent(event)}
                             >
                                 <div className="event-name">
