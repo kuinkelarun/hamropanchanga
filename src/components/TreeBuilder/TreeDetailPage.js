@@ -23,6 +23,7 @@ export default function TreeDetailPage({ user }) {
   const [editingEvent, setEditingEvent] = useState(null);
   const [memberModalOpen, setMemberModalOpen] = useState(false);
   const [editingMember, setEditingMember] = useState(null);
+  const [memberPreviewMode, setMemberPreviewMode] = useState(false);
   const [aboutFamilyOpen, setAboutFamilyOpen] = useState(false);
   const [aboutFamilyRows, setAboutFamilyRows] = useState([]);
   const [aboutFamilyEditMode, setAboutFamilyEditMode] = useState(false);
@@ -257,6 +258,13 @@ export default function TreeDetailPage({ user }) {
 
   const handleEditMember = (member) => {
     setEditingMember(member);
+    setMemberPreviewMode(false);
+    setMemberModalOpen(true);
+  };
+
+  const handlePreviewMember = (member) => {
+    setEditingMember(member);
+    setMemberPreviewMode(true);
     setMemberModalOpen(true);
   };
 
@@ -503,7 +511,11 @@ export default function TreeDetailPage({ user }) {
               {members.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {members.map(member => (
-                    <div key={member.id} className="bg-gradient-to-br from-gray-50 to-white p-4 rounded-lg border border-gray-200 hover:shadow-md transition-shadow">
+                    <div 
+                      key={member.id} 
+                      className="bg-gradient-to-br from-gray-50 to-white p-4 rounded-lg border border-gray-200 hover:shadow-md transition-shadow cursor-pointer"
+                      onDoubleClick={() => handlePreviewMember(member)}
+                    >
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
                           <h4 className="font-semibold text-gray-800">{member.name || 'Unknown'}</h4>
@@ -634,8 +646,10 @@ export default function TreeDetailPage({ user }) {
         onClose={() => {
           setMemberModalOpen(false);
           setEditingMember(null);
+          setMemberPreviewMode(false);
         }}
         onDelete={editingMember ? () => handleDeleteMember(editingMember.id) : undefined}
+        previewMode={memberPreviewMode}
       />
 
       {/* About Family Modal */}
