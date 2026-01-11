@@ -2,7 +2,7 @@
 .block1-container {
     width: 100%;
     background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-    padding: 0.75rem 0 1rem 0;
+    padding: 0.75rem 0 0 0;
     margin: 0;
     overflow: hidden;
 }
@@ -33,9 +33,11 @@
 
 .block1-header-inner {
     display: flex;
-    padding: 0 2rem;
+    padding: 0 1rem;
     flex: 0 1 auto;
     min-width: min-content;
+    max-width: 1100px;
+    width: 100%;
     justify-content: flex-start;
     gap: 1.5rem;
 }
@@ -70,38 +72,39 @@
     display: flex;
     justify-content: center;
     width: 100%;
+    overflow: visible;
+    padding: 0.5rem 0 1rem 0;
+}
+
+.block1-scroll-wrapper-inner {
+    display: flex;
+    padding: 0 1rem 1rem;
+    max-width: 1100px;
+    width: 100%;
+    gap: 1.5rem;
     overflow-x: auto;
     overflow-y: hidden;
     -webkit-overflow-scrolling: touch;
     scroll-behavior: smooth;
     scrollbar-width: thin;
     scrollbar-color: rgba(0, 0, 0, 0.3) transparent;
-    padding: 0.5rem 0 1rem 0;
 }
 
-.block1-scroll-wrapper-inner {
-    display: flex;
-    padding: 0 2rem 1rem;
-    flex: 0 1 auto;
-    min-width: min-content;
-    gap: 1.5rem;
-}
-
-/* Custom scrollbar for webkit browsers */
-.block1-scroll-wrapper::-webkit-scrollbar {
+/* Custom scrollbar for webkit browsers on inner wrapper */
+.block1-scroll-wrapper-inner::-webkit-scrollbar {
     height: 8px;
 }
 
-.block1-scroll-wrapper::-webkit-scrollbar-track {
+.block1-scroll-wrapper-inner::-webkit-scrollbar-track {
     background: transparent;
 }
 
-.block1-scroll-wrapper::-webkit-scrollbar-thumb {
+.block1-scroll-wrapper-inner::-webkit-scrollbar-thumb {
     background: rgba(0, 0, 0, 0.3);
     border-radius: 4px;
 }
 
-.block1-scroll-wrapper::-webkit-scrollbar-thumb:hover {
+.block1-scroll-wrapper-inner::-webkit-scrollbar-thumb:hover {
     background: rgba(0, 0, 0, 0.5);
 }
 
@@ -116,7 +119,7 @@
 /* Individual Card */
 .block1-card {
     flex: 0 0 280px;
-    background: white;
+    background: transparent;
     border-radius: 16px;
     padding: 0;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08), 
@@ -303,25 +306,18 @@
 
 /* Scroll Hint */
 .block1-scroll-hint {
-    text-align: center;
-    padding: 0.8rem 0 0.4rem;
-}
-
-.block1-hint-text {
-    font-size: 0.85rem;
-    color: #718096;
-    opacity: 0.8;
+    display: none;
 }
 
 /* Desktop: Show 7 cards side by side on large screens */
 @media (min-width: 1400px) {
     .block1-scroll-wrapper-inner {
-        padding: 0 4rem 1rem;
+        padding: 0 1rem 1rem;
         gap: 2rem;
     }
 
     .block1-header-inner {
-        padding: 0 4rem;
+        padding: 0 1rem;
     }
 
     .block1-cards {
@@ -336,12 +332,12 @@
 /* Tablet and Medium Desktop */
 @media (min-width: 1024px) and (max-width: 1399px) {
     .block1-scroll-wrapper-inner {
-        padding: 0 3rem 1rem;
+        padding: 0 1rem 1rem;
         gap: 1.75rem;
     }
 
     .block1-header-inner {
-        padding: 0 3rem;
+        padding: 0 1rem;
     }
 
     .block1-cards {
@@ -356,7 +352,7 @@
 /* Mobile Optimizations - Show 2 cards in compact view */
 @media (max-width: 768px) {
     .block1-container {
-        padding: 2rem 0;
+        padding: 0.75rem 0 0.75rem 0;
         /* Force full width on mobile */
         width: 100vw;
         position: relative;
@@ -367,11 +363,11 @@
     }
     
     .block1-scroll-wrapper {
-        padding: 0.5rem 0 1rem 0;
+        padding: 0.5rem 0 0 0;
     }
     
     .block1-header {
-        padding: 0 1rem 1.25rem;
+        padding: 0 0 0.5rem;
     }
     
     .block1-title {
@@ -389,6 +385,7 @@
 
     .block1-header-inner {
         padding: 0 1rem;
+        padding-bottom: 0.5rem;
     }
 
     .block1-cards {
@@ -420,20 +417,15 @@
         font-size: 0.85rem;
         line-height: 1.5;
     }
-    
-    /* Show scroll hint on mobile */
-    .block1-scroll-hint {
-        display: block;
-    }
 }
 
 @media (max-width: 480px) {
     .block1-container {
-        padding: 1.5rem 0;
+        padding: 0.5rem 0 0.75rem 0;
     }
     
     .block1-scroll-wrapper {
-        padding: 0.5rem 0 1rem 0;
+        padding: 0.5rem 0 0 0;
     }
     
     /* Adjust for smaller screens - still show 2 cards */
@@ -466,6 +458,7 @@
 
     .block1-header-inner {
         padding: 0 0.75rem;
+        padding-bottom: 0.5rem;
     }
 
     .block1-cards {
@@ -475,7 +468,7 @@
 
 @media (max-width: 320px) {
     .block1-container {
-        padding: 1.25rem 0;
+        padding: 0.5rem 0 0.75rem 0;
     }
     
     .block1-title {
@@ -493,6 +486,7 @@
 
     .block1-header-inner {
         padding: 0 0.5rem;
+        padding-bottom: 0.5rem;
     }
 
     .block1-cards {
@@ -518,9 +512,3 @@
     }
 }
 
-/* Hide scroll hint on desktop */
-@media (min-width: 769px) {
-    .block1-scroll-hint {
-        display: none;
-    }
-}
