@@ -1,11 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { collection, query, where, orderBy, onSnapshot } from 'firebase/firestore';
 import { db } from '../firebase';
+import announcementIcon from '../assets/announcement-icon.svg';
 import './Block1.css';
 
 const Block1 = () => {
     const [cards, setCards] = useState([]);
     const [loading, setLoading] = useState(true);
+    const cardsRowRef = useRef(null);
+    const [cardsWidth, setCardsWidth] = useState(0);
 
     useEffect(() => {
         // Fetch published cards from Firestore
@@ -50,6 +53,34 @@ const Block1 = () => {
         return () => unsubscribe();
     }, []);
 
+    // Keep header width in sync with the cards row width
+    useEffect(() => {
+        if (!cardsRowRef.current) return;
+
+        const updateWidth = () => {
+            const rect = cardsRowRef.current.getBoundingClientRect();
+            setCardsWidth(rect.width);
+        };
+
+        updateWidth();
+
+        let resizeObserver;
+        if (typeof ResizeObserver !== 'undefined') {
+            resizeObserver = new ResizeObserver(() => updateWidth());
+            resizeObserver.observe(cardsRowRef.current);
+        } else if (typeof window !== 'undefined') {
+            window.addEventListener('resize', updateWidth);
+        }
+
+        return () => {
+            if (resizeObserver) {
+                resizeObserver.disconnect();
+            } else if (typeof window !== 'undefined') {
+                window.removeEventListener('resize', updateWidth);
+            }
+        };
+    }, [cards.length]);
+
     if (loading) {
         return (
             <section className="block1-container">
@@ -64,13 +95,24 @@ const Block1 = () => {
 
     return (
         <section className="block1-container">
-            <div className="block1-header">
-                <h2 className="block1-title">Discover Features</h2>
-                <p className="block1-subtitle">Explore everything you can do with My Family Tree</p>
-            </div>
-            
-            <div className="block1-scroll-wrapper">
-                <div className="block1-cards">
+            <div className="block1-content-wrapper">
+                <div className="block1-header-wrapper">
+                    <div className="block1-header">
+                        <div 
+                            className="block1-header-inner"
+                            style={cardsWidth ? { width: cardsWidth } : undefined}
+                        >
+                            <h2 className="block1-title"><img src={announcementIcon} alt="Announcement" className="block1-title-icon" /> Announcements</h2>
+                        </div>
+                    </div>
+                </div>
+                
+                <div className="block1-scroll-wrapper">
+                    <div 
+                        className="block1-scroll-wrapper-inner"
+                        ref={cardsRowRef}
+                    >
+                    <div className="block1-cards">
                     {cards.map(card => (
                         <div 
                             key={card.id} 
@@ -93,7 +135,9 @@ const Block1 = () => {
                             </div>
                         </div>
                     ))}
+                    </div>
                 </div>
+            </div>
             </div>
             
             <div className="block1-scroll-hint">
