@@ -8,8 +8,10 @@ import MemberModal from './MemberModal';
 import { db } from '../../firebase';
 import { collection, addDoc, serverTimestamp, query, where, getDocs, doc, updateDoc } from 'firebase/firestore';
 import { formatAdDateToNepaliStringWithNumerals, convertAdToBs } from '../../utils/nepaliDateUtils';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 export default function TreeDetailPage({ user }) {
+  const { t, tn, isNepali } = useLanguage();
   const { treeId } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
@@ -425,14 +427,21 @@ export default function TreeDetailPage({ user }) {
       // If less than 1 day old, show "today" or "yesterday"
       if (diffDays === 0) {
         const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-        if (diffHours === 0) return 'Just now';
-        return `${diffHours}h ago`;
+        if (diffHours === 0) return t('treeDetail.justNow');
+        return isNepali ? `${tn(diffHours)} ${t('treeDetail.hoursAgo')}` : `${t('treeDetail.updated')} ${diffHours}${t('treeDetail.hoursAgo')}`;
       }
-      if (diffDays === 1) return 'Yesterday';
-      if (diffDays < 7) return `${diffDays} days ago`;
-      if (diffDays < 30) return `${Math.floor(diffDays / 7)}w ago`;
-      if (diffDays < 365) return `${Math.floor(diffDays / 30)}m ago`;
-      return `${Math.floor(diffDays / 365)}y ago`;
+      if (diffDays === 1) return t('treeDetail.yesterday');
+      if (diffDays < 7) return isNepali ? `${tn(diffDays)} ${t('treeDetail.daysAgo')} ${t('treeDetail.updated')}` : `${t('treeDetail.updated')} ${diffDays} ${t('treeDetail.daysAgo')}`;
+      if (diffDays < 30) {
+        const weeks = Math.floor(diffDays / 7);
+        return isNepali ? `${tn(weeks)} ${t('treeDetail.weeksAgo')} ${t('treeDetail.updated')}` : `${t('treeDetail.updated')} ${weeks}${t('treeDetail.weeksAgo')}`;
+      }
+      if (diffDays < 365) {
+        const months = Math.floor(diffDays / 30);
+        return isNepali ? `${tn(months)} ${t('treeDetail.monthsAgo')} ${t('treeDetail.updated')}` : `${t('treeDetail.updated')} ${months}${t('treeDetail.monthsAgo')}`;
+      }
+      const years = Math.floor(diffDays / 365);
+      return isNepali ? `${tn(years)} ${t('treeDetail.yearsAgo')} ${t('treeDetail.updated')}` : `${t('treeDetail.updated')} ${years}${t('treeDetail.yearsAgo')}`;
     } catch (err) {
       return null;
     }
@@ -506,7 +515,7 @@ export default function TreeDetailPage({ user }) {
                     className="text-gray-500 flex items-center gap-1"
                     title={tree.updatedAt?.toDate ? tree.updatedAt.toDate().toLocaleString() : new Date(tree.updatedAt).toLocaleString()}
                   >
-                    📅 Updated {formatDateForDisplay(tree.updatedAt)}
+                    📅 {formatDateForDisplay(tree.updatedAt)}
                   </span>
                 )}
               </div>
@@ -521,7 +530,7 @@ export default function TreeDetailPage({ user }) {
           {/* Left Column - Tree Preview */}
           <div className="lg:col-span-1">
             <div className="bg-white rounded-2xl shadow-md p-6 border border-gray-200 sticky top-6">
-              <h3 className="text-lg font-bold text-gray-800 mb-4">Tree Preview</h3>
+              <h3 className="text-lg font-bold text-gray-800 mb-4">{t('treeDetail.treePreview')}</h3>
               <TreePreview
                 treeId={treeId}
                 members={members}
@@ -533,7 +542,7 @@ export default function TreeDetailPage({ user }) {
                 onClick={handleOpenCanvas}
                 className="w-full mt-4 px-4 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-lg font-semibold shadow-md transition-all transform hover:scale-105"
               >
-                Open Tree Canvas
+                {t('treeDetail.openTreeCanvas')}
               </button>
             </div>
           </div>
@@ -543,12 +552,12 @@ export default function TreeDetailPage({ user }) {
             {/* Family Members Section */}
             <div className="bg-white rounded-2xl shadow-md p-6 border border-gray-200">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-bold text-gray-800">Family Members</h3>
+                <h3 className="text-lg font-bold text-gray-800">{t('treeDetail.familyMembers')}</h3>
                 <button
                   onClick={handleAddMember}
                   className="px-4 py-2 text-sm bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium"
                 >
-                  Add Member
+                  {t('treeDetail.addMember')}
                 </button>
               </div>
               {members.length > 0 ? (
@@ -607,12 +616,12 @@ export default function TreeDetailPage({ user }) {
             {/* Events Section */}
             <div className="bg-white rounded-2xl shadow-md p-6 border border-gray-200">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-bold text-gray-800">Events</h3>
+                <h3 className="text-lg font-bold text-gray-800">{t('treeDetail.events')}</h3>
                 <button
                   onClick={() => setIsAddingEvent(true)}
                   className="px-4 py-2 text-sm bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium"
                 >
-                  Add Event
+                  {t('treeDetail.addEvent')}
                 </button>
               </div>
               {events.length > 0 ? (

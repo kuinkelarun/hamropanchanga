@@ -4,6 +4,7 @@ import { onAuthStateChanged } from 'firebase/auth';
 import { db, auth, signInWithGoogle } from '../firebase';
 import { useUserPermissions } from '../hooks/usePermissions';
 import { PERMISSIONS } from '../constants/roles';
+import { useLanguage } from '../contexts/LanguageContext';
 import './NepaliCalendar.css';
 import ConfirmModal from './ConfirmModal';
 import bsCalendarData from '../data/bsCalendarData';
@@ -24,6 +25,10 @@ const nepaliMonths = utilNepaliMonths;
 const englishMonths = [
   "January", "February", "March", "April", "May", "June",
   "July", "August", "September", "October", "November", "December"
+];
+const englishMonthsNepali = [
+  "जनवरी", "फेब्रुअरी", "मार्च", "अप्रिल", "मे", "जुन",
+  "जुलाई", "अगस्ट", "सेप्टेम्बर", "अक्टोबर", "नोभेम्बर", "डिसेम्बर"
 ];
 const nepaliWeekdays = [
   "आइतबार", "सोमबार", "मंगलबार", "बुधबार", "बिहिबार", "शुक्रबार", "शनिबार"
@@ -66,12 +71,17 @@ function getNepalDate(){
 }
 
 // Convert 24-hour time (HH:MM) to 12-hour format with AM/PM
-function formatTime12Hour(time24) {
+function formatTime12Hour(time24, isNepali = false, tn = null) {
   if (!time24) return '';
   const [hours, minutes] = time24.split(':').map(Number);
   const period = hours >= 12 ? 'PM' : 'AM';
   const hours12 = hours % 12 || 12;
-  return `${hours12}:${String(minutes).padStart(2, '0')} ${period}`;
+  const minutesStr = String(minutes).padStart(2, '0');
+  
+  if (isNepali && tn) {
+    return `${tn(hours12)}:${tn(minutesStr)} ${period}`;
+  }
+  return `${hours12}:${minutesStr} ${period}`;
 }
 
 // Convert 12-hour time with AM/PM to 24-hour format (HH:MM)
@@ -97,6 +107,7 @@ function formatTime24Hour(time12) {
 
 export default function NepaliCalendar({ user: propUser, isAdmin, treeMembers = [], onTreeEventClick }) {
   const { isEditMode } = useSettings();
+  const { t, tn, isNepali } = useLanguage();
   const isDev = process.env.NODE_ENV !== 'production';
   const [user, setUser] = useState(propUser || null);
   const [authLoading, setAuthLoading] = useState(!propUser);
@@ -526,13 +537,22 @@ export default function NepaliCalendar({ user: propUser, isAdmin, treeMembers = 
     const start = firstDayOfBsMonthAd;
     const end = lastDayOfBsMonthAd;
     if (!start) return '';
-    if (!end) return `${englishMonths[start.month ?? 0]} ${start.year ?? ''}`;
+    
+    // Use translated month names based on language
+    const monthNames = isNepali ? englishMonthsNepali : englishMonths;
+    
+    if (!end) return `${monthNames[start.month ?? 0]} ${isNepali ? tn(start.year ?? '') : (start.year ?? '')}`;
     const sMon = start.month; const eMon = end.month;
     const sYr = start.year; const eYr = end.year;
-    if (sMon === eMon && sYr === eYr) return `${englishMonths[sMon]} ${sYr}`;
-    if (sYr === eYr) return `${englishMonths[sMon]}/${englishMonths[eMon]} ${sYr}`;
-    return `${englishMonths[sMon]} ${sYr} / ${englishMonths[eMon]} ${eYr}`;
-  }, [firstDayOfBsMonthAd, lastDayOfBsMonthAd]);
+    
+    // Format years with Nepali numerals if language is Nepali
+    const sYrDisplay = isNepali ? tn(sYr) : sYr;
+    const eYrDisplay = isNepali ? tn(eYr) : eYr;
+    
+    if (sMon === eMon && sYr === eYr) return `${monthNames[sMon]} ${sYrDisplay}`;
+    if (sYr === eYr) return `${monthNames[sMon]}/${monthNames[eMon]} ${sYrDisplay}`;
+    return `${monthNames[sMon]} ${sYrDisplay} / ${monthNames[eMon]} ${eYrDisplay}`;
+  }, [firstDayOfBsMonthAd, lastDayOfBsMonthAd, isNepali, tn]);
 
   const startDayOfWeek = useMemo(() => {
     if (!firstDayOfBsMonthAd) return 0;
@@ -1664,7 +1684,7 @@ export default function NepaliCalendar({ user: propUser, isAdmin, treeMembers = 
   // Helper function to format tithi datetime display
   const formatTithiDateTime = (tithi) => {
     if (!tithi.startDate && !tithi.endDate) {
-      return `${formatTime12Hour(tithi.startTime)} — ${formatTime12Hour(tithi.endTime)}`;
+      return `${formatTime12Hour(tithi.startTime, isNepali, tn)} — ${formatTime12Hour(tithi.endTime, isNepali, tn)}`;
     }
 
     // Parse start and end dates
@@ -1681,7 +1701,7 @@ export default function NepaliCalendar({ user: propUser, isAdmin, treeMembers = 
     
     // Always show full date-time format for consistency with 12-hour time
     // Format: "कात्तिक २७, २०८२, 6:00 AM — कात्तिक २८, २०८२, 6:00 PM"
-    return `${startDateStr}, ${formatTime12Hour(tithi.startTime)} — ${endDateStr}, ${formatTime12Hour(tithi.endTime)}`;
+    return `${startDateStr}, ${formatTime12Hour(tithi.startTime, isNepali, tn)} — ${endDateStr}, ${formatTime12Hour(tithi.endTime, isNepali, tn)}`;
 }
 
 // Helpers to compute millisecond timestamps for tithi start/end for robust ordering
@@ -2065,7 +2085,10 @@ function compareTithisByStart(a,b){
              return null;
           })()}
           <div style={{ fontSize: '0.8rem', marginTop: '2px', opacity: 0.9 }}>
-            {englishMonths[todayAd.getUTCMonth()]} {todayAd.getUTCDate()}, {todayAd.getUTCFullYear()}
+            {isNepali 
+              ? `${englishMonthsNepali[todayAd.getUTCMonth()]} ${tn(todayAd.getUTCDate())}, ${tn(todayAd.getUTCFullYear())}`
+              : `${englishMonths[todayAd.getUTCMonth()]} ${todayAd.getUTCDate()}, ${todayAd.getUTCFullYear()}`
+            }
           </div>
         </div>
       </div>
@@ -2076,7 +2099,7 @@ function compareTithisByStart(a,b){
           aria-label={`Previous Nepali month: ${getPrevMonthName()}`}
         >
           <span className="nc-arrow nc-arrow-left">‹</span>
-          <span className="nc-label nc-label-default">Prev</span>
+          <span className="nc-label nc-label-default">{t('calendar.prev')}</span>
           <span className="nc-label nc-label-hover">{getPrevMonthName()}</span>
         </button>
         <div className="nc-center">
@@ -2117,7 +2140,7 @@ function compareTithisByStart(a,b){
           className="nc-btn nc-nav-btn"
           aria-label={`Next Nepali month: ${getNextMonthName()}`}
         >
-          <span className="nc-label nc-label-default">Next</span>
+          <span className="nc-label nc-label-default">{t('calendar.next')}</span>
           <span className="nc-label nc-label-hover">{getNextMonthName()}</span>
           <span className="nc-arrow nc-arrow-right">›</span>
         </button>
@@ -2144,16 +2167,17 @@ function compareTithisByStart(a,b){
           <div className="nc-modal" onClick={(e)=>e.stopPropagation()} style={{ maxWidth: '600px' }}>
             <div className="nc-modal-header">
               <h3 className="nc-modal-title" style={{ fontSize: '0.95rem', color: '#666' }}>
-                Selected Date: {
+                {
                   (() => {
                     if (!activeDate) return '';
                     
-                    // eslint-disable-next-line no-unused-vars
                     const [year, month, day] = activeDate.split('-').map(Number);
-                    // const bs = convertAdToBs(year, month - 1, day);
+                    const bs = convertAdToBs(year, month - 1, day);
                     
-                    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-                    return `${monthNames[month - 1]} ${day}`;
+                    // Display Nepali date: "१ वैशाख २०८१" or "1 Baisakh 2081"
+                    return isNepali 
+                      ? `${tn(bs.day)} ${nepaliMonths[bs.month]} ${tn(bs.year)}`
+                      : `${bs.day} ${nepaliMonths[bs.month]} ${bs.year}`;
                   })()
                 }
               </h3>
@@ -2164,7 +2188,7 @@ function compareTithisByStart(a,b){
 
             {/* Tithis Section */}
             <div className="nc-modal-section">
-              <h4>Tithis</h4>
+              <h4>{t('calendar.tithis')}</h4>
               {modalTithis.length===0 && <div className="muted">✨ Tithis will be added soon for this date</div>}
               {modalTithis
                 .sort(compareTithisByStart)
@@ -2181,7 +2205,7 @@ function compareTithisByStart(a,b){
 
             {/* Public Events Section */}
             <div className="nc-modal-section" style={{ borderTop: '1px solid #eee', paddingTop: '1rem' }}>
-              <h4>Public Events</h4>
+              <h4>{t('calendar.publicEvents')}</h4>
               {modalEvents.length===0 && <div className="muted">No public events for this date</div>}
               {modalEvents.map(event => {
                 return (
@@ -2204,7 +2228,7 @@ function compareTithisByStart(a,b){
             {/* Private Events Section - user's own private events */}
             <div className="nc-modal-section" style={{ borderTop: '1px solid #eee', paddingTop: '1rem' }}>
               <h4 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                Private Events
+                {t('calendar.privateEvents')}
               </h4>
               {modalPersonalEvents.length===0 && <div className="muted">No private events for this date</div>}
               {modalPersonalEvents.map(event => {
@@ -2585,7 +2609,7 @@ function compareTithisByStart(a,b){
               <div className="nc-modal-section">
               {/* Event Type Selection */}
               <div className="nc-form-row" style={{ marginBottom: '1rem' }}>
-                <label className="nc-label">Add Event:</label>
+                <label className="nc-label">{t('calendar.addEvent')}</label>
                 <div className="nc-event-type-tabs" role="tablist" aria-label="Event type">
                   <button
                     type="button"
@@ -2598,7 +2622,7 @@ function compareTithisByStart(a,b){
                     aria-selected={eventType === 'private'}
                     role="tab"
                   >
-                    For Self
+                    {t('calendar.forSelf')}
                   </button>
                   <button
                     type="button"
@@ -2609,7 +2633,7 @@ function compareTithisByStart(a,b){
                     aria-selected={eventType === 'customer'}
                     role="tab"
                   >
-                    For Family Member
+                    {t('calendar.forFamilyMember')}
                   </button>
                   {(isAdmin || isSuperUser) && (
                     <button
@@ -2623,7 +2647,7 @@ function compareTithisByStart(a,b){
                       aria-selected={eventType === 'public'}
                       role="tab"
                     >
-                      Public
+                      {t('calendar.public')}
                     </button>
                   )}
                 </div>
@@ -2634,7 +2658,7 @@ function compareTithisByStart(a,b){
                 <>
                   <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1rem' }}>
                     <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-                      <label className="nc-label">Select Tree:</label>
+                      <label className="nc-label">{t('calendar.selectTree')}</label>
                       <select
                         value={selectedTreeId}
                         onChange={(e) => {
@@ -2643,7 +2667,7 @@ function compareTithisByStart(a,b){
                         }}
                         className="nc-select"
                       >
-                        <option value="">-- Select a tree --</option>
+                        <option value="">{t('calendar.selectTreePlaceholder')}</option>
                         {availableTrees.map((tree) => (
                           <option key={tree.id} value={tree.id}>
                             {tree.title || 'Untitled Tree'}
@@ -2653,14 +2677,14 @@ function compareTithisByStart(a,b){
                     </div>
 
                     <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-                      <label className="nc-label">Select Family Member:</label>
+                      <label className="nc-label">{t('calendar.selectMember')}</label>
                       <select
                         value={selectedTreeMemberId}
                         onChange={(e) => setSelectedTreeMemberId(e.target.value)}
                         className="nc-select"
                         disabled={!selectedTreeId}
                       >
-                        <option value="">-- Select a family member --</option>
+                        <option value="">{t('calendar.selectMemberPlaceholder')}</option>
                         {availableTreeMembers.map((m) => (
                           <option key={m.id} value={m.id}>
                             {m.name || 'Unknown'}
@@ -2674,23 +2698,23 @@ function compareTithisByStart(a,b){
 
               {/* Event Title */}
               <div className="nc-form-row" style={{ marginBottom: '1rem' }}>
-                <label className="nc-label">Event Title:</label>
+                <label className="nc-label">{t('calendar.eventTitle')}</label>
                 <input
                   type="text"
                   value={eventTitle}
                   onChange={(e) => setEventTitle(e.target.value)}
-                  placeholder="e.g., Birthday, Anniversary, etc."
+                  placeholder={t('calendar.eventTitlePlaceholder')}
                   className="nc-input"
                 />
               </div>
 
               {/* Event Description */}
               <div className="nc-form-row" style={{ marginBottom: '1rem' }}>
-                <label className="nc-label">Description (Optional):</label>
+                <label className="nc-label">{t('calendar.description')}</label>
                 <textarea
                   value={eventDescription}
                   onChange={(e) => setEventDescription(e.target.value)}
-                  placeholder="Add any additional details..."
+                  placeholder={t('calendar.descriptionPlaceholder')}
                   className="nc-input"
                   rows={3}
                   style={{ resize: 'vertical' }}
@@ -2699,7 +2723,7 @@ function compareTithisByStart(a,b){
 
               {/* Associate event with date or tithi */}
               <div className="nc-form-row" style={{ marginBottom: '1rem' }}>
-                <label className="nc-label">Associate With:</label>
+                <label className="nc-label">{t('calendar.associateWith')}</label>
                 <div className="nc-event-type-tabs" role="tablist" aria-label="Associate event with">
                   <button
                     type="button"
@@ -2708,7 +2732,7 @@ function compareTithisByStart(a,b){
                     aria-selected={eventAssociateMode === 'date'}
                     role="tab"
                   >
-                    Date
+                    {t('calendar.date')}
                   </button>
                   <button
                     type="button"
@@ -2717,14 +2741,14 @@ function compareTithisByStart(a,b){
                     aria-selected={eventAssociateMode === 'tithi'}
                     role="tab"
                   >
-                    Tithi
+                    {t('calendar.tithi')}
                   </button>
                 </div>
               </div>
 
               {eventAssociateMode === 'tithi' && (
                 <div className="nc-form-row" style={{ marginBottom: '1rem' }}>
-                  <label className="nc-label">Select Tithi:</label>
+                  <label className="nc-label">{t('calendar.selectTithi')}</label>
                   {(() => {
                     if (!eventDate) {
                       return <div className="muted">No day selected. Close and reopen from a calendar day.</div>;
@@ -2759,7 +2783,7 @@ function compareTithisByStart(a,b){
                   <NepaliDatePicker
                     value={eventDate}
                     onChange={setEventDate}
-                    label="Event Date"
+                    label={t('calendar.eventDate')}
                     required
                   />
                 </div>
@@ -2767,15 +2791,15 @@ function compareTithisByStart(a,b){
 
               {/* Event Repetition */}
               <div className="nc-form-row" style={{ marginBottom: '1rem' }}>
-                <label className="nc-label">Repeats:</label>
+                <label className="nc-label">{t('calendar.repeats')}</label>
                 <select
                   value={eventRepetition}
                   onChange={(e) => setEventRepetition(e.target.value)}
                   className="nc-select"
                 >
-                  <option value="none">Does not repeat</option>
-                  <option value="monthly">Monthly</option>
-                  <option value="yearly">Yearly</option>
+                  <option value="none">{t('calendar.doesNotRepeat')}</option>
+                  <option value="monthly">{t('calendar.monthly')}</option>
+                  <option value="yearly">{t('calendar.yearly')}</option>
                 </select>
               </div>
 
@@ -2788,14 +2812,14 @@ function compareTithisByStart(a,b){
                   className="nc-add-btn"
                   disabled={isAddingEvent || !user || authLoading}
                 >
-                  {isAddingEvent ? 'Adding...' : !user ? 'Log in to Add' : 'Add Event'}
+                  {isAddingEvent ? 'Adding...' : !user ? 'Log in to Add' : t('calendar.addEventButton')}
                 </button>
                 <button
                   type="button"
                   className="nc-cancel-btn"
                   onClick={()=>{ setAddEventModalOpen(false); setEventValidation(''); }}
                 >
-                  Cancel
+                  {t('calendar.cancel')}
                 </button>
               </div>
             </div>

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { convertAdToBs, convertBsToAd, toNepaliNumber, getNepalDate, minBsYear, maxBsYear } from '../utils/nepaliDateUtils';
+import { useLanguage } from '../contexts/LanguageContext';
 import './NepaliDatePicker.css';
 
 const nepaliMonths = [
@@ -8,6 +9,8 @@ const nepaliMonths = [
 ];
 
 const NepaliDatePicker = ({ value, onChange, label, required = false }) => {
+  const { t, tn, isNepali } = useLanguage();
+  
   // Default to current Nepali date
   const nptNow = getNepalDate();
   const todayBs = convertAdToBs(nptNow.getFullYear(), nptNow.getMonth(), nptNow.getDate());
@@ -73,7 +76,7 @@ const NepaliDatePicker = ({ value, onChange, label, required = false }) => {
         </select>
       </div>
       <div className="nepali-date-ad-display">
-        <small>AD: {adValue}</small>
+        <small>{t('calendar.adLabel')} {isNepali && adValue ? adValue.split('').map(char => /\d/.test(char) ? tn(Number(char)) : char).join('') : adValue}</small>
       </div>
     </div>
   );

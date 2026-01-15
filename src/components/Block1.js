@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { collection, query, where, orderBy, onSnapshot } from 'firebase/firestore';
 import { db } from '../firebase';
+import { useLanguage } from '../contexts/LanguageContext';
 import announcementIcon from '../assets/announcement-icon.svg';
 import './Block1.css';
 
 const Block1 = () => {
+    const { t } = useLanguage();
     const [cards, setCards] = useState([]);
     const [loading, setLoading] = useState(true);
     const cardsRowRef = useRef(null);
@@ -84,7 +86,7 @@ const Block1 = () => {
     if (loading) {
         return (
             <section className="block1-container">
-                <div className="block1-loading">Loading features...</div>
+                <div className="block1-loading">{t('home.loading')}</div>
             </section>
         );
     }
@@ -102,7 +104,7 @@ const Block1 = () => {
                             className="block1-header-inner"
                             style={cardsWidth ? { width: cardsWidth } : undefined}
                         >
-                            <h2 className="block1-title"><img src={announcementIcon} alt="Announcement" className="block1-title-icon" /> Announcements</h2>
+                            <h2 className="block1-title"><img src={announcementIcon} alt="Announcement" className="block1-title-icon" /> {t('home.announcements')}</h2>
                         </div>
                     </div>
                 </div>
