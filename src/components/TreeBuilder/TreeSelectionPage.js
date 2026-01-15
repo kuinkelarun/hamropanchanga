@@ -6,9 +6,11 @@ import { signInWithGoogle } from '../../firebase';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { normalizeForCompare } from '../../utils/textNormalize';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 export default function TreeSelectionPage({ user, isAdmin }) {
   const navigate = useNavigate();
+  const { t } = useLanguage();
   const [trees, setTrees] = useState([]);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
@@ -279,21 +281,21 @@ export default function TreeSelectionPage({ user, isAdmin }) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-100">
         <div className="bg-white rounded-lg shadow-md p-6 max-w-md w-full text-center">
-          <h1 className="text-xl font-semibold mb-4 text-gray-800">Sign in to manage your trees</h1>
+          <h1 className="text-xl font-semibold mb-4 text-gray-800">{t('auth.signInToManageTrees')}</h1>
           <p className="text-sm text-gray-600 mb-6">
-            You need to be signed in to create or open a family tree.
+            {t('auth.needToSignIn')}
           </p>
           <button
             onClick={handleRequireAuth}
             className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md text-sm font-semibold shadow-sm"
           >
-            Sign in with Google
+            {t('auth.signInWithGoogle')}
           </button>
           <button
             onClick={() => navigate('/')}
             className="mt-3 px-3 py-1 text-sm text-gray-600 hover:text-gray-800"
           >
-            Back to Home
+            {t('auth.backToHome')}
           </button>
         </div>
       </div>

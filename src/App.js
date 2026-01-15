@@ -4,7 +4,9 @@ import { collection, query, where, onSnapshot, doc, getDoc, setDoc, updateDoc, g
 import { onAuthStateChanged, signOut, getIdTokenResult } from 'firebase/auth';
 import { auth, signInWithGoogle, db } from './firebase';
 import { SettingsProvider } from './contexts/SettingsContext';
+import { LanguageProvider, useLanguage } from './contexts/LanguageContext';
 import SettingsMenu from './components/SettingsMenu';
+import LanguageSelector from './components/LanguageSelector';
 import LandingPage from './components/LandingPage';
 import AdminEditCards from './components/AdminEditCards';
 import AdminManagement from './components/AdminManagement';
@@ -56,17 +58,20 @@ function TithiCalculatorButton({ onClick }) {
 
 export default function App() {
     return (
-        <SettingsProvider>
-            <Router>
-                <AppContent />
-            </Router>
-        </SettingsProvider>
+        <LanguageProvider>
+            <SettingsProvider>
+                <Router>
+                    <AppContent />
+                </Router>
+            </SettingsProvider>
+        </LanguageProvider>
     );
 }
 
 function AppContent() {
     const navigate = useNavigate();
     const location = useLocation();
+    const { t } = useLanguage();
     
     // STATE MANAGEMENT
     const [user, setUser] = useState(null);
@@ -574,6 +579,9 @@ function AppContent() {
 
                         {/* Navigation Section */}
                         <div className="flex items-center gap-2 sm:gap-4">
+                            {/* Language Selector - Always visible */}
+                            <LanguageSelector compact={true} />
+                            
                             {user ? (
                                 <>
                                     {/* Desktop: Full button with text */}
@@ -612,7 +620,7 @@ function AppContent() {
                                     }}
                                     className="text-sm font-medium bg-gray-900 text-white px-5 py-2.5 rounded-full hover:bg-gray-800 transition-all shadow-sm hover:shadow-md transform hover:-translate-y-0.5"
                                 >
-                                    Sign In
+                                    {t('auth.signIn')}
                                 </button>
                             )}
                         </div>

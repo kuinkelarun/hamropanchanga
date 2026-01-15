@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../firebase';
+import { useLanguage } from '../contexts/LanguageContext';
 import LandingPageEventsSection from './LandingPageEventsSection';
 import './LandingPage.css';
 import heroAnimation from './hero-image.png';
@@ -10,6 +11,7 @@ import Block1 from './Block1';
 import Footer from './Footer';
 
 const LandingPage = ({ user, isAdmin, trees = [], treeMembers = [], events, familyMembers, onDoubleClickEvent, onEventClick }) => {
+    const { t } = useLanguage();
     const [block1Visible, setBlock1Visible] = useState(null);
     const [searchQuery, setSearchQuery] = useState('');
     const navigate = useNavigate();
@@ -78,14 +80,14 @@ const LandingPage = ({ user, isAdmin, trees = [], treeMembers = [], events, fami
                     >
                         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 w-full h-full flex items-center">
                             <div className="hero-content">
-                                <h1 className="app-name">My Family Tree</h1>
-                                <p className="tagline">Connect your past. Branch out your future.</p>
+                                <h1 className="app-name">{t('hero.title')}</h1>
+                                <p className="tagline">{t('hero.tagline')}</p>
                                 <button 
                                     className="cta-button" 
                                     onClick={handleStartTree}
                                     aria-label="Start building your family tree"
                                 >
-                                    Build Your Tree
+                                    {t('hero.buildYourTree')}
                                 </button>
                             </div>
                         </div>
@@ -120,7 +122,7 @@ const LandingPage = ({ user, isAdmin, trees = [], treeMembers = [], events, fami
                         <div className="section-card branches-section">
                             <div className="space-y-4">
                                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4">
-                                    <h2 className="section-title whitespace-nowrap">Your Trees</h2>
+                                    <h2 className="section-title whitespace-nowrap">{t('home.yourTrees')}</h2>
                                     <input
                                         type="text"
                                         placeholder="Search trees..."

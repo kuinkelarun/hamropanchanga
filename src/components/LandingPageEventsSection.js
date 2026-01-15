@@ -1,9 +1,11 @@
 import React, { useState, useCallback } from 'react';
 import './LandingPageEventsSection.css';
 import { useSettings } from '../contexts/SettingsContext';
+import { useLanguage } from '../contexts/LanguageContext';
 import { formatNepaliDate, formatEnglishDate, formatNepaliMonthYear, formatGregorianMonthYear, convertAdToBs, convertBsToAd } from '../utils/nepaliDateUtils';
 
 const LandingPageEventsSection = ({ events, familyMembers, onDoubleClickEvent, onEventClick }) => {
+    const { t } = useLanguage();
     const [eventFilter, setEventFilter] = useState('next-week');
     const { isNepaliCalendar } = useSettings(); // Use global settings
 
@@ -168,18 +170,18 @@ const LandingPageEventsSection = ({ events, familyMembers, onDoubleClickEvent, o
     return (
         <div className="events-section">
             <div className="flex flex-col gap-2 mb-4 sm:flex-row sm:items-center sm:justify-between">
-                <h2 className="section-title whitespace-nowrap">Events & Reminders</h2>
+                <h2 className="section-title whitespace-nowrap">{t('home.eventsAndReminders')}</h2>
                 <select
                     value={eventFilter}
                     onChange={(e) => setEventFilter(e.target.value)}
                     className="w-2/5 self-end border rounded-xl p-1 text-sm sm:w-auto"
                 >
-                    <option value="upcoming">Upcoming</option>
-                    <option value="all">All Events</option>
-                    <option value="past">Past Events</option>
-                    <option value="next-week">Next 7 Days</option>
-                    <option value="next-month">Next 30 Days</option>
-                    <option value="next-90-days">Next 90 Days</option>
+                    <option value="upcoming">{t('home.filterUpcoming')}</option>
+                    <option value="all">{t('home.filterAllEvents')}</option>
+                    <option value="past">{t('home.filterPastEvents')}</option>
+                    <option value="next-week">{t('home.filterNext7Days')}</option>
+                    <option value="next-month">{t('home.filterNext30Days')}</option>
+                    <option value="next-90-days">{t('home.filterNext90Days')}</option>
                 </select>
             </div>
             
