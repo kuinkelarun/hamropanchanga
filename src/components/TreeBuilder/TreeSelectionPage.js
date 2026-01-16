@@ -309,10 +309,9 @@ export default function TreeSelectionPage({ user, isAdmin }) {
         {/* Hero Message */}
         <div className="bg-white rounded-2xl shadow-md p-8 mb-8 border border-gray-200">
           <div className="text-center max-w-2xl mx-auto">
-            <h2 className="text-3xl font-bold text-gray-800 mb-3">Build Your Family Legacy</h2>
+            <h2 className="text-3xl font-bold text-gray-800 mb-3">{t('treeSelection.buildYourFamilyLegacy')}</h2>
             <p className="text-gray-600 leading-relaxed">
-              Choose an existing tree to continue building your family history, or start fresh with a new tree. 
-              Each tree can hold unlimited family members, relationships, and important life events.
+              {t('treeSelection.legacyDescription')}
             </p>
           </div>
         </div>
@@ -326,13 +325,13 @@ export default function TreeSelectionPage({ user, isAdmin }) {
         {/* My Trees Grid */}
         <div className="bg-white rounded-2xl shadow-md p-6 mb-6 border border-gray-200">
           <div className="flex items-center justify-between mb-6">
-            <h3 className="text-xl font-bold text-gray-800">Your Trees</h3>
+            <h3 className="text-xl font-bold text-gray-800">{t('treeSelection.yourTrees')}</h3>
             <button
               onClick={handleCreateTree}
               disabled={creating}
               className="px-6 py-2.5 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 disabled:opacity-60 disabled:cursor-not-allowed text-white rounded-lg font-semibold shadow-md transition-all transform hover:scale-105"
             >
-              {creating ? 'Creating...' : 'Build New Tree'}
+              {creating ? t('treeSelection.creating') : t('treeSelection.buildNewTree')}
             </button>
           </div>
 
@@ -343,7 +342,7 @@ export default function TreeSelectionPage({ user, isAdmin }) {
                   <div className="cursor-pointer" onClick={() => handleOpenTree(tree.id)}>
                     <div className="flex items-start justify-between mb-3">
                       <div className="flex-1">
-                        <h4 className="text-lg font-bold text-gray-800 mb-1">{tree.title || 'Untitled Tree'}</h4>
+                        <h4 className="text-lg font-bold text-gray-800 mb-1">{tree.title || t('treeSelection.untitledTree')}</h4>
                         <p className="text-xs text-gray-500">ID: {tree.id}</p>
                       </div>
                     </div>
@@ -362,9 +361,9 @@ export default function TreeSelectionPage({ user, isAdmin }) {
                     )}
                   </div>
                   <div className="flex items-center gap-2 mt-4 pt-4 border-t border-gray-200">
-                    <button className="flex-1 px-3 py-2 text-xs bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium" onClick={() => handleOpenTree(tree.id)}>View Details</button>
-                    <button className="px-3 py-2 text-xs bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium" onClick={(e) => { e.stopPropagation(); handleEditTree(tree); }}>Edit</button>
-                    <button className="px-3 py-2 text-xs bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium" onClick={(e) => { e.stopPropagation(); handleDeleteTree(tree.id); }}>Delete</button>
+                    <button className="flex-1 px-3 py-2 text-xs bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium" onClick={() => handleOpenTree(tree.id)}>{t('treeSelection.viewDetails')}</button>
+                    <button className="px-3 py-2 text-xs bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium" onClick={(e) => { e.stopPropagation(); handleEditTree(tree); }}>{t('treeSelection.edit')}</button>
+                    <button className="px-3 py-2 text-xs bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium" onClick={(e) => { e.stopPropagation(); handleDeleteTree(tree.id); }}>{t('treeSelection.delete')}</button>
                   </div>
                 </div>
               ))}
@@ -376,8 +375,8 @@ export default function TreeSelectionPage({ user, isAdmin }) {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
                 </svg>
               </div>
-              <p className="text-gray-600 mb-4">You don't have any trees yet.</p>
-              <p className="text-sm text-gray-500">Click "Build New Tree" to get started on your family history journey.</p>
+              <p className="text-gray-600 mb-4">{t('treeSelection.noTreesYet')}</p>
+              <p className="text-sm text-gray-500">{t('treeSelection.getStartedMessage')}</p>
             </div>
           )}
         </div>
@@ -386,7 +385,7 @@ export default function TreeSelectionPage({ user, isAdmin }) {
         {isAdmin && otherTrees.length > 0 && (
           <div className="bg-white rounded-2xl shadow-md p-6 mb-6 border border-gray-200">
             <div className="flex items-center justify-between mb-6">
-              <h3 className="text-xl font-bold text-gray-800">Other Users' Trees</h3>
+              <h3 className="text-xl font-bold text-gray-800">{t('treeSelection.otherUsersTrees')}</h3>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {otherTrees.map(tree => (
@@ -394,11 +393,11 @@ export default function TreeSelectionPage({ user, isAdmin }) {
                   <div className="cursor-pointer" onClick={() => handleOpenTree(tree.id)}>
                     <div className="flex items-start justify-between mb-3">
                       <div className="flex-1">
-                        <h4 className="text-lg font-bold text-gray-800 mb-1">{tree.title || 'Untitled Tree'}</h4>
+                        <h4 className="text-lg font-bold text-gray-800 mb-1">{tree.title || t('treeSelection.untitledTree')}</h4>
                         <p className="text-xs text-gray-500">ID: {tree.id}</p>
                         {tree.ownerUid && (
                           <p className="text-xs text-gray-400 mt-1">
-                            Owner: {ownerEmailByUid[tree.ownerUid] || tree.ownerEmail || tree.ownerUid}
+                            {t('treeSelection.owner')} {ownerEmailByUid[tree.ownerUid] || tree.ownerEmail || tree.ownerUid}
                           </p>
                         )}
                       </div>
@@ -418,9 +417,9 @@ export default function TreeSelectionPage({ user, isAdmin }) {
                     )}
                   </div>
                   <div className="flex items-center gap-2 mt-4 pt-4 border-t border-gray-200">
-                    <button className="flex-1 px-3 py-2 text-xs bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium" onClick={() => handleOpenTree(tree.id)}>View Details</button>
-                    <button className="px-3 py-2 text-xs bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium" onClick={(e) => { e.stopPropagation(); handleEditTree(tree); }}>Edit</button>
-                    <button className="px-3 py-2 text-xs bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium" onClick={(e) => { e.stopPropagation(); handleDeleteTree(tree.id); }}>Delete</button>
+                    <button className="flex-1 px-3 py-2 text-xs bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium" onClick={() => handleOpenTree(tree.id)}>{t('treeSelection.viewDetails')}</button>
+                    <button className="px-3 py-2 text-xs bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium" onClick={(e) => { e.stopPropagation(); handleEditTree(tree); }}>{t('treeSelection.edit')}</button>
+                    <button className="px-3 py-2 text-xs bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium" onClick={(e) => { e.stopPropagation(); handleDeleteTree(tree.id); }}>{t('treeSelection.delete')}</button>
                   </div>
                 </div>
               ))}
@@ -433,42 +432,42 @@ export default function TreeSelectionPage({ user, isAdmin }) {
       {creatingModalOpen && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md">
-            <h2 className="text-xl font-bold text-gray-800 mb-4">Create New Family Tree</h2>
+            <h2 className="text-xl font-bold text-gray-800 mb-4">{t('treeSelection.createNewFamilyTree')}</h2>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Tree Name *</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">{t('treeSelection.treeName')} <span className="text-red-500">{t('treeSelection.required')}</span></label>
                 <input 
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
                   value={newTreeData.title} 
                   onChange={(e) => setNewTreeData({...newTreeData, title: e.target.value})} 
-                  placeholder="e.g., Smith Family Tree" 
+                  placeholder={t('treeSelection.treeNamePlaceholder')}
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Primary Member Name *</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">{t('treeSelection.primaryMemberName')} <span className="text-red-500">{t('treeSelection.required')}</span></label>
                 <input 
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
                   value={newTreeData.primaryName} 
                   onChange={(e) => setNewTreeData({...newTreeData, primaryName: e.target.value})} 
-                  placeholder="e.g., John Smith" 
+                  placeholder={t('treeSelection.primaryMemberPlaceholder')}
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Contact Information *</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">{t('treeSelection.contactInformation')} <span className="text-red-500">{t('treeSelection.required')}</span></label>
                 <input 
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
                   value={newTreeData.contact} 
                   onChange={(e) => setNewTreeData({...newTreeData, contact: e.target.value})} 
-                  placeholder="Phone or Email" 
+                  placeholder={t('treeSelection.contactPlaceholder')}
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Location *</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">{t('treeSelection.location')} <span className="text-red-500">{t('treeSelection.required')}</span></label>
                 <input 
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
                   value={newTreeData.location} 
                   onChange={(e) => setNewTreeData({...newTreeData, location: e.target.value})} 
-                  placeholder="City, State, or Country" 
+                  placeholder={t('treeSelection.locationPlaceholder')}
                 />
               </div>
             </div>
@@ -480,14 +479,14 @@ export default function TreeSelectionPage({ user, isAdmin }) {
                   setNewTreeData({ title: '', primaryName: '', contact: '', location: '' }); 
                 }}
               >
-                Cancel
+                {t('treeSelection.cancel')}
               </button>
               <button 
                 className="px-4 py-2 text-sm bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors disabled:opacity-60" 
                 onClick={confirmCreateTree}
                 disabled={creating}
               >
-                {creating ? 'Creating...' : 'Create Tree'}
+                {creating ? t('treeSelection.creating') : t('treeSelection.createTree')}
               </button>
             </div>
           </div>
@@ -497,33 +496,33 @@ export default function TreeSelectionPage({ user, isAdmin }) {
       {editingModalOpen && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md">
-            <h2 className="text-xl font-bold text-gray-800 mb-4">Edit Tree</h2>
+            <h2 className="text-xl font-bold text-gray-800 mb-4">{t('treeSelection.editTree')}</h2>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Tree Name *</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">{t('treeSelection.treeName')} <span className="text-red-500">{t('treeSelection.required')}</span></label>
                 <input 
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
                   value={editTreeData.title} 
                   onChange={(e) => setEditTreeData({...editTreeData, title: e.target.value})} 
-                  placeholder="e.g., Smith Family Tree" 
+                  placeholder={t('treeSelection.treeNamePlaceholder')}
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Contact Information *</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">{t('treeSelection.contactInformation')} <span className="text-red-500">{t('treeSelection.required')}</span></label>
                 <input 
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
                   value={editTreeData.contact} 
                   onChange={(e) => setEditTreeData({...editTreeData, contact: e.target.value})} 
-                  placeholder="Phone or Email" 
+                  placeholder={t('treeSelection.contactPlaceholder')}
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Location *</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">{t('treeSelection.location')} <span className="text-red-500">{t('treeSelection.required')}</span></label>
                 <input 
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
                   value={editTreeData.location} 
                   onChange={(e) => setEditTreeData({...editTreeData, location: e.target.value})} 
-                  placeholder="City, State, or Country" 
+                  placeholder={t('treeSelection.locationPlaceholder')}
                 />
               </div>
             </div>
@@ -536,13 +535,13 @@ export default function TreeSelectionPage({ user, isAdmin }) {
                   setEditTreeData({ title: '', contact: '', location: '' }); 
                 }}
               >
-                Cancel
+                {t('treeSelection.cancel')}
               </button>
               <button 
                 className="px-4 py-2 text-sm bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors" 
                 onClick={confirmEditTree}
               >
-                Save Changes
+                {t('treeSelection.saveChanges')}
               </button>
             </div>
           </div>

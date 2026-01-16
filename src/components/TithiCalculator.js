@@ -2,12 +2,14 @@ import React, { useState, useEffect } from 'react';
 import './TithiCalculator.css';
 import { computeTithiFromLongitudes, getEphemerisData } from '../utils/ephemeris';
 import { toNepaliNumber, formatNepaliDateTime, nepaliMonths, convertAdToBs, getTithiYearFromAdDate, getTithiLunarMonthName } from '../utils/nepaliDateUtils';
+import { useLanguage } from '../contexts/LanguageContext';
 
 // Nepali Tithi names
 const shuklaNames = ["प्रतिपदा", "द्वितीया", "तृतीया", "चतुर्थी", "पञ्चमी", "षष्ठी", "सप्तमी", "अष्टमी", "नवमी", "दशमी", "एकादशी", "द्वादशी", "त्रयोदशी", "चतुर्दशी", "पूर्णिमा"];
 const krishnaNames = ["प्रतिपदा", "द्वितीया", "तृतीया", "चतुर्थी", "पञ्चमी", "षष्ठी", "सप्तमी", "अष्टमी", "नवमी", "दशमी", "एकादशी", "द्वादशी", "त्रयोदशी", "चतुर्दशी", "औंसी"];
 
 export default function TithiCalculator() {
+  const { t } = useLanguage();
   const [moonLon, setMoonLon] = useState('');
   const [sunLon, setSunLon] = useState('');
   const [dateStr, setDateStr] = useState('');
@@ -94,7 +96,7 @@ export default function TithiCalculator() {
 
     // Auto mode
     if (!dateStr || !timeStr) {
-      setError('Please select a valid date and time.');
+      setError(t('tithiCalculator.selectValidDateTime'));
       return;
     }
     try {
@@ -179,8 +181,8 @@ export default function TithiCalculator() {
   return (
     <div className="tc-root">
       <div className="tc-header">
-        <h3 className="tc-title">Tithi Calculator</h3>
-        <button className="tc-info-btn" onClick={() => setShowInfo(!showInfo)} title="Click for more information about Tithi Calculator">
+        <h3 className="tc-title">{t('tithiCalculator.title')}</h3>
+        <button className="tc-info-btn" onClick={() => setShowInfo(!showInfo)} title={t('tithiCalculator.infoButtonTitle')}>
           i
         </button>
       </div>
@@ -189,16 +191,15 @@ export default function TithiCalculator() {
         <div className="tc-modal-overlay" onClick={() => setShowInfo(false)}>
           <div className="tc-modal-content" onClick={(e) => e.stopPropagation()}>
             <div className="tc-modal-header">
-              <h4>About Tithi Calculator</h4>
+              <h4>{t('tithiCalculator.aboutTitle')}</h4>
               <button className="tc-modal-close" onClick={() => setShowInfo(false)}>×</button>
             </div>
             <div className="tc-modal-body">
               <p>
-                The Tithi Calculator computes the lunar day (Tithi) in the Hindu calendar.
-                Tithi is determined by the angular distance between the Moon and Sun in the ecliptic plane.
+                {t('tithiCalculator.aboutDescription1')}
               </p>
               <p>
-                <strong>Modern (Drik):</strong> Uses high-precision NASA/JPL ephemeris data (astronomy-engine) to calculate positions. This corresponds to the physical reality of the planets.
+                <strong>{t('tithiCalculator.aboutDescription2')}</strong>
               </p>
             </div>
           </div>
@@ -206,11 +207,11 @@ export default function TithiCalculator() {
       )}
       
       <p className="tc-desc">
-        Select a date and time to calculate Tithi using modern high-precision astronomy (NASA/JPL).
+        {t('tithiCalculator.description')}
       </p>
 
       <div className="tc-location-selector" style={{ marginBottom: '1rem', padding: '10px', background: '#f5f5f5', borderRadius: '4px' }}>
-        <label className="tc-label" style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>Location:</label>
+        <label className="tc-label" style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>{t('tithiCalculator.location')}</label>
         <div className="tc-radio-group" style={{ display: 'flex', gap: '15px', flexWrap: 'wrap' }}>
           <label className={`tc-radio-label ${locationMode === 'kathmandu' ? 'selected' : ''}`} style={{ cursor: 'pointer' }}>
             <input 
@@ -221,7 +222,7 @@ export default function TithiCalculator() {
               onChange={() => setLocationMode('kathmandu')}
               style={{ marginRight: '5px' }}
             />
-            Kathmandu, Nepal
+            {t('tithiCalculator.kathmanduNepal')}
           </label>
           <label 
             className={`tc-radio-label ${locationMode === 'current' ? 'selected' : ''} ${locationStatus !== 'detected' ? 'disabled' : ''}`}
@@ -236,13 +237,13 @@ export default function TithiCalculator() {
               disabled={locationStatus !== 'detected'}
               style={{ marginRight: '5px' }}
             />
-            Current Location 
-            {locationStatus === 'detected' ? '' : ' (Not available)'}
+            {t('tithiCalculator.currentLocation')}
+            {locationStatus === 'detected' ? '' : ` ${t('tithiCalculator.notAvailable')}`}
           </label>
         </div>
         {locationMode === 'current' && locationStatus === 'detected' && (
           <div className="tc-location-coords" style={{ fontSize: '0.85em', color: '#666', marginTop: '5px' }}>
-            Using: {userLat?.toFixed(4)}, {userLon?.toFixed(4)}
+            {t('tithiCalculator.using')} {userLat?.toFixed(4)}, {userLon?.toFixed(4)}
           </div>
         )}
       </div>
@@ -250,7 +251,7 @@ export default function TithiCalculator() {
       <form className="tc-form" onSubmit={onCompute}>
         <div className="tc-datetime-group">
           <div className="tc-field">
-            <label className="tc-label">Date</label>
+            <label className="tc-label">{t('tithiCalculator.date')}</label>
             <input 
               type="date" 
               className="tc-input" 
@@ -259,7 +260,7 @@ export default function TithiCalculator() {
             />
           </div>
           <div className="tc-field">
-            <label className="tc-label">Time</label>
+            <label className="tc-label">{t('tithiCalculator.time')}</label>
             <input 
               type="time" 
               className="tc-input" 
@@ -270,8 +271,8 @@ export default function TithiCalculator() {
         </div>
 
         <div className="tc-actions">
-          <button type="submit" className="tc-btn">Compute</button>
-          <button type="button" className="tc-btn tc-btn-muted" onClick={onClear}>Clear</button>
+          <button type="submit" className="tc-btn">{t('tithiCalculator.compute')}</button>
+          <button type="button" className="tc-btn tc-btn-muted" onClick={onClear}>{t('tithiCalculator.clear')}</button>
         </div>
       </form>
 
@@ -282,7 +283,7 @@ export default function TithiCalculator() {
           {/* Tithi Year Display */}
           {result.tithiYear && (
             <div className="tc-month-banner" style={{background: '#e8f4f8', borderColor: '#0891b2'}}>
-              <div className="tc-month-name" style={{color: '#0891b2'}}>Tithi Year {result.tithiYear}</div>
+              <div className="tc-month-name" style={{color: '#0891b2'}}>{t('tithiCalculator.tithiYear')} {result.tithiYear}</div>
               <div className="tc-month-number" style={{color: '#0891b2'}}>({result.tithiLunarMonthName || 'Unknown'})</div>
             </div>
           )}
@@ -307,7 +308,7 @@ export default function TithiCalculator() {
 
           {/* Timing Information */}
           <div className="tc-result-card tc-timing-card">
-            <h4>⏰ Tithi Duration</h4>
+            <h4>{t('tithiCalculator.tithiDuration')}</h4>
             <div className="tc-info-grid">
               <div className="tc-info-item">
                 <strong>Start Time</strong>
@@ -373,22 +374,22 @@ export default function TithiCalculator() {
 
           {/* Technical Details */}
           <div className="tc-result-card">
-            <h4>🔬 Astronomical Data</h4>
+            <h4>{t('tithiCalculator.astronomicalData')}</h4>
             <div className="tc-info-grid">
               <div className="tc-info-item">
-                <strong>Moon Longitude</strong>
+                <strong>{t('tithiCalculator.moonLongitude')}</strong>
                 <span>{parseFloat(moonLon).toFixed(4)}°</span>
               </div>
               <div className="tc-info-item">
-                <strong>Sun Longitude</strong>
+                <strong>{t('tithiCalculator.sunLongitude')}</strong>
                 <span>{parseFloat(sunLon).toFixed(4)}°</span>
               </div>
               <div className="tc-info-item">
-                <strong>Angular Difference</strong>
+                <strong>{t('tithiCalculator.angularDifference')}</strong>
                 <span>{result.Dnorm.toFixed(4)}°</span>
               </div>
               <div className="tc-info-item">
-                <strong>Fractional Tithi</strong>
+                <strong>{t('tithiCalculator.fractionalTithi')}</strong>
                 <span>{result.t_frac.toFixed(4)}</span>
               </div>
             </div>
@@ -397,7 +398,7 @@ export default function TithiCalculator() {
       )}
 
       <div className="tc-note">
-        Note: Calculations use the "astronomy-engine" library for high-precision ephemeris data (Apparent Geocentric Ecliptic of Date). Modern Astronomy: Uses the actual physical positions of the Sun and Moon (taking into account thousands of gravitational perturbations using NASA-based calculations (Drik Ganita).
+        <strong>{t('tithiCalculator.notePrefix')}</strong> {t('tithiCalculator.noteText')} <strong>{t('tithiCalculator.modernAstronomy')}</strong> {t('tithiCalculator.modernAstronomyText')}
       </div>
     </div>
   );
