@@ -31,6 +31,12 @@ export default function TreeSelectionPage({ user, isAdmin }) {
     location: ''
   });
 
+  // Duplicate detection state
+  const [treeNameWarning, setTreeNameWarning] = useState('');
+  const [treeNameSuggestions, setTreeNameSuggestions] = useState([]);
+  const [primaryNameWarning, setPrimaryNameWarning] = useState('');
+  const [showDuplicateConfirmation, setShowDuplicateConfirmation] = useState(false);
+
   // Cache owner email lookups for admin display in Other Users section
   const [ownerEmailByUid, setOwnerEmailByUid] = useState({});
 
@@ -58,6 +64,61 @@ export default function TreeSelectionPage({ user, isAdmin }) {
 
   const myTrees = useMemo(() => trees.filter(t => t.ownerUid === user?.uid), [trees, user]);
   const otherTrees = useMemo(() => trees.filter(t => t.ownerUid !== user?.uid), [trees, user]);
+
+  // Check for duplicate tree names (case-insensitive, normalized) and show suggestions
+  const checkDuplicateTreeName = (inputName) => {
+    if (!inputName.trim()) {
+      setTreeNameWarning('');
+      setTreeNameSuggestions([]);
+      return null;
+    }
+    
+    const normalized = normalizeForCompare(inputName);
+    
+    // Find all trees that match (partial or full)
+    const matches = myTrees.filter(t => {
+      const treeTitle = t.title || '';
+      const treeNormalized = normalizeForCompare(treeTitle);
+      // Match if the input is contained in the tree name
+      return treeNormalized.includes(normalized);
+    });
+    
+    // Set suggestions for display
+    setTreeNameSuggestions(matches);
+    
+    // Check for exact match for warning
+    const exactMatch = myTrees.find(t => normalizeForCompare(t.title || '') === normalized);
+    
+    if (exactMatch) {
+      setTreeNameWarning(`⚠️ A tree named "${exactMatch.title}" already exists`);
+      return exactMatch;
+    }
+    
+    setTreeNameWarning('');
+    return null;
+  };
+
+  // Check for duplicate primary member names (case-insensitive, normalized)
+  const checkDuplicatePrimaryMember = (inputName) => {
+    if (!inputName.trim()) {
+      setPrimaryNameWarning('');
+      return null;
+    }
+    
+    const normalized = normalizeForCompare(inputName);
+    const duplicate = myTrees.find(t => {
+      const primaryName = t.primaryMemberName || '';
+      return normalizeForCompare(primaryName) === normalized;
+    });
+    
+    if (duplicate) {
+      setPrimaryNameWarning(`⚠️ "${duplicate.primaryMemberName}" is already the primary member in tree "${duplicate.title}"`);
+      return duplicate;
+    }
+    
+    setPrimaryNameWarning('');
+    return null;
+  };
 
   // For admins, resolve owner email for other trees
   useEffect(() => {
@@ -142,7 +203,18 @@ export default function TreeSelectionPage({ user, isAdmin }) {
       alert('Location is required');
       return;
     }
+
+    // Check for duplicates
+    const treeNameDupe = checkDuplicateTreeName(newTreeData.title);
+    const primaryNameDupe = checkDuplicatePrimaryMember(newTreeData.primaryName);
     
+    // If duplicates found and not already showing confirmation, show confirmation modal
+    if ((treeNameDupe || primaryNameDupe) && !showDuplicateConfirmation) {
+      setShowDuplicateConfirmation(true);
+      return;
+    }
+    
+    // Proceed with creation
     setCreating(true);
     setError('');
     try {
@@ -171,6 +243,10 @@ export default function TreeSelectionPage({ user, isAdmin }) {
       }
       setCreatingModalOpen(false);
       setNewTreeData({ title: '', primaryName: '', contact: '', location: '' });
+      setTreeNameWarning('');
+      setTreeNameSuggestions([]);
+      setPrimaryNameWarning('');
+      setShowDuplicateConfirmation(false);
       // Navigate to the new tree detail page
       navigate(`/tree/${newTree.id}`);
     } catch (err) {
@@ -436,21 +512,78 @@ export default function TreeSelectionPage({ user, isAdmin }) {
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">{t('treeSelection.treeName')} <span className="text-red-500">{t('treeSelection.required')}</span></label>
-                <input 
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
-                  value={newTreeData.title} 
-                  onChange={(e) => setNewTreeData({...newTreeData, title: e.target.value})} 
-                  placeholder={t('treeSelection.treeNamePlaceholder')}
-                />
+                <div className="relative">
+                  <input 
+                    className={`w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                      treeNameWarning ? 'border-yellow-400 bg-yellow-50' : 'border-gray-300'
+                    }`}
+                    value={newTreeData.title} 
+                    onChange={(e) => {
+                      setNewTreeData({...newTreeData, title: e.target.value});
+                      checkDuplicateTreeName(e.target.value);
+                    }}
+                    placeholder={t('treeSelection.treeNamePlaceholder')}
+                  />
+                  
+                  {/* Suggestions dropdown */}
+                  {treeNameSuggestions.length > 0 && (
+                    <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                      <div className="px-3 py-2 text-xs font-medium text-gray-500 bg-gray-50 border-b border-gray-200">
+                        Existing trees with similar names:
+                      </div>
+                      {treeNameSuggestions.map(tree => (
+                        <button
+                          key={tree.id}
+                          type="button"
+                          onClick={() => {
+                            // Navigate to existing tree
+                            setCreatingModalOpen(false);
+                            setNewTreeData({ title: '', primaryName: '', contact: '', location: '' });
+                            setTreeNameSuggestions([]);
+                            handleOpenTree(tree.id);
+                          }}
+                          className="w-full px-3 py-2 text-left hover:bg-blue-50 transition-colors border-b border-gray-100 last:border-b-0"
+                        >
+                          <div className="flex items-center justify-between">
+                            <div className="flex-1">
+                              <p className="text-sm font-medium text-gray-800">{tree.title}</p>
+                              {tree.primaryMemberName && (
+                                <p className="text-xs text-gray-500 mt-0.5">Primary: {tree.primaryMemberName}</p>
+                              )}
+                            </div>
+                            <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                            </svg>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                {treeNameWarning && (
+                  <p className="mt-1 text-xs text-yellow-700 flex items-center gap-1">
+                    {treeNameWarning}
+                  </p>
+                )}
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">{t('treeSelection.primaryMemberName')} <span className="text-red-500">{t('treeSelection.required')}</span></label>
                 <input 
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
+                  className={`w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                    primaryNameWarning ? 'border-yellow-400 bg-yellow-50' : 'border-gray-300'
+                  }`}
                   value={newTreeData.primaryName} 
-                  onChange={(e) => setNewTreeData({...newTreeData, primaryName: e.target.value})} 
+                  onChange={(e) => {
+                    setNewTreeData({...newTreeData, primaryName: e.target.value});
+                    checkDuplicatePrimaryMember(e.target.value);
+                  }}
                   placeholder={t('treeSelection.primaryMemberPlaceholder')}
                 />
+                {primaryNameWarning && (
+                  <p className="mt-1 text-xs text-yellow-700 flex items-center gap-1">
+                    {primaryNameWarning}
+                  </p>
+                )}
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">{t('treeSelection.contactInformation')} <span className="text-red-500">{t('treeSelection.required')}</span></label>
@@ -476,7 +609,11 @@ export default function TreeSelectionPage({ user, isAdmin }) {
                 className="px-4 py-2 text-sm bg-gray-100 hover:bg-gray-200 rounded-lg font-medium transition-colors" 
                 onClick={() => { 
                   setCreatingModalOpen(false); 
-                  setNewTreeData({ title: '', primaryName: '', contact: '', location: '' }); 
+                  setNewTreeData({ title: '', primaryName: '', contact: '', location: '' });
+                  setTreeNameWarning('');
+                  setTreeNameSuggestions([]);
+                  setPrimaryNameWarning('');
+                  setShowDuplicateConfirmation(false);
                 }}
               >
                 {t('treeSelection.cancel')}
@@ -542,6 +679,60 @@ export default function TreeSelectionPage({ user, isAdmin }) {
                 onClick={confirmEditTree}
               >
                 {t('treeSelection.saveChanges')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Duplicate Confirmation Modal */}
+      {showDuplicateConfirmation && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[60]">
+          <div className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-md border-2 border-yellow-400">
+            <div className="flex items-start gap-3 mb-4">
+              <div className="flex-shrink-0 w-10 h-10 bg-yellow-100 rounded-full flex items-center justify-center">
+                <svg className="w-6 h-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+              </div>
+              <div className="flex-1">
+                <h3 className="text-lg font-bold text-gray-900 mb-2">Possible Duplicate Detected</h3>
+                <div className="space-y-2 text-sm text-gray-700">
+                  {treeNameWarning && (
+                    <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                      <p className="font-medium text-yellow-800">Tree Name Issue:</p>
+                      <p className="text-yellow-700 mt-1">{treeNameWarning}</p>
+                    </div>
+                  )}
+                  {primaryNameWarning && (
+                    <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                      <p className="font-medium text-yellow-800">Primary Member Issue:</p>
+                      <p className="text-yellow-700 mt-1">{primaryNameWarning}</p>
+                    </div>
+                  )}
+                  <p className="mt-3 text-gray-600">
+                    Are you sure you want to create this tree? This may result in duplicate family trees.
+                  </p>
+                </div>
+              </div>
+            </div>
+            <div className="flex justify-end gap-3 mt-6">
+              <button 
+                className="px-4 py-2 text-sm bg-gray-100 hover:bg-gray-200 rounded-lg font-medium transition-colors" 
+                onClick={() => {
+                  setShowDuplicateConfirmation(false);
+                }}
+              >
+                Go Back & Edit
+              </button>
+              <button 
+                className="px-4 py-2 text-sm bg-yellow-600 hover:bg-yellow-700 text-white rounded-lg font-medium transition-colors" 
+                onClick={() => {
+                  setShowDuplicateConfirmation(false);
+                  confirmCreateTree(); // Proceed with creation
+                }}
+              >
+                Create Anyway
               </button>
             </div>
           </div>
