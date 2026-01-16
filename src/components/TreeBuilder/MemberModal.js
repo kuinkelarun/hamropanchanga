@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { normalizeForCompare } from '../../utils/textNormalize';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 // Validate and filter to allow only English (0-9) or Nepali numerals (०-९)
 const validateNumericInput = (value) => {
@@ -32,6 +33,7 @@ export default function MemberModal({
   onDelete,
   previewMode = false,
 }) {
+  const { t } = useLanguage();
   const isEdit = !!(member && member.id);
 
   const [name, setName] = useState('');
@@ -189,7 +191,7 @@ export default function MemberModal({
             : 'bg-gradient-to-r from-indigo-500 to-purple-600 text-white'
         }`}>
           <h3 className="text-sm font-semibold">
-            {previewMode ? 'Member Details' : (isEdit ? 'Edit Member Details' : 'Add New Member')}
+            {previewMode ? t('memberModal.memberDetails') : (isEdit ? t('memberModal.editMemberDetails') : t('memberModal.addNewMember'))}
           </h3>
           <button
             type="button"
@@ -197,7 +199,7 @@ export default function MemberModal({
             className="text-xs font-medium px-2 py-1 rounded-md bg-white/20 hover:bg-white/30 transition-colors"
             title="Press Escape or click outside to close"
           >
-            ✕ Close
+            ✕ {t('memberModal.close')}
           </button>
         </div>
 
@@ -206,12 +208,12 @@ export default function MemberModal({
         }`}>
           <div className="grid grid-cols-1 gap-2">
             <label className="space-y-1">
-              <span className="text-xs font-semibold text-gray-700">Name <span className="text-red-500">*</span></span>
+              <span className="text-xs font-semibold text-gray-700">{t('memberModal.name')} <span className="text-red-500">{t('memberModal.nameRequired')}</span></span>
               <input
                 type="text"
                 value={name}
                 onChange={e => setName(e.target.value)}
-                placeholder="Full name"
+                placeholder={t('memberModal.namePlaceholder')}
                 disabled={previewMode}
                 className={`w-full rounded-md border px-2 py-1 text-xs bg-white transition-all ${
                   previewMode 
@@ -222,12 +224,12 @@ export default function MemberModal({
               />
             </label>
             <label className="space-y-1">
-              <span className="text-xs font-semibold text-gray-700">Nickname</span>
+              <span className="text-xs font-semibold text-gray-700">{t('memberModal.nickname')}</span>
               <input
                 type="text"
                 value={nickname}
                 onChange={e => setNickname(e.target.value)}
-                placeholder="Jr., Sr., Mike, etc."
+                placeholder={t('memberModal.nicknamePlaceholder')}
                 disabled={previewMode}
                 className={`w-full rounded-md border px-2 py-1 text-xs bg-white transition-all ${
                   previewMode 
@@ -240,17 +242,17 @@ export default function MemberModal({
 
           {duplicateExact && !nickname.trim() && (
             <p className="text-xs text-red-600">
-              This name is already taken. Please add a nickname to distinguish.
+              {t('memberModal.duplicateNameNickname')}
             </p>
           )}
           {duplicateExact && !!nickname.trim() && (
             <p className="text-xs text-red-600">
-              This name and nickname are already used. Please choose a different nickname.
+              {t('memberModal.duplicateFull')}
             </p>
           )}
 
           <div className="grid grid-cols-[auto,1fr] items-center gap-3">
-            <span className="text-xs font-semibold text-gray-700">Gender</span>
+            <span className="text-xs font-semibold text-gray-700">{t('memberModal.gender')}</span>
             <div className="flex flex-wrap gap-3 text-xs" style={{color: '#1f2937'}}>
               <label className="inline-flex items-center gap-1">
                 <input
@@ -262,7 +264,7 @@ export default function MemberModal({
                   onChange={e => setGender(e.target.value)}
                   className={previewMode ? 'cursor-not-allowed opacity-60' : ''}
                 />
-                Male
+                {t('memberModal.male')}
               </label>
               <label className="inline-flex items-center gap-1">
                 <input
@@ -274,7 +276,7 @@ export default function MemberModal({
                   onChange={e => setGender(e.target.value)}
                   className={previewMode ? 'cursor-not-allowed opacity-60' : ''}
                 />
-                Female
+                {t('memberModal.female')}
               </label>
               <label className="inline-flex items-center gap-1">
                 <input
@@ -286,7 +288,7 @@ export default function MemberModal({
                   onChange={e => setGender(e.target.value)}
                   className={previewMode ? 'cursor-not-allowed opacity-60' : ''}
                 />
-                Non-binary
+                {t('memberModal.nonbinary')}
               </label>
               <label className="inline-flex items-center gap-1">
                 <input
@@ -298,14 +300,14 @@ export default function MemberModal({
                   onChange={e => setGender(e.target.value)}
                   className={previewMode ? 'cursor-not-allowed opacity-60' : ''}
                 />
-                Prefer not to say
+                {t('memberModal.preferNotToSay')}
               </label>
             </div>
           </div>
 
           <div className="grid grid-cols-1 gap-2">
             <div className="flex items-center gap-3">
-              <span className="text-xs font-semibold text-gray-700">📅 Date of Birth</span>
+              <span className="text-xs font-semibold text-gray-700">{t('memberModal.dateOfBirth')}</span>
               <div className="flex flex-wrap gap-3 text-xs" style={{color: '#1f2937'}}>
                 <label className="inline-flex items-center gap-1">
                   <input
@@ -317,7 +319,7 @@ export default function MemberModal({
                     onChange={e => setStatus(e.target.value)}
                     className={previewMode ? 'cursor-not-allowed opacity-60' : ''}
                   />
-                  Is Alive
+                  {t('memberModal.isAlive')}
                 </label>
                 <label className="inline-flex items-center gap-1">
                   <input
@@ -329,7 +331,7 @@ export default function MemberModal({
                     onChange={e => setStatus(e.target.value)}
                     className={previewMode ? 'cursor-not-allowed opacity-60' : ''}
                   />
-                  Passed Away
+                  {t('memberModal.passedAway')}
                 </label>
               </div>
             </div>
@@ -340,7 +342,7 @@ export default function MemberModal({
                   value={dobYear}
                   onChange={e => setDobYear(validateNumericInput(e.target.value))}
                   disabled={previewMode}
-                  placeholder="yyyy"
+                  placeholder={t('memberModal.yearPlaceholder')}
                   className={`w-24 rounded-md border px-2 py-1 text-xs bg-white placeholder-gray-400 transition-all ${
                     previewMode 
                       ? 'border-gray-300 text-gray-900 bg-white cursor-default' 
@@ -352,7 +354,7 @@ export default function MemberModal({
                   value={dobMonth}
                   onChange={e => setDobMonth(validateNumericInput(e.target.value))}
                   disabled={previewMode}
-                  placeholder="mm"
+                  placeholder={t('memberModal.monthPlaceholder')}
                   className={`w-16 rounded-md border px-2 py-1 text-xs bg-white placeholder-gray-400 transition-all ${
                     previewMode 
                       ? 'border-gray-300 text-gray-900 bg-white cursor-default' 
@@ -364,7 +366,7 @@ export default function MemberModal({
                   value={dobDay}
                   onChange={e => setDobDay(validateNumericInput(e.target.value))}
                   disabled={previewMode}
-                  placeholder="dd"
+                  placeholder={t('memberModal.dayPlaceholder')}
                   className={`w-16 rounded-md border px-2 py-1 text-xs bg-white placeholder-gray-400 transition-all ${
                     previewMode 
                       ? 'border-gray-300 text-gray-900 bg-white cursor-default' 
@@ -376,14 +378,14 @@ export default function MemberModal({
 
             {status === 'deceased' && (
               <label className="space-y-1">
-                <span className="text-xs font-semibold text-gray-700">📅 Date of Death</span>
+                <span className="text-xs font-semibold text-gray-700">{t('memberModal.dateOfDeath')}</span>
                 <div className="flex gap-2">
                   <input
                     type="text"
                     value={dodYear}
                     onChange={e => setDodYear(validateNumericInput(e.target.value))}
                     disabled={previewMode}
-                    placeholder="yyyy"
+                    placeholder={t('memberModal.yearPlaceholder')}
                     className={`w-24 rounded-md border px-2 py-1 text-xs bg-white placeholder-gray-400 transition-all ${
                       previewMode 
                         ? 'border-gray-300 text-gray-900 bg-white cursor-default' 
@@ -395,7 +397,7 @@ export default function MemberModal({
                     value={dodMonth}
                     onChange={e => setDodMonth(validateNumericInput(e.target.value))}
                     disabled={previewMode}
-                    placeholder="mm"
+                    placeholder={t('memberModal.monthPlaceholder')}
                     className={`w-16 rounded-md border px-2 py-1 text-xs bg-white placeholder-gray-400 transition-all ${
                       previewMode 
                         ? 'border-gray-300 text-gray-900 bg-white cursor-default' 
@@ -407,7 +409,7 @@ export default function MemberModal({
                     value={dodDay}
                     onChange={e => setDodDay(validateNumericInput(e.target.value))}
                     disabled={previewMode}
-                    placeholder="dd"
+                    placeholder={t('memberModal.dayPlaceholder')}
                     className={`w-16 rounded-md border px-2 py-1 text-xs bg-white placeholder-gray-400 transition-all ${
                       previewMode 
                         ? 'border-gray-300 text-gray-900 bg-white cursor-default' 
@@ -419,13 +421,13 @@ export default function MemberModal({
             )}
 
             <label className="space-y-1">
-              <span className="text-xs font-semibold text-gray-700">📍 Location</span>
+              <span className="text-xs font-semibold text-gray-700">{t('memberModal.location')}</span>
               <input
                 type="text"
                 value={location}
                 onChange={e => setLocation(e.target.value)}
                 disabled={previewMode}
-                placeholder="City, Country"
+                placeholder={t('memberModal.locationPlaceholder')}
                 className={`w-full rounded-md border px-2 py-1 text-xs bg-white transition-all ${
                   previewMode 
                     ? 'border-gray-300 text-gray-900 bg-white cursor-default' 
@@ -436,13 +438,13 @@ export default function MemberModal({
           </div>
 
           <label className="space-y-1">
-            <span className="text-xs font-semibold text-gray-700">Photo URL</span>
+            <span className="text-xs font-semibold text-gray-700">{t('memberModal.photoUrl')}</span>
             <input
               type="url"
               value={photo}
               onChange={e => setPhoto(e.target.value)}
               disabled={previewMode}
-              placeholder="https://..."
+              placeholder={t('memberModal.photoUrlPlaceholder')}
               className={`w-full rounded-md border px-2 py-1 text-xs bg-white transition-all ${
                 previewMode 
                   ? 'border-gray-300 text-gray-900 bg-white cursor-default' 
@@ -452,13 +454,13 @@ export default function MemberModal({
           </label>
 
           <label className="space-y-1">
-            <span className="text-xs font-semibold text-gray-700">📝 Notes</span>
+            <span className="text-xs font-semibold text-gray-700">{t('memberModal.notes')}</span>
             <textarea
               rows={2}
               disabled={previewMode}
               value={notes}
               onChange={e => setNotes(e.target.value)}
-              placeholder="Add notes, occupation, facts..."
+              placeholder={t('memberModal.notesPlaceholder')}
               className={`w-full rounded-md border px-2 py-1 text-xs resize-none overflow-y-auto ${
                 previewMode
                   ? 'border-gray-300 text-gray-900 bg-white cursor-default'
@@ -475,7 +477,7 @@ export default function MemberModal({
                 onClick={() => onMoveToPool(member.id)}
                 className="px-3 py-1.5 text-xs font-semibold rounded-md text-white shadow-sm bg-amber-500 hover:bg-amber-600 transition-colors"
               >
-                Move to Pool
+                {t('memberModal.moveToPool')}
               </button>
             )}
             {!previewMode && isEdit && onDelete && (
@@ -484,7 +486,7 @@ export default function MemberModal({
                 onClick={() => onDelete(member.id)}
                 className="px-3 py-1.5 text-xs font-semibold rounded-md text-white shadow-sm bg-red-600 hover:bg-red-700 transition-colors"
               >
-                Delete
+                {t('memberModal.delete')}
               </button>
             )}
             {!previewMode && (
@@ -497,7 +499,7 @@ export default function MemberModal({
                     : 'bg-emerald-600 hover:bg-emerald-700 cursor-pointer'
                 }`}
               >
-                {isEdit ? 'Save Changes' : 'Add Member'}
+                {isEdit ? t('memberModal.saveChanges') : t('memberModal.addMember')}
               </button>
             )}
             {!previewMode && (
@@ -506,7 +508,7 @@ export default function MemberModal({
                 onClick={onClose}
                 className="px-3 py-1.5 text-xs font-semibold rounded-md border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 transition-colors"
               >
-                Cancel
+                {t('memberModal.cancel')}
               </button>
             )}
           </div>

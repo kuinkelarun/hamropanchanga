@@ -1,5 +1,6 @@
 import React from 'react';
 import { displayMemberName } from './utils/format';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 function hasPosVal(pos) {
   return pos && typeof pos.x === 'number' && typeof pos.y === 'number';
@@ -16,12 +17,13 @@ export default function SidebarPanel({
   onToggle,
   modalOpen = false,
 }) {
+  const { t } = useLanguage();
   const membersOnCanvas = members.filter(m => hasPosVal(m.position));
   const membersInPool = members.filter(m => !hasPosVal(m.position));
 
   const handleAddClick = () => {
     if (!canAddMember) {
-      if (showToast) showToast('Create or select a tree to add members.');
+      if (showToast) showToast(t('treeBuilder.createOrSelectTree'));
       return;
     }
     if (onAddNewMember) onAddNewMember();
@@ -33,7 +35,7 @@ export default function SidebarPanel({
         <button
           onClick={onToggle}
           className="absolute left-0 top-1/2 -translate-y-1/2 z-20 bg-blue-600 text-white p-3 rounded-r-lg shadow-lg hover:bg-blue-700 transition-all lg:hidden"
-          title="Expand sidebar"
+          title={t('treeBuilder.expandSidebar')}
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
@@ -71,18 +73,18 @@ export default function SidebarPanel({
             className={`w-full px-3 py-2 rounded-md text-sm font-medium text-white ${
               canAddMember ? 'bg-blue-600 hover:bg-blue-700' : 'bg-indigo-200 cursor-not-allowed'
             }`}
-            title={!canAddMember ? 'Create or select a tree to add members.' : 'Add a new node to the canvas'}
+            title={!canAddMember ? t('treeBuilder.createOrSelectTree') : t('treeBuilder.addNode')}
           >
-            Add Node
+            {t('treeBuilder.addNode')}
           </button>
         </div>
 
         <div className="flex items-center justify-between mb-2">
-          <h2 className="font-semibold text-gray-800 text-sm">Members</h2>
+          <h2 className="font-semibold text-gray-800 text-sm">{t('treeBuilder.members')}</h2>
           <button
             onClick={onToggle}
             className="p-1 hover:bg-gray-100 rounded transition-colors lg:hidden"
-            title="Hide sidebar"
+            title={t('treeBuilder.hideSidebar')}
           >
             <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -94,11 +96,11 @@ export default function SidebarPanel({
           <div>
             <div className="flex items-center gap-2 text-gray-700 font-medium text-xs">
               <span className="inline-block w-2 h-2 rounded-full bg-red-500" />
-              <span>Member Pool ({membersInPool.length})</span>
+              <span>{t('treeBuilder.memberPool')} ({membersInPool.length})</span>
             </div>
             {membersInPool.length === 0 ? (
               <div className="mt-2 p-2 rounded-md bg-gray-50 text-gray-500 italic text-xs">
-                No members in pool.
+                {t('treeBuilder.noMembersInPool')}
               </div>
             ) : (
               <ul className="mt-2 space-y-1 max-h-44 overflow-y-auto pr-1">
@@ -112,7 +114,7 @@ export default function SidebarPanel({
                       e.dataTransfer.effectAllowed = 'move';
                     }}
                     className="group flex items-center justify-between px-2 py-1.5 rounded-md border border-gray-200 bg-white text-xs text-gray-800 cursor-grab hover:bg-gray-100 hover:border-orange-500 active:cursor-grabbing relative"
-                    title="Drag to canvas or click 'Add' to place on canvas"
+                    title={t('treeBuilder.dragToCanvasOrAdd')}
                     onClick={() => onSelectMember && onSelectMember(m.id)}
                   >
                     <span className="font-medium truncate mr-2">{displayMemberName(m)}</span>
@@ -124,11 +126,11 @@ export default function SidebarPanel({
                         if (onAddMemberToCanvas) onAddMemberToCanvas(m);
                       }}
                     >
-                      Add
+                      {t('treeBuilder.add')}
                     </button>
                     {/* Tooltip on hover */}
                     <div className="hidden group-hover:block absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-[10px] rounded whitespace-nowrap z-30 pointer-events-none">
-                      Drag to canvas to place
+                      {t('treeBuilder.dragToCanvas')}
                     </div>
                   </li>
                 ))}
@@ -141,11 +143,11 @@ export default function SidebarPanel({
           <div className="flex-1 min-h-0 flex flex-col">
             <div className="flex items-center gap-2 text-gray-700 font-medium text-xs">
               <span className="inline-block w-2 h-2 rounded-full bg-emerald-500" />
-              <span>On Canvas ({membersOnCanvas.length})</span>
+              <span>{t('treeBuilder.onCanvas')} ({membersOnCanvas.length})</span>
             </div>
             {membersOnCanvas.length === 0 ? (
               <div className="mt-2 p-2 rounded-md bg-gray-50 text-gray-500 italic text-xs">
-                No members on canvas yet. Drag members from pool or click "Add" button.
+                {t('treeBuilder.noMembersOnCanvas')}
               </div>
             ) : (
               <ul className="mt-2 space-y-1 overflow-y-auto pr-1 text-xs">

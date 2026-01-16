@@ -3,10 +3,12 @@ import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '../firebase';
 import NepaliDatePicker from './NepaliDatePicker'; // Use the existing NepaliDatePicker component
 import { useSettings } from '../contexts/SettingsContext';
+import { useLanguage } from '../contexts/LanguageContext';
 import { nepaliMonths, getTithisForMonth, convertAdToBs, getTithiIndexByName, getTithiLunarMonthName, getTithiYearFromAdDate } from '../utils/nepaliDateUtils';
 
 // Component to add/edit an event
 const AddEventForm = ({ onAdd, familyMembers, onCancel, editingEvent }) => {
+    const { t } = useLanguage();
     // Initialize date with today's date in YYYY-MM-DD format
     const getTodayDate = () => {
         const today = new Date();
@@ -125,7 +127,7 @@ const AddEventForm = ({ onAdd, familyMembers, onCancel, editingEvent }) => {
                         month: actualTithiLunarMonth,  // Save the actual tithi lunar month name, NOT calendar month
                         id: tithiId,
                         name: tithiName,
-                        paksha: pakshaNepali  // Use Nepali paksha name for display
+                        paksha: paksha  // Use English paksha name ('Shukla'/'Krishna') for consistent matching
                     };
                 } else {
                     alert(`Could not find date for ${selectedMonthName} ${pakshaNepali} ${tithiName} in year ${currentBsYear}. Please ensure Tithis are generated.`);
@@ -166,12 +168,12 @@ const AddEventForm = ({ onAdd, familyMembers, onCancel, editingEvent }) => {
         <>
             <div className="bg-white p-4 rounded-xl shadow-inner mb-4 space-y-3">
                 <h4 className="text-lg font-bold text-gray-800">
-                    {editingEvent ? 'Edit Event' : 'Add New Event'}
+                    {editingEvent ? t('addEventForm.editEvent') : t('addEventForm.addNewEvent')}
                 </h4>
                 <form onSubmit={handleSubmit} className="space-y-3">
                     <div>
                         <label htmlFor="event-person" className="block text-gray-700 font-semibold mb-1 text-sm">
-                            Associated Person
+                            {t('addEventForm.associatedPerson')}
                         </label>
                         <select
                             id="event-person"
@@ -180,7 +182,7 @@ const AddEventForm = ({ onAdd, familyMembers, onCancel, editingEvent }) => {
                             className="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-green-500"
                             required
                         >
-                            <option value="" disabled>Select a person...</option>
+                            <option value="" disabled>{t('addEventForm.selectPerson')}</option>
                             {familyMembers.map(member => {
                                 const suffix = member.nickname ? ` (${member.nickname})` : '';
                                 return (
@@ -193,12 +195,12 @@ const AddEventForm = ({ onAdd, familyMembers, onCancel, editingEvent }) => {
                     </div>
                     <div>
                         <label htmlFor="event-name" className="block text-gray-700 font-semibold mb-1 text-sm">
-                            Event Name
+                            {t('addEventForm.eventName')}
                         </label>
                         <input
                             id="event-name"
                             type="text"
-                            placeholder="Event Name (e.g., Birthday)"
+                            placeholder={t('addEventForm.eventNamePlaceholder')}
                             value={name}
                             onChange={(e) => setName(e.target.value)}
                             className="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-green-500"
@@ -208,11 +210,11 @@ const AddEventForm = ({ onAdd, familyMembers, onCancel, editingEvent }) => {
 
                     <div>
                         <label htmlFor="event-description" className="block text-gray-700 font-semibold mb-1 text-sm">
-                            Description (Optional)
+                            {t('addEventForm.description')}
                         </label>
                         <textarea
                             id="event-description"
-                            placeholder="Add details (optional)"
+                            placeholder={t('addEventForm.descriptionPlaceholder')}
                             value={description}
                             onChange={(e) => setDescription(e.target.value)}
                             className="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-green-500"
@@ -222,7 +224,7 @@ const AddEventForm = ({ onAdd, familyMembers, onCancel, editingEvent }) => {
                     
                     <div>
                         <label className="block text-gray-700 font-semibold mb-1 text-sm">
-                            Entry Mode
+                            {t('addEventForm.entryMode')}
                         </label>
                         <div className="flex space-x-4 mb-2">
                             <label className="inline-flex items-center">
@@ -237,7 +239,7 @@ const AddEventForm = ({ onAdd, familyMembers, onCancel, editingEvent }) => {
                                         // Keep current repetition value
                                     }} 
                                 />
-                                <span className="ml-2 text-sm">By Date</span>
+                                <span className="ml-2 text-sm">{t('addEventForm.byDate')}</span>
                             </label>
                             <label className="inline-flex items-center">
                                 <input 
@@ -248,20 +250,17 @@ const AddEventForm = ({ onAdd, familyMembers, onCancel, editingEvent }) => {
                                     checked={entryMode === 'tithi'} 
                                     onChange={() => {
                                         setEntryMode('tithi');
-                                        // Default to monthly for tithi-based events
-                                        if (repetition === 'none') {
-                                            setRepetition('monthly');
-                                        }
+                                        // Keep current repetition value
                                     }} 
                                 />
-                                <span className="ml-2 text-sm">By Tithi</span>
+                                <span className="ml-2 text-sm">{t('addEventForm.byTithi')}</span>
                             </label>
                         </div>
 
                         {entryMode === 'date' ? (
                             <>
                                 <label htmlFor="event-date" className="block text-gray-700 font-semibold mb-1 text-sm">
-                                    Date ({isNepaliCalendar ? 'Nepali Calendar' : 'Gregorian Calendar'})
+                                    {isNepaliCalendar ? t('addEventForm.dateNepaliCalendar') : t('addEventForm.dateGregorianCalendar')}
                                 </label>
                                 {isNepaliCalendar ? (
                                     <NepaliDatePicker
@@ -283,21 +282,21 @@ const AddEventForm = ({ onAdd, familyMembers, onCancel, editingEvent }) => {
                         ) : (
                             <div className="grid grid-cols-2 gap-2">
                                 <div>
-                                    <label className="block text-gray-700 font-semibold mb-1 text-sm">Tithi Month (Lunar)</label>
+                                    <label className="block text-gray-700 font-semibold mb-1 text-sm">{t('addEventForm.tithiMonthLunar')}</label>
                                     <select 
                                         value={tithiMonth} 
                                         onChange={(e) => setTithiMonth(e.target.value)}
                                         className="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-green-500"
                                         required
                                     >
-                                        <option value="">Select Tithi Month</option>
+                                        <option value="">{t('addEventForm.selectTithiMonth')}</option>
                                         {nepaliMonths.map((month, idx) => (
                                             <option key={idx} value={String(idx + 1)}>{month}</option>
                                         ))}
                                     </select>
                                 </div>
                                 <div>
-                                    <label className="block text-gray-700 font-semibold mb-1 text-sm">Tithi</label>
+                                    <label className="block text-gray-700 font-semibold mb-1 text-sm">{t('addEventForm.tithi')}</label>
                                     <select 
                                         value={tithiId} 
                                         onChange={(e) => setTithiId(e.target.value)}
@@ -305,7 +304,7 @@ const AddEventForm = ({ onAdd, familyMembers, onCancel, editingEvent }) => {
                                         disabled={!tithiMonth}
                                         required
                                     >
-                                        <option value="">Select Tithi</option>
+                                        <option value="">{t('addEventForm.selectTithi')}</option>
                                         {tithiMonth && getTithisForMonth(parseInt(tithiMonth)).map(tithi => (
                                             <option key={tithi.tithiId} value={tithi.tithiId}>
                                                 {tithi.name} ({tithi.pakshya})
@@ -318,7 +317,7 @@ const AddEventForm = ({ onAdd, familyMembers, onCancel, editingEvent }) => {
                     </div>
                     <div>
                         <label htmlFor="event-repetition" className="block text-gray-700 font-semibold mb-1 text-sm">
-                            Repeats
+                            {t('addEventForm.repeats')}
                         </label>
                         <select
                             id="event-repetition"
@@ -326,17 +325,17 @@ const AddEventForm = ({ onAdd, familyMembers, onCancel, editingEvent }) => {
                             onChange={(e) => setRepetition(e.target.value)}
                             className="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-green-500"
                         >
-                            <option value="none">Does not repeat</option>
-                            <option value="monthly">Monthly</option>
-                            <option value="yearly">Yearly</option>
+                            <option value="none">{t('addEventForm.doesNotRepeat')}</option>
+                            <option value="monthly">{t('addEventForm.monthly')}</option>
+                            <option value="yearly">{t('addEventForm.yearly')}</option>
                         </select>
                     </div>
                     <div className="flex justify-end space-x-2">
                         <button type="button" onClick={onCancel} className="px-4 py-2 rounded-xl text-gray-700 font-semibold transition bg-gray-200 hover:bg-gray-300 text-sm">
-                            Cancel
+                            {t('addEventForm.cancel')}
                         </button>
                         <button type="submit" disabled={resolvingTithi} className="px-4 py-2 rounded-xl text-white font-semibold transition bg-green-600 hover:bg-green-700 text-sm disabled:opacity-50">
-                            {resolvingTithi ? 'Resolving...' : (editingEvent ? 'Update Event' : 'Add Event')}
+                            {resolvingTithi ? t('addEventForm.resolving') : (editingEvent ? t('addEventForm.updateEvent') : t('addEventForm.addEvent'))}
                         </button>
                     </div>
                 </form>

@@ -734,7 +734,7 @@ export default function TreeDetailPage({ user }) {
             onClick={e => e.stopPropagation()}
           >
             <div className="flex items-center justify-between border-b px-4 py-3 rounded-t-2xl bg-gradient-to-r from-slate-400 to-slate-500 text-white">
-              <h3 className="text-sm font-semibold">{previewingEvent.title || 'Event Details'}</h3>
+              <h3 className="text-sm font-semibold">{previewingEvent.title || t('eventPreview.eventDetails')}</h3>
               <button
                 type="button"
                 onClick={() => {
@@ -744,14 +744,14 @@ export default function TreeDetailPage({ user }) {
                 className="text-xs font-medium px-2 py-1 rounded-md bg-white/20 hover:bg-white/30 transition-colors"
                 title="Press Escape or click outside to close"
               >
-                ✕ Close
+                ✕ {t('eventPreview.close')}
               </button>
             </div>
             
             <div className="px-4 py-4 space-y-3 max-h-[70vh] overflow-y-auto">
               {previewingEvent.memberId && (
                 <div>
-                  <label className="text-xs font-semibold text-gray-700">Associated Member</label>
+                  <label className="text-xs font-semibold text-gray-700">{t('eventPreview.associatedMember')}</label>
                   <div className="mt-1 px-3 py-2 bg-white text-gray-900 rounded-md text-sm border border-gray-300">
                     {getMemberName(previewingEvent.memberId) || '—'}
                   </div>
@@ -759,14 +759,14 @@ export default function TreeDetailPage({ user }) {
               )}
 
               <div>
-                <label className="text-xs font-semibold text-gray-700">Description</label>
+                <label className="text-xs font-semibold text-gray-700">{t('eventPreview.description')}</label>
                 <div className="mt-1 px-3 py-2 bg-white text-gray-900 rounded-md text-sm border border-gray-300 max-h-[70px] overflow-y-auto whitespace-pre-wrap">
                   {previewingEvent.description || '—'}
                 </div>
               </div>
 
               <div>
-                <label className="text-xs font-semibold text-gray-700">Date (Gregorian)</label>
+                <label className="text-xs font-semibold text-gray-700">{t('eventPreview.dateGregorian')}</label>
                 <div className="mt-1 px-3 py-2 bg-white text-gray-900 rounded-md text-sm border border-gray-300">
                   {previewingEvent.dateKey || '—'}
                 </div>
@@ -774,7 +774,7 @@ export default function TreeDetailPage({ user }) {
 
               {previewingEvent.dateKey && (
                 <div>
-                  <label className="text-xs font-semibold text-gray-700">Date (Nepali)</label>
+                  <label className="text-xs font-semibold text-gray-700">{t('eventPreview.dateNepali')}</label>
                   <div className="mt-1 px-3 py-2 bg-white text-gray-900 rounded-md text-sm border border-gray-300">
                     {formatAdDateToNepaliStringWithNumerals(previewingEvent.dateKey)}
                     {getTithiDisplayString(previewingEvent.tithi)}
@@ -784,9 +784,9 @@ export default function TreeDetailPage({ user }) {
 
               {previewingEvent.repetition && previewingEvent.repetition !== 'none' && (
                 <div>
-                  <label className="text-xs font-semibold text-gray-700">Repetition</label>
+                  <label className="text-xs font-semibold text-gray-700">{t('eventPreview.repetition')}</label>
                   <div className="mt-1 px-3 py-2 bg-white text-gray-900 rounded-md text-sm border border-gray-300">
-                    {previewingEvent.repetition}
+                    {t(`repetitionValues.${previewingEvent.repetition}`) || previewingEvent.repetition}
                   </div>
                 </div>
               )}
