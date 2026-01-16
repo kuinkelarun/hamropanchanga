@@ -576,7 +576,14 @@ export default function TreeDetailPage({ user }) {
                     >
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
-                          <h4 className="font-semibold text-gray-800">{member.name || 'Unknown'}</h4>
+                          <div className="flex items-center gap-2">
+                            <h4 className="font-semibold text-gray-800">{member.name || 'Unknown'}</h4>
+                            {tree?.primaryMemberName && normalizeForCompare(member.name || '') === normalizeForCompare(tree.primaryMemberName) && (
+                              <span className="text-xs px-2 py-0.5 bg-green-100 text-green-700 rounded-full font-medium">
+                                Primary
+                              </span>
+                            )}
+                          </div>
                           {member.nickname && (
                             <p className="text-xs text-gray-500 mt-0.5">"{member.nickname}"</p>
                           )}
