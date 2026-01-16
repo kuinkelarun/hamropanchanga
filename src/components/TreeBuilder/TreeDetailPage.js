@@ -5,6 +5,7 @@ import { Trees, Members, Relationships, MarriagePoints } from './utils/firestore
 import AddEventForm from '../AddEventForm';
 import TreePreview from './TreePreview';
 import MemberModal from './MemberModal';
+import KebabMenu from './KebabMenu';
 import { db } from '../../firebase';
 import { collection, addDoc, serverTimestamp, query, where, getDocs, doc, updateDoc } from 'firebase/firestore';
 import { formatAdDateToNepaliStringWithNumerals, convertAdToBs } from '../../utils/nepaliDateUtils';
@@ -587,19 +588,11 @@ export default function TreeDetailPage({ user }) {
                             )}
                           </div>
                         </div>
-                        <div className="flex gap-2 ml-2">
-                          <button
-                            onClick={() => handleEditMember(member)}
-                            className="px-3 py-1.5 text-xs bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-lg font-medium transition-colors"
-                          >
-                            Edit
-                          </button>
-                          <button
-                            onClick={() => handleDeleteMember(member.id)}
-                            className="px-3 py-1.5 text-xs bg-red-100 hover:bg-red-200 text-red-700 rounded-lg font-medium transition-colors"
-                          >
-                            Delete
-                          </button>
+                        <div className="ml-2">
+                          <KebabMenu
+                            onEdit={() => handleEditMember(member)}
+                            onDelete={() => handleDeleteMember(member.id)}
+                          />
                         </div>
                       </div>
                     </div>
@@ -658,19 +651,11 @@ export default function TreeDetailPage({ user }) {
                               </span>
                             )}
                           </div>
-                          <div className="flex gap-2 ml-3">
-                            <button
-                              onClick={() => handleEditEvent(event)}
-                              className="px-3 py-1.5 text-sm bg-purple-100 hover:bg-purple-200 text-purple-700 rounded-lg font-medium transition-colors"
-                            >
-                              Edit
-                            </button>
-                            <button
-                              onClick={() => handleDeleteEvent(event.id)}
-                              className="px-3 py-1.5 text-sm bg-red-100 hover:bg-red-200 text-red-700 rounded-lg font-medium transition-colors"
-                            >
-                              Delete
-                            </button>
+                          <div className="ml-3">
+                            <KebabMenu
+                              onEdit={() => handleEditEvent(event)}
+                              onDelete={() => handleDeleteEvent(event.id)}
+                            />
                           </div>
                         </div>
                       </div>
@@ -690,7 +675,7 @@ export default function TreeDetailPage({ user }) {
 
       {/* Add/Edit Event Modal */}
       {isAddingEvent && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50">
           <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-lg">
             <AddEventForm
               familyMembers={familyMembersForForm}
