@@ -5,7 +5,7 @@ const LanguageSelector = ({ showLabel = false, compact = false }) => {
   const { language, changeLanguage, t } = useLanguage();
 
   if (compact) {
-    // Compact toggle style (like calendar toggle)
+    // Compact clickable labels style
     return (
       <div className="flex items-center space-x-2">
         {showLabel && (
@@ -14,26 +14,31 @@ const LanguageSelector = ({ showLabel = false, compact = false }) => {
           </span>
         )}
         <div className="flex items-center space-x-2">
-          <span className={`text-sm ${language === 'ne' ? 'text-blue-600 font-medium' : 'text-gray-500'}`}>
-            नेपाली
-          </span>
           <button
             type="button"
-            onClick={() => changeLanguage(language === 'ne' ? 'en' : 'ne')}
-            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 ${
-              language === 'ne' ? 'bg-blue-600' : 'bg-gray-300'
+            onClick={() => changeLanguage('ne')}
+            className={`text-sm transition-all cursor-pointer ${
+              language === 'ne' 
+                ? 'text-blue-600 font-bold' 
+                : 'text-gray-500 hover:text-blue-500'
             }`}
-            aria-label="Toggle language"
+            aria-label="Switch to Nepali"
           >
-            <span
-              className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform duration-200 ${
-                language === 'ne' ? 'translate-x-6' : 'translate-x-1'
-              }`}
-            />
+            नेपाली
           </button>
-          <span className={`text-sm ${language === 'en' ? 'text-blue-600 font-medium' : 'text-gray-500'}`}>
+          <span className="text-gray-400">|</span>
+          <button
+            type="button"
+            onClick={() => changeLanguage('en')}
+            className={`text-sm transition-all cursor-pointer ${
+              language === 'en' 
+                ? 'text-blue-600 font-bold' 
+                : 'text-gray-500 hover:text-blue-500'
+            }`}
+            aria-label="Switch to English"
+          >
             English
-          </span>
+          </button>
         </div>
       </div>
     );

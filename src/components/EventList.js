@@ -76,7 +76,7 @@ const EventList = ({ events, eventFilter, onEdit, onDelete }) => {
     if (shouldGroup) {
         sortedAndFilteredEvents.forEach(event => {
             const monthYear = isNepaliCalendar 
-                ? formatNepaliMonthYear(event.displayDate).english
+                ? formatNepaliMonthYear(event.displayDate).nepali
                 : formatGregorianMonthYear(event.displayDate).full;
             if (!groupedEvents[monthYear]) {
                 groupedEvents[monthYear] = [];

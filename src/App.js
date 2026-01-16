@@ -579,9 +579,6 @@ function AppContent() {
 
                         {/* Navigation Section */}
                         <div className="flex items-center gap-2 sm:gap-4">
-                            {/* Language Selector - Always visible */}
-                            <LanguageSelector compact={true} />
-                            
                             {user ? (
                                 <>
                                     {/* Desktop: Full button with text */}
@@ -598,6 +595,9 @@ function AppContent() {
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
                                         </svg>
                                     </button>
+                                    
+                                    {/* Language Selector - After Tithi Calculator */}
+                                    <LanguageSelector compact={true} />
                                     <div className="pl-2 border-l border-gray-200 ml-2">
                                         <SettingsMenu 
                                             user={user} 
@@ -610,18 +610,22 @@ function AppContent() {
                                     </div>
                                 </>
                             ) : (
-                                <button
-                                    onClick={async () => {
-                                        try {
-                                            await signInWithGoogle();
-                                        } catch (err) {
-                                            // logged in helper handles logging
-                                        }
-                                    }}
-                                    className="text-sm font-medium bg-gray-900 text-white px-5 py-2.5 rounded-full hover:bg-gray-800 transition-all shadow-sm hover:shadow-md transform hover:-translate-y-0.5"
-                                >
-                                    {t('auth.signIn')}
-                                </button>
+                                <>
+                                    {/* Language Selector - When not logged in */}
+                                    <LanguageSelector compact={true} />
+                                    <button
+                                        onClick={async () => {
+                                            try {
+                                                await signInWithGoogle();
+                                            } catch (err) {
+                                                // logged in helper handles logging
+                                            }
+                                        }}
+                                        className="text-sm font-medium bg-gray-900 text-white px-5 py-2.5 rounded-full hover:bg-gray-800 transition-all shadow-sm hover:shadow-md transform hover:-translate-y-0.5"
+                                    >
+                                        {t('auth.signIn')}
+                                    </button>
+                                </>
                             )}
                         </div>
                     </div>
