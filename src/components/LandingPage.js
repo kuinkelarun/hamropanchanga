@@ -102,7 +102,7 @@ const LandingPage = ({ user, isAdmin, trees = [], treeMembers = [], events, fami
             )}
 
             {/* Nepali Calendar */}
-            <div className="edgefull">
+            <div id="nepali-calendar-section" className="edgefull">
                 <div className="section-content-centered">
                     <div className="section-card calendar-wrapper">
                         <NepaliCalendar 

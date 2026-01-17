@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { BrowserRouter as Router, Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import { collection, query, where, onSnapshot, doc, getDoc, setDoc, updateDoc, getDocs } from 'firebase/firestore';
 import { onAuthStateChanged, signOut, getIdTokenResult } from 'firebase/auth';
@@ -81,12 +81,84 @@ function AppContent() {
     const [treeMembers, setTreeMembers] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isAdmin, setIsAdmin] = useState(false);
+    const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+    const hamburgerButtonRef = useRef(null);
+    const mobileMenuPanelRef = useRef(null);
     
     // Smart home button state
     const [savedScrollPosition, setSavedScrollPosition] = useState(0);
 
     // Use the new permissions hook
     useUserPermissions(user);
+
+    const isHomePage = location.pathname === '/';
+
+    const getHeaderPageName = (pathname) => {
+        if (pathname === '/' || !pathname) return '';
+        if (pathname.startsWith('/tithi-calculator')) return 'Tithi Calculator';
+        if (pathname.startsWith('/trees')) return 'Tree View';
+        if (pathname.startsWith('/tree/')) return 'Tree';
+        if (pathname.startsWith('/admin/edit-cards')) return 'Admin';
+        if (pathname.startsWith('/admin/management')) return 'Admin';
+        if (pathname.startsWith('/admin/tithis')) return 'Admin';
+        if (pathname.startsWith('/admin/events')) return 'Admin';
+        if (pathname.startsWith('/admin/calendar')) return 'Admin';
+        if (pathname.startsWith('/admin/data-management')) return 'Admin';
+        if (pathname.startsWith('/user-management')) return 'User Management';
+        if (pathname.startsWith('/builder')) return 'Builder';
+
+        const clean = pathname.replace(/^\//, '').split('/')[0] || '';
+        return clean
+            ? clean
+                .split('-')
+                .map((s) => s.charAt(0).toUpperCase() + s.slice(1))
+                .join(' ')
+            : '';
+    };
+
+    const headerPageName = getHeaderPageName(location.pathname);
+
+    const handleBrandClick = () => {
+        // User requested a hard refresh when returning home.
+        if (location.pathname === '/') {
+            window.location.reload();
+            return;
+        }
+        window.location.href = '/';
+    };
+
+    const handleBreadcrumbClick = () => {
+        // Breadcrumb represents the CURRENT page; clicking should refresh.
+        window.location.reload();
+    };
+
+    // Close menu on route change
+    useEffect(() => {
+        setMobileMenuOpen(false);
+    }, [location.pathname]);
+
+    // Close menu on outside click; also scroll to top
+    useEffect(() => {
+        if (!mobileMenuOpen) return undefined;
+
+        const onPointerDown = (event) => {
+            const target = event.target;
+            const menuEl = mobileMenuPanelRef.current;
+            const buttonEl = hamburgerButtonRef.current;
+
+            const clickedInsideMenu = menuEl && menuEl.contains(target);
+            const clickedHamburgerButton = buttonEl && buttonEl.contains(target);
+
+            if (!clickedInsideMenu && !clickedHamburgerButton) {
+                setMobileMenuOpen(false);
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+        };
+
+        document.addEventListener('pointerdown', onPointerDown);
+        return () => document.removeEventListener('pointerdown', onPointerDown);
+    }, [mobileMenuOpen]);
 
     // --- HOOKS ---
     useEffect(() => {
@@ -479,6 +551,31 @@ function AppContent() {
 
     const handleTithiCalculator = () => {
         navigate('/tithi-calculator');
+        setMobileMenuOpen(false);
+    };
+
+    const handleNepaliCalendarClick = () => {
+        if (location.pathname !== '/') {
+            navigate('/');
+            // Wait for navigation, then scroll
+            setTimeout(() => {
+                const calendarSection = document.getElementById('nepali-calendar-section');
+                if (calendarSection) {
+                    calendarSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+            }, 100);
+        } else {
+            const calendarSection = document.getElementById('nepali-calendar-section');
+            if (calendarSection) {
+                calendarSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+        }
+        setMobileMenuOpen(false);
+    };
+
+    const handleTreeViewClick = () => {
+        navigate('/trees');
+        setMobileMenuOpen(false);
     };
 
     // --- RENDER ---
@@ -567,69 +664,151 @@ function AppContent() {
 
     return (
         <div className="min-h-screen bg-gray-50">
-            <header className="sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b border-gray-200 shadow-sm" role="banner">
+            <header
+                className={
+                    !isHomePage
+                        ? 'sticky top-0 z-50 bg-white border-b border-gray-200 shadow-sm'
+                        : mobileMenuOpen
+                            ? 'relative z-50 bg-white border-b border-gray-200 shadow-sm'
+                            : 'sticky top-0 z-50 bg-white border-b border-gray-200 shadow-sm'
+                }
+                role="banner"
+            >
                 <div className="w-full px-4 sm:px-6 lg:px-8">
-                    <div className="flex justify-between items-center h-16">
-                        {/* Logo Section */}
-                        <div className="flex-shrink-0 flex items-center cursor-pointer group" onClick={handleLogoClick}>
-                            <span className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-gray-800 to-gray-600 group-hover:from-purple-600 group-hover:to-blue-600 transition-all duration-300 pl-2">
-                                FamilyTree
-                            </span>
-                        </div>
+                    <div className="flex justify-between items-center h-14">
+                        {/* Left Section: Hamburger (mobile) + Logo */}
+                        <div className="flex items-center gap-3">
+                            {/* Hamburger Menu Button - Mobile Only */}
+                            {isHomePage && (
+                                <button
+                                    ref={hamburgerButtonRef}
+                                    onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                                    className="lg:hidden p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded transition-all duration-200"
+                                    aria-label="Toggle menu"
+                                >
+                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        {mobileMenuOpen ? (
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                        ) : (
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                                        )}
+                                    </svg>
+                                </button>
+                            )}
 
-                        {/* Navigation Section */}
-                        <div className="flex items-center gap-2 sm:gap-4">
-                            {user ? (
-                                <>
-                                    {/* Desktop: Full button with text */}
-                                    <div className="hidden sm:block">
-                                        <TithiCalculatorButton onClick={handleTithiCalculator} />
-                                    </div>
-                                    {/* Mobile: Icon-only button */}
+                            {/* Logo */}
+                            <div className="flex-shrink-0 flex items-center">
+                                <button
+                                    type="button"
+                                    onClick={handleBrandClick}
+                                    className="brand-link"
+                                    aria-label="Go to home"
+                                >
+                                    FamilyTree
+                                </button>
+                                {!isHomePage && headerPageName ? (
+                                    <>
+                                        <span className="mx-2 text-gray-400">|</span>
+                                        <button
+                                            type="button"
+                                            onClick={handleBreadcrumbClick}
+                                            className="breadcrumb-title"
+                                            aria-label={`Refresh ${headerPageName}`}
+                                        >
+                                            {headerPageName}
+                                        </button>
+                                    </>
+                                ) : null}
+                            </div>
+
+                            {/* Desktop Navigation Menu (home only) */}
+                            {isHomePage && (
+                                <nav className="hidden lg:flex items-center gap-1 ml-6">
+                                    <button
+                                        onClick={handleNepaliCalendarClick}
+                                        className="nav-menu-item"
+                                    >
+                                        <span className="nav-menu-text">Nepali Calendar</span>
+                                    </button>
                                     <button
                                         onClick={handleTithiCalculator}
-                                        className="sm:hidden p-2 text-gray-600 hover:text-purple-600 hover:bg-purple-50 rounded-full transition-all duration-200"
-                                        title="Tithi Calculator"
+                                        className="nav-menu-item"
                                     >
-                                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                                        </svg>
+                                        <span className="nav-menu-text">Tithi Calculator</span>
                                     </button>
-                                    
-                                    {/* Language Selector - After Tithi Calculator */}
-                                    <LanguageSelector compact={true} />
-                                    <div className="pl-2 border-l border-gray-200 ml-2">
-                                        <SettingsMenu 
-                                            user={user} 
-                                            onSignOut={handleSignOut} 
-                                            isAdmin={isAdmin}
-                                            onAdminEditCards={handleAdminEditCards}
-                                            onAdminManagement={handleAdminManagement}
-                                            onUserManagement={handleUserManagement}
-                                        />
-                                    </div>
-                                </>
-                            ) : (
-                                <>
-                                    {/* Language Selector - When not logged in */}
-                                    <LanguageSelector compact={true} />
                                     <button
-                                        onClick={async () => {
-                                            try {
-                                                await signInWithGoogle();
-                                            } catch (err) {
-                                                // logged in helper handles logging
-                                            }
-                                        }}
-                                        className="text-sm font-medium bg-gray-900 text-white px-5 py-2.5 rounded-full hover:bg-gray-800 transition-all shadow-sm hover:shadow-md transform hover:-translate-y-0.5"
+                                        onClick={handleTreeViewClick}
+                                        className="nav-menu-item"
                                     >
-                                        {t('auth.signIn')}
+                                        <span className="nav-menu-text">Tree View</span>
                                     </button>
-                                </>
+                                </nav>
+                            )}
+                        </div>
+
+                        {/* Right Section: Language Selector + Sign In/Settings */}
+                        <div className="flex items-center gap-3">
+                            <LanguageSelector compact={true} />
+                            {user ? (
+                                <div className="border-l border-gray-200 pl-3">
+                                    <SettingsMenu 
+                                        user={user} 
+                                        onSignOut={handleSignOut} 
+                                        isAdmin={isAdmin}
+                                        onAdminEditCards={handleAdminEditCards}
+                                        onAdminManagement={handleAdminManagement}
+                                        onUserManagement={handleUserManagement}
+                                    />
+                                </div>
+                            ) : (
+                                <button
+                                    onClick={async () => {
+                                        try {
+                                            await signInWithGoogle();
+                                        } catch (err) {
+                                            // logged in helper handles logging
+                                        }
+                                    }}
+                                    className="flex items-center gap-2 text-sm font-medium bg-gray-900 text-white px-4 py-2 rounded hover:bg-gray-800 transition-all"
+                                >
+                                    {t('auth.signIn')}
+                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
+                                    </svg>
+                                </button>
                             )}
                         </div>
                     </div>
                 </div>
+
+                {/* Mobile Navigation Menu (dropdown attached to header; does not push content) */}
+                {isHomePage && mobileMenuOpen && (
+                    <div
+                        ref={mobileMenuPanelRef}
+                        className="absolute left-0 right-0 top-full z-50 bg-white border-b border-gray-200 shadow-lg lg:hidden"
+                    >
+                        <nav className="flex flex-col items-start px-4 py-3 gap-2">
+                            <button
+                                onClick={handleNepaliCalendarClick}
+                                className="mobile-nav-item"
+                            >
+                                Nepali Calendar
+                            </button>
+                            <button
+                                onClick={handleTithiCalculator}
+                                className="mobile-nav-item"
+                            >
+                                Tithi Calculator
+                            </button>
+                            <button
+                                onClick={handleTreeViewClick}
+                                className="mobile-nav-item"
+                            >
+                                Tree View
+                            </button>
+                        </nav>
+                    </div>
+                )}
             </header>
 
             <main role="main">
