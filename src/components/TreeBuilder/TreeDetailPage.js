@@ -80,29 +80,30 @@ export default function TreeDetailPage({ user }) {
         console.log('Loading tree data for:', { treeId });
       }
       
-      // Load tree metadata
-      const treeData = await Trees.get(treeId);
+      // Load all data in parallel for faster page load
+      const [
+        treeData,
+        membersList,
+        relationshipsList,
+        marriagePointsList,
+        eventsSnap
+      ] = await Promise.all([
+        Trees.get(treeId),
+        Members.list(treeId),
+        Relationships.list(treeId),
+        MarriagePoints.list(treeId),
+        getDocs(query(
+          collection(db, 'calendarEvents'),
+          where('treeId', '==', treeId)
+        ))
+      ]);
+
       console.log('Tree loaded:', treeData);
       setTree(treeData);
-
-      // Load members
-      const membersList = await Members.list(treeId);
       setMembers(membersList || []);
-
-      // Load relationships
-      const relationshipsList = await Relationships.list(treeId);
       setRelationships(relationshipsList || []);
-
-      // Load marriage points
-      const marriagePointsList = await MarriagePoints.list(treeId);
       setMarriagePoints(marriagePointsList || []);
-
-      // Load events for this tree
-      const eventsQuery = query(
-        collection(db, 'calendarEvents'),
-        where('treeId', '==', treeId)
-      );
-      const eventsSnap = await getDocs(eventsQuery);
+      
       const eventsList = eventsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setEvents(eventsList);
 
