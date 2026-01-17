@@ -12,7 +12,7 @@ import Footer from './Footer';
 
 const LandingPage = ({ user, isAdmin, trees = [], treeMembers = [], events, familyMembers, onDoubleClickEvent, onEventClick }) => {
     const { t } = useLanguage();
-    const [block1Visible, setBlock1Visible] = useState(null);
+    const [block1Visible, setBlock1Visible] = useState(true); // Optimistically show Block1, hide if needed
     const [searchQuery, setSearchQuery] = useState('');
     const navigate = useNavigate();
 
