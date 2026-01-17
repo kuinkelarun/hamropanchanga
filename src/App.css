@@ -27,6 +27,111 @@ html, body {
  * All previous mobile-specific CSS has been removed for a cleaner, more maintainable approach.
  */
 
+/* Navigation Menu Items - Microsoft Style */
+.nav-menu-item {
+  /* ~40% tighter than before */
+  /* ~30% tighter again */
+  padding: 0 10px !important;
+  margin: 0 3px !important;
+  font-size: 13px !important;
+  font-weight: 400 !important;
+  color: #262626 !important;
+  background: transparent !important;
+  border: none !important;
+  cursor: pointer !important;
+  transition: all 0.25s ease !important;
+  position: relative !important;
+  white-space: nowrap !important;
+  outline: none !important;
+  height: 56px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  text-align: center !important;
+}
+
+/* Underline should match EXACT text width */
+.nav-menu-text {
+  display: inline-block;
+  padding-bottom: 2px;
+  border-bottom: 2px solid transparent;
+  transition: border-color 0.2s ease;
+}
+
+.nav-menu-item:hover {
+  color: #000 !important;
+}
+
+.nav-menu-item:hover .nav-menu-text {
+  border-bottom-color: #000;
+}
+
+.nav-menu-item:focus {
+  outline: none !important;
+}
+
+.nav-menu-item:active {
+  color: #000 !important;
+}
+
+/* Brand + breadcrumb (non-home header) */
+.brand-link {
+  font-size: 18px;
+  font-weight: 600;
+  color: #111827;
+  background: transparent;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+
+.brand-link:hover {
+  color: #7c3aed; /* purple-600 */
+}
+
+.breadcrumb-title {
+  font-size: 16px;
+  font-weight: 500;
+  color: #374151; /* gray-700 */
+  background: transparent;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  padding-bottom: 2px;
+  transition: color 0.2s ease, border-color 0.2s ease;
+}
+
+.breadcrumb-title:hover {
+  color: #111827;
+  border-bottom-color: #111827;
+}
+
+/* Mobile Navigation Items */
+.mobile-nav-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 12px 16px;
+  font-size: 14px;
+  font-weight: 400;
+  color: #262626;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border-radius: 4px;
+}
+
+.mobile-nav-item:hover {
+  background-color: #f3f4f6;
+  color: #000;
+}
+
+.mobile-nav-item:active {
+  background-color: #e5e7eb;
+}
+
 /* Remove padding from main element on mobile for full-width calendar */
 @media (max-width: 768px) {
   main.p-4 {
