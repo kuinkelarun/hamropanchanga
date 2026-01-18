@@ -6,6 +6,7 @@ import SidebarPanel from './SidebarPanel';
 import MemberModal from './MemberModal';
 import RelationshipPicker from './RelationshipPicker';
 import { displayMemberName } from './utils/format';
+import { useLanguage } from '../../contexts/LanguageContext';
 import * as htmlToImage from 'html-to-image';
 import './styles/TreeBuilder.css';
 
@@ -160,6 +161,7 @@ function svgDataUrlToPng(svgUrl, pixelRatio = 2) {
 export default function EmbeddedBuilderPage({ user, isAdmin }) {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const { t } = useLanguage();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [tree, setTree] = useState(null);
@@ -1739,9 +1741,9 @@ export default function EmbeddedBuilderPage({ user, isAdmin }) {
             onClick={handleAddNodeToCanvas}
             disabled={!tree}
             className="px-3 sm:px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white rounded-lg shadow font-medium text-xs sm:text-sm transition-all whitespace-nowrap"
-            title="Add a new node to the canvas"
+            title={t('treeBuilder.addNode')}
           >
-            Add Node
+            {t('treeBuilder.addNode')}
           </button>
           <div className="text-center flex-1 min-w-0">
             <h1 className="text-base sm:text-lg font-semibold text-gray-800 truncate">{tree.title || 'Untitled Tree'}</h1>
