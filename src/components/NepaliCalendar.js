@@ -2175,9 +2175,10 @@ function compareTithisByStart(a,b){
                     const bs = convertAdToBs(year, month - 1, day);
                     
                     // Display Nepali date: "१ वैशाख २०८१" or "1 Baisakh 2081"
+                    // Note: bs.month is 1-indexed, so use [bs.month - 1] for array access
                     return isNepali 
-                      ? `${tn(bs.day)} ${nepaliMonths[bs.month]} ${tn(bs.year)}`
-                      : `${bs.day} ${nepaliMonths[bs.month]} ${bs.year}`;
+                      ? `${tn(bs.day)} ${nepaliMonths[bs.month - 1]} ${tn(bs.year)}`
+                      : `${bs.day} ${nepaliMonths[bs.month - 1]} ${bs.year}`;
                   })()
                 }
               </h3>
