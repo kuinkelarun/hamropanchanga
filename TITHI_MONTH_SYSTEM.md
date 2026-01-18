@@ -25,7 +25,7 @@ Tithi Month N:
 ### Tithi Year
 The Tithi Year starts and ends at specific points:
 - **Year Start**: वैशाख कृष्णपक्ष प्रतिपदा (Vaishakh Krishna Pratipada)
-- **Year End**: चैत शुक्लपक्ष पूर्णिमा (Chaitra Shukla Purnima)
+- **Year End**: चैत्र शुक्लपक्ष पूर्णिमा (Chaitra Shukla Purnima)
 - **Total Months**: 12 Tithi Months in a Tithi Year
 
 ---
@@ -39,18 +39,18 @@ The **Tithi Month name is derived from the Nepali month where the tithi STARTS**
 
 #### Example 1: Tithi Stays Within Calendar Month
 ```
-Nepali Month: असार (Ashar)
-Tithi: असार कृष्णपक्ष प्रतिपदा → असार शुक्लपक्ष पूर्णिमा
-Tithi Month Name: असार
+Nepali Month: आषाढ (Ashar)
+Tithi: आषाढ कृष्णपक्ष प्रतिपदा → आषाढ शुक्लपक्ष पूर्णिमा
+Tithi Month Name: आषाढ
 (Starts in Ashar, ends in Ashar)
 ```
 
 #### Example 2: Tithi Spans Calendar Months (Boundary Crossing)
 ```
-Nepali Month Boundary: असार ends → साउन begins
-Tithi: असार शुक्लपक्ष षष्ठी (late Ashar) → साउन कृष्णपक्ष (early Saun)
-Tithi Month Name: असार
-(Starts in Ashar, ends in Saun, but called असार because it STARTS there)
+Nepali Month Boundary: आषाढ ends → श्रावण begins
+Tithi: आषाढ शुक्लपक्ष षष्ठी (late Ashar) → श्रावण कृष्णपक्ष (early Saun)
+Tithi Month Name: आषाढ
+(Starts in Ashar, ends in Saun, but called आषाढ because it STARTS there)
 ```
 
 ### Why This Matters
@@ -94,9 +94,9 @@ convertAdToBs() → BS Date (2082-3-9)
     ↓
 Extract month number (3)
     ↓
-nepaliMonths[3-1] → "असार"
+nepaliMonths[3-1] → "आषाढ"
     ↓
-Return: { month: 3, monthName: "असार", bsYear: 2082 }
+Return: { month: 3, monthName: "आषाढ", bsYear: 2082 }
 ```
 
 ### Where It's Used
@@ -113,7 +113,7 @@ Return: { month: 3, monthName: "असार", bsYear: 2082 }
 
 3. **Bulk Upload** (`downloadTemplate()`):
    - Reference sheet shows month names
-   - Example: "Month Name (Nepali)*" column includes values like "असार", "साउन", etc.
+   - Example: "Month Name (Nepali)*" column includes values like "आषाढ", "श्रावण", etc.
 
 ---
 
@@ -121,12 +121,12 @@ Return: { month: 3, monthName: "असार", bsYear: 2082 }
 
 | No. | Month Name (Nepali) | English Name | No. | Month Name (Nepali) | English Name |
 |-----|-------------------|--------------|-----|-------------------|--------------|
-| 1 | वैशाख | Vaishakh (Mar-Apr) | 7 | कात्तिक | Kartik (Oct-Nov) |
-| 2 | जेठ | Jeshta (Apr-May) | 8 | मंसिर | Mangsir (Nov-Dec) |
-| 3 | असार | Ashar (May-Jun) | 9 | पुस | Pus (Dec-Jan) |
-| 4 | साउन | Saun (Jun-Jul) | 10 | माघ | Magh (Jan-Feb) |
-| 5 | भदौ | Bhadau (Jul-Aug) | 11 | फागुन | Phalgun (Feb-Mar) |
-| 6 | असोज | Asoj (Aug-Sep) | 12 | चैत | Chaitra (Mar) |
+| 1 | वैशाख | Vaishakh (Mar-Apr) | 7 | कार्तिक | Kartik (Oct-Nov) |
+| 2 | ज्जेष्ठ | Jeshta (Apr-May) | 8 | मार्ग | Mangsir (Nov-Dec) |
+| 3 | आषाढ | Ashar (May-Jun) | 9 | पौष | Pus (Dec-Jan) |
+| 4 | श्रावण | Saun (Jun-Jul) | 10 | माघ | Magh (Jan-Feb) |
+| 5 | भाद्र | Bhadau (Jul-Aug) | 11 | फाल्गुन | Phalgun (Feb-Mar) |
+| 6 | आश्विन | Asoj (Aug-Sep) | 12 | चैत्र | Chaitra (Mar) |
 
 ---
 
@@ -180,13 +180,13 @@ Return: { month: 3, monthName: "असार", bsYear: 2082 }
 // For each calculated tithi:
 const adDateStr = '2025-06-23'; // Tithi start date
 const tithiMonth = getTithiMonthFromAdDate(adDateStr);
-// Returns: { month: 3, monthName: 'असार', bsYear: 2082 }
+// Returns: { month: 3, monthName: 'आषाढ', bsYear: 2082 }
 
 // Excel row output:
 [
   'एकादशी',        // Tithi name
   'कृष्णपक्ष',      // Pakshya
-  'असार',           // Tithi Month Name (AUTO-POPULATED)
+  'आषाढ',           // Tithi Month Name (AUTO-POPULATED)
   '२०८२-०३-०९',    // Start date (Nepali)
   '06:30',          // Start time
   '२०८२-०३-०१०',   // End date (Nepali)

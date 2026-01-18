@@ -16,7 +16,7 @@ const nepaliMonthNames = [
   'पौष',        // 9. Paush
   'माघ',        // 10. Magh
   'फाल्गुन',    // 11. Phalgun
-  'चैत्र'       // 12. Chaitra
+  'चैत्र्र'       // 12. Chaitra
 ];
 
 const NepaliCalendarManagement = ({ hasPermission, PERMISSIONS }) => {

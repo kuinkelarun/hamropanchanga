@@ -90,7 +90,7 @@ A complete, user-friendly admin interface for managing the Nepali (Bikram Sambat
 
 ### Month Configuration
 - ✅ Individual input for each of 12 months
-- ✅ Nepali month names (चैत्र, वैशाख, etc.)
+- ✅ Nepali month names (चैत्र्र, वैशाख, etc.)
 - ✅ Range validation (29-32 days per month)
 - ✅ Real-time total days calculation
 - ✅ Visual status indicators

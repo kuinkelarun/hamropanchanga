@@ -55,7 +55,7 @@ A brand new **Calendar Manager** tab has been added to the Admin Management page
 ### The 12 Nepali Months (In Order)
 | Number | Name (Nepali) | Name (English) | Typical Days |
 |--------|---|---|---|
-| 1 | चैत्र | Chaitra | 29-31 |
+| 1 | चैत्र्र | Chaitra | 29-31 |
 | 2 | वैशाख | Vaisakha | 30-32 |
 | 3 | ज्येष्ठ | Jyeshtha | 31-32 |
 | 4 | आषाढ़ | Ashadha | 31-32 |
@@ -76,7 +76,7 @@ A brand new **Calendar Manager** tab has been added to the Admin Management page
 
 ### Example: Regular Year (365 days)
 ```
-चैत्र: 31, वैशाख: 31, ज्येष्ठ: 32, आषाढ़: 32, श्रावण: 31, भाद्रपद: 30,
+चैत्र्र: 31, वैशाख: 31, ज्येष्ठ: 32, आषाढ़: 32, श्रावण: 31, भाद्रपद: 30,
 आश्विन: 30, कार्तिक: 30, मार्गशीर्ष: 29, पौष: 30, माघ: 29, फाल्गुन: 31
 Total: 365 days ✅ Regular Year
 ```

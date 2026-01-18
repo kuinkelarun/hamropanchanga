@@ -70,7 +70,7 @@ Modify year configurations:
 │  │  Year: [    2082    ]            │   │
 │  │  Start Date: [2025-04-13]        │   │
 │  │  Months:                         │   │
-│  │  चैत्र [31] वैशाख [31]...        │   │
+│  │  चैत्र्र [31] वैशाख [31]...        │   │
 │  │  Total Days: 366 🔄 Leap Year   │   │
 │  │  [Cancel] [Save]                │   │
 │  └─────────────────────────────────┘   │
@@ -84,7 +84,7 @@ All 12 Nepali months with flexible day configuration:
 
 | # | Nepali Name | English | Days |
 |---|---|---|---|
-| 1 | चैत्र | Chaitra | 29-32 |
+| 1 | चैत्र्र | Chaitra | 29-32 |
 | 2 | वैशाख | Vaisakha | 29-32 |
 | 3 | ज्येष्ठ | Jyeshtha | 29-32 |
 | 4 | आषाढ़ | Ashadha | 29-32 |

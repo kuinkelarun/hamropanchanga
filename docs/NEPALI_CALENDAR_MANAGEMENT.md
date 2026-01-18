@@ -27,7 +27,7 @@ Allows admins to add completely new Nepali years with custom configurations:
 - **Nepali Year*** - Year number (1900-2500 range)
 - **Start AD Date*** - The Gregorian date when this Nepali year begins
 - **Days in Each Month** - 12 input fields for months:
-  - चैत्र (Chaitra)
+  - चैत्र्र (Chaitra)
   - वैशाख (Vaisakha)
   - ज्येष्ठ (Jyeshtha)
   - आषाढ़ (Ashadha)
@@ -72,7 +72,7 @@ The form displays a real-time summary of the year being configured:
 ## Month Information
 
 ### Month Names (Nepali)
-1. **चैत्र** (Chaitra) - March/April
+1. **चैत्र्र** (Chaitra) - March/April
 2. **वैशाख** (Vaisakha) - April/May
 3. **ज्येष्ठ** (Jyeshtha) - May/June
 4. **आषाढ़** (Ashadha) - June/July
