@@ -1700,7 +1700,7 @@ export default function NepaliCalendar({ user: propUser, isAdmin, treeMembers = 
     const endDateStr = `${nepaliMonths[endBs.month - 1]} ${toNepaliNumber(endBs.day)}, ${toNepaliNumber(endBs.year)}`;
     
     // Always show full date-time format for consistency with 12-hour time
-    // Format: "कात्तिक २७, २०८२, 6:00 AM — कात्तिक २८, २०८२, 6:00 PM"
+    // Format: "कार्तिक २७, २०८२, 6:00 AM — कार्तिक २८, २०८२, 6:00 PM"
     return `${startDateStr}, ${formatTime12Hour(tithi.startTime, isNepali, tn)} — ${endDateStr}, ${formatTime12Hour(tithi.endTime, isNepali, tn)}`;
 }
 

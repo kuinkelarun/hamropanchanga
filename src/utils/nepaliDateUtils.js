@@ -2,8 +2,8 @@
 import bsCalendarData from '../data/bsCalendarData';
 
 const nepaliMonths = [
-  "वैशाख", "जेठ", "असार", "साउन", "भदौ", "असोज",
-  "कात्तिक", "मंसिर", "पुस", "माघ", "फागुन", "चैत"
+  "वैशाख", "ज्जेष्ठ", "आषाढ", "श्रावण", "भाद्र", "आश्विन",
+  "कार्तिक", "मार्ग", "पौष", "माघ", "फाल्गुन", "चैत्र"
 ];
 
 const englishMonths = [
@@ -347,7 +347,7 @@ export function formatAdDateToNepaliStringWithNumerals(adDateStr, customCalendar
 
 // Format a UTC instant (ISO string or Date) to Nepali date/time using Nepal Time (NPT = UTC+5:45).
 // Returns an object with useful fields:
-// - formatted: readable Nepali date + 12-hour time string (e.g. "मंसिर १२, २०८२, 2:14:27 AM")
+// - formatted: readable Nepali date + 12-hour time string (e.g. "मार्ग १२, २०८२, 2:14:27 AM")
 // - adDateIso: the NPT local AD date in ISO YYYY-MM-DD
 // - time24: time in 24-hour HH:MM format (NPT)
 // - time12: time in 12-hour h:mm:ss AM/PM format (NPT)
@@ -421,7 +421,7 @@ export function getMonthName(monthNumber, useNepali = true) {
  * 
  * TITHI MONTH SYSTEM:
  * - A Tithi Month is a lunar cycle: कृष्णपक्ष प्रतिपदा → शुक्लपक्ष पूर्णिमा (30 days)
- * - Tithi Year: वैशाख कृष्णपक्ष प्रतिपदा (start) → चैत शुक्लपक्ष पूर्णिमा (end)
+ * - Tithi Year: वैशाख कृष्णपक्ष प्रतिपदा (start) → चैत्र शुक्लपक्ष पूर्णिमा (end)
  * - Month Name: Derived from which Nepali month the tithi STARTS in
  * - Boundary Crossing: Tithi months may span across Nepali calendar month lines
  * 
@@ -719,17 +719,17 @@ export function getTithiMonthBoundaries(lunarMonthNumber, bsYear, tithiLookupFn 
   // Lunar month names mapped to lunar months
   const lunarMonthNames = [
     'बैशाख',    // 1 - Baishakh
-    'जेठ',       // 2 - Jyeshtha
-    'असार',     // 3 - Ashar
-    'साउन',     // 4 - Saun
-    'भदौ',      // 5 - Bhadau
-    'असोज',     // 6 - Asoj
-    'कात्तिक',  // 7 - Kartik
-    'मंसिर',    // 8 - Mangsir
-    'पुस',      // 9 - Pus
+    'ज्जेष्ठ',       // 2 - Jyeshtha
+    'आषाढ',     // 3 - Ashar
+    'श्रावण',     // 4 - Saun
+    'भाद्र',      // 5 - Bhadau
+    'आश्विन',     // 6 - Asoj
+    'कार्तिक',  // 7 - Kartik
+    'मार्ग',    // 8 - Mangsir
+    'पौष',      // 9 - Pus
     'माघ',      // 10 - Magh
-    'फागुन',    // 11 - Phalgun
-    'चैत'       // 12 - Chaitra
+    'फाल्गुन',    // 11 - Phalgun
+    'चैत्र'       // 12 - Chaitra
   ];
   
   if (lunarMonthNumber < 1 || lunarMonthNumber > 12) {
@@ -1124,7 +1124,7 @@ export function getAllMonthsWithNumbers(useNepali = true) {
  * - End of current month: Shukla Purnima (tithi 15, paksha 'Shukla')
  * - Start of next month: Krishna Pratipada (tithi 1, paksha 'Krishna')
  * 
- * The month name (बैशाख, जेठ, etc.) is determined by where the
+ * The month name (बैशाख, ज्जेष्ठ, etc.) is determined by where the
  * Krishna Pratipada of that cycle starts, but the month continues
  * through solar calendar boundaries until the next Purnima.
  * 

@@ -171,7 +171,7 @@ A complete, production-ready Nepali Calendar Management system for admins to man
 
 ### 12 Months
 ```
-1. चैत्र (Chaitra)        - March/April
+1. चैत्र्र (Chaitra)        - March/April
 2. वैशाख (Vaisakha)       - April/May
 3. ज्येष्ठ (Jyeshtha)      - May/June
 4. आषाढ़ (Ashadha)        - June/July
