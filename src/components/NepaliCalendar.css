@@ -176,6 +176,7 @@
     align-items: center;
     /* Smooth transitions */
     transition: padding 0.3s ease, min-height 0.3s ease, font-size 0.3s ease;
+    gap: 2px;
 }
 .nc-weekday-nepali {
     font-size: 14px;
@@ -184,6 +185,21 @@
     color: #374151;
 }
 .nc-weekday-english {
+    font-size: 11px;
+    font-weight: 500;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+/* When English is selected, swap the styling */
+.nc-weekday.nc-weekday-english-primary .nc-weekday-english-top {
+    font-size: 14px;
+    font-weight: 700;
+    margin-bottom: 2px;
+    color: #374151;
+    order: -1; /* Put it on top */
+}
+.nc-weekday.nc-weekday-english-primary .nc-weekday-nepali-bottom {
     font-size: 11px;
     font-weight: 500;
     color: #6b7280;

@@ -12,8 +12,8 @@ export const useLanguage = () => {
 };
 
 export const LanguageProvider = ({ children }) => {
-  // Default to Nepali
-  const [language, setLanguage] = useState('ne');
+  // Default to English
+  const [language, setLanguage] = useState('en');
 
   // Load language preference from localStorage on mount
   useEffect(() => {

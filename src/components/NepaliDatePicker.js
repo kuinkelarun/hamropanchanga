@@ -4,7 +4,7 @@ import { useLanguage } from '../contexts/LanguageContext';
 import './NepaliDatePicker.css';
 
 const nepaliMonths = [
-  "वैशाख", "ज्जेष्ठ", "आषाढ", "श्रावण", "भाद्र", "आश्विन",
+  "वैशाख", "ज्येष्ठ", "आषाढ", "श्रावण", "भाद्र", "आश्विन",
   "कार्तिक", "मार्ग", "पौष", "माघ", "फाल्गुन", "चैत्र"
 ];
 

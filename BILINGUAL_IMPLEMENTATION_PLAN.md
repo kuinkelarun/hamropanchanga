@@ -10,7 +10,7 @@ This document outlines a comprehensive plan to convert the Family Tree Calendar 
 
 ### Existing Language Support
 - **Partial Nepali Support**: 
-  - Calendar months (वैशाख, ज्जेष्ठ, आषाढ, etc.)
+  - Calendar months (वैशाख, ज्येष्ठ, आषाढ, etc.)
   - Weekday names (आइतबार, सोमबार, etc.)
   - Tithi names (प्रतिपदा, द्वितीया, etc.)
   - Number system (Nepali numerals: ०१२३४५६७८९)
@@ -127,7 +127,7 @@ src/
     "5": "५", "6": "६", "7": "७", "8": "८", "9": "९"
   },
   "months": {
-    "nepali": ["वैशाख", "ज्जेष्ठ", "आषाढ", "श्रावण", "भाद्र", "आश्विन", "कार्तिक", "मार्ग", "पौष", "माघ", "फाल्गुन", "चैत्र"],
+    "nepali": ["वैशाख", "ज्येष्ठ", "आषाढ", "श्रावण", "भाद्र", "आश्विन", "कार्तिक", "मार्ग", "पौष", "माघ", "फाल्गुन", "चैत्र"],
     "english": ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
   },
   "weekdays": {
