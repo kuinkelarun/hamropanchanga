@@ -57,6 +57,23 @@ const krishnaPackshyaTithis = [
   "अष्टमी", "नवमी", "दशमी", "एकादशी", "द्वादशी", "त्रयोदशी", "चतुर्दशी", "औंसी"
 ];
 
+// English transliterations of Tithis (Lunar days)
+const englishTithis = [
+  "Pratipada", "Dwitiya", "Tritiya", "Chaturthi", "Panchami", "Shashthi", "Saptami",
+  "Ashtami", "Navami", "Dashami", "Ekadashi", "Dwadashi", "Trayodashi", "Chaturdashi", "Purnima"
+];
+
+const englishTithisKrishna = [
+  "Pratipada", "Dwitiya", "Tritiya", "Chaturthi", "Panchami", "Shashthi", "Saptami",
+  "Ashtami", "Navami", "Dashami", "Ekadashi", "Dwadashi", "Trayodashi", "Chaturdashi", "Amavasya"
+];
+
+// Pakshya (Lunar phase) names in both languages
+const pakshyaNames = {
+  ne: { shukla: 'शुक्लपक्ष', krishna: 'कृष्णपक्ष' },
+  en: { shukla: 'Suklapakshya', krishna: 'Krishnapakshya' }
+};
+
 const nepaliNumbers = ["०","१","२","३","४","५","६","७","८","९"];
 
 // bsCalendarData moved to src/data/bsCalendarData.js
@@ -1671,6 +1688,39 @@ export default function NepaliCalendar({ user: propUser, isAdmin, treeMembers = 
     return { pakshya: '', tithi: fullName };
   };
 
+  // Helper function to get English translation of tithi name
+  const getEnglishTithiName = (nepaliTithiName) => {
+    // Map of Nepali tithi names to their English equivalents
+    const tithiNameMap = {
+      'प्रतिपदा': 'Pratipada',
+      'द्वितीया': 'Dwitiya',
+      'तृतीया': 'Tritiya',
+      'चतुर्थी': 'Chaturthi',
+      'पञ्चमी': 'Panchami',
+      'षष्ठी': 'Shashthi',
+      'सप्तमी': 'Saptami',
+      'अष्टमी': 'Ashtami',
+      'नवमी': 'Navami',
+      'दशमी': 'Dashami',
+      'एकादशी': 'Ekadashi',
+      'द्वादशी': 'Dwadashi',
+      'त्रयोदशी': 'Trayodashi',
+      'चतुर्दशी': 'Chaturdashi',
+      'पूर्णिमा': 'Purnima',
+      'औंसी': 'Amavasya'
+    };
+    return tithiNameMap[nepaliTithiName] || nepaliTithiName;
+  };
+
+  // Helper function to get English translation of pakshya name
+  const getEnglishPakshyaName = (nepaliPakshyaName) => {
+    const pakshyaMap = {
+      'शुक्लपक्ष': 'Sukla',
+      'कृष्णपक्ष': 'Krishna'
+    };
+    return pakshyaMap[nepaliPakshyaName] || nepaliPakshyaName;
+  };
+
   // Helper function to get tithi display name with lunar month
   const getTithiDisplayName = (tithi) => {
     const { pakshya, tithi: tithiName } = parseTithiName(tithi.name);
@@ -1679,14 +1729,20 @@ export default function NepaliCalendar({ user: propUser, isAdmin, treeMembers = 
     }
     
     // Get the tithi lunar month for the start date
-    // const [y, m, d] = tithi.startDate.split('-').map(Number);
     const pakshaNormalized = pakshya === 'शुक्लपक्ष' ? 'Shukla' : 'Krishna';
     const tithiIndex = getTithiIndexByName(tithiName);
     
     if (tithiIndex) {
       const lunarMonth = getTithiLunarMonthName(pakshaNormalized, tithiIndex, tithi.startDate);
       if (lunarMonth) {
-        return `${lunarMonth} ${pakshya} ${tithiName}`;
+        // lunarMonth is in Nepali (e.g., 'माघ'), find its index and convert to English if needed
+        const monthIndex = nepaliMonths.indexOf(lunarMonth);
+        const monthDisplay = monthIndex !== -1 
+          ? (isNepali ? nepaliMonths[monthIndex] : englishNepaliMonths[monthIndex])
+          : lunarMonth;
+        const pakshyaDisplay = isNepali ? pakshya : getEnglishPakshyaName(pakshya);
+        const tithiDisplay = isNepali ? tithiName : getEnglishTithiName(tithiName);
+        return `${monthDisplay} ${pakshyaDisplay} ${tithiDisplay}`;
       }
     }
     
@@ -1707,9 +1763,13 @@ export default function NepaliCalendar({ user: propUser, isAdmin, treeMembers = 
     const startBs = convertAdToBs(startY, startM - 1, startD);
     const endBs = convertAdToBs(endY, endM - 1, endD);
     
+    // Get month names based on language
+    const startMonth = isNepali ? nepaliMonths[startBs.month - 1] : englishNepaliMonths[startBs.month - 1];
+    const endMonth = isNepali ? nepaliMonths[endBs.month - 1] : englishNepaliMonths[endBs.month - 1];
+    
     // Format start date-time with conditional number formatting based on language
-    const startDateStr = `${nepaliMonths[startBs.month - 1]} ${isNepali ? toNepaliNumber(startBs.day) : startBs.day}, ${isNepali ? toNepaliNumber(startBs.year) : startBs.year}`;
-    const endDateStr = `${nepaliMonths[endBs.month - 1]} ${isNepali ? toNepaliNumber(endBs.day) : endBs.day}, ${isNepali ? toNepaliNumber(endBs.year) : endBs.year}`;
+    const startDateStr = `${startMonth} ${isNepali ? toNepaliNumber(startBs.day) : startBs.day}, ${isNepali ? toNepaliNumber(startBs.year) : startBs.year}`;
+    const endDateStr = `${endMonth} ${isNepali ? toNepaliNumber(endBs.day) : endBs.day}, ${isNepali ? toNepaliNumber(endBs.year) : endBs.year}`;
     
     // Always show full date-time format for consistency with 12-hour time
     // Format: "कार्तिक २७, २०८२, 6:00 AM — कार्तिक २८, २०८२, 6:00 PM"
@@ -1787,7 +1847,9 @@ function getTithiEndMillis(tithi){
     
     if (sortedParsedTithis.length === 1) {
       const t = sortedParsedTithis[0];
-      return `${t.pakshya} ${t.tithi}`;
+      const pakshyaDisplay = isNepali ? t.pakshya : getEnglishPakshyaName(t.pakshya);
+      const tithiDisplay = isNepali ? t.tithi : getEnglishTithiName(t.tithi);
+      return `${pakshyaDisplay} ${tithiDisplay}`;
     }
     
     // Multiple tithis - check if paksha changes
@@ -1796,12 +1858,19 @@ function getTithiEndMillis(tithi){
     if (pakshyaSet.size === 1) {
       // Same paksha for all tithis: "कृष्णपक्ष पञ्चमी / षष्ठी"
       const pakshya = sortedParsedTithis[0].pakshya;
-      const tithiNames = sortedParsedTithis.map(t => t.tithi).join(' / ');
-      return `${pakshya} ${tithiNames}`;
+      const pakshyaDisplay = isNepali ? pakshya : getEnglishPakshyaName(pakshya);
+      const tithiNames = sortedParsedTithis
+        .map(t => isNepali ? t.tithi : getEnglishTithiName(t.tithi))
+        .join(' / ');
+      return `${pakshyaDisplay} ${tithiNames}`;
     } else {
       // Paksha changes: "कृष्णपक्ष औंसी / शुक्लपक्ष प्रतिपदा"
       return sortedParsedTithis
-        .map(t => `${t.pakshya} ${t.tithi}`)
+        .map(t => {
+          const pakshyaDisplay = isNepali ? t.pakshya : getEnglishPakshyaName(t.pakshya);
+          const tithiDisplay = isNepali ? t.tithi : getEnglishTithiName(t.tithi);
+          return `${pakshyaDisplay} ${tithiDisplay}`;
+        })
         .join(' / ');
     }
   };
