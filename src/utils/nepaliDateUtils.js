@@ -2,7 +2,7 @@
 import bsCalendarData from '../data/bsCalendarData';
 
 const nepaliMonths = [
-  "वैशाख", "ज्जेष्ठ", "आषाढ", "श्रावण", "भाद्र", "आश्विन",
+  "वैशाख", "ज्येष्ठ", "आषाढ", "श्रावण", "भाद्र", "आश्विन",
   "कार्तिक", "मार्ग", "पौष", "माघ", "फाल्गुन", "चैत्र"
 ];
 
@@ -719,7 +719,7 @@ export function getTithiMonthBoundaries(lunarMonthNumber, bsYear, tithiLookupFn 
   // Lunar month names mapped to lunar months
   const lunarMonthNames = [
     'बैशाख',    // 1 - Baishakh
-    'ज्जेष्ठ',       // 2 - Jyeshtha
+    'ज्येष्ठ',       // 2 - Jyeshtha
     'आषाढ',     // 3 - Ashar
     'श्रावण',     // 4 - Saun
     'भाद्र',      // 5 - Bhadau
@@ -1124,7 +1124,7 @@ export function getAllMonthsWithNumbers(useNepali = true) {
  * - End of current month: Shukla Purnima (tithi 15, paksha 'Shukla')
  * - Start of next month: Krishna Pratipada (tithi 1, paksha 'Krishna')
  * 
- * The month name (बैशाख, ज्जेष्ठ, etc.) is determined by where the
+ * The month name (बैशाख, ज्येष्ठ, etc.) is determined by where the
  * Krishna Pratipada of that cycle starts, but the month continues
  * through solar calendar boundaries until the next Purnima.
  * 

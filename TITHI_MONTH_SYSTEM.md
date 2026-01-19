@@ -122,7 +122,7 @@ Return: { month: 3, monthName: "आषाढ", bsYear: 2082 }
 | No. | Month Name (Nepali) | English Name | No. | Month Name (Nepali) | English Name |
 |-----|-------------------|--------------|-----|-------------------|--------------|
 | 1 | वैशाख | Vaishakh (Mar-Apr) | 7 | कार्तिक | Kartik (Oct-Nov) |
-| 2 | ज्जेष्ठ | Jeshta (Apr-May) | 8 | मार्ग | Mangsir (Nov-Dec) |
+| 2 | ज्येष्ठ | Jeshta (Apr-May) | 8 | मार्ग | Mangsir (Nov-Dec) |
 | 3 | आषाढ | Ashar (May-Jun) | 9 | पौष | Pus (Dec-Jan) |
 | 4 | श्रावण | Saun (Jun-Jul) | 10 | माघ | Magh (Jan-Feb) |
 | 5 | भाद्र | Bhadau (Jul-Aug) | 11 | फाल्गुन | Phalgun (Feb-Mar) |

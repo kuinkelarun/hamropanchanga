@@ -30,12 +30,22 @@ const englishMonthsNepali = [
   "जनवरी", "फेब्रुअरी", "मार्च", "अप्रिल", "मे", "जुन",
   "जुलाई", "अगस्ट", "सेप्टेम्बर", "अक्टोबर", "नोभेम्बर", "डिसेम्बर"
 ];
+// English transliterations of Nepali lunar months (Bikram Sambat)
+const englishNepaliMonths = [
+  "Baishakh", "Jeshtha", "Ashadh", "Shrawan", "Bhadra", "Ashwin",
+  "Kartik", "Marga", "Poush", "Magh", "Falgun", "Chaitra"
+];
 const nepaliWeekdays = [
   "आइतबार", "सोमबार", "मंगलबार", "बुधबार", "बिहिबार", "शुक्रबार", "शनिबार"
 ];
 const englishWeekdays = [
   "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"
 ];
+// Time periods in both languages
+const timePeriods = {
+  ne: ['बिहान', 'दिउँसो', 'साँझ', 'रात'],
+  en: ['Morning', 'Afternoon', 'Evening', 'Night']
+};
 
 const shuklaPackshyaTithis = [
   "प्रतिपदा", "द्वितीया", "तृतीया", "चतुर्थी", "पञ्चमी", "षष्ठी", "सप्तमी", 
@@ -713,12 +723,14 @@ export default function NepaliCalendar({ user: propUser, isAdmin, treeMembers = 
   function getPrevMonthName(){
     let m = currentBsMonth - 1;
     if (m < 1) { m = 12; }
-    return nepaliMonths[m-1] || '';
+    const monthArray = isNepali ? nepaliMonths : englishNepaliMonths;
+    return monthArray[m-1] || '';
   }
   function getNextMonthName(){
     let m = currentBsMonth + 1;
     if (m > 12) { m = 1; }
-    return nepaliMonths[m-1] || '';
+    const monthArray = isNepali ? nepaliMonths : englishNepaliMonths;
+    return monthArray[m-1] || '';
   }
 
   // open details modal when clicking on tile
@@ -1695,9 +1707,9 @@ export default function NepaliCalendar({ user: propUser, isAdmin, treeMembers = 
     const startBs = convertAdToBs(startY, startM - 1, startD);
     const endBs = convertAdToBs(endY, endM - 1, endD);
     
-    // Format start date-time in Nepali
-    const startDateStr = `${nepaliMonths[startBs.month - 1]} ${toNepaliNumber(startBs.day)}, ${toNepaliNumber(startBs.year)}`;
-    const endDateStr = `${nepaliMonths[endBs.month - 1]} ${toNepaliNumber(endBs.day)}, ${toNepaliNumber(endBs.year)}`;
+    // Format start date-time with conditional number formatting based on language
+    const startDateStr = `${nepaliMonths[startBs.month - 1]} ${isNepali ? toNepaliNumber(startBs.day) : startBs.day}, ${isNepali ? toNepaliNumber(startBs.year) : startBs.year}`;
+    const endDateStr = `${nepaliMonths[endBs.month - 1]} ${isNepali ? toNepaliNumber(endBs.day) : endBs.day}, ${isNepali ? toNepaliNumber(endBs.year) : endBs.year}`;
     
     // Always show full date-time format for consistency with 12-hour time
     // Format: "कार्तिक २७, २०८२, 6:00 AM — कार्तिक २८, २०८२, 6:00 PM"
@@ -1837,7 +1849,7 @@ function compareTithisByStart(a,b){
             onKeyDown={(e)=> { if (e.key === 'Enter') { handlePrev(); openDetailsModalForDate(adDate.getFullYear(), adDate.getMonth(), adDate.getDate()); } }}
             data-date={dateKey}
           >
-            <div className="nt-nepali-date">{toNepaliNumber(displayDay)}</div>
+            <div className="nt-nepali-date">{isNepali ? toNepaliNumber(displayDay) : displayDay}</div>
             <div className="nt-english-date">{adDate.getDate()}</div>
             <div className="nt-summary" aria-hidden>
               {events.length > 0 && (
@@ -1900,7 +1912,7 @@ function compareTithisByStart(a,b){
             >+</button>
           )}
 
-          <div className="nt-nepali-date" aria-hidden>{toNepaliNumber(day)}</div>
+          <div className="nt-nepali-date" aria-hidden>{isNepali ? toNepaliNumber(day) : day}</div>
           <div className="nt-english-date" aria-hidden>{ad.day}</div>
           
           {/* Card body - shows events and family member events */}
@@ -2048,26 +2060,30 @@ function compareTithisByStart(a,b){
           style={{ display: 'flex', flexDirection: 'column', gap: '2px', alignItems: 'flex-start', width: '100%' }}
         >
           <div style={{ fontSize: '1.5rem', fontWeight: 'bold', lineHeight: '1.4' }}>
-            {toNepaliNumber(todayBs.day)} {nepaliMonths[todayBs.month-1]} {toNepaliNumber(todayBs.year)}, {nepaliWeekdays[todayBs.dayOfWeek]}
+            {isNepali ? toNepaliNumber(todayBs.day) : todayBs.day} {isNepali ? nepaliMonths[todayBs.month-1] : englishNepaliMonths[todayBs.month-1]} {isNepali ? toNepaliNumber(todayBs.year) : todayBs.year}, {isNepali ? nepaliWeekdays[todayBs.dayOfWeek] : englishWeekdays[todayBs.dayOfWeek]}
           </div>
           <div style={{ fontSize: '0.85rem', opacity: 0.9 }}>
             {(() => {
               const h = todayAd.getUTCHours();
               const m = todayAd.getUTCMinutes();
               const s = todayAd.getUTCSeconds();
-              // Determine time of day in Nepali
-              let timeOfDay = '';
+              // Determine time of day based on hour
+              let timePeriodIndex = 0;
               if (h >= 0 && h < 12) {
-                timeOfDay = 'बिहान'; // Morning (midnight to noon)
+                timePeriodIndex = 0; // Morning (midnight to noon)
               } else if (h >= 12 && h < 17) {
-                timeOfDay = 'दिउँसो'; // Afternoon (noon to 5 PM)
+                timePeriodIndex = 1; // Afternoon (noon to 5 PM)
               } else if (h >= 17 && h < 19) {
-                timeOfDay = 'साँझ'; // Evening (5 PM to 7 PM)
+                timePeriodIndex = 2; // Evening (5 PM to 7 PM)
               } else {
-                timeOfDay = 'रात'; // Night (7 PM to midnight)
+                timePeriodIndex = 3; // Night (7 PM to midnight)
               }
+              const timeOfDay = isNepali ? timePeriods.ne[timePeriodIndex] : timePeriods.en[timePeriodIndex];
               const h12 = h % 12 || 12;
-              return `${timeOfDay} ${toNepaliNumber(h12)}:${toNepaliNumber(String(m).padStart(2, '0'))}:${toNepaliNumber(String(s).padStart(2, '0'))}`;
+              const displayTime = isNepali 
+                ? `${timeOfDay} ${toNepaliNumber(h12)}:${toNepaliNumber(String(m).padStart(2, '0'))}:${toNepaliNumber(String(s).padStart(2, '0'))}` 
+                : `${timeOfDay} ${h12}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+              return displayTime;
             })()}
           </div>
           {(() => {
@@ -2114,8 +2130,10 @@ function compareTithisByStart(a,b){
                 triggerMonthTransition(() => { setCurrentBsMonth(m); });
               }}
             >
-              {nepaliMonths.map((mn, idx) => (
-                <option key={mn} value={idx+1}>{mn}</option>
+              {(
+                isNepali ? nepaliMonths : englishNepaliMonths
+              ).map((mn, idx) => (
+                <option key={`month-${idx}`} value={idx+1}>{mn}</option>
               ))}
             </select>
             <select
@@ -2128,7 +2146,7 @@ function compareTithisByStart(a,b){
               }}
             >
               {Array.from({ length: maxBsYear - minBsYear + 1 }, (_, i) => minBsYear + i).map(y => (
-                <option key={y} value={y}>{toNepaliNumber(y)}</option>
+                <option key={y} value={y}>{isNepali ? toNepaliNumber(y) : String(y)}</option>
               ))}
             </select>
           </div>
@@ -2148,9 +2166,18 @@ function compareTithisByStart(a,b){
 
       <div className="nc-weekdays">
         {nepaliWeekdays.map((nepaliDay, index) => (
-          <div key={nepaliDay} className="nc-weekday">
-            <div className="nc-weekday-nepali">{nepaliDay}</div>
-            <div className="nc-weekday-english">{englishWeekdays[index]}</div>
+          <div key={nepaliDay} className={`nc-weekday ${isNepali ? '' : 'nc-weekday-english-primary'}`}>
+            {isNepali ? (
+              <>
+                <div className="nc-weekday-nepali">{nepaliDay}</div>
+                <div className="nc-weekday-english">{englishWeekdays[index]}</div>
+              </>
+            ) : (
+              <>
+                <div className="nc-weekday-english nc-weekday-english-top">{englishWeekdays[index]}</div>
+                <div className="nc-weekday-nepali nc-weekday-nepali-bottom">{nepaliDay}</div>
+              </>
+            )}
           </div>
         ))}
       </div>
@@ -2174,11 +2201,14 @@ function compareTithisByStart(a,b){
                     const [year, month, day] = activeDate.split('-').map(Number);
                     const bs = convertAdToBs(year, month - 1, day);
                     
-                    // Display Nepali date: "१ वैशाख २०८१" or "1 Baisakh 2081"
-                    // Note: bs.month is 1-indexed, so use [bs.month - 1] for array access
+                    // Display BS (lunar) date with correct month name based on language
+                    // bs.month is 1-indexed (1-12), so subtract 1 for array access (0-11)
+                    const monthIndex = bs.month - 1;
+                    const monthName = isNepali ? nepaliMonths[monthIndex] : englishNepaliMonths[monthIndex];
+                    
                     return isNepali 
-                      ? `${tn(bs.day)} ${nepaliMonths[bs.month - 1]} ${tn(bs.year)}`
-                      : `${bs.day} ${nepaliMonths[bs.month - 1]} ${bs.year}`;
+                      ? `${tn(bs.day)} ${monthName} ${tn(bs.year)}`
+                      : `${bs.day} ${monthName} ${bs.year}`;
                   })()
                 }
               </h3>
