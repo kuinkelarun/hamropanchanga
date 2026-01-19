@@ -2699,7 +2699,11 @@ function compareTithisByStart(a,b){
                   const adMonthZeroBased = parts[1]-1;
                   const adDay = parts[2];
                   const bs = convertAdToBs(adYear, adMonthZeroBased, adDay);
-                  return `${nepaliMonths[bs.month-1]} ${toNepaliNumber(bs.day)}, ${toNepaliNumber(bs.year)}`;
+                  const monthIndex = bs.month - 1;
+                  const monthName = isNepali ? nepaliMonths[monthIndex] : englishNepaliMonths[monthIndex];
+                  return isNepali 
+                    ? `${toNepaliNumber(bs.day)} ${monthName}, ${toNepaliNumber(bs.year)}`
+                    : `${bs.day} ${monthName}, ${bs.year}`;
                 })()
               }</h3>
               <button onClick={()=> setAddEventModalOpen(false)} aria-label="Close">✕</button>
