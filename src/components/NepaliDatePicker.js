@@ -8,6 +8,12 @@ const nepaliMonths = [
   "कार्तिक", "मार्ग", "पौष", "माघ", "फाल्गुन", "चैत्र"
 ];
 
+// English transliterations of Nepali lunar months
+const englishNepaliMonths = [
+  "Baishakh", "Jeshtha", "Ashadh", "Shrawan", "Bhadra", "Ashwin",
+  "Kartik", "Marga", "Poush", "Magh", "Falgun", "Chaitra"
+];
+
 const NepaliDatePicker = ({ value, onChange, label, required = false }) => {
   const { t, tn, isNepali } = useLanguage();
   
@@ -58,20 +64,21 @@ const NepaliDatePicker = ({ value, onChange, label, required = false }) => {
         <select value={bsDate.year} onChange={(e) => handleChange('year', e.target.value)}>
           {Array.from({ length: maxBsYear - minBsYear + 1 }, (_, i) => {
             const year = minBsYear + i;
-            return <option key={year} value={year}>{toNepaliNumber(year)}</option>;
+            return <option key={year} value={year}>{isNepali ? toNepaliNumber(year) : year}</option>;
           })}
         </select>
         
         <select value={bsDate.month} onChange={(e) => handleChange('month', e.target.value)}>
-          {nepaliMonths.map((month, i) => (
-            <option key={i + 1} value={i + 1}>{month}</option>
-          ))}
+          {nepaliMonths.map((month, i) => {
+            const displayMonth = isNepali ? month : englishNepaliMonths[i];
+            return <option key={i + 1} value={i + 1}>{displayMonth}</option>;
+          })}
         </select>
         
         <select value={bsDate.day} onChange={(e) => handleChange('day', e.target.value)}>
           {[...Array(32)].map((_, i) => {
             const day = i + 1;
-            return <option key={day} value={day}>{toNepaliNumber(day)}</option>;
+            return <option key={day} value={day}>{isNepali ? toNepaliNumber(day) : day}</option>;
           })}
         </select>
       </div>
