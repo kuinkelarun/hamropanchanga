@@ -2443,6 +2443,15 @@ function compareTithisByStart(a,b){
 
             {/* Modal Actions */}
             <div className="nc-modal-actions" style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+              <button
+                type="button"
+                className="app-cancel-btn"
+                onClick={()=> setDetailsModalOpen(false)}
+                style={{ flex: '1 1 auto' }}
+              >
+                {t('calendar.cancel') || 'Cancel'}
+              </button>
+
               {/* For Guests: Show "Login to Add Events" button */}
               {!user && (
                 <button 
@@ -2453,7 +2462,7 @@ function compareTithisByStart(a,b){
                       console.error('Login error:', err);
                     }
                   }}
-                  className="nc-add-btn"
+                  className="app-save-btn"
                   style={{ flex: '1 1 auto' }}
                 >
                   Login to Add Events
@@ -2471,7 +2480,7 @@ function compareTithisByStart(a,b){
                     const adDay = parts[2];
                     openAddEventModalForDate(adYear, adMonthZeroBased, adDay);
                   }}
-                  className="nc-add-btn"
+                  className="app-save-btn"
                   style={{ flex: '1 1 auto' }}
                 >
                   Add Event
@@ -2489,21 +2498,12 @@ function compareTithisByStart(a,b){
                     const adDay = parts[2];
                     openAddTithiModalForDate(adYear, adMonthZeroBased, adDay, 'tithi');
                   }}
-                  className="nc-add-btn"
-                  style={{ flex: '1 1 auto', background: '#f97316' }}
+                  className="app-save-btn"
+                  style={{ flex: '1 1 auto' }}
                 >
                   Add Tithi
                 </button>
               )}
-              
-              <button
-                type="button"
-                className="nc-cancel-btn"
-                onClick={()=> setDetailsModalOpen(false)}
-                style={{ flex: '1 1 auto' }}
-              >
-                Close
-              </button>
             </div>
             </div>
           </div>
@@ -2671,14 +2671,22 @@ function compareTithisByStart(a,b){
               {!user && !authLoading && <div className="nc-validation">Please log in to add tithis</div>}
               
               <div className="nc-modal-actions">
+                <button
+                  type="button"
+                  className="app-cancel-btn"
+                  onClick={()=>{ setAddTithiModalOpen(false); setValidation(''); }}
+                  style={{ flex: '1 1 auto' }}
+                >
+                  {t('calendar.cancel') || 'Cancel'}
+                </button>
                 <button 
                   onClick={submitAdd} 
-                  className="nc-add-btn"
-                  disabled={isLoading || !user || authLoading}
+                  className="app-save-btn"
+                  disabled={isLoading || !user || authLoading || !newTithi || !startDate || !endDate || !startTime || !endTime}
+                  style={{ flex: '1 1 auto' }}
                 >
                   {isLoading ? 'Adding...' : !user ? 'Log in to Add' : 'Add Tithi'}
                 </button>
-                <button onClick={()=>{ setAddTithiModalOpen(false); setValidation(''); }}>Cancel</button>
               </div>
             </div>
             </div>
@@ -2911,19 +2919,26 @@ function compareTithisByStart(a,b){
               {!user && !authLoading && <div className="nc-validation">Please log in to add events</div>}
               
               <div className="nc-modal-actions">
-                <button 
-                  onClick={submitAddEvent} 
-                  className="nc-add-btn"
-                  disabled={isAddingEvent || !user || authLoading}
-                >
-                  {isAddingEvent ? 'Adding...' : !user ? 'Log in to Add' : t('calendar.addEventButton')}
-                </button>
                 <button
                   type="button"
-                  className="nc-cancel-btn"
+                  className="app-cancel-btn"
                   onClick={()=>{ setAddEventModalOpen(false); setEventValidation(''); }}
+                  style={{ flex: '1 1 auto' }}
                 >
                   {t('calendar.cancel')}
+                </button>
+                <button 
+                  onClick={submitAddEvent} 
+                  className="app-save-btn"
+                  disabled={
+                    isAddingEvent || !user || authLoading || !eventTitle ||
+                    (eventAssociateMode === 'date' && !eventDate) ||
+                    (eventAssociateMode === 'tithi' && !selectedEventTithiId) ||
+                    (eventType === 'customer' && !selectedTreeMemberId)
+                  }
+                  style={{ flex: '1 1 auto' }}
+                >
+                  {isAddingEvent ? 'Adding...' : !user ? 'Log in to Add' : t('calendar.addEventButton')}
                 </button>
               </div>
             </div>

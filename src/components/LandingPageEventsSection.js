@@ -3,6 +3,7 @@ import './LandingPageEventsSection.css';
 import { useSettings } from '../contexts/SettingsContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { formatNepaliDate, formatEnglishDate, formatNepaliMonthYear, formatGregorianMonthYear, convertAdToBs, convertBsToAd } from '../utils/nepaliDateUtils';
+// Use Unicode `event.title` when present
 
 const LandingPageEventsSection = ({ events, familyMembers, onDoubleClickEvent, onEventClick }) => {
     const { t } = useLanguage();
@@ -126,7 +127,7 @@ const LandingPageEventsSection = ({ events, familyMembers, onDoubleClickEvent, o
 
             return { 
                 ...event, 
-                name: event.title || event.name, // Ensure title is used if name is missing
+                name: (event.title || event.name), // Ensure title is used if name is missing
                 originalDate, 
                 displayDate, 
                 personName: person?.name, 

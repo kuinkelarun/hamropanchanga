@@ -2831,7 +2831,7 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h3>⚠️ Confirm Bulk Delete</h3>
-              <button onClick={() => setDeleteConfirmation({ show: false, type: '', count: 0, confirmText: '' })} className="modal-close">✕</button>
+              <button onClick={() => setDeleteConfirmation({ show: false, type: '', count: 0, confirmText: '' })} className="modal-close nc-header-close" aria-label="Close">✕</button>
             </div>
             
             <div className="modal-body">

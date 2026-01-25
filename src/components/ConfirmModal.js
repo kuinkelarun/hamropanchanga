@@ -1,6 +1,8 @@
 import React from 'react';
+import { useLanguage } from '../contexts/LanguageContext';
 
 const ConfirmModal = ({ open, title = 'Confirm', message, onConfirm, onCancel, confirmText = 'Confirm' }) => {
+  const { t } = useLanguage();
   if (!open) return null;
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
@@ -8,8 +10,8 @@ const ConfirmModal = ({ open, title = 'Confirm', message, onConfirm, onCancel, c
         <h3 className="text-lg font-semibold mb-2">{title}</h3>
         <p className="text-sm text-gray-600 mb-4">{message}</p>
         <div className="flex justify-end space-x-2">
-          <button onClick={onCancel} className="px-3 py-1 rounded-lg border">Cancel</button>
-          <button onClick={onConfirm} className="px-3 py-1 rounded-lg bg-blue-600 text-white">{confirmText}</button>
+          <button onClick={onCancel} className="app-cancel-btn text-sm">{t('cancel') || 'Cancel'}</button>
+          <button onClick={onConfirm} className="app-save-btn text-sm">{confirmText}</button>
         </div>
       </div>
     </div>

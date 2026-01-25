@@ -9,6 +9,7 @@ import KebabMenu from './KebabMenu';
 import { db } from '../../firebase';
 import { collection, addDoc, serverTimestamp, query, where, getDocs, doc, updateDoc } from 'firebase/firestore';
 import { formatAdDateToNepaliStringWithNumerals, convertAdToBs } from '../../utils/nepaliDateUtils';
+// Use Unicode `title`/`description` fields stored on events
 import { useLanguage } from '../../contexts/LanguageContext';
 
 export default function TreeDetailPage({ user }) {
@@ -643,7 +644,7 @@ export default function TreeDetailPage({ user }) {
                       >
                         <div className="flex items-start justify-between">
                           <div className="flex-1">
-                            <h4 className="font-semibold text-gray-800">{event.title || 'Untitled Event'}</h4>
+                            <h4 className="font-semibold text-gray-800">{(event.title || 'Untitled Event')}</h4>
                             {event.memberId && (
                               <p className="text-sm text-purple-700 mt-0.5">
                                 <span className="cursor-pointer hover:text-purple-900 hover:underline" onClick={(e) => {e.stopPropagation(); handleMemberNameClick(event.memberId);}} title="Click to go to family member">👤 {getMemberName(event.memberId)}</span>
@@ -727,7 +728,7 @@ export default function TreeDetailPage({ user }) {
             onClick={e => e.stopPropagation()}
           >
             <div className="flex items-center justify-between border-b px-4 py-3 rounded-t-2xl bg-gradient-to-r from-slate-400 to-slate-500 text-white">
-              <h3 className="text-sm font-semibold">{previewingEvent.title || t('eventPreview.eventDetails')}</h3>
+              <h3 className="text-sm font-semibold">{(previewingEvent?.title || t('eventPreview.eventDetails'))}</h3>
               <button
                 type="button"
                 onClick={() => {
@@ -736,8 +737,9 @@ export default function TreeDetailPage({ user }) {
                 }}
                 className="text-xs font-medium px-2 py-1 rounded-md bg-white/20 hover:bg-white/30 transition-colors"
                 title="Press Escape or click outside to close"
+                aria-label={t('eventPreview.close')}
               >
-                ✕ {t('eventPreview.close')}
+                ✕
               </button>
             </div>
             
