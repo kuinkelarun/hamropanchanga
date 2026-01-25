@@ -576,7 +576,7 @@
     max-width:520px;
     border-radius:12px;
     padding:20px 20px 18px;
-    max-height:90vh;
+    max-height:85vh;
     /*
       Keep rounded corners even when content overflows.
       On Windows, scrollbars can visually square off the right edge when
@@ -1016,6 +1016,36 @@
     background:#d1d5db;
 }
 
+/* App-wide save/add button for form submit actions (green when enabled) */
+.app-save-btn {
+    background: #059669; /* emerald-600 */
+    color: #fff;
+    padding: 12px 14px;
+    border-radius: 8px;
+    border: 0;
+    cursor: pointer;
+    flex: 1;
+    font-weight: 600;
+    font-size: 15px;
+    transition: all 0.15s ease;
+}
+.app-save-btn:hover { background: #047857; }
+.app-save-btn:disabled { background: #9ca3af; cursor: not-allowed; opacity: 0.75; }
+
+/* App-wide cancel button consistent shade */
+.app-cancel-btn {
+    background: #e5e7eb; /* neutral gray */
+    color: #374151;
+    padding: 12px 14px;
+    border-radius: 8px;
+    border: 0;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 15px;
+    transition: all 0.15s ease;
+}
+.app-cancel-btn:hover { background: #d1d5db; }
+
 /* Utility Classes */
 .muted { 
     color:#6b7280; 
@@ -1053,17 +1083,25 @@
     
     .nc-modal {
         width: 96%; /* Increased width for better mobile usage */
-        padding: 15px; /* Reduced padding */
+        padding: 15px 12px; /* Reduced padding for compact screens */
         max-width: none; /* Remove max-width constraint on mobile */
+        max-height: 80vh; /* Reduce max-height for better scrolling */
         border-radius: 10px;
     }
     
+    .nc-modal-body {
+        overflow-y: auto; /* Ensure vertical scrolling for content */
+        -webkit-overflow-scrolling: touch; /* Smooth scroll on iOS */
+    }
+    
     .nc-modal-header {
-        margin-bottom: 15px;
+        margin-bottom: 12px;
+        flex-shrink: 0; /* Keep header fixed at top */
     }
     
     .nc-modal-title {
-        font-size: 16px;
+        font-size: 15px;
+        word-break: break-word;
     }
     
     .nc-calendar {
@@ -1211,6 +1249,36 @@
         font-size: 9px;
         padding: 1px 3px;
     }
+    
+    /* Form elements responsive styling */
+    .nc-modal-actions {
+        gap: 6px;
+        margin-top: 8px;
+        flex-wrap: wrap;
+    }
+    
+    .nc-add-btn,
+    .nc-cancel-btn {
+        padding: 10px 12px;
+        font-size: 14px;
+        min-height: 40px; /* Touch-friendly */
+    }
+    
+    .nc-form-row {
+        margin-bottom: 10px;
+    }
+    
+    .nc-label {
+        font-size: 13px;
+    }
+    
+    .nc-select,
+    .nc-input,
+    .nc-textarea {
+        font-size: 16px; /* Prevents zoom on iOS */
+        padding: 10px;
+        min-height: 40px; /* Touch-friendly */
+    }
 }
 
 @media (max-width: 480px) {
@@ -1229,16 +1297,25 @@
     
     .nc-modal {
         width: 98%; /* Maximum width usage */
-        padding: 12px; /* Minimal padding */
+        padding: 10px 8px; /* Minimal padding for compact phones */
+        max-height: 75vh; /* Even more compact on small screens */
         border-radius: 8px;
     }
     
+    .nc-modal-body {
+        overflow-y: auto; /* Ensure vertical scrolling */
+        -webkit-overflow-scrolling: touch; /* Smooth scroll on iOS */
+    }
+    
     .nc-modal-header {
-        margin-bottom: 12px;
+        margin-bottom: 10px;
+        flex-shrink: 0; /* Keep header fixed at top */
     }
     
     .nc-modal-title {
-        font-size: 15px;
+        font-size: 14px;
+        padding: 0 30px; /* Room for close button */
+        word-break: break-word;
     }
     
     .nc-calendar {
@@ -1406,6 +1483,37 @@
     .nc-event-indicator {
         height: 1.5px;
         margin-top: 1px;
+    }
+    
+    /* Compact form styling for 480px */
+    .nc-modal-actions {
+        gap: 5px;
+        margin-top: 6px;
+        flex-wrap: wrap;
+    }
+    
+    .nc-add-btn,
+    .nc-cancel-btn {
+        padding: 9px 10px;
+        font-size: 13px;
+        min-height: 38px; /* Touch-friendly */
+    }
+    
+    .nc-form-row {
+        margin-bottom: 8px;
+    }
+    
+    .nc-label {
+        font-size: 12px;
+        margin-bottom: 4px;
+    }
+    
+    .nc-select,
+    .nc-input,
+    .nc-textarea {
+        font-size: 16px; /* Prevents zoom on iOS */
+        padding: 8px 10px;
+        min-height: 38px; /* Touch-friendly */
     }
 }
 

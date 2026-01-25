@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import EventMenu from './EventMenu';
 import { useSettings } from '../contexts/SettingsContext';
 import { formatNepaliDate, formatEnglishDate, formatNepaliMonthYear, formatGregorianMonthYear } from '../utils/nepaliDateUtils';
+// Titles are expected as Unicode in `event.title`
 
 // Component to list all events
 const EventList = ({ events, eventFilter, onEdit, onDelete }) => {
@@ -45,7 +46,7 @@ const EventList = ({ events, eventFilter, onEdit, onDelete }) => {
             const eventName = event.title || event.name;
             return eventName && eventName.trim() !== '';
         })
-        .map(event => {
+            .map(event => {
             const originalDate = new Date(event.date);
             const displayDate = (event.repetition && event.repetition !== 'none') ?
                 getNextOccurrence(originalDate, event.repetition) :
@@ -113,7 +114,7 @@ const EventList = ({ events, eventFilter, onEdit, onDelete }) => {
                                         <li key={id} className="bg-white p-3 rounded-xl shadow-sm flex justify-between items-center">
                                         <div className="flex-1">
                                             <div className="text-gray-800 font-medium">
-                                                {event.title || event.name || 'Untitled Event'}
+                                                { (event.title || event.name) || 'Untitled Event'}
                                                 {event.repetition && event.repetition !== 'none' && (
                                                     <span className="text-xs text-gray-400 ml-2">({event.repetition} repeating)</span>
                                                 )}
@@ -158,7 +159,7 @@ const EventList = ({ events, eventFilter, onEdit, onDelete }) => {
                                 <li key={id} className="bg-white p-3 rounded-xl shadow-sm flex justify-between items-center">
                                     <div className="flex-1">
                                     <div className="text-gray-800 font-medium">
-                                        {event.title || event.name || 'Untitled Event'}
+                                        { (event.title || event.name) || 'Untitled Event'}
                                         {event.repetition && event.repetition !== 'none' && (
                                             <span className="text-xs text-gray-400 ml-2">({event.repetition} repeating)</span>
                                         )}

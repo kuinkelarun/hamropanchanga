@@ -197,9 +197,10 @@ export default function MemberModal({
             type="button"
             onClick={onClose}
             className="text-xs font-medium px-2 py-1 rounded-md bg-white/20 hover:bg-white/30 transition-colors"
-            title="Press Escape or click outside to close"
+            title={t('memberModal.close')}
+            aria-label={t('memberModal.close')}
           >
-            ✕ {t('memberModal.close')}
+            ✕
           </button>
         </div>
 
@@ -470,7 +471,7 @@ export default function MemberModal({
             />
           </label>
 
-          <div className="flex flex-wrap gap-1 pt-2 border-t border-gray-300 mt-2 justify-end">
+            <div className="flex flex-wrap gap-1 pt-2 border-t border-gray-300 mt-2 justify-end">
             {!previewMode && isEdit && onMoveToPool && member?.position && typeof member.position.x === 'number' && typeof member.position.y === 'number' && (
               <button
                 type="button"
@@ -491,24 +492,20 @@ export default function MemberModal({
             )}
             {!previewMode && (
               <button
-                type="submit"
-                disabled={saveDisabled}
-                className={`px-3 py-1.5 text-xs font-semibold rounded-md text-white shadow-sm transition-colors ${
-                  saveDisabled
-                    ? 'bg-slate-400 cursor-not-allowed'
-                    : 'bg-emerald-600 hover:bg-emerald-700 cursor-pointer'
-                }`}
+                type="button"
+                onClick={onClose}
+                className="app-cancel-btn text-xs"
               >
-                {isEdit ? t('memberModal.saveChanges') : t('memberModal.addMember')}
+                {t('memberModal.cancel')}
               </button>
             )}
             {!previewMode && (
               <button
-                type="button"
-                onClick={onClose}
-                className="px-3 py-1.5 text-xs font-semibold rounded-md border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 transition-colors"
+                type="submit"
+                disabled={saveDisabled}
+                className={`app-save-btn text-xs ${saveDisabled ? 'disabled' : ''}`}
               >
-                {t('memberModal.cancel')}
+                {isEdit ? t('memberModal.saveChanges') : t('memberModal.addMember')}
               </button>
             )}
           </div>

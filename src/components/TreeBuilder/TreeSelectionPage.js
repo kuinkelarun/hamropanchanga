@@ -7,6 +7,7 @@ import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { normalizeForCompare } from '../../utils/textNormalize';
 import { useLanguage } from '../../contexts/LanguageContext';
+import BulkUploadModal from '../BulkUploadModal';
 
 export default function TreeSelectionPage({ user, isAdmin }) {
   const navigate = useNavigate();
@@ -36,6 +37,10 @@ export default function TreeSelectionPage({ user, isAdmin }) {
   const [treeNameSuggestions, setTreeNameSuggestions] = useState([]);
   const [primaryNameWarning, setPrimaryNameWarning] = useState('');
   const [showDuplicateConfirmation, setShowDuplicateConfirmation] = useState(false);
+
+  // Bulk upload state
+  const [showBulkUploadConfirmation, setShowBulkUploadConfirmation] = useState(false);
+  const [showBulkUploadModal, setShowBulkUploadModal] = useState(false);
 
   // Cache owner email lookups for admin display in Other Users section
   const [ownerEmailByUid, setOwnerEmailByUid] = useState({});
@@ -257,6 +262,36 @@ export default function TreeSelectionPage({ user, isAdmin }) {
     }
   };
 
+  const handleOpenBulkUploadConfirmation = () => {
+    if (!user) {
+      handleRequireAuth();
+      return;
+    }
+    setShowBulkUploadConfirmation(true);
+  };
+
+  const handleConfirmBulkUpload = () => {
+    setShowBulkUploadConfirmation(false);
+    setShowBulkUploadModal(true);
+  };
+
+  const handleBulkUploadComplete = (results, tabType) => {
+    setShowBulkUploadModal(false);
+    // Reload trees
+    loadTrees();
+  };
+
+  const loadTrees = async () => {
+    if (!user) return;
+    try {
+      const all = await Trees.list(isAdmin ? null : user.uid);
+      const active = (all || []).filter(t => !t.deleted);
+      setTrees(active);
+    } catch (err) {
+      console.error('Error loading trees:', err);
+    }
+  };
+
   const handleEditTree = (tree) => {
     setEditingTree(tree);
     setEditTreeData({
@@ -400,15 +435,23 @@ export default function TreeSelectionPage({ user, isAdmin }) {
 
         {/* My Trees Grid */}
         <div className="bg-white rounded-2xl shadow-md p-6 mb-6 border border-gray-200">
-          <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
             <h3 className="text-xl font-bold text-gray-800">{t('treeSelection.yourTrees')}</h3>
-            <button
-              onClick={handleCreateTree}
-              disabled={creating}
-              className="px-6 py-2.5 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 disabled:opacity-60 disabled:cursor-not-allowed text-white rounded-lg font-semibold shadow-md transition-all transform hover:scale-105"
-            >
-              {creating ? t('treeSelection.creating') : t('treeSelection.buildNewTree')}
-            </button>
+            <div className="flex gap-3">
+              <button
+                onClick={handleCreateTree}
+                disabled={creating}
+                className="px-6 py-2.5 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 disabled:opacity-60 disabled:cursor-not-allowed text-white rounded-lg font-semibold shadow-md transition-all transform hover:scale-105"
+              >
+                {creating ? t('treeSelection.creating') : t('treeSelection.buildNewTree')}
+              </button>
+              <button
+                onClick={handleOpenBulkUploadConfirmation}
+                className="px-6 py-2.5 bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white rounded-lg font-semibold shadow-md transition-all transform hover:scale-105"
+              >
+                📁 Build From File Upload
+              </button>
+            </div>
           </div>
 
           {myTrees.length > 0 ? (
@@ -739,7 +782,6 @@ export default function TreeSelectionPage({ user, isAdmin }) {
         </div>
       )}
 
-      {/* 
       {/* Add Event Modal */}
       {eventModal.open && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
@@ -747,6 +789,43 @@ export default function TreeSelectionPage({ user, isAdmin }) {
             <AddEventForm familyMembers={eventModal.members} onAdd={handleAddEventFromModal} onCancel={() => setEventModal({ open: false, treeId: null, members: [] })} />
           </div>
         </div>
+      )}
+
+      {/* Bulk Upload Confirmation Dialog */}
+      {showBulkUploadConfirmation && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-lg p-8 max-w-md w-full mx-4">
+            <h3 className="text-xl font-semibold mb-4">Ready for Bulk Upload?</h3>
+            <p className="text-gray-600 mb-6">
+              This feature is recommended for uploading 5 or more trees at once. It can also bulk upload family members and events. Do you have your Excel/CSV file ready?
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowBulkUploadConfirmation(false)}
+                className="flex-1 px-4 py-2 bg-gray-300 text-gray-800 rounded hover:bg-gray-400 transition"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmBulkUpload}
+                className="flex-1 px-4 py-2 bg-gradient-to-r from-blue-600 to-cyan-600 text-white rounded hover:from-blue-700 hover:to-cyan-700 transition"
+              >
+                Proceed to Upload
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Bulk Upload Modal */}
+      {showBulkUploadModal && (
+        <BulkUploadModal
+          isOpen={showBulkUploadModal}
+          onClose={() => setShowBulkUploadModal(false)}
+          onComplete={handleBulkUploadComplete}
+          userId={user.uid}
+          userEmail={user.email}
+        />
       )}
     </div>
   );

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '../firebase';
-import NepaliDatePicker from './NepaliDatePicker'; // Use the existing NepaliDatePicker component
+import NepaliDatePicker from './NepaliDatePicker';
 import { useSettings } from '../contexts/SettingsContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { nepaliMonths, getTithisForMonth, convertAdToBs, getTithiIndexByName, getTithiLunarMonthName, getTithiYearFromAdDate } from '../utils/nepaliDateUtils';
@@ -28,7 +28,7 @@ const AddEventForm = ({ onAdd, familyMembers, onCancel, editingEvent }) => {
     const [tithiId, setTithiId] = useState('');
     const [resolvingTithi, setResolvingTithi] = useState(false);
     
-    const { isNepaliCalendar } = useSettings(); // Use global settings
+    const { isNepaliCalendar } = useSettings();
 
     // Populate form when editing
     useEffect(() => {
@@ -331,12 +331,28 @@ const AddEventForm = ({ onAdd, familyMembers, onCancel, editingEvent }) => {
                         </select>
                     </div>
                     <div className="flex justify-end space-x-2">
-                        <button type="button" onClick={onCancel} className="px-4 py-2 rounded-xl text-gray-700 font-semibold transition bg-gray-200 hover:bg-gray-300 text-sm">
+                        <button type="button" onClick={onCancel} className="app-cancel-btn text-sm">
                             {t('addEventForm.cancel')}
                         </button>
-                        <button type="submit" disabled={resolvingTithi} className="px-4 py-2 rounded-xl text-white font-semibold transition bg-green-600 hover:bg-green-700 text-sm disabled:opacity-50">
-                            {resolvingTithi ? t('addEventForm.resolving') : (editingEvent ? t('addEventForm.updateEvent') : t('addEventForm.addEvent'))}
-                        </button>
+                        {
+                            (() => {
+                                const submitDisabled = resolvingTithi
+                                    || !name.trim()
+                                    || !selectedPersonId
+                                    || (entryMode === 'date' && !date)
+                                    || (entryMode === 'tithi' && (!tithiMonth || !tithiId));
+
+                                return (
+                                    <button
+                                        type="submit"
+                                        disabled={submitDisabled}
+                                        className={`app-save-btn text-sm`}
+                                    >
+                                        {resolvingTithi ? t('addEventForm.resolving') : (editingEvent ? t('addEventForm.updateEvent') : t('addEventForm.addEvent'))}
+                                    </button>
+                                );
+                            })()
+                        }
                     </div>
                 </form>
             </div>
