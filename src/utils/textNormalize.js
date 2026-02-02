@@ -8,8 +8,10 @@ export function normalizeForCompare(value) {
 
   return String(value)
     .normalize('NFKC')
+    // Remove ALL invisible/formatting characters
+    .replace(/[\u00AD\u00A0\u200B-\u200F\u202A-\u202E\uFEFF]/g, '')
     .replace(/[\u200c\u200d]/g, '') // zero-width joiners
-    .toLocaleLowerCase()
+    .toLowerCase() // Changed from toLocaleLowerCase() for consistent behavior
     // Replace anything that's not a letter/number (English + Devanagari) with spaces.
     .replace(/[^0-9a-z\u0900-\u097f]+/gi, ' ')
     .trim()

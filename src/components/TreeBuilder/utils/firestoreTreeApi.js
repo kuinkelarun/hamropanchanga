@@ -1,6 +1,3 @@
-// Firestore-backed adapter that mimics the standalone Tree Builder API surface
-// (Trees, Members, Relationships) but stores data in Firebase Firestore.
-
 import { db } from '../../../firebase';
 import {
   collection,
@@ -16,6 +13,30 @@ import {
   setDoc,
 } from 'firebase/firestore';
 import { buildSearchFields, normalizeForCompare } from '../../../utils/textNormalize';
+
+// Recursively delete a tree and all its members, relationships, marriage points, and events
+export async function deleteTreeAndAssociations(treeId) {
+  if (!treeId) throw new Error('treeId is required');
+  // Delete all members
+  const membersSnap = await getDocs(collection(db, 'trees', treeId, 'members'));
+  await Promise.all(membersSnap.docs.map(d => deleteDoc(d.ref)));
+
+  // Delete all relationships
+  const relSnap = await getDocs(collection(db, 'trees', treeId, 'relationships'));
+  await Promise.all(relSnap.docs.map(d => deleteDoc(d.ref)));
+
+  // Delete all marriage points
+  const mpSnap = await getDocs(collection(db, 'trees', treeId, 'marriagePoints'));
+  await Promise.all(mpSnap.docs.map(d => deleteDoc(d.ref)));
+
+  // Delete all events in calendarEvents with this treeId
+  const eventsSnap = await getDocs(query(collection(db, 'calendarEvents'), where('treeId', '==', treeId)));
+  await Promise.all(eventsSnap.docs.map(d => deleteDoc(d.ref)));
+
+  // Soft delete the tree itself
+  await Trees.delete(treeId);
+  return { ok: true };
+}
 
 // Helper to get trees collection
 function treesCollection() {
@@ -47,15 +68,54 @@ export const Trees = {
     return { id: docRef.id, ...(snap.data() || {}) };
   },
 
-  async list(ownerUid) {
-    // If ownerUid is provided, filter by owner; otherwise return all (for now).
+  async list(ownerUid, options = {}) {
+    // options: { includeShared: boolean, userEmail: string, includeDeleted: boolean }
+    const { includeShared = false, userEmail = null, includeDeleted = false } = options;
     const colRef = treesCollection();
-    let qRef = colRef;
-    if (ownerUid) {
-      qRef = query(colRef, where('ownerUid', '==', ownerUid));
+    
+    if (!ownerUid) {
+      // Return all trees (admin view)
+      const snap = await getDocs(colRef);
+      const trees = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      return includeDeleted ? trees : trees.filter(t => !t.deleted);
     }
-    const snap = await getDocs(qRef);
-    return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    
+    // Get trees owned by user
+    const ownedQuery = query(colRef, where('ownerUid', '==', ownerUid));
+    const ownedSnap = await getDocs(ownedQuery);
+    let trees = ownedSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+    
+    // If includeShared is true and userEmail provided, also get shared trees
+    if (includeShared && userEmail) {
+      try {
+        console.log('[Trees.list] Fetching shared trees for email:', userEmail.toLowerCase());
+        // Query using array-contains on sharedWithEmails array (queryable field)
+        const sharedQuery = query(colRef, where('sharedWithEmails', 'array-contains', userEmail.toLowerCase()));
+        const sharedSnap = await getDocs(sharedQuery);
+        const sharedTrees = sharedSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+        console.log('[Trees.list] Found', sharedTrees.length, 'shared trees:', sharedTrees.map(t => ({ id: t.id, name: t.name, sharedWithEmails: t.sharedWithEmails })));
+        
+        // Merge owned and shared trees, avoiding duplicates
+        const treeMap = new Map();
+        trees.forEach(t => treeMap.set(t.id, t));
+        sharedTrees.forEach(t => {
+          if (!treeMap.has(t.id)) {
+            treeMap.set(t.id, t);
+          }
+        });
+        trees = Array.from(treeMap.values());
+        console.log('[Trees.list] Total trees after merge:', trees.length);
+      } catch (err) {
+        console.error('[Trees.list] Failed to fetch shared trees:', err);
+        // Continue with owned trees only
+      }
+    }
+    
+    // Filter out deleted trees unless explicitly requested
+    const filtered = includeDeleted ? trees : trees.filter(t => !t.deleted);
+    console.log('[Trees.list] Before filter:', trees.length, '| After filter:', filtered.length, '| Deleted count:', trees.filter(t => t.deleted).length);
+    console.log('[Trees.list] Deleted trees:', trees.filter(t => t.deleted).map(t => ({ id: t.id, name: t.name, deleted: t.deleted })));
+    return filtered;
   },
 
   async get(id) {

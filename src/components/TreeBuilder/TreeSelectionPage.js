@@ -8,6 +8,7 @@ import { db } from '../../firebase';
 import { normalizeForCompare } from '../../utils/textNormalize';
 import { useLanguage } from '../../contexts/LanguageContext';
 import BulkUploadModal from '../BulkUploadModal';
+import BulkTreeShareModal from '../BulkTreeShareModal';
 
 export default function TreeSelectionPage({ user, isAdmin }) {
   const navigate = useNavigate();
@@ -42,6 +43,13 @@ export default function TreeSelectionPage({ user, isAdmin }) {
   const [showBulkUploadConfirmation, setShowBulkUploadConfirmation] = useState(false);
   const [showBulkUploadModal, setShowBulkUploadModal] = useState(false);
 
+  // Tree sharing state
+  const [showShareModal, setShowShareModal] = useState(false);
+
+  // Migration state
+  const [isMigrating, setIsMigrating] = useState(false);
+  const [migrationMessage, setMigrationMessage] = useState('');
+
   // Cache owner email lookups for admin display in Other Users section
   const [ownerEmailByUid, setOwnerEmailByUid] = useState({});
 
@@ -53,9 +61,18 @@ export default function TreeSelectionPage({ user, isAdmin }) {
       }
       setLoading(true);
       try {
-        // If admin, fetch all trees (pass null). Otherwise fetch only user's trees.
-        const all = await Trees.list(isAdmin ? null : user.uid);
+        console.log('[TreeSelectionPage] Loading trees for user:', { uid: user.uid, email: user.email, isAdmin });
+        // If admin, fetch all trees (pass null). Otherwise fetch user's trees + shared trees.
+        const all = await Trees.list(isAdmin ? null : user.uid, {
+          includeShared: !isAdmin, // Regular users should see shared trees
+          userEmail: user.email,
+          includeDeleted: false
+        });
+        console.log('[TreeSelectionPage] Raw trees from Trees.list:', all.length, 'trees');
+        console.log('[TreeSelectionPage] Trees details:', all.map(t => ({ id: t.id, name: t.name, deleted: t.deleted, ownerUid: t.ownerUid })));
+        // Trees.list already filters deleted trees, but double-check
         const active = (all || []).filter(t => !t.deleted);
+        console.log('[TreeSelectionPage] Loaded trees:', active.length, 'trees');
         setTrees(active);
       } catch (err) {
         console.error('Error loading trees:', err);
@@ -69,6 +86,76 @@ export default function TreeSelectionPage({ user, isAdmin }) {
 
   const myTrees = useMemo(() => trees.filter(t => t.ownerUid === user?.uid), [trees, user]);
   const otherTrees = useMemo(() => trees.filter(t => t.ownerUid !== user?.uid), [trees, user]);
+  
+  // Shared trees are trees not owned by current user (for regular users)
+  const sharedTrees = useMemo(() => {
+    if (isAdmin) return []; // Admins see all trees in "Other Trees" section
+    return trees.filter(t => t.ownerUid !== user?.uid);
+  }, [trees, user, isAdmin]);
+
+  // Migration function for shared trees
+  const runMigration = async () => {
+    if (!isAdmin) {
+      alert('Only administrators can run the migration.');
+      return;
+    }
+
+    if (!window.confirm('This will migrate all shared trees to add the sharedWithEmails array. Continue?')) {
+      return;
+    }
+
+    setIsMigrating(true);
+    setMigrationMessage('🔧 Starting migration...');
+
+    try {
+      const { collection, getDocs, updateDoc, doc } = await import('firebase/firestore');
+      const treesRef = collection(db, 'trees');
+      const treesSnapshot = await getDocs(treesRef);
+      
+      let migrated = 0;
+      let alreadyMigrated = 0;
+      let total = 0;
+
+      for (const treeDoc of treesSnapshot.docs) {
+        const treeData = treeDoc.data();
+        const treeId = treeDoc.id;
+
+        if (treeData.sharedWith && typeof treeData.sharedWith === 'object' && Object.keys(treeData.sharedWith).length > 0) {
+          total++;
+          const sharedEmails = Object.keys(treeData.sharedWith).map(email => email.toLowerCase());
+          
+          if (!treeData.sharedWithEmails || treeData.sharedWithEmails.length === 0) {
+            setMigrationMessage(`🔄 Migrating: ${treeData.title || treeId}...`);
+            const treeRef = doc(db, 'trees', treeId);
+            await updateDoc(treeRef, { sharedWithEmails: sharedEmails });
+            migrated++;
+          } else {
+            alreadyMigrated++;
+          }
+        }
+      }
+
+      setMigrationMessage(`✅ Migration complete! Migrated ${migrated} trees. ${alreadyMigrated} already had the array.`);
+      
+      // Reload trees after migration
+      setTimeout(async () => {
+        const all = await Trees.list(isAdmin ? null : user.uid, {
+          includeShared: !isAdmin,
+          userEmail: user.email,
+          includeDeleted: false
+        });
+        const active = (all || []).filter(t => !t.deleted);
+        setTrees(active);
+        setMigrationMessage('');
+      }, 3000);
+
+    } catch (error) {
+      console.error('Migration error:', error);
+      setMigrationMessage(`❌ Migration failed: ${error.message}`);
+    } finally {
+      setIsMigrating(false);
+    }
+  };
 
   // Check for duplicate tree names (case-insensitive, normalized) and show suggestions
   const checkDuplicateTreeName = (inputName) => {
@@ -437,7 +524,7 @@ export default function TreeSelectionPage({ user, isAdmin }) {
         <div className="bg-white rounded-2xl shadow-md p-6 mb-6 border border-gray-200">
           <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
             <h3 className="text-xl font-bold text-gray-800">{t('treeSelection.yourTrees')}</h3>
-            <div className="flex gap-3">
+            <div className="flex gap-3 flex-wrap">
               <button
                 onClick={handleCreateTree}
                 disabled={creating}
@@ -451,8 +538,32 @@ export default function TreeSelectionPage({ user, isAdmin }) {
               >
                 📁 Build From File Upload
               </button>
+              <button
+                onClick={() => setShowShareModal(true)}
+                disabled={!user}
+                className="px-6 py-2.5 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 disabled:opacity-60 disabled:cursor-not-allowed text-white rounded-lg font-semibold shadow-md transition-all transform hover:scale-105"
+                title={isAdmin ? 'Share any trees with other users' : 'Share your trees with other users'}
+              >
+                📤 Share Trees
+              </button>
+              {isAdmin && (
+                <button
+                  onClick={runMigration}
+                  disabled={isMigrating}
+                  className="px-6 py-2.5 bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700 disabled:opacity-60 disabled:cursor-not-allowed text-white rounded-lg font-semibold shadow-md transition-all transform hover:scale-105"
+                  title="Fix shared trees permission error by adding sharedWithEmails array"
+                >
+                  {isMigrating ? '🔄 Migrating...' : '🔧 Fix Shared Trees'}
+                </button>
+              )}
             </div>
           </div>
+
+          {migrationMessage && (
+            <div className="mb-4 text-sm bg-blue-50 border border-blue-200 rounded-lg px-4 py-3 text-blue-800">
+              {migrationMessage}
+            </div>
+          )}
 
           {myTrees.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -461,7 +572,17 @@ export default function TreeSelectionPage({ user, isAdmin }) {
                   <div className="cursor-pointer" onClick={() => handleOpenTree(tree.id)}>
                     <div className="flex items-start justify-between mb-3">
                       <div className="flex-1">
-                        <h4 className="text-lg font-bold text-gray-800 mb-1">{tree.title || t('treeSelection.untitledTree')}</h4>
+                        <div className="flex items-center gap-2 mb-1">
+                          <h4 className="text-lg font-bold text-gray-800">{tree.title || t('treeSelection.untitledTree')}</h4>
+                          {tree.sharedWith && Object.keys(tree.sharedWith).length > 0 && (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs bg-blue-100 text-blue-700 rounded-full font-medium border border-blue-200" title={`Shared with ${Object.keys(tree.sharedWith).length} user(s)`}>
+                              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                              </svg>
+                              {Object.keys(tree.sharedWith).length}
+                            </span>
+                          )}
+                        </div>
                         <p className="text-xs text-gray-500">ID: {tree.id}</p>
                       </div>
                     </div>
@@ -500,6 +621,58 @@ export default function TreeSelectionPage({ user, isAdmin }) {
           )}
         </div>
 
+        {/* Shared With Me Trees Grid (Regular Users Only) */}
+        {!isAdmin && sharedTrees.length > 0 && (
+          <div className="bg-white rounded-2xl shadow-md p-6 mb-6 border border-gray-200">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-xl font-bold text-gray-800">
+                <span className="inline-flex items-center gap-2">
+                  <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                  </svg>
+                  Shared With Me
+                </span>
+              </h3>
+              <span className="text-sm text-gray-500">{sharedTrees.length} tree{sharedTrees.length !== 1 ? 's' : ''}</span>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {sharedTrees.map(tree => (
+                <div key={tree.id} className="relative bg-gradient-to-br from-blue-50 to-white p-6 rounded-xl shadow-md border border-blue-200 hover:shadow-lg transition-shadow">
+                  <div className="cursor-pointer" onClick={() => handleOpenTree(tree.id)}>
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <h4 className="text-lg font-bold text-gray-800">{tree.title || 'Untitled Tree'}</h4>
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs bg-blue-100 text-blue-700 rounded-full font-medium border border-blue-200">
+                            Shared
+                          </span>
+                        </div>
+                        <p className="text-xs text-gray-500">ID: {tree.id}</p>
+                      </div>
+                    </div>
+                    {tree.location && (
+                      <p className="text-sm text-gray-600 mb-2">📍 {tree.location}</p>
+                    )}
+                    {tree.contact && (
+                      <a 
+                        href={`tel:${tree.contact.replace(/\D/g, '')}`}
+                        className="inline-flex items-center gap-1 text-sm text-gray-600 mb-2 hover:text-blue-600 transition-colors max-w-fit"
+                        title={tree.contact}
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        📞 <span className="truncate">{tree.contact}</span>
+                      </a>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2 mt-4 pt-4 border-t border-gray-200">
+                    <button className="flex-1 px-3 py-2 text-xs bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium" onClick={() => handleOpenTree(tree.id)}>View Details</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Other Users' Trees Grid (Admin Only) */}
         {isAdmin && otherTrees.length > 0 && (
           <div className="bg-white rounded-2xl shadow-md p-6 mb-6 border border-gray-200">
@@ -512,7 +685,17 @@ export default function TreeSelectionPage({ user, isAdmin }) {
                   <div className="cursor-pointer" onClick={() => handleOpenTree(tree.id)}>
                     <div className="flex items-start justify-between mb-3">
                       <div className="flex-1">
-                        <h4 className="text-lg font-bold text-gray-800 mb-1">{tree.title || t('treeSelection.untitledTree')}</h4>
+                        <div className="flex items-center gap-2 mb-1">
+                          <h4 className="text-lg font-bold text-gray-800">{tree.title || t('treeSelection.untitledTree')}</h4>
+                          {tree.sharedWith && Object.keys(tree.sharedWith).length > 0 && (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs bg-blue-100 text-blue-700 rounded-full font-medium border border-blue-200" title={`Shared with ${Object.keys(tree.sharedWith).length} user(s)`}>
+                              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                              </svg>
+                              {Object.keys(tree.sharedWith).length}
+                            </span>
+                          )}
+                        </div>
                         <p className="text-xs text-gray-500">ID: {tree.id}</p>
                         {tree.ownerUid && (
                           <p className="text-xs text-gray-400 mt-1">
@@ -825,6 +1008,22 @@ export default function TreeSelectionPage({ user, isAdmin }) {
           onComplete={handleBulkUploadComplete}
           userId={user.uid}
           userEmail={user.email}
+          isAdmin={isAdmin}
+        />
+      )}
+
+      {/* Bulk Tree Share Modal */}
+      {showShareModal && user && (
+        <BulkTreeShareModal
+          isOpen={showShareModal}
+          onClose={() => setShowShareModal(false)}
+          onComplete={() => {
+            // Optionally reload trees after sharing
+            setShowShareModal(false);
+          }}
+          userEmail={user.email}
+          userId={user.uid}
+          isAdmin={isAdmin}
         />
       )}
     </div>

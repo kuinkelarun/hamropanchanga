@@ -532,9 +532,14 @@ function AppContent() {
     };
 
     const handleSignOut = () => {
-        signOut(auth).catch((error) => {
-            console.error("Sign out error: ", error);
-        });
+        signOut(auth)
+            .then(() => {
+                // Redirect to home page after successful logout
+                navigate('/');
+            })
+            .catch((error) => {
+                console.error("Sign out error: ", error);
+            });
     };
 
     const handleAdminEditCards = () => {

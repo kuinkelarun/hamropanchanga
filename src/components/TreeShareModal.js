@@ -107,7 +107,7 @@ const TreeShareModal = ({ isOpen, onClose, tree, onComplete, userEmail, userId }
   };
 
   const handleRemoveShare = async (email) => {
-    if (!confirm(`Remove ${email} from sharing?`)) {
+    if (!window.confirm(`Remove ${email} from sharing?`)) {
       return;
     }
 
@@ -146,12 +146,26 @@ const TreeShareModal = ({ isOpen, onClose, tree, onComplete, userEmail, userId }
       <div className="tsm-modal" onClick={(e) => e.stopPropagation()}>
         {/* Header */}
         <div className="tsm-header">
-          <h2>Share Tree: {tree.name}</h2>
+          <div>
+            <h2>Share Tree</h2>
+            <p className="tsm-tree-name">{tree.title || tree.name || 'Untitled Tree'}</p>
+          </div>
           <button className="tsm-close nc-header-close" onClick={handleClose} aria-label="Close">✕</button>
         </div>
 
         {/* Content */}
         <div className="tsm-content">
+          {/* Existing Share Info Notice */}
+          {sharedEmailsList.length > 0 && !error && !success && (
+            <div className="tsm-alert tsm-alert-info">
+              <span>ℹ️</span>
+              <p>
+                This tree is currently shared with {sharedEmailsList.length} {sharedEmailsList.length === 1 ? 'user' : 'users'}. 
+                You can manage their permissions or add more users below.
+              </p>
+            </div>
+          )}
+          
           {/* Error Message */}
           {error && (
             <div className="tsm-alert tsm-alert-error">
@@ -232,7 +246,7 @@ const TreeShareModal = ({ isOpen, onClose, tree, onComplete, userEmail, userId }
           {/* Divider */}
           {sharedEmailsList.length > 0 && (
             <div className="tsm-divider">
-              <span>Shared With</span>
+              <span>Currently Shared With ({sharedEmailsList.length})</span>
             </div>
           )}
 
@@ -241,12 +255,19 @@ const TreeShareModal = ({ isOpen, onClose, tree, onComplete, userEmail, userId }
             <div className="tsm-shared-list">
               {sharedEmailsList.map((email) => {
                 const shareData = sharedUsers[email];
+                const permissionIcon = shareData.permission === SHARE_PERMISSIONS.VIEW ? '👁️' : '✏️';
+                const permissionText = shareData.permission === SHARE_PERMISSIONS.VIEW ? 'View Only' : 'Can Edit';
+                
                 return (
                   <div key={email} className="tsm-shared-item">
                     <div className="tsm-shared-info">
-                      <p className="tsm-shared-email">{email}</p>
+                      <div className="flex items-center gap-2">
+                        <span className="text-lg">{permissionIcon}</span>
+                        <p className="tsm-shared-email">{email}</p>
+                      </div>
                       <p className="tsm-shared-date">
-                        Shared on {new Date(shareData.sharedAt).toLocaleDateString()}
+                        {permissionText} • Shared on {new Date(shareData.sharedAt).toLocaleDateString()}
+                        {shareData.sharedBy && ` by ${shareData.sharedBy}`}
                       </p>
                     </div>
 

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { collection, getDocs, deleteDoc, doc, writeBatch, query, updateDoc, where, addDoc, getDoc } from 'firebase/firestore';
 import { db } from '../firebase';
+import { Trees, deleteTreeAndAssociations } from './TreeBuilder/utils/firestoreTreeApi';
 import * as XLSX from 'xlsx';
 import './AdminManagement.css';
 import NepaliDatePicker from './NepaliDatePicker';
@@ -132,6 +133,18 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
   const [tithis, setTithis] = useState([]);
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [trees, setTrees] = useState([]);
+    // Load trees for admin (all trees, or by owner)
+    const loadTrees = useCallback(async () => {
+      try {
+        // Admin: fetch all trees
+        const treesList = await Trees.list();
+        setTrees(treesList.filter(t => !t.deleted));
+      } catch (error) {
+        console.error('Error loading trees:', error);
+        setUploadStatus('Error loading trees: ' + error.message);
+      }
+    }, []);
   const [uploadFile, setUploadFile] = useState(null);
   const [uploadStatus, setUploadStatus] = useState('');
   const [validationResults, setValidationResults] = useState(null);
@@ -299,10 +312,10 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
     console.log('Loading data...');
     hasLoadedData.current = true;
     setLoading(true);
-    Promise.all([loadTithis(), loadEvents()]).finally(() => {
+    Promise.all([loadTithis(), loadEvents(), loadTrees()]).finally(() => {
       setLoading(false);
     });
-  }, [canAccessAdminPage, loadTithis, loadEvents]);
+  }, [canAccessAdminPage, loadTithis, loadEvents, loadTrees]);
 
   // Load admin calendar data for validation
   useEffect(() => {
@@ -342,7 +355,141 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
   const recentIso = recentThreshold.toISOString();
   const recentTithisCount = tithis.filter(t => t.createdAt && t.createdAt > recentIso).length;
   const recentEventsCount = events.filter(e => e.createdAt && e.createdAt > recentIso).length;
-  const recentCount = recentTithisCount + recentEventsCount;
+  const recentTreesCount = trees.filter(t => t.createdAt && t.createdAt > recentIso).length;
+  const recentCount = recentTithisCount + recentEventsCount + recentTreesCount;
+  // Helper: normalize createdAt to ISO string for comparison
+  const getCreatedAtIso = (t) => {
+    if (!t || !t.createdAt) return '';
+    if (typeof t.createdAt === 'string') return t.createdAt;
+    if (t.createdAt instanceof Date) return t.createdAt.toISOString();
+    if (t.createdAt && typeof t.createdAt.toDate === 'function') return t.createdAt.toDate().toISOString();
+    return '';
+  };
+
+  // Compute filtered trees for the modal preview/labels based on current deleteConfirmation filters
+  const computeFilteredTreesForModal = () => {
+    if (!deleteConfirmation || deleteConfirmation.type !== 'trees') return [];
+    const { range = '30', userType = 'all', userFilter = '' } = deleteConfirmation;
+    const days = parseInt(range, 10) || 0;
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - days);
+    const cutoffIso = cutoff.toISOString();
+    return (trees || []).filter(t => {
+      const iso = getCreatedAtIso(t);
+      if (!iso) return false;
+      if (iso <= cutoffIso) return false;
+      if (userType === 'email' && userFilter) return (t.ownerEmail || '').toLowerCase() === userFilter.toLowerCase();
+      if (userType === 'id' && userFilter) return (t.ownerUid || '') === userFilter;
+      return true;
+    });
+  };
+  const filteredTreesForModal = computeFilteredTreesForModal();
+  // Bulk delete trees with range/user filter
+  async function handleBulkDeleteTrees() {
+    setLoading(true);
+    setUploadStatus('🔍 Counting trees in database...');
+    try {
+      const allTrees = await Trees.list();
+      const actualCount = allTrees.filter(t => !t.deleted).length;
+      if (actualCount === 0) {
+        setUploadStatus('ℹ️ No trees found in database');
+        setLoading(false);
+        return;
+      }
+      setDeleteConfirmation({
+        show: true,
+        type: 'trees',
+        count: actualCount,
+        confirmText: '',
+        range: '30',
+        userFilter: '',
+        userType: 'all',
+      });
+    } catch (error) {
+      console.error('Error counting trees:', error);
+      setUploadStatus('❌ Error counting trees: ' + error.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function executeBulkDeleteTrees() {
+    const { confirmText, range = '30', userFilter = '', userType = 'all' } = deleteConfirmation;
+    const expectedText = 'DELETE ALL TREES';
+    if (confirmText !== expectedText) {
+      setUploadStatus(`❌ Please type exactly: ${expectedText}`);
+      return;
+    }
+    setLoading(true);
+    setUploadStatus('🔍 Fetching trees for deletion...');
+    try {
+      let allTrees = await Trees.list();
+      allTrees = allTrees.filter(t => !t.deleted);
+      // Filter by range
+      const days = parseInt(range, 10);
+      const cutoff = new Date();
+      cutoff.setDate(cutoff.getDate() - days);
+      const cutoffDate = cutoff.toISOString();
+      let filteredTrees = allTrees.filter(t => {
+        if (!t.createdAt) return false;
+        let createdAtIso = '';
+        if (typeof t.createdAt === 'string') {
+          createdAtIso = t.createdAt;
+        } else if (t.createdAt && typeof t.createdAt.toDate === 'function') {
+          // Firestore Timestamp object
+          createdAtIso = t.createdAt.toDate().toISOString();
+        } else if (t.createdAt instanceof Date) {
+          createdAtIso = t.createdAt.toISOString();
+        }
+        return createdAtIso > cutoffDate;
+      });
+      // Filter by user
+      if (userType === 'email' && userFilter) {
+        filteredTrees = filteredTrees.filter(t => t.ownerEmail === userFilter);
+      } else if (userType === 'id' && userFilter) {
+        filteredTrees = filteredTrees.filter(t => t.ownerUid === userFilter);
+      }
+      if (filteredTrees.length === 0) {
+        setUploadStatus('ℹ️ No trees found for the selected filter');
+        setLoading(false);
+        setDeleteConfirmation({ show: false, type: '', count: 0, confirmText: '' });
+        return;
+      }
+      // Backup
+      setUploadStatus(`📦 Creating backup of ${filteredTrees.length} trees...`);
+      const backupData = filteredTrees.map(t => ({
+        Title: t.title || '',
+        Owner: t.ownerEmail || t.ownerUid || '',
+        CreatedAt: t.createdAt || '',
+        TreeId: t.id
+      }));
+      const workbook = XLSX.utils.book_new();
+      const worksheet = XLSX.utils.json_to_sheet(backupData);
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Trees Backup');
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
+      XLSX.writeFile(workbook, `trees_backup_${timestamp}.xlsx`);
+      setUploadStatus(`🗑️ Deleting ${filteredTrees.length} trees...`);
+      // Delete recursively
+      let deletedCount = 0;
+      for (const tree of filteredTrees) {
+        try {
+          await deleteTreeAndAssociations(tree.id);
+          deletedCount++;
+          setUploadStatus(`🗑️ Deleted ${deletedCount} of ${filteredTrees.length} trees...`);
+        } catch (err) {
+          console.error('Error deleting tree', tree.id, err);
+        }
+      }
+      setUploadStatus(`✅ Successfully deleted ${deletedCount} trees. Backup saved to Downloads.`);
+      await loadTrees();
+      setDeleteConfirmation({ show: false, type: '', count: 0, confirmText: '' });
+    } catch (error) {
+      console.error('Error deleting trees:', error);
+      setUploadStatus('❌ Error deleting trees: ' + error.message);
+    } finally {
+      setLoading(false);
+    }
+  }
 
   
 
@@ -869,6 +1016,28 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
     } catch (error) {
       console.error('Error generating Tithi Excel:', error);
       setAutoStatus('❌ Error generating Tithi Excel: ' + error.message);
+    }
+  }
+
+  // Download Trees Excel (all trees currently loaded)
+  function downloadTreesExcel() {
+    try {
+      const exportData = (trees || []).map(t => ({
+        'Tree Name *': t.title || '',
+        'Primary Member Name *': t.primaryMemberName || t.primaryMemberName || '',
+        'Contact Information *': t.contactInfo || t.contact || '',
+        'Location *': t.location || '',
+        'Owner': t.ownerEmail || t.ownerUid || ''
+      }));
+      const wb = XLSX.utils.book_new();
+      const ws = XLSX.utils.json_to_sheet(exportData);
+      XLSX.utils.book_append_sheet(wb, ws, 'Trees');
+      const ts = new Date().toISOString().slice(0,19).replace(/[:T]/g,'');
+      XLSX.writeFile(wb, `trees_export_${ts}.xlsx`);
+      setUploadStatus(`✅ Exported ${exportData.length} trees to trees_export_${ts}.xlsx`);
+    } catch (err) {
+      console.error('Error exporting trees:', err);
+      setUploadStatus('❌ Error exporting trees: ' + (err.message || err));
     }
   }
 
@@ -1799,48 +1968,53 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
     console.warn('deleteTestData() should not be called directly. Use requestDeleteTestData() to show confirmation.');
   }
 
-  // Request confirmation for deleting recent test data (created in last 30 days)
+  // Request confirmation for deleting test data by range/user
   function requestDeleteTestData() {
-    const thirtyDaysAgo = new Date();
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-    const cutoffDate = thirtyDaysAgo.toISOString();
-
-    const recentTithis = tithis.filter(t => t.createdAt && t.createdAt > cutoffDate);
-    const recentEvents = events.filter(e => e.createdAt && e.createdAt > cutoffDate);
-
-    const total = recentTithis.length + recentEvents.length;
-    if (total === 0) {
-      setUploadStatus('ℹ️ No recent data found (created in last 30 days)');
-      return;
-    }
-
-    // Store counts in deleteConfirmation.details for use in modal
-    setDeleteConfirmation({ show: true, type: 'recent', count: total, confirmText: '', details: { tithis: recentTithis.length, events: recentEvents.length } });
+    setDeleteConfirmation({
+      show: true,
+      type: 'recent',
+      count: 0,
+      confirmText: '',
+      details: null,
+      range: '30', // default to 30 days
+      userFilter: '',
+      userType: 'all', // 'all', 'email', 'id'
+    });
   }
 
-  // Execute deletion of recent test data after user confirms
+  // Execute deletion of test data after user confirms, with range/user filter
   async function performDeleteTestData() {
-    const thirtyDaysAgo = new Date();
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-    const cutoffDate = thirtyDaysAgo.toISOString();
+    const { range = '30', userFilter = '', userType = 'all' } = deleteConfirmation;
+    const days = parseInt(range, 10);
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - days);
+    const cutoffDate = cutoff.toISOString();
 
-    const recentTithis = tithis.filter(t => t.createdAt && t.createdAt > cutoffDate);
-    const recentEvents = events.filter(e => e.createdAt && e.createdAt > cutoffDate);
+    // Filter tithis/events by date and user
+    let filteredTithis = tithis.filter(t => t.createdAt && t.createdAt > cutoffDate);
+    let filteredEvents = events.filter(e => e.createdAt && e.createdAt > cutoffDate);
+    if (userType === 'email' && userFilter) {
+      filteredTithis = filteredTithis.filter(t => t.createdBy === userFilter);
+      filteredEvents = filteredEvents.filter(e => e.createdBy === userFilter);
+    } else if (userType === 'id' && userFilter) {
+      filteredTithis = filteredTithis.filter(t => t.createdById === userFilter);
+      filteredEvents = filteredEvents.filter(e => e.createdById === userFilter);
+    }
 
     setLoading(true);
-    setUploadStatus('🗑️ Deleting recent test data...');
+    setUploadStatus('🗑️ Deleting test data...');
 
     try {
       const batch = writeBatch(db);
       let deletedCount = 0;
 
-      recentTithis.forEach(tithi => {
+      filteredTithis.forEach(tithi => {
         const docRef = doc(db, 'tithis', tithi.id);
         batch.delete(docRef);
         deletedCount++;
       });
 
-      recentEvents.forEach(event => {
+      filteredEvents.forEach(event => {
         const docRef = doc(db, 'calendarEvents', event.id);
         batch.delete(docRef);
         deletedCount++;
@@ -1848,7 +2022,7 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
 
       await batch.commit();
 
-      setUploadStatus(`✅ Deleted ${deletedCount} recent records (${recentTithis.length} Tithis, ${recentEvents.length} Events)`);
+      setUploadStatus(`✅ Deleted ${deletedCount} records (${filteredTithis.length} Tithis, ${filteredEvents.length} Events)`);
 
       // Reload data
       await loadTithis();
@@ -1978,6 +2152,14 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
           🎉 Events
         </button>
         <button 
+          className={`admin-tab ${activeTab === 'trees' ? 'active' : ''}`}
+          onClick={() => setActiveTab('trees')}
+          disabled={!isAdmin}
+          title={!isAdmin ? 'Admin only' : ''}
+        >
+          🌳 Trees
+        </button>
+        <button 
           className={`admin-tab ${activeTab === 'calendar' ? 'active' : ''}`}
           onClick={() => setActiveTab('calendar')}
           disabled={!hasPermission(PERMISSIONS.MANAGE_CALENDAR)}
@@ -2008,6 +2190,46 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
         </div>
       )}
 
+      {activeTab === 'trees' && (
+        <div className="admin-section">
+          <h2>🌳 Trees</h2>
+          <p className="section-description">View and export Trees from all users. Use the download button to export the table to Excel.</p>
+
+          <div style={{ marginBottom: 12 }}>
+            <button onClick={downloadTreesExcel} className="btn-primary" disabled={loading || !trees || trees.length === 0}>
+              📥 Download Trees (Excel)
+            </button>
+            <span style={{ marginLeft: 12, color: '#6b7280' }}>{trees.length} trees loaded</span>
+          </div>
+
+          <div className="preview-table-container">
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>Tree Name *</th>
+                  <th>Primary Member Name *</th>
+                  <th>Contact Information *</th>
+                  <th>Location *</th>
+                  <th>Owner</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(trees || []).slice(0, 500).map(tr => (
+                  <tr key={tr.id}>
+                    <td>{tr.title || ''}</td>
+                    <td>{tr.primaryMemberName || ''}</td>
+                    <td>{tr.contactInfo || tr.contact || ''}</td>
+                    <td>{tr.location || ''}</td>
+                    <td>{tr.ownerEmail || tr.ownerUid || ''}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            {trees.length > 500 && <div style={{ marginTop: 6, color: '#6b7280' }}>Showing first 500 of {trees.length} trees.</div>}
+          </div>
+        </div>
+      )}
+
       {/* User Management moved to Settings -> User Management (top-level). */}
 
       {/* Data Management Tab */}
@@ -2034,16 +2256,37 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
               </div>
             </div>
             <div className="stat-card">
+              <div className="stat-icon">🌳</div>
+              <div className="stat-content">
+                <div className="stat-label">Total Trees</div>
+                <div className="stat-value">{trees.length}</div>
+              </div>
+            </div>
+            <div className="stat-card">
               <div className="stat-icon">🕒</div>
               <div className="stat-content">
                 <div className="stat-label">Recent (30 days)</div>
                 <div className="stat-value">
                   {tithis.filter(t => t.createdAt && t.createdAt > new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()).length +
-                   events.filter(e => e.createdAt && e.createdAt > new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()).length}
+                   events.filter(e => e.createdAt && e.createdAt > new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()).length +
+                   trees.filter(tr => tr.createdAt && tr.createdAt > new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()).length}
                 </div>
               </div>
             </div>
           </div>
+            <div className="danger-action-card">
+              <div className="danger-action-info">
+                <h4>🗑️ Delete All Trees</h4>
+                <p>Remove all trees and all associated members, relationships, marriage points, and events. A backup file will be downloaded automatically.</p>
+              </div>
+              <button
+                onClick={handleBulkDeleteTrees}
+                className="btn-danger"
+                disabled={loading || trees.length === 0}
+              >
+                Delete All Trees
+              </button>
+            </div>
 
           <div className="danger-zone">
             <h3>⚠️ Danger Zone</h3>
@@ -2828,7 +3071,7 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
       {/* Delete Confirmation Modal */}
       {deleteConfirmation.show && (
         <div className="modal-overlay" onClick={() => setDeleteConfirmation({ show: false, type: '', count: 0, confirmText: '' })}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+          <div className="modal-content" style={{ maxWidth: 800, width: '100%' }} onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h3>⚠️ Confirm Bulk Delete</h3>
               <button onClick={() => setDeleteConfirmation({ show: false, type: '', count: 0, confirmText: '' })} className="modal-close nc-header-close" aria-label="Close">✕</button>
@@ -2849,7 +3092,7 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
                 ) : (
                   <>
                     <p className="warning-text">
-                      You are about to permanently delete <strong>{deleteConfirmation.count} {deleteConfirmation.type}</strong>.
+                      You are about to permanently delete <strong>{deleteConfirmation.type === 'trees' ? filteredTreesForModal.length : deleteConfirmation.count} {deleteConfirmation.type}</strong>.
                     </p>
                     <p className="warning-subtext">
                       A backup file will be automatically downloaded before deletion.
@@ -2858,23 +3101,75 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
                 )}
               </div>
 
-              <div className="form-group">
-                <label>
-                  {deleteConfirmation.type === 'recent' ? (
-                    <>Type <code>DELETE RECENT TEST DATA</code> to confirm:</>
-                  ) : (
-                    <>Type <code>DELETE ALL {deleteConfirmation.type.toUpperCase()}</code> to confirm:</>
+              {(deleteConfirmation.type === 'recent' || deleteConfirmation.type === 'trees') && (
+                <div className="form-group">
+                  <label>Delete Range</label>
+                  <select
+                    className="form-input"
+                    value={deleteConfirmation.range || '30'}
+                    onChange={e => setDeleteConfirmation(prev => ({ ...prev, range: e.target.value }))}
+                  >
+                    <option value="1">Last 1 day</option>
+                    <option value="2">Last 2 days</option>
+                    <option value="3">Last 3 days</option>
+                    <option value="4">Last 4 days</option>
+                    <option value="5">Last 5 days</option>
+                    <option value="6">Last 6 days</option>
+                    <option value="7">Last 7 days</option>
+                    <option value="30">Last 30 days</option>
+                  </select>
+                </div>
+              )}
+              {(deleteConfirmation.type === 'recent' || deleteConfirmation.type === 'trees') && (
+                <div className="form-group">
+                  <label>User Filter</label>
+                  <select
+                    className="form-input"
+                    value={deleteConfirmation.userType || 'all'}
+                    onChange={e => setDeleteConfirmation(prev => ({ ...prev, userType: e.target.value, userFilter: '' }))}
+                  >
+                    <option value="all">All Users</option>
+                    <option value="email">By Email</option>
+                    <option value="id">By User ID</option>
+                  </select>
+                  {(deleteConfirmation.userType === 'email' || deleteConfirmation.userType === 'id') && (
+                    <input
+                      type="text"
+                      className="form-input"
+                      placeholder={deleteConfirmation.userType === 'email' ? 'Enter user email' : 'Enter user ID'}
+                      value={deleteConfirmation.userFilter || ''}
+                      onChange={e => setDeleteConfirmation(prev => ({ ...prev, userFilter: e.target.value }))}
+                      style={{ marginTop: 4 }}
+                    />
                   )}
-                </label>
-                <input
-                  type="text"
-                  value={deleteConfirmation.confirmText}
-                  onChange={(e) => setDeleteConfirmation(prev => ({ ...prev, confirmText: e.target.value }))}
-                  className="form-input"
-                  placeholder={deleteConfirmation.type === 'recent' ? 'DELETE RECENT TEST DATA' : `DELETE ALL ${deleteConfirmation.type.toUpperCase()}`}
-                  autoFocus
+                </div>
+              )}
+              {/* Show filtered trees preview if deleting trees with filter */}
+              {deleteConfirmation.type === 'trees' && (
+                <FilteredTreesPreview
+                  trees={trees}
+                  range={deleteConfirmation.range}
+                  userType={deleteConfirmation.userType}
+                  userFilter={deleteConfirmation.userFilter}
                 />
-              </div>
+              )}
+              <label>
+                {deleteConfirmation.type === 'recent' ? (
+                  <>Type <code>DELETE RECENT TEST DATA</code> to confirm:</>
+                ) : deleteConfirmation.type === 'trees' ? (
+                  <>Type <code>DELETE ALL TREES</code> to confirm:</>
+                ) : (
+                  <>Type <code>DELETE ALL {deleteConfirmation.type.toUpperCase()}</code> to confirm:</>
+                )}
+              </label>
+              <input
+                type="text"
+                value={deleteConfirmation.confirmText}
+                onChange={(e) => setDeleteConfirmation(prev => ({ ...prev, confirmText: e.target.value }))}
+                className="form-input"
+                placeholder={deleteConfirmation.type === 'recent' ? 'DELETE RECENT TEST DATA' : deleteConfirmation.type === 'trees' ? 'DELETE ALL TREES' : `DELETE ALL ${deleteConfirmation.type.toUpperCase()}`}
+                autoFocus
+              />
             </div>
             
             <div className="modal-footer">
@@ -2888,14 +3183,16 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
                 onClick={() => {
                   if (deleteConfirmation.type === 'recent') {
                     performDeleteTestData();
+                  } else if (deleteConfirmation.type === 'trees') {
+                    executeBulkDeleteTrees();
                   } else {
                     executeBulkDelete();
                   }
                 }}
                 className="btn-danger"
-                disabled={deleteConfirmation.confirmText !== (deleteConfirmation.type === 'recent' ? 'DELETE RECENT TEST DATA' : `DELETE ALL ${deleteConfirmation.type.toUpperCase()}`)}
+                disabled={deleteConfirmation.confirmText !== (deleteConfirmation.type === 'recent' ? 'DELETE RECENT TEST DATA' : deleteConfirmation.type === 'trees' ? 'DELETE ALL TREES' : `DELETE ALL ${deleteConfirmation.type.toUpperCase()}`)}
               >
-                {deleteConfirmation.type === 'recent' ? `Delete ${deleteConfirmation.count} Recent Test Records` : `Delete All ${deleteConfirmation.count} ${deleteConfirmation.type}`}
+                {deleteConfirmation.type === 'recent' ? `Delete ${deleteConfirmation.count} Recent Test Records` : deleteConfirmation.type === 'trees' ? `Delete All ${filteredTreesForModal.length} Trees` : `Delete All ${deleteConfirmation.count} ${deleteConfirmation.type}`}
               </button>
             </div>
           </div>
@@ -3001,6 +3298,71 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
         </div>
       </div>
       )}
+    </div>
+  );
+}
+
+// Preview component for filtered trees in delete confirmation
+function FilteredTreesPreview({ trees, range, userType, userFilter }) {
+  // Compute filtered trees as in executeBulkDeleteTrees
+  const days = parseInt(range, 10);
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - days);
+  const cutoffDate = cutoff.toISOString();
+  let filtered = trees.filter(t => {
+    if (!t.createdAt) return false;
+    let createdAtIso = '';
+    if (typeof t.createdAt === 'string') {
+      createdAtIso = t.createdAt;
+    } else if (t.createdAt && typeof t.createdAt.toDate === 'function') {
+      // Firestore Timestamp object
+      createdAtIso = t.createdAt.toDate().toISOString();
+    } else if (t.createdAt instanceof Date) {
+      createdAtIso = t.createdAt.toISOString();
+    }
+    return createdAtIso > cutoffDate;
+  });
+  if (userType === 'email' && userFilter) {
+    filtered = filtered.filter(t => t.ownerEmail === userFilter);
+  } else if (userType === 'id' && userFilter) {
+    filtered = filtered.filter(t => t.ownerUid === userFilter);
+  }
+  if (filtered.length === 0) return <div className="status-message info">No trees match the selected filter.</div>;
+  return (
+    <div style={{ maxHeight: 200, overflowY: 'auto', margin: '10px 0' }}>
+      <div style={{ fontWeight: 600, marginBottom: 4 }}>Trees to be deleted ({filtered.length}):</div>
+      <table className="data-table" style={{ fontSize: '0.95em' }}>
+        <thead>
+          <tr>
+            <th>Title</th>
+            <th>Owner</th>
+            <th>Created At</th>
+            <th>Tree ID</th>
+          </tr>
+        </thead>
+        <tbody>
+          {filtered.slice(0, 20).map(t => (
+            <tr key={t.id}>
+              <td>{t.title || '(Untitled)'}</td>
+              <td>{t.ownerEmail || t.ownerUid || ''}</td>
+              <td>{(() => {
+                if (!t.createdAt) return '';
+                let iso = '';
+                if (typeof t.createdAt === 'string') {
+                  iso = t.createdAt;
+                } else if (t.createdAt && typeof t.createdAt.toDate === 'function') {
+                  iso = t.createdAt.toDate().toISOString();
+                } else if (t.createdAt instanceof Date) {
+                  iso = t.createdAt.toISOString();
+                }
+                return iso ? iso.slice(0, 19).replace('T', ' ') : '';
+              })()}</td>
+              <td style={{ fontSize: '0.85em', color: '#888' }}>{t.id}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      {filtered.length > 20 && <div style={{ fontSize: '0.9em', color: '#888', marginTop: 2 }}>Showing first 20 of {filtered.length} trees.</div>}
     </div>
   );
 }
