@@ -11,6 +11,7 @@ import { collection, addDoc, serverTimestamp, query, where, getDocs, doc, update
 import { formatAdDateToNepaliStringWithNumerals, convertAdToBs } from '../../utils/nepaliDateUtils';
 // Use Unicode `title`/`description` fields stored on events
 import { useLanguage } from '../../contexts/LanguageContext';
+import TreeShareModal from '../TreeShareModal';
 
 export default function TreeDetailPage({ user }) {
   const { t, tn, isNepali } = useLanguage();
@@ -40,6 +41,9 @@ export default function TreeDetailPage({ user }) {
   const [aboutFamilyHeaders, setAboutFamilyHeaders] = useState({ field1: 'Field 1', field2: 'Field 2', field3: 'Field 3' });
   const [savingAboutFamily, setSavingAboutFamily] = useState(false);
   const [selectedRowIndex, setSelectedRowIndex] = useState(null);
+
+  // Tree sharing state
+  const [showShareModal, setShowShareModal] = useState(false);
 
   // Check for highlighted event ID from navigation state
   useEffect(() => {
@@ -489,8 +493,17 @@ export default function TreeDetailPage({ user }) {
         <div className="max-w-6xl mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex-1">
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-3 flex-wrap">
                 <h1 className="text-2xl font-bold text-gray-800">{tree.title || 'Untitled Tree'}</h1>
+                {/* Shared Status Indicator */}
+                {tree.sharedWith && Object.keys(tree.sharedWith).length > 0 && (
+                  <span className="flex items-center gap-1.5 px-3 py-1 text-xs bg-blue-100 text-blue-700 rounded-full font-medium border border-blue-200">
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                    </svg>
+                    Shared with {Object.keys(tree.sharedWith).length} {Object.keys(tree.sharedWith).length === 1 ? 'user' : 'users'}
+                  </span>
+                )}
                 <button
                   onClick={handleOpenAboutFamily}
                   className="group flex items-center gap-2 px-3 py-1.5 text-sm bg-gradient-to-r from-purple-100 to-pink-100 hover:from-purple-200 hover:to-pink-200 text-purple-700 rounded-full font-medium transition-all shadow-sm hover:shadow-md"
@@ -500,6 +513,17 @@ export default function TreeDetailPage({ user }) {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                   <span className="hidden sm:inline">About Family</span>
+                </button>
+                <button
+                  onClick={() => setShowShareModal(true)}
+                  disabled={!user}
+                  className="group flex items-center gap-2 px-3 py-1.5 text-sm bg-gradient-to-r from-blue-100 to-indigo-100 hover:from-blue-200 hover:to-indigo-200 text-blue-700 rounded-full font-medium transition-all shadow-sm hover:shadow-md disabled:opacity-60 disabled:cursor-not-allowed"
+                  title="Share this tree with other users"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+                  </svg>
+                  <span className="hidden sm:inline">Share Tree</span>
                 </button>
               </div>
               <div className="flex items-center gap-4 mt-1 text-sm text-gray-600">
@@ -991,6 +1015,21 @@ export default function TreeDetailPage({ user }) {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Tree Share Modal */}
+      {showShareModal && user && tree && (
+        <TreeShareModal
+          isOpen={showShareModal}
+          onClose={() => setShowShareModal(false)}
+          tree={tree}
+          onComplete={() => {
+            loadTreeData(); // Reload to get updated shared info
+            setShowShareModal(false);
+          }}
+          userEmail={user.email}
+          userId={user.uid}
+        />
       )}
     </div>
   );

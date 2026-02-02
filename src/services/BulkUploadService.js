@@ -20,13 +20,23 @@ import {
   getDoc,
   writeBatch,
   Timestamp,
-  increment
+  increment,
+  deleteField
 } from 'firebase/firestore';
 import { SHARE_PERMISSIONS } from '../utils/TreeSharingUtils';
 import { USER_ROLES, DEFAULT_ROLE_PERMISSIONS } from '../constants/roles';
 import { convertBsToAd, getTithisForMonth, nepaliMonths, convertAdToBs } from '../utils/nepaliDateUtils';
 import { getTithiIndexByName, getTithiLunarMonthName, getTithiYearFromAdDate } from '../utils/nepaliDateUtils';
 import { normalizeForCompare } from '../utils/textNormalize';
+
+// Helper function to build structured member lookup keys
+// Uses JSON to avoid delimiter conflicts when tree/member names contain colons or other special chars
+function buildMemberKey(treeName, memberName) {
+  return JSON.stringify({ 
+    tree: normalizeForCompare(treeName), 
+    member: normalizeForCompare(memberName) 
+  });
+}
 
 // Normalize repetition strings (accept English and Nepali variants)
 function normalizeRepetition(raw) {
@@ -275,11 +285,19 @@ export const createTreesFromBulkUpload = async (treeData, userId, userEmail) => 
       }
     }
 
-    // Check for existing trees
+    // Check for existing trees - build both exact and normalized name sets
     const existingTreesSnap = await getDocs(
-      query(collection(db, 'trees'), where('owner', '==', userId))
+      query(collection(db, 'trees'), where('ownerUid', '==', userId))
     );
-    const existingTreeNames = new Set(existingTreesSnap.docs.map(doc => doc.data().name));
+    const existingTreeNames = new Set(
+      existingTreesSnap.docs.map(doc => doc.data().title || doc.data().name)
+    );
+    const existingTreeNamesNormalized = new Set(
+      existingTreesSnap.docs.map(doc => 
+        doc.data().titleNormalized || doc.data().nameNormalized || 
+        normalizeForCompare(doc.data().title || doc.data().name || '')
+      )
+    );
 
     for (const treeItem of treeData) {
       try {
@@ -297,11 +315,13 @@ export const createTreesFromBulkUpload = async (treeData, userId, userEmail) => 
           continue;
         }
 
-        // Check if tree already exists
-        if (existingTreeNames.has(treeName)) {
+        // Check if tree already exists (exact match or normalized match)
+        const normalizedTreeName = normalizeForCompare(treeName);
+        if (existingTreeNames.has(treeName) || 
+            existingTreeNamesNormalized.has(normalizedTreeName)) {
           results.failed.push({
             name: treeName,
-            reason: 'Tree already exists',
+            reason: 'Tree already exists (or name too similar to existing tree)',
             isDuplicate: true
           });
           results.stats.skipped++;
@@ -310,14 +330,19 @@ export const createTreesFromBulkUpload = async (treeData, userId, userEmail) => 
 
         // Create new tree
         const newTree = {
-          title: treeName,
+          title: treeName,  // Primary field used by UI components
+          titleNormalized: normalizeForCompare(treeName),
+          name: treeName,   // Kept for backwards compatibility
+          nameNormalized: normalizeForCompare(treeName),
           primaryMemberName: primaryName,
+          primaryMemberNameNormalized: normalizeForCompare(primaryName || ''),
           contact: contact,
-          contactInfo: contact,
           location: location,
-          owner: userId,
+          contactNormalized: normalizeForCompare(contact || ''),
+          locationNormalized: normalizeForCompare(location || ''),
+          ownerUid: userId,  // Primary field for Firestore security rules
+          owner: userId,     // Kept for backwards compatibility
           ownerEmail: userEmail,
-          ownerUid: userId,
           createdAt: Timestamp.now(),
           updatedAt: Timestamp.now(),
           memberCount: 0,
@@ -337,6 +362,7 @@ export const createTreesFromBulkUpload = async (treeData, userId, userEmail) => 
         });
         results.stats.created++;
         existingTreeNames.add(treeName); // Add to set to prevent duplicates in same batch
+        existingTreeNamesNormalized.add(normalizedTreeName); // Add normalized form too
       } catch (error) {
         console.error('Error creating individual tree:', {
           treeName: treeItem['Tree Name *'],
@@ -378,14 +404,18 @@ export const addFamilyMembersFromBulkUpload = async (memberData, userId, treeMap
     stats: {
       total: memberData.length,
       created: 0,
+      updated: 0,
       skipped: 0,
       errors: 0
     }
   };
 
-  const batch = writeBatch(db);
-  let batchCount = 0;
-  const BATCH_SIZE = 500;
+  let batch = writeBatch(db);
+  // Firestore limits: max 500 operations per batch. Each member add here uses
+  // 2 operations (set member doc + update tree doc). Track operations, not rows.
+  const MAX_BATCH_OPS = 500;
+  const OPS_PER_MEMBER = 2;
+  let currentBatchOps = 0;
 
   try {
     // Ensure user document exists before attempting to add members
@@ -394,6 +424,52 @@ export const addFamilyMembersFromBulkUpload = async (memberData, userId, treeMap
     
     if (!userDocSnap.exists()) {
       throw new Error('User setup incomplete. Please refresh the page and try again.');
+    }
+
+    // Build normalized lookup for tree names -> ids (tolerate minor variations)
+    const normalizedTreeIdByName = new Map();
+    for (const [k, v] of treeMap.entries()) {
+      normalizedTreeIdByName.set(normalizeForCompare(k), v);
+    }
+
+    // Prefetch existing members for all referenced trees to avoid per-row queries
+    const referencedTreeIds = new Set();
+    for (const row of memberData) {
+      const treeNameRaw = (row['Tree Name *'] || row['Tree Name'] || '').trim();
+      if (!treeNameRaw) continue;
+      const resolved = treeMap.get(treeNameRaw) || normalizedTreeIdByName.get(normalizeForCompare(treeNameRaw));
+      if (resolved) referencedTreeIds.add(resolved);
+    }
+
+    const existingMembersByTree = new Map(); // treeId -> Map(normalized member name -> { id, notes })
+    for (const tId of referencedTreeIds) {
+      try {
+        const snap = await getDocs(collection(db, 'trees', tId, 'members'));
+        const map = new Map();
+        snap.docs.forEach(d => {
+          const name = (d.data()?.name || '').toString();
+          if (name) map.set(normalizeForCompare(name), { id: d.id, notes: d.data()?.notes || '' });
+        });
+        existingMembersByTree.set(tId, map);
+      } catch (err) {
+        // If fetching members fails, continue; we'll fall back to per-row query
+        console.warn('Failed to prefetch members for tree', tId, err.message);
+      }
+    }
+
+    // Prefetch tree owner UIDs for referenced trees so admin uploads can be recorded as owner-created
+    const treeOwnerById = new Map();
+    for (const tId of referencedTreeIds) {
+      try {
+        const treeDoc = await getDoc(doc(db, 'trees', tId));
+        if (treeDoc.exists()) {
+          const td = treeDoc.data() || {};
+          const ownerUid = td.ownerUid || td.owner || null;
+          treeOwnerById.set(tId, ownerUid);
+        }
+      } catch (err) {
+        console.warn('Failed to fetch tree doc for owner lookup', tId, err.message || err);
+      }
     }
 
     for (const memberItem of memberData) {
@@ -411,7 +487,8 @@ export const addFamilyMembersFromBulkUpload = async (memberData, userId, treeMap
           continue;
         }
 
-        const treeId = treeMap.get(treeName);
+        // Resolve treeId using exact match first, then normalized lookup to tolerate formatting
+        const treeId = treeMap.get(treeName) || normalizedTreeIdByName.get(normalizeForCompare(treeName));
         if (!treeId) {
           results.failed.push({
             name: memberName,
@@ -422,23 +499,104 @@ export const addFamilyMembersFromBulkUpload = async (memberData, userId, treeMap
           continue;
         }
 
-        // Check if member already exists in this tree
-        const existingMembers = await getDocs(
-          query(
-            collection(db, 'trees', treeId, 'members'),
-            where('name', '==', memberName)
-          )
-        );
+        // Check if member already exists in this tree using prefetched map (normalized)
+        const normalizedMemberName = normalizeForCompare(memberName);
+        const existingMap = existingMembersByTree.get(treeId);
+        if (existingMap && existingMap.has(normalizedMemberName)) {
+          // Member exists: if Notes column provided, update notes; otherwise skip
+          const existing = existingMap.get(normalizedMemberName);
+          const notesValue = (memberItem['Notes'] || memberItem['Note'] || '').toString().trim();
 
-        if (existingMembers.size > 0) {
-          results.failed.push({
-            name: memberName,
-            tree: treeName,
-            reason: 'Member already exists in this tree',
-            isDuplicate: true
-          });
-          results.stats.skipped++;
-          continue;
+          if (notesValue) {
+            // Ensure batch has room for single update
+            if (currentBatchOps + 1 > MAX_BATCH_OPS) {
+              let committed = false;
+              let attempts = 0;
+              while (!committed && attempts < 3) {
+                try {
+                  attempts++;
+                  await batch.commit();
+                  console.log(`Committed batch (ops=${currentBatchOps}) before member-update after ${attempts} attempt(s)`);
+                  committed = true;
+                } catch (err) {
+                  console.warn(`Batch commit attempt ${attempts} failed:`, err.message);
+                  if (attempts < 3) await new Promise(r => setTimeout(r, 500 * attempts));
+                  else throw err;
+                }
+              }
+              batch = writeBatch(db);
+              currentBatchOps = 0;
+            }
+
+            const memberDocRef = doc(db, 'trees', treeId, 'members', existing.id);
+            batch.update(memberDocRef, { notes: notesValue, updatedAt: Timestamp.now() });
+            results.success.push({ name: memberName, tree: treeName, memberId: existing.id, updated: true });
+            results.stats.updated++;
+            // count as skipped for creation as well
+            results.stats.skipped++;
+            currentBatchOps += 1;
+
+            // Update cached value so subsequent rows see updated notes
+            existingMap.set(normalizedMemberName, { id: existing.id, notes: notesValue });
+            continue;
+          } else {
+            results.failed.push({
+              name: memberName,
+              tree: treeName,
+              reason: 'Member already exists in this tree',
+              isDuplicate: true
+            });
+            results.stats.skipped++;
+            continue;
+          }
+        } else if (!existingMap) {
+          // Fallback to direct query if prefetch wasn't available
+          const existingMembers = await getDocs(
+            query(
+              collection(db, 'trees', treeId, 'members'),
+              where('name', '==', memberName)
+            )
+          );
+          if (existingMembers.size > 0) {
+            const d = existingMembers.docs[0];
+            const existingId = d.id;
+            const notesValue = (memberItem['Notes'] || memberItem['Note'] || '').toString().trim();
+            if (notesValue) {
+              if (currentBatchOps + 1 > MAX_BATCH_OPS) {
+                let committed = false;
+                let attempts = 0;
+                while (!committed && attempts < 3) {
+                  try {
+                    attempts++;
+                    await batch.commit();
+                    committed = true;
+                  } catch (err) {
+                    console.warn(`Batch commit attempt ${attempts} failed:`, err.message);
+                    if (attempts < 3) await new Promise(r => setTimeout(r, 500 * attempts));
+                    else throw err;
+                  }
+                }
+                batch = writeBatch(db);
+                currentBatchOps = 0;
+              }
+
+              const memberDocRef = doc(db, 'trees', treeId, 'members', existingId);
+              batch.update(memberDocRef, { notes: notesValue, updatedAt: Timestamp.now() });
+              results.success.push({ name: memberName, tree: treeName, memberId: existingId, updated: true });
+              results.stats.updated++;
+              currentBatchOps += 1;
+              continue;
+            } else {
+              results.failed.push({
+                name: memberName,
+                tree: treeName,
+                reason: 'Member already exists in this tree',
+                isDuplicate: true
+              });
+              results.stats.skipped++;
+              continue;
+            }
+          }
         }
 
         // Generate member ID
@@ -488,11 +646,14 @@ export const addFamilyMembersFromBulkUpload = async (memberData, userId, treeMap
         }
 
         // Create member document with ALL fields from MemberModal
+        const ownerForThisTree = treeOwnerById.get(treeId) || null;
         const newMember = {
           treeId,
           memberId,
           name: memberName,
+          nameNormalized: normalizeForCompare(memberName || ''),
           nickname: memberItem['Nickname']?.trim() || '',
+          notes: (memberItem['Notes'] || memberItem['Note'] || '').toString().trim(),
           gender: genderValue,
           dob: dob || null,
           status: status.toLowerCase() === 'passed away' ? 'deceased' : 'alive',
@@ -502,8 +663,31 @@ export const addFamilyMembersFromBulkUpload = async (memberData, userId, treeMap
           // notes removed from member payload per template simplification
           createdAt: Timestamp.now(),
           updatedAt: Timestamp.now(),
-          createdBy: userId
+          // If admin is uploading on behalf of owner, record createdBy as ownerUid so owner sees records as their own
+          createdBy: ownerForThisTree || userId
         };
+
+        // If adding this member would exceed Firestore's per-batch operation
+        // limit, commit the current batch first and start a fresh one.
+        if (currentBatchOps + OPS_PER_MEMBER > MAX_BATCH_OPS) {
+          // commit with simple retry/backoff
+          let committed = false;
+          let attempts = 0;
+          while (!committed && attempts < 3) {
+            try {
+              attempts++;
+              await batch.commit();
+              console.log(`Committed batch (ops=${currentBatchOps}) after ${attempts} attempt(s)`);
+              committed = true;
+            } catch (err) {
+              console.warn(`Batch commit attempt ${attempts} failed:`, err.message);
+              if (attempts < 3) await new Promise(r => setTimeout(r, 500 * attempts));
+              else throw err;
+            }
+          }
+          batch = writeBatch(db);
+          currentBatchOps = 0;
+        }
 
         const memberRef = doc(collection(db, 'trees', treeId, 'members'));
         batch.set(memberRef, newMember);
@@ -523,13 +707,12 @@ export const addFamilyMembersFromBulkUpload = async (memberData, userId, treeMap
         });
         results.stats.created++;
 
-        batchCount++;
+        // Add to prefetched map so subsequent rows in the same upload don't duplicate
+        if (!existingMembersByTree.has(treeId)) existingMembersByTree.set(treeId, new Map());
+        existingMembersByTree.get(treeId).set(normalizeForCompare(memberName), { id: memberId, notes: '' });
 
-        // Commit batch if reaches limit
-        if (batchCount >= BATCH_SIZE) {
-          await batch.commit();
-          batchCount = 0;
-        }
+        // Track ops consumed by this member (set + update)
+        currentBatchOps += OPS_PER_MEMBER;
       } catch (error) {
         console.error('Error creating individual member:', {
           memberName: memberItem['Member Name *'],
@@ -546,11 +729,11 @@ export const addFamilyMembersFromBulkUpload = async (memberData, userId, treeMap
       }
     }
 
-    // Commit remaining batch
-    if (batchCount > 0) {
+    // Commit remaining batch (if any)
+    if (currentBatchOps > 0) {
       try {
         await batch.commit();
-        console.log(`Final batch committed with ${batchCount} members`);
+        console.log(`Final batch committed with ${currentBatchOps} operations`);
       } catch (commitErr) {
         console.error('Error committing final batch:', commitErr);
         throw new Error(`Failed to commit members: ${commitErr.message}`);
@@ -606,12 +789,134 @@ export const addEventsFromBulkUpload = async (eventData, userId, treeMap, member
 
     const normalizedMemberIdByKey = new Map();
     for (const [k, v] of memberMap.entries()) {
-      const parts = k.split(':');
-      const t = parts[0] || '';
-      const m = parts.slice(1).join(':') || '';
-      const nk = `${normalizeForCompare(t)}:${normalizeForCompare(m)}`;
-      normalizedMemberIdByKey.set(nk, v);
+      try {
+        // Try to parse as JSON structured key (new format)
+        const parsed = JSON.parse(k);
+        // Keys are already normalized, so just use as-is
+        normalizedMemberIdByKey.set(k, v);
+      } catch (e) {
+        // Fallback for old-style colon-delimited keys (backwards compatibility)
+        const parts = k.split('|||');
+        if (parts.length >= 2) {
+          const t = parts[0];
+          const m = parts.slice(1).join('|||');
+          const structured = buildMemberKey(t, m);
+          normalizedMemberIdByKey.set(structured, v);
+        } else {
+          // Try single colon split as last resort
+          const colonParts = k.split(':');
+          if (colonParts.length >= 2) {
+            const t = colonParts[0];
+            const m = colonParts.slice(1).join(':');
+            const structured = buildMemberKey(t, m);
+            normalizedMemberIdByKey.set(structured, v);
+          }
+        }
+      }
     }
+
+    // Prefetch tree owner UIDs for all trees referenced in the provided treeMap
+    const treeOwnerById = new Map();
+    try {
+      const treeIds = new Set(Array.from(treeMap.values()));
+      for (const tId of treeIds) {
+        try {
+          const treeDoc = await getDoc(doc(db, 'trees', tId));
+          if (treeDoc.exists()) {
+            const td = treeDoc.data() || {};
+            const ownerUid = td.ownerUid || td.owner || null;
+            treeOwnerById.set(tId, ownerUid);
+          }
+        } catch (e) {
+          console.warn('[BulkUpload] Failed to prefetch tree owner for', tId, e?.message || e);
+        }
+      }
+    } catch (e) {
+      console.warn('[BulkUpload] Error building tree owner cache', e?.message || e);
+    }
+
+    // Prefetch existing events for referenced tree/member pairs to avoid per-row queries
+    const existingEventsByTreeMember = new Map(); // key: `${treeId}:${memberId}` -> Map(eventKey -> { id, data })
+    try {
+      const referenced = new Map(); // treeId -> Set(memberId)
+      for (const ev of eventData) {
+        const treeName = (ev['Tree Name *'] || ev['Tree Name'] || '').toString().trim();
+        const memberName = (ev['Member Name *'] || ev['Member Name'] || '').toString().trim();
+        if (!treeName || !memberName) continue;
+
+        let treeId = treeMap.get(treeName) || treeMap.get((ev['Tree Name *'] || ev['Tree Name'] || '').toString().trim());
+        if (!treeId) treeId = normalizedTreeIdByName.get(normalizeForCompare(treeName)) || normalizedTreeIdByName.get(normalizeForCompare((ev['Tree Name *'] || ev['Tree Name'] || '').toString().trim()));
+        if (!treeId) continue;
+
+        let memberId = memberMap.get(`${treeName}:${memberName}`) || memberMap.get(`${(ev['Tree Name *'] || ev['Tree Name'] || '').toString().trim()}:${(ev['Member Name *'] || ev['Member Name'] || '').toString().trim()}`);
+        if (!memberId) {
+          const nk = `${normalizeForCompare(treeName)}:${normalizeForCompare(memberName)}`;
+          memberId = normalizedMemberIdByKey.get(nk);
+        }
+        if (!memberId) continue;
+
+        if (!referenced.has(treeId)) referenced.set(treeId, new Set());
+        referenced.get(treeId).add(memberId);
+      }
+
+      // For each tree, fetch events for memberId chunks (Firestore 'in' supports up to 10)
+      const CHUNK_SIZE = 10;
+      for (const [tId, memberSet] of referenced.entries()) {
+        const memberArr = Array.from(memberSet);
+        for (let i = 0; i < memberArr.length; i += CHUNK_SIZE) {
+          const chunk = memberArr.slice(i, i + CHUNK_SIZE);
+          try {
+            const q = query(collection(db, 'calendarEvents'), where('treeId', '==', tId), where('memberId', 'in', chunk));
+            const snap = await getDocs(q);
+            snap.docs.forEach(d => {
+              const data = d.data() || {};
+              const keyBase = `${tId}:${data.memberId}`;
+              if (!existingEventsByTreeMember.has(keyBase)) existingEventsByTreeMember.set(keyBase, new Map());
+              const titleNorm = normalizeForCompare(data.titleNormalized || data.title || '');
+              const dateKey = data.dateKey || '';
+              const tithiId = data.tithi?.id || '';
+              const tithiMonth = data.tithi?.month || '';
+              const eKey = `${titleNorm}::${dateKey}::${tithiId}::${tithiMonth}`;
+              existingEventsByTreeMember.get(keyBase).set(eKey, { id: d.id, data });
+            });
+          } catch (e) {
+            console.warn('[BulkUpload] Failed to prefetch events for tree', tId, 'chunk', e?.message || e);
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('[BulkUpload] Error building event prefetch cache', e?.message || e);
+    }
+
+    // Prepare batching for events to support large uploads (1k+ rows)
+    let batch = writeBatch(db);
+    const MAX_BATCH_OPS = 500; // Firestore limit
+    const OPS_PER_EVENT = 1; // single set per event
+    let currentBatchOps = 0;
+
+    // commit helper with retry/backoff
+    const commitBatch = async () => {
+      if (currentBatchOps === 0) return;
+      let committed = false;
+      let attempts = 0;
+      while (!committed && attempts < 4) {
+        try {
+          attempts++;
+          await batch.commit();
+          console.log(`[BulkUpload] Committed event batch (ops=${currentBatchOps}) after ${attempts} attempt(s)`);
+          committed = true;
+        } catch (err) {
+          console.warn(`[BulkUpload] Batch commit attempt ${attempts} failed:`, err.message || err);
+          if (attempts < 4) await new Promise(r => setTimeout(r, 300 * attempts));
+          else throw err;
+        }
+      }
+      batch = writeBatch(db);
+      currentBatchOps = 0;
+    };
+
+    // Cache for tithi query results to avoid repeated DB queries for same tithi
+    const tithiQueryCache = new Map();
 
     for (const eventItem of eventData) {
       try {
@@ -683,19 +988,28 @@ export const addEventsFromBulkUpload = async (eventData, userId, treeMap, member
           continue;
         }
 
-        // Resolve memberId using direct, raw, and normalized lookups
-        const memberKey = `${treeName}:${memberName}`;
-        const memberKeyRaw = `${rawTreeName}:${rawMemberName}`;
+        // Resolve memberId using structured keys
+        const memberKey = buildMemberKey(treeName, memberName);
+        const memberKeyRaw = buildMemberKey(rawTreeName, rawMemberName);
         let memberId = memberMap.get(memberKey) || memberMap.get(memberKeyRaw);
         if (!memberId) {
-          const normalizedKey = `${normalizeForCompare(treeName)}:${normalizeForCompare(memberName)}`;
-          const normalizedKeyRaw = `${normalizeForCompare(rawTreeName)}:${normalizeForCompare(rawMemberName)}`;
-          memberId = normalizedMemberIdByKey.get(normalizedKey) || normalizedMemberIdByKey.get(normalizedKeyRaw);
+          // Try normalized lookup (should be the same as memberKey since buildMemberKey normalizes)
+          memberId = normalizedMemberIdByKey.get(memberKey) || normalizedMemberIdByKey.get(memberKeyRaw);
           if (memberId) console.log('[BulkUpload] Resolved memberId via normalized fallback for', { memberName, rawMemberName });
         }
         if (!memberId) {
-          const normalizedKey = `${normalizeForCompare(treeName)}:${normalizeForCompare(memberName)}`;
-          console.warn('[BulkUpload] Member lookup failed for:', { treeName, memberName, memberKey, normalizedKey, availableNormalizedMembers: Array.from(normalizedMemberIdByKey.keys()).slice(0,50) });
+          console.warn('[BulkUpload] Member lookup failed for:', { 
+            treeName, 
+            memberName, 
+            attemptedKey: memberKey,
+            normalizedTreeName: normalizeForCompare(treeName),
+            normalizedMemberName: normalizeForCompare(memberName),
+            availableKeys: Array.from(normalizedMemberIdByKey.keys()).slice(0, 10),
+            hexDump: {
+              treeNameHex: Array.from(treeName).map(c => c.charCodeAt(0).toString(16).padStart(4, '0')).join(' '),
+              memberNameHex: Array.from(memberName).map(c => c.charCodeAt(0).toString(16).padStart(4, '0')).join(' ')
+            }
+          });
           results.failed.push({
             member: memberName,
             event: eventName,
@@ -712,6 +1026,8 @@ export const addEventsFromBulkUpload = async (eventData, userId, treeMap, member
         const finalTitle = titleRaw;
         const finalDescription = descriptionRaw;
 
+        const ownerForThisTree = treeOwnerById.get(treeId) || null;
+
         let eventPayload = {
           treeId,
           memberId,
@@ -725,7 +1041,8 @@ export const addEventsFromBulkUpload = async (eventData, userId, treeMap, member
           repetition: repeats,
           createdAt: Timestamp.now(),
           updatedAt: Timestamp.now(),
-          createdBy: userId,
+          // Record createdBy as tree owner when available so admin uploads appear as owner-created
+          createdBy: ownerForThisTree || userId,
           isPublic: false
         };
 
@@ -831,22 +1148,28 @@ export const addEventsFromBulkUpload = async (eventData, userId, treeMap, member
             
             const pakshaNepali = paksha === 'Shukla' ? 'शुक्लपक्ष' : 'कृष्णपक्ष';
             const fullName = `${pakshaNepali} ${tithiMapping.nepaliName}`;
-            const q = query(collection(db, 'tithis'), where('name', '>=', fullName), where('name', '<=', fullName + '\uf8ff'));
-            const snapshot = await getDocs(q);
-            
+            const cacheKey = `${fullName}::${currentBsYear}`;
+            let snapshotDocs = tithiQueryCache.get(cacheKey);
+            if (!snapshotDocs) {
+              const q = query(collection(db, 'tithis'), where('name', '>=', fullName), where('name', '<=', fullName + '\uf8ff'));
+              const snap = await getDocs(q);
+              snapshotDocs = snap.docs;
+              tithiQueryCache.set(cacheKey, snapshotDocs);
+            }
+
             let matchingTithi = null;
             let actualTithiLunarMonth = null;
-            
-            snapshot.docs.forEach(doc => {
+
+            snapshotDocs.forEach(doc => {
               const t = doc.data();
               if (!t.name.includes(tithiMapping.nepaliName) || !t.name.includes(pakshaNepali)) return;
-              
+
               const tithiIndex = getTithiIndexByName(tithiMapping.nepaliName, { fallbackToOne: false });
               if (!tithiIndex) return;
-              
+
               const lunarMonthName = getTithiLunarMonthName(paksha, tithiIndex, t.startDate);
               const tithiYearInfo = getTithiYearFromAdDate(t.startDate, null, paksha, tithiIndex);
-              
+
               // Match by: lunar month name + BS year
               if (lunarMonthName === selectedMonthName && tithiYearInfo.tithiYear === currentBsYear) {
                 matchingTithi = t;
@@ -897,38 +1220,61 @@ export const addEventsFromBulkUpload = async (eventData, userId, treeMap, member
           console.log('[BulkUpload] Creating tithi event:', { eventName, memberName, tithi: { month: eventPayload.tithi.month, paksha: eventPayload.tithi.paksha, name: eventPayload.tithi.name } });
         }
 
-        // Create event in calendarEvents collection
-        const eventRef = doc(collection(db, 'calendarEvents'));
-        // Minimal safe log: avoid sensitive/full payload dumps in console
-        console.log('[BulkUpload] Saving event:', { eventName, entryMode, repetition: eventPayload.repetition, hasTithi: 'tithi' in eventPayload });
-        await setDoc(eventRef, eventPayload);
-
-        // Read back the saved document to verify persisted fields (debugging)
+        // Attempt to find an existing matching event using prefetched cache (same treeId, memberId, titleNormalized)
         try {
-          const savedSnap = await getDoc(eventRef);
-          if (savedSnap.exists()) {
-            // Log full saved document as string to ensure visibility in console
-            try {
-              const savedData = savedSnap.data();
-              // Log only id and keys to avoid exposing full payload in console
-              console.log('[BulkUpload] Saved event id:', savedSnap.id, 'fields:', Object.keys(savedData || {}));
-              if (!savedData || !savedData.tithi) {
-                console.warn('[BulkUpload] No tithi object found in saved event');
+          const pairKey = `${treeId}:${memberId}`;
+          const titleKey = normalizeForCompare(eventPayload.titleNormalized || '');
+          const dateKey = eventPayload.dateKey || '';
+          const tithiId = eventPayload.tithi?.id || '';
+          const tithiMonth = eventPayload.tithi?.month || '';
+          const lookupKey = `${titleKey}::${dateKey}::${tithiId}::${tithiMonth}`;
+
+          const mapForPair = existingEventsByTreeMember.get(pairKey);
+          if (mapForPair && mapForPair.has(lookupKey)) {
+            const evEntry = mapForPair.get(lookupKey);
+            const existingId = evEntry.id;
+            const descValue = (finalDescription || '').trim();
+            if (descValue) {
+              if (currentBatchOps + 1 > MAX_BATCH_OPS) {
+                await commitBatch();
               }
-            } catch (sErr) {
-              console.log('[BulkUpload] Saved event readback failed to stringify keys:', sErr);
+              const existingRef = doc(db, 'calendarEvents', existingId);
+              batch.update(existingRef, {
+                description: descValue,
+                descriptionRaw: descriptionRaw,
+                descriptionNormalized: normalizeForCompare(descValue),
+                updatedAt: Timestamp.now()
+              });
+              currentBatchOps += 1;
+              results.success.push({ member: memberName, event: eventName, eventId: existingId, updated: true });
+              results.stats.updated = (results.stats.updated || 0) + 1;
+              continue;
             }
-          } else {
-            console.warn('[BulkUpload] Saved event not found after write (unexpected)');
+            results.failed.push({ member: memberName, event: eventName, reason: 'Event already exists' });
+            results.stats.errors++;
+            continue;
           }
-        } catch (readErr) {
-          console.error('[BulkUpload] Error reading back saved event:', readErr);
+        } catch (cacheErr) {
+          console.warn('[BulkUpload] Event cache lookup failed:', cacheErr?.message || cacheErr);
+          // fall through and create new event
         }
 
+        // Prepare event write via batch (avoid immediate setDoc for bulk)
+        // Commit current batch first if this event would exceed batch op limits
+        if (currentBatchOps + OPS_PER_EVENT > MAX_BATCH_OPS) {
+          await commitBatch();
+        }
+
+        const eventRef = doc(collection(db, 'calendarEvents'));
+        batch.set(eventRef, eventPayload);
+        currentBatchOps += OPS_PER_EVENT;
+
+        // Record success (event will be created on commit)
         results.success.push({
           member: memberName,
           event: eventName,
           entryMode,
+          eventId: eventRef.id,
           created: true
         });
         results.stats.created++;
@@ -946,6 +1292,14 @@ export const addEventsFromBulkUpload = async (eventData, userId, treeMap, member
         });
         results.stats.errors++;
       }
+    }
+
+    // Commit any remaining event writes
+    try {
+      await commitBatch();
+    } catch (err) {
+      console.error('[BulkUpload] Error committing final event batch:', err);
+      throw err;
     }
 
     console.log('Event creation completed:', results.stats);
@@ -973,19 +1327,27 @@ export const addEventsFromBulkUpload = async (eventData, userId, treeMap, member
 export const shareTreeWithUser = async (treeId, recipientEmail, permission, ownerEmail) => {
   try {
     const treeRef = doc(db, 'trees', treeId);
-    const sharedWith = {};
-    sharedWith[recipientEmail] = {
-      permission: permission || SHARE_PERMISSIONS.VIEW,
-      sharedAt: Timestamp.now(),
-      sharedBy: ownerEmail
-    };
+    const normalizedEmail = recipientEmail.toLowerCase();
+    
+    // Get current tree to check existing sharedWithEmails
+    const treeSnap = await getDoc(treeRef);
+    const treeData = treeSnap.data();
+    const currentSharedEmails = treeData?.sharedWithEmails || [];
+    
+    // Add email to array if not already present
+    const updatedEmails = currentSharedEmails.includes(normalizedEmail) 
+      ? currentSharedEmails 
+      : [...currentSharedEmails, normalizedEmail];
 
     await updateDoc(treeRef, {
-      [`sharedWith.${recipientEmail}`]: {
+      // Keep the detailed sharedWith map for permission info
+      [`sharedWith.${normalizedEmail}`]: {
         permission: permission || SHARE_PERMISSIONS.VIEW,
         sharedAt: Timestamp.now(),
         sharedBy: ownerEmail
-      }
+      },
+      // Also maintain sharedWithEmails array for querying
+      sharedWithEmails: updatedEmails
     });
 
     return true;
@@ -1026,29 +1388,62 @@ export const updateSharePermission = async (treeId, recipientEmail, newPermissio
 export const removeTreeShare = async (treeId, recipientEmail) => {
   try {
     const treeRef = doc(db, 'trees', treeId);
+    const normalizedEmail = recipientEmail.toLowerCase();
 
-    // Use array-union to remove by setting to null, then filtering
-    // Firebase doesn't support deleting nested fields directly, so we fetch and update
-    const treeSnap = await getDocs(
-      query(collection(db, 'trees'), where('__name__', '==', treeId))
-    );
-
-    if (treeSnap.empty) {
+    // Get current tree to update sharedWithEmails array
+    const treeSnap = await getDoc(treeRef);
+    if (!treeSnap.exists()) {
       throw new Error('Tree not found');
     }
 
-    const treeData = treeSnap.docs[0].data();
-    const updatedSharedWith = { ...treeData.sharedWith };
-    delete updatedSharedWith[recipientEmail];
+    const treeData = treeSnap.data();
+    const currentSharedEmails = treeData?.sharedWithEmails || [];
+    
+    // Remove email from array
+    const updatedEmails = currentSharedEmails.filter(email => email !== normalizedEmail);
 
+    // Remove from sharedWith map and update sharedWithEmails array
     await updateDoc(treeRef, {
-      sharedWith: updatedSharedWith
+      [`sharedWith.${normalizedEmail}`]: deleteField(),
+      sharedWithEmails: updatedEmails
     });
 
     return true;
   } catch (error) {
     console.error('Error removing share:', error);
     throw new Error(`Failed to remove share: ${error.message}`);
+  }
+};
+
+/**
+ * Share multiple trees with a user
+ * @param {Array<String>} treeIds - Array of tree IDs to share
+ * @param {String} recipientEmail - Email of recipient
+ * @param {String} permission - Permission level ('view' or 'edit')
+ * @param {String} ownerEmail - Email of user sharing the trees
+ * @returns {Promise<Object>} Results {success: number, failed: Array}
+ */
+export const shareBulkTreesWithUser = async (treeIds, recipientEmail, permission, ownerEmail) => {
+  const results = {
+    success: 0,
+    failed: [],
+    errors: []
+  };
+
+  try {
+    for (const treeId of treeIds) {
+      try {
+        await shareTreeWithUser(treeId, recipientEmail, permission, ownerEmail);
+        results.success++;
+      } catch (error) {
+        results.failed.push(treeId);
+        results.errors.push({ treeId, error: error.message });
+      }
+    }
+    return results;
+  } catch (error) {
+    console.error('Error in bulk share:', error);
+    throw new Error(`Bulk sharing failed: ${error.message}`);
   }
 };
 
@@ -1080,5 +1475,6 @@ export default {
   shareTreeWithUser,
   updateSharePermission,
   removeTreeShare,
+  shareBulkTreesWithUser,
   getSharedTreesForUser
 };

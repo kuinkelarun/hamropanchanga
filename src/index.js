@@ -4,6 +4,12 @@ import './index.css';
 import './App.css';
 import App from './App';
 import reportWebVitals from './reportWebVitals';
+import { db } from './firebase';
+
+// Expose db globally for migration scripts in development
+if (process.env.NODE_ENV === 'development' || true) { // Always expose for admin tools
+  window.db = db;
+}
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(

@@ -1,6 +1,7 @@
 // Clean BulkUploadValidation - no template literals
 import { getTithisForMonth } from './nepaliDateUtils';
 import { normalizeForCompare } from './textNormalize';
+import { Members } from '../components/TreeBuilder/utils/firestoreTreeApi';
 // Simple pakshya canonicalization (accepts Nepali/English variants)
 const canonicalizePakshya = (raw) => {
   if (!raw) return null;
@@ -76,7 +77,7 @@ export const validateMemberData = (data = [], existingTrees = [], existingMember
   return { isValid: result.isValid, errors: result.errors, warnings: result.warnings, summary: { totalRows: data.length, errorsCount: result.errors.length, warningsCount: result.warnings.length } };
 };
 
-export const validateEventData = (data = [], existingTrees = [], existingMembers = {}) => {
+export const validateEventData = async (data = [], existingTrees = [], existingMembers = {}, treeNameToId = {}) => {
   const result = new ValidationResult();
   if (!Array.isArray(data) || data.length === 0) { 
     result.addError('No data provided'); 
@@ -90,7 +91,19 @@ export const validateEventData = (data = [], existingTrees = [], existingMembers
     existingTreeMap[normalizeForCompare(t)] = t;
   });
 
-  data.forEach((row, idx) => {
+  // Build normalized map of existingMembers keyed by normalized tree name to avoid key-mismatch issues
+  const existingMembersNormalized = {};
+  Object.keys(existingMembers || {}).forEach(k => {
+    try {
+      const nk = normalizeForCompare(k);
+      existingMembersNormalized[nk] = existingMembers[k] || [];
+    } catch (e) {
+      // ignore
+    }
+  });
+
+  for (let idx = 0; idx < data.length; idx++) {
+    const row = data[idx];
     const r = idx + 2;
     // Expect Unicode input only; use raw row values
     const rowData = { ...row };
@@ -109,28 +122,74 @@ export const validateEventData = (data = [], existingTrees = [], existingMembers
     const matchedExistingName = existingTreeMap[normalizedRaw] || existingTreeMap[normalizedConverted] || null;
 
     if (!tree && !treeRaw) result.addError('Tree Name is required', r);
-    else if (!matchedExistingName) result.addError('Tree ' + displayTree + ' does not exist', r);
+    else if (!matchedExistingName) result.addWarning('Tree ' + displayTree + ' does not exist', r);
 
-    // Member validation: try exact match, then normalized match to handle Preeti/Unicode/English variants
+    // Member validation: try normalized match to handle Preeti/Unicode/English variants
     let matchedMemberName = null;
     if (!member) result.addError('Member Name is required', r);
     else if (matchedExistingName) {
-      const members = existingMembers[matchedExistingName] || [];
-      // Exact match first
-      if (members.includes(member)) matchedMemberName = member;
-      else {
-        // Build normalized map of existing members for this tree
-        const membersNormalizedMap = {};
-        members.forEach(m => { membersNormalizedMap[normalizeForCompare(m)] = m; });
+      const members = existingMembers[matchedExistingName] || existingMembersNormalized[normalizeForCompare(matchedExistingName)] || [];
+      // Build normalized map of existing members for this tree
+      const membersNormalizedMap = {};
+      members.forEach(m => { membersNormalizedMap[normalizeForCompare(m)] = m; });
 
-        const memberRaw = String(row['Member Name *'] || '').trim();
-        const normalizedMemberRaw = normalizeForCompare(memberRaw);
-        const normalizedMemberConverted = normalizeForCompare(member);
+      const memberRaw = String(row['Member Name *'] || '').trim();
+      const normalizedMemberRaw = normalizeForCompare(memberRaw);
+      const normalizedMemberConverted = normalizeForCompare(member);
 
-        matchedMemberName = membersNormalizedMap[normalizedMemberRaw] || membersNormalizedMap[normalizedMemberConverted] || null;
+      matchedMemberName = membersNormalizedMap[normalizedMemberRaw] || membersNormalizedMap[normalizedMemberConverted] || null;
+
+      // Fallback: try substring/contains matching in normalized forms (helps when uploaded name omits surname)
+      if (!matchedMemberName) {
+        const keys = Object.keys(membersNormalizedMap || {});
+        const foundKey = keys.find(k => (normalizedMemberRaw && k.includes(normalizedMemberRaw)) || (normalizedMemberRaw && normalizedMemberRaw.includes(k)));
+        if (foundKey) {
+          matchedMemberName = membersNormalizedMap[foundKey];
+          result.addWarning(`Approximated member match for ${memberRaw} -> ${matchedMemberName} in tree ${displayTree}`, r);
+        }
       }
 
-      if (!matchedMemberName) result.addError('Member ' + (String(row['Member Name *'] || member)) + ' not found in tree ' + displayTree, r);
+      if (!matchedMemberName) {
+        // Attempt an on-demand fetch from the DB for the expected tree and try to match live data.
+        let didLiveMatch = false;
+        try {
+          if (treeNameToId) {
+            const tid = treeNameToId[matchedExistingName] || treeNameToId[existingTreeMap[normalizeForCompare(matchedExistingName)]];
+            if (tid) {
+              const fetched = await Members.list(tid);
+              const fetchedNames = (fetched || []).map(m => (m.name || '').toString().trim()).filter(Boolean);
+              // build normalized map from fetched members
+              const liveMap = {};
+              fetchedNames.forEach(n => { liveMap[normalizeForCompare(n)] = n; });
+
+              const candidate = liveMap[normalizedMemberRaw] || liveMap[normalizedMemberConverted] || null;
+              if (!candidate) {
+                const fk = Object.keys(liveMap || {});
+                const foundKey = fk.find(k => (normalizedMemberRaw && k.includes(normalizedMemberRaw)) || (normalizedMemberRaw && normalizedMemberRaw.includes(k)));
+                if (foundKey) {
+                  matchedMemberName = liveMap[foundKey];
+                  result.addWarning(`Matched member by live lookup for ${memberRaw} -> ${matchedMemberName} in tree ${displayTree}`, r);
+                  didLiveMatch = true;
+                }
+              } else {
+                matchedMemberName = candidate;
+                result.addWarning(`Matched member by live lookup for ${memberRaw} -> ${matchedMemberName} in tree ${displayTree}`, r);
+                didLiveMatch = true;
+              }
+            }
+          }
+        } catch (fetchErr) {
+          // ignore fetch error for validation diagnostics
+        }
+
+        if (!didLiveMatch) {
+          // Prepare diagnostic info: normalized forms tried and available normalized members for this tree
+          const normalizedTried = [normalizedMemberRaw, normalizedMemberConverted].filter(Boolean).join(', ');
+          let availableNormalized = Object.keys(membersNormalizedMap).slice(0,50).join(', ');
+          const diag = `Member ${String(row['Member Name *'] || member)} not found in tree ${displayTree} (tried: ${normalizedTried}). Available (normalized, sample): ${availableNormalized}`;
+          result.addError(diag, r);
+        }
+      }
     }
     if (!eventName) result.addError('Event Name is required', r);
     // Accept Nepali variants for Entry Mode (e.g., 'मिति', 'तिथि', 'मिति अनुसार', 'तिथि अनुसार') and Preeti
@@ -241,7 +300,7 @@ export const validateEventData = (data = [], existingTrees = [], existingMembers
     const eventKey = keyTree + '||' + keyMember + '||' + eventName + '||' + String(rowData['Event Date (YYYY-MM-DD)'] || row['Event Date (YYYY-MM-DD)'] || '');
     if (seen.has(eventKey)) result.addWarning('Duplicate event detected', r);
     seen.add(eventKey);
-  });
+  }
 
   return { isValid: result.isValid, errors: result.errors, warnings: result.warnings, summary: { totalRows: data.length, errorsCount: result.errors.length, warningsCount: result.warnings.length } };
 };
