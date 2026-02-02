@@ -46,9 +46,7 @@ export default function TreeSelectionPage({ user, isAdmin }) {
   // Tree sharing state
   const [showShareModal, setShowShareModal] = useState(false);
 
-  // Migration state
-  const [isMigrating, setIsMigrating] = useState(false);
-  const [migrationMessage, setMigrationMessage] = useState('');
+  // (Migration state removed - one-time operations completed)
 
   // Cache owner email lookups for admin display in Other Users section
   const [ownerEmailByUid, setOwnerEmailByUid] = useState({});
@@ -92,70 +90,6 @@ export default function TreeSelectionPage({ user, isAdmin }) {
     if (isAdmin) return []; // Admins see all trees in "Other Trees" section
     return trees.filter(t => t.ownerUid !== user?.uid);
   }, [trees, user, isAdmin]);
-
-  // Migration function for shared trees
-  const runMigration = async () => {
-    if (!isAdmin) {
-      alert('Only administrators can run the migration.');
-      return;
-    }
-
-    if (!window.confirm('This will migrate all shared trees to add the sharedWithEmails array. Continue?')) {
-      return;
-    }
-
-    setIsMigrating(true);
-    setMigrationMessage('🔧 Starting migration...');
-
-    try {
-      const { collection, getDocs, updateDoc, doc } = await import('firebase/firestore');
-      const treesRef = collection(db, 'trees');
-      const treesSnapshot = await getDocs(treesRef);
-      
-      let migrated = 0;
-      let alreadyMigrated = 0;
-      let total = 0;
-
-      for (const treeDoc of treesSnapshot.docs) {
-        const treeData = treeDoc.data();
-        const treeId = treeDoc.id;
-
-        if (treeData.sharedWith && typeof treeData.sharedWith === 'object' && Object.keys(treeData.sharedWith).length > 0) {
-          total++;
-          const sharedEmails = Object.keys(treeData.sharedWith).map(email => email.toLowerCase());
-          
-          if (!treeData.sharedWithEmails || treeData.sharedWithEmails.length === 0) {
-            setMigrationMessage(`🔄 Migrating: ${treeData.title || treeId}...`);
-            const treeRef = doc(db, 'trees', treeId);
-            await updateDoc(treeRef, { sharedWithEmails: sharedEmails });
-            migrated++;
-          } else {
-            alreadyMigrated++;
-          }
-        }
-      }
-
-      setMigrationMessage(`✅ Migration complete! Migrated ${migrated} trees. ${alreadyMigrated} already had the array.`);
-      
-      // Reload trees after migration
-      setTimeout(async () => {
-        const all = await Trees.list(isAdmin ? null : user.uid, {
-          includeShared: !isAdmin,
-          userEmail: user.email,
-          includeDeleted: false
-        });
-        const active = (all || []).filter(t => !t.deleted);
-        setTrees(active);
-        setMigrationMessage('');
-      }, 3000);
-
-    } catch (error) {
-      console.error('Migration error:', error);
-      setMigrationMessage(`❌ Migration failed: ${error.message}`);
-    } finally {
-      setIsMigrating(false);
-    }
-  };
 
   // Check for duplicate tree names (case-insensitive, normalized) and show suggestions
   const checkDuplicateTreeName = (inputName) => {
@@ -546,24 +480,8 @@ export default function TreeSelectionPage({ user, isAdmin }) {
               >
                 📤 Share Trees
               </button>
-              {isAdmin && (
-                <button
-                  onClick={runMigration}
-                  disabled={isMigrating}
-                  className="px-6 py-2.5 bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700 disabled:opacity-60 disabled:cursor-not-allowed text-white rounded-lg font-semibold shadow-md transition-all transform hover:scale-105"
-                  title="Fix shared trees permission error by adding sharedWithEmails array"
-                >
-                  {isMigrating ? '🔄 Migrating...' : '🔧 Fix Shared Trees'}
-                </button>
-              )}
             </div>
           </div>
-
-          {migrationMessage && (
-            <div className="mb-4 text-sm bg-blue-50 border border-blue-200 rounded-lg px-4 py-3 text-blue-800">
-              {migrationMessage}
-            </div>
-          )}
 
           {myTrees.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
