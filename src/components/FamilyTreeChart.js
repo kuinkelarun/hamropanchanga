@@ -35,21 +35,23 @@ const FamilyTreeChart = ({ familyMembers, onEdit, onDeleteRequest }) => {
         function compute() {
             const container = containerRef.current;
             if (!container) return;
-            const cRect = container.getBoundingClientRect();
-            const lines = [];
+            
+            try {
+                const cRect = container.getBoundingClientRect();
+                const lines = [];
 
-            Object.values(familyMembers || {}).forEach(member => {
-                const childEl = boxRefs.current[member.id];
-                if (!member.parentIds || member.parentIds.length === 0) return;
-                if (!childEl) return;
-                const childRect = childEl.getBoundingClientRect();
-                const childX = childRect.left - cRect.left + childRect.width / 2;
-                const childY = childRect.top - cRect.top; // top of child box
+                Object.values(familyMembers || {}).forEach(member => {
+                    const childEl = boxRefs.current[member.id];
+                    if (!member.parentIds || member.parentIds.length === 0) return;
+                    if (!childEl) return;
+                    const childRect = childEl.getBoundingClientRect();
+                    const childX = childRect.left - cRect.left + childRect.width / 2;
+                    const childY = childRect.top - cRect.top; // top of child box
 
-                member.parentIds.forEach(pid => {
-                    const parentEl = boxRefs.current[pid];
-                    if (!parentEl) return;
-                    const pRect = parentEl.getBoundingClientRect();
+                    member.parentIds.forEach(pid => {
+                        const parentEl = boxRefs.current[pid];
+                        if (!parentEl) return;
+                        const pRect = parentEl.getBoundingClientRect();
                     const parentX = pRect.left - cRect.left + pRect.width / 2;
                     const parentY = pRect.top - cRect.top + pRect.height; // bottom of parent box
 
@@ -73,6 +75,10 @@ const FamilyTreeChart = ({ familyMembers, onEdit, onDeleteRequest }) => {
             });
 
             setConnectors(lines);
+            } catch (e) {
+                // Element unmounted during measurement; ignore silently
+                console.debug('FamilyTreeChart: element unmounted during compute', e);
+            }
         }
 
         // compute on next frame to ensure layout is settled

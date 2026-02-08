@@ -129,7 +129,9 @@ export default function TreeBuilderPage({ user }) {
   const onDrop = useCallback(async (event) => {
     event.preventDefault();
 
-    const reactFlowBounds = document.querySelector('.react-flow').getBoundingClientRect();
+    const reactFlowElement = document.querySelector('.react-flow');
+    if (!reactFlowElement) return; // Element not ready
+    const reactFlowBounds = reactFlowElement.getBoundingClientRect();
     const memberData = JSON.parse(event.dataTransfer.getData('application/reactflow'));
     
     // Calculate position relative to canvas
