@@ -60,6 +60,8 @@ const Block1 = () => {
         if (!cardsRowRef.current) return;
 
         const updateWidth = () => {
+            // Guard against unmounted ref or missing element
+            if (!cardsRowRef.current) return;
             const rect = cardsRowRef.current.getBoundingClientRect();
             setCardsWidth(rect.width);
         };
