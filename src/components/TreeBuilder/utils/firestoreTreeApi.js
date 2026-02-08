@@ -53,6 +53,7 @@ export const Trees = {
       title: safeTitle,
       titleNormalized: normalizeForCompare(safeTitle),
       ownerUid: ownerUid || null,
+      ownerEmail: metadata.ownerEmail || '',
       contact: metadata.contact || '',
       location: metadata.location || '',
       primaryMemberName: metadata.primaryMemberName || '',

@@ -7,6 +7,50 @@ service cloud.firestore {
       return request.auth != null;
     }
 
+    // Some auth providers / tenants may not populate request.auth.token.email.
+    // Try multiple sources in order:
+    // 1) request.auth.token.email
+    // 2) request.auth.token.firebase.identities.email[0]
+    // 3) /users/{uid}.email
+    //
+    // IMPORTANT: Avoid using the /users fallback inside LIST queries.
+    // LIST (collection queries) can fail with PERMISSION_DENIED if rules perform
+    // too many get()/exists() calls across matched documents.
+    function userEmailLower() {
+      return !isAuthenticated() ? null :
+        (
+          request.auth.token.email != null ? request.auth.token.email.lower() :
+          (
+            (request.auth.token.firebase != null &&
+             request.auth.token.firebase.identities != null &&
+             request.auth.token.firebase.identities.email != null &&
+             request.auth.token.firebase.identities.email.size() > 0
+            ) ? request.auth.token.firebase.identities.email[0].lower() :
+            (
+              (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+               get(/databases/$(database)/documents/users/$(request.auth.uid)).data.email != null
+              ) ? get(/databases/$(database)/documents/users/$(request.auth.uid)).data.email.lower() : null
+            )
+          )
+        );
+    }
+
+    // Token-only email resolver (NO get()/exists()).
+    // Use this in LIST rules to keep queries reliable.
+    function userEmailLowerFromToken() {
+      return !isAuthenticated() ? null :
+        (
+          request.auth.token.email != null ? request.auth.token.email.lower() :
+          (
+            (request.auth.token.firebase != null &&
+             request.auth.token.firebase.identities != null &&
+             request.auth.token.firebase.identities.email != null &&
+             request.auth.token.firebase.identities.email.size() > 0
+            ) ? request.auth.token.firebase.identities.email[0].lower() : null
+          )
+        );
+    }
+
     // Admin if auth token has admin claim OR there exists an adminList document for their uid
     function isAdmin() {
       return isAuthenticated() && (
@@ -37,17 +81,31 @@ service cloud.firestore {
       return isAuthenticated() && userId == request.auth.uid;
     }
 
-    // Tree ownership check (used for calendarEvents access)
-    // Returns true if user owns the tree OR if tree is shared with user
+    // Tree read access check (used for calendarEvents and shared tree access)
+    // Returns true if user owns the tree OR if tree is shared with user (any permission level)
     function isTreeOwner(treeId) {
+      let email = userEmailLower();
       return isAuthenticated() &&
         treeId != null &&
         exists(/databases/$(database)/documents/trees/$(treeId)) &&
         (get(/databases/$(database)/documents/trees/$(treeId)).data.ownerUid == request.auth.uid ||
          (get(/databases/$(database)/documents/trees/$(treeId)).data.sharedWith != null &&
-          request.auth.token.email in get(/databases/$(database)/documents/trees/$(treeId)).data.sharedWith) ||
-         (get(/databases/$(database)/documents/trees/$(treeId)).data.sharedWithEmails != null &&
-          request.auth.token.email in get(/databases/$(database)/documents/trees/$(treeId)).data.sharedWithEmails));
+          email != null &&
+          email in get(/databases/$(database)/documents/trees/$(treeId)).data.sharedWith)
+        );
+    }
+    
+    // Tree edit access check - only owner or users with 'edit' permission can modify
+    function hasTreeEditPermission(treeId) {
+      let email = userEmailLower();
+      return isAuthenticated() &&
+        treeId != null &&
+        exists(/databases/$(database)/documents/trees/$(treeId)) &&
+        (get(/databases/$(database)/documents/trees/$(treeId)).data.ownerUid == request.auth.uid ||
+         (get(/databases/$(database)/documents/trees/$(treeId)).data.sharedWith != null &&
+          email != null &&
+          email in get(/databases/$(database)/documents/trees/$(treeId)).data.sharedWith &&
+          get(/databases/$(database)/documents/trees/$(treeId)).data.sharedWith[email].permission == 'edit'));
     }
 
     match /customers/{customerId} {
@@ -113,9 +171,11 @@ service cloud.firestore {
                        (isAuthenticated() && request.resource.data.createdBy == request.auth.uid);
       
       // Users can update/delete only their own events
+      // Tree-linked events can be updated/deleted only by tree owner or those with edit permission
       // Admins and users with manageEvents permission can modify any
       allow update, delete: if hasPermission('manageEvents') || 
-                               (isAuthenticated() && resource.data.createdBy == request.auth.uid);
+                               (isAuthenticated() && resource.data.createdBy == request.auth.uid) ||
+                               (resource.data.treeId != null && hasTreeEditPermission(resource.data.treeId));
     }
 
     // adminList controls which users are considered admins (bootstrap via console)
@@ -166,19 +226,29 @@ service cloud.firestore {
       // A tree is owned by ownerUid; admins can manage all trees.
       // Super users and regular users can create/manage their own trees.
       // Admins can update any tree (including sharedWith field for sharing)
-      // Users can read trees shared with them
-      allow read: if isAdmin() || 
+      // Users can read trees shared with them.
+      // Split GET vs LIST:
+      // - GET can use userEmailLower() (includes /users fallback)
+      // - LIST must avoid get()/exists() to prevent query-wide PERMISSION_DENIED
+      allow get: if isAdmin() ||
         isSuperUser() || // Super users can manage all trees (for bulk upload functionality)
+        (isAuthenticated() && resource.data.ownerUid == request.auth.uid) ||
+        (isAuthenticated() && userEmailLower() != null &&
+         resource.data.sharedWith != null &&
+         userEmailLower() in resource.data.sharedWith);
+
+      allow list: if isAdmin() || 
+        isSuperUser() ||
         (isAuthenticated() && (
-          // Owner can read
-          (resource != null && resource.data.ownerUid == request.auth.uid) ||
-          // User can read if tree is shared with them (check both map and array)
-          (resource != null && resource.data.sharedWith != null && 
-           request.auth.token.email in resource.data.sharedWith) ||
-          (resource != null && resource.data.sharedWithEmails != null && 
-           request.auth.token.email in resource.data.sharedWithEmails)
-        )
-      );
+          // Allow listing own trees
+          resource.data.ownerUid == request.auth.uid ||
+          // Allow listing trees shared with the user (check array, not map, for LIST queries)
+          (
+            resource.data.sharedWithEmails != null &&
+            userEmailLowerFromToken() != null &&
+            userEmailLowerFromToken() in resource.data.sharedWithEmails
+          )
+        ));
       
       // Write access: owner can do anything, admin can update sharedWith field
       allow create: if isAdmin() ||
@@ -198,25 +268,12 @@ service cloud.firestore {
         // Read access: owner, admin, super user, or shared user
         allow read: if isAdmin() || 
           isSuperUser() ||
-          (isAuthenticated() && (
-            get(/databases/$(database)/documents/trees/$(treeId)).data.ownerUid == request.auth.uid ||
-            (get(/databases/$(database)/documents/trees/$(treeId)).data.sharedWith != null &&
-             request.auth.token.email in get(/databases/$(database)/documents/trees/$(treeId)).data.sharedWith) ||
-            (get(/databases/$(database)/documents/trees/$(treeId)).data.sharedWithEmails != null &&
-             request.auth.token.email in get(/databases/$(database)/documents/trees/$(treeId)).data.sharedWithEmails)
-          ));
+          (isAuthenticated() && isTreeOwner(treeId));
         
         // Write access: owner, admin, super user, or shared user with edit permission
         allow write: if isAdmin() || 
           isSuperUser() ||
-          (isAuthenticated() && (
-            get(/databases/$(database)/documents/trees/$(treeId)).data.ownerUid == request.auth.uid ||
-            (get(/databases/$(database)/documents/trees/$(treeId)).data.sharedWith != null &&
-             request.auth.token.email in get(/databases/$(database)/documents/trees/$(treeId)).data.sharedWith &&
-             get(/databases/$(database)/documents/trees/$(treeId)).data.sharedWith[request.auth.token.email].permission == 'edit') ||
-            (get(/databases/$(database)/documents/trees/$(treeId)).data.sharedWithEmails != null &&
-             request.auth.token.email in get(/databases/$(database)/documents/trees/$(treeId)).data.sharedWithEmails)
-          ));
+          (isAuthenticated() && hasTreeEditPermission(treeId));
       }
 
       // Relationships subcollection for a given tree
@@ -224,25 +281,12 @@ service cloud.firestore {
         // Read access: owner, admin, super user, or shared user
         allow read: if isAdmin() || 
           isSuperUser() ||
-          (isAuthenticated() && (
-            get(/databases/$(database)/documents/trees/$(treeId)).data.ownerUid == request.auth.uid ||
-            (get(/databases/$(database)/documents/trees/$(treeId)).data.sharedWith != null &&
-             request.auth.token.email in get(/databases/$(database)/documents/trees/$(treeId)).data.sharedWith) ||
-            (get(/databases/$(database)/documents/trees/$(treeId)).data.sharedWithEmails != null &&
-             request.auth.token.email in get(/databases/$(database)/documents/trees/$(treeId)).data.sharedWithEmails)
-          ));
+          (isAuthenticated() && isTreeOwner(treeId));
         
         // Write access: owner, admin, super user, or shared user with edit permission
         allow write: if isAdmin() || 
           isSuperUser() ||
-          (isAuthenticated() && (
-            get(/databases/$(database)/documents/trees/$(treeId)).data.ownerUid == request.auth.uid ||
-            (get(/databases/$(database)/documents/trees/$(treeId)).data.sharedWith != null &&
-             request.auth.token.email in get(/databases/$(database)/documents/trees/$(treeId)).data.sharedWith &&
-             get(/databases/$(database)/documents/trees/$(treeId)).data.sharedWith[request.auth.token.email].permission == 'edit') ||
-            (get(/databases/$(database)/documents/trees/$(treeId)).data.sharedWithEmails != null &&
-             request.auth.token.email in get(/databases/$(database)/documents/trees/$(treeId)).data.sharedWithEmails)
-          ));
+          (isAuthenticated() && hasTreeEditPermission(treeId));
       }
 
       // Marriage points subcollection for a given tree
@@ -250,25 +294,12 @@ service cloud.firestore {
         // Read access: owner, admin, super user, or shared user
         allow read: if isAdmin() || 
           isSuperUser() ||
-          (isAuthenticated() && (
-            get(/databases/$(database)/documents/trees/$(treeId)).data.ownerUid == request.auth.uid ||
-            (get(/databases/$(database)/documents/trees/$(treeId)).data.sharedWith != null &&
-             request.auth.token.email in get(/databases/$(database)/documents/trees/$(treeId)).data.sharedWith) ||
-            (get(/databases/$(database)/documents/trees/$(treeId)).data.sharedWithEmails != null &&
-             request.auth.token.email in get(/databases/$(database)/documents/trees/$(treeId)).data.sharedWithEmails)
-          ));
+          (isAuthenticated() && isTreeOwner(treeId));
         
         // Write access: owner, admin, super user, or shared user with edit permission
         allow write: if isAdmin() || 
           isSuperUser() ||
-          (isAuthenticated() && (
-            get(/databases/$(database)/documents/trees/$(treeId)).data.ownerUid == request.auth.uid ||
-            (get(/databases/$(database)/documents/trees/$(treeId)).data.sharedWith != null &&
-             request.auth.token.email in get(/databases/$(database)/documents/trees/$(treeId)).data.sharedWith &&
-             get(/databases/$(database)/documents/trees/$(treeId)).data.sharedWith[request.auth.token.email].permission == 'edit') ||
-            (get(/databases/$(database)/documents/trees/$(treeId)).data.sharedWithEmails != null &&
-             request.auth.token.email in get(/databases/$(database)/documents/trees/$(treeId)).data.sharedWithEmails)
-          ));
+          (isAuthenticated() && hasTreeEditPermission(treeId));
       }
     }
   }

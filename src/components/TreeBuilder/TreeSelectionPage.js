@@ -13,6 +13,7 @@ import BulkTreeShareModal from '../BulkTreeShareModal';
 export default function TreeSelectionPage({ user, isAdmin }) {
   const navigate = useNavigate();
   const { t } = useLanguage();
+  const currentUserEmailLower = (user?.email || '').toLowerCase().trim();
   const [trees, setTrees] = useState([]);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
@@ -252,7 +253,8 @@ export default function TreeSelectionPage({ user, isAdmin }) {
       const newTree = await Trees.create(title, user.uid, { 
         contact, 
         location,
-        primaryMemberName: primaryName 
+        primaryMemberName: primaryName,
+        ownerEmail: user.email || ''
       });
       
       try {
@@ -493,12 +495,16 @@ export default function TreeSelectionPage({ user, isAdmin }) {
                         <div className="flex items-center gap-2 mb-1">
                           <h4 className="text-lg font-bold text-gray-800">{tree.title || t('treeSelection.untitledTree')}</h4>
                           {tree.sharedWith && Object.keys(tree.sharedWith).length > 0 && (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs bg-blue-100 text-blue-700 rounded-full font-medium border border-blue-200" title={`Shared with ${Object.keys(tree.sharedWith).length} user(s)`}>
-                              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                              </svg>
-                              {Object.keys(tree.sharedWith).length}
-                            </span>
+                            <div className="group relative">
+                              <span className="inline-flex items-center justify-center p-1 text-blue-700 cursor-pointer rounded hover:bg-blue-50 transition-colors">
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                                </svg>
+                              </span>
+                              <div className="absolute left-1/2 transform -translate-x-1/2 top-full mt-2 px-2 py-1 text-xs bg-gray-800 text-white rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-10">
+                                {`Shared with ${Object.keys(tree.sharedWith).length} ${Object.keys(tree.sharedWith).length === 1 ? 'user' : 'users'}`}
+                              </div>
+                            </div>
                           )}
                         </div>
                         <p className="text-xs text-gray-500">ID: {tree.id}</p>
@@ -561,9 +567,18 @@ export default function TreeSelectionPage({ user, isAdmin }) {
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-1">
                           <h4 className="text-lg font-bold text-gray-800">{tree.title || 'Untitled Tree'}</h4>
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs bg-blue-100 text-blue-700 rounded-full font-medium border border-blue-200">
-                            Shared
-                          </span>
+                          <div className="group relative">
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs bg-blue-100 text-blue-700 rounded-full font-medium border border-blue-200 cursor-pointer">
+                              Shared
+                            </span>
+                            <div className="absolute left-1/2 transform -translate-x-1/2 top-full mt-2 px-2 py-1 text-xs bg-gray-800 text-white rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-10">
+                              {`Shared by ${
+                                (currentUserEmailLower && tree.sharedWith && tree.sharedWith[currentUserEmailLower] && tree.sharedWith[currentUserEmailLower].sharedBy)
+                                  || tree.ownerEmail
+                                  || 'Unknown User'
+                              }`}
+                            </div>
+                          </div>
                         </div>
                         <p className="text-xs text-gray-500">ID: {tree.id}</p>
                       </div>
@@ -606,12 +621,16 @@ export default function TreeSelectionPage({ user, isAdmin }) {
                         <div className="flex items-center gap-2 mb-1">
                           <h4 className="text-lg font-bold text-gray-800">{tree.title || t('treeSelection.untitledTree')}</h4>
                           {tree.sharedWith && Object.keys(tree.sharedWith).length > 0 && (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs bg-blue-100 text-blue-700 rounded-full font-medium border border-blue-200" title={`Shared with ${Object.keys(tree.sharedWith).length} user(s)`}>
-                              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                              </svg>
-                              {Object.keys(tree.sharedWith).length}
-                            </span>
+                            <div className="group relative">
+                              <span className="inline-flex items-center justify-center p-1 text-blue-700 cursor-pointer rounded hover:bg-blue-50 transition-colors">
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                                </svg>
+                              </span>
+                              <div className="absolute left-1/2 transform -translate-x-1/2 top-full mt-2 px-2 py-1 text-xs bg-gray-800 text-white rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-10">
+                                {`Shared with ${Object.keys(tree.sharedWith).length} ${Object.keys(tree.sharedWith).length === 1 ? 'user' : 'users'}`}
+                              </div>
+                            </div>
                           )}
                         </div>
                         <p className="text-xs text-gray-500">ID: {tree.id}</p>

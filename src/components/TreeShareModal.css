@@ -19,6 +19,7 @@
   max-width: 500px;
   width: 100%;
   max-height: 90vh;
+  height: auto;
   display: flex;
   flex-direction: column;
   box-shadow: 0 20px 50px rgba(0, 0, 0, 0.15);
@@ -568,30 +569,29 @@
   .tsm-search-input {
     width: 100%;
   }
-}
 
-@media (max-width: 480px) {
   .tsm-modal {
-    max-height: 95vh;
-    border-radius: 8px;
-  }
-
-  .tsm-header {
-    padding: 16px;
-  }
-
-  .tsm-header h2 {
-    font-size: 18px;
+    max-width: 95vw;
+    max-height: 85vh;
   }
 
   .tsm-content {
     padding: 16px;
   }
 
+  .tsm-header {
+    padding: 16px;
+  }
+
+  .tsm-footer {
+    padding: 12px 16px;
+  }
+
   .tsm-shared-item {
     flex-direction: column;
     align-items: flex-start;
     gap: 12px;
+    padding: 12px;
   }
 
   .tsm-shared-actions {
@@ -601,22 +601,248 @@
 
   .tsm-permission-select {
     flex: 1;
+    min-width: 0;
+  }
+
+  .tsm-permission-option {
+    flex-direction: column;
+    gap: 8px;
+    padding: 10px;
+  }
+
+  .tsm-permission-option div {
+    gap: 2px;
+  }
+
+  .tsm-permission-name {
+    font-size: 13px;
+  }
+
+  .tsm-permission-desc {
+    font-size: 11px;
+  }
+
+  .tsm-info-box {
+    padding: 12px;
+  }
+
+  .tsm-info-box h4 {
+    font-size: 13px;
+    margin-bottom: 8px;
+  }
+
+  .tsm-info-item p {
+    font-size: 11px;
+  }
+}
+
+@media (max-width: 480px) {
+  .tsm-backdrop {
+    padding: 8px;
+  }
+
+  .tsm-modal {
+    max-width: 100%;
+    max-height: 90vh;
+    border-radius: 8px;
+  }
+
+  .tsm-header {
+    padding: 12px;
+    gap: 8px;
+  }
+
+  .tsm-header h2 {
+    font-size: 16px;
+    margin: 0;
+  }
+
+  .tsm-tree-name {
+    font-size: 12px;
+    margin-top: 2px;
+  }
+
+  .tsm-close {
+    width: 32px;
+    height: 32px;
+    font-size: 20px;
+  }
+
+  .tsm-content {
+    padding: 12px;
+    flex: 1;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .tsm-form-group {
+    margin-bottom: 12px;
+  }
+
+  .tsm-label {
+    font-size: 13px;
+    margin-bottom: 6px;
+  }
+
+  .tsm-input {
+    font-size: 13px;
+    padding: 8px 10px;
+  }
+
+  .tsm-permission-options {
+    gap: 8px;
+  }
+
+  .tsm-permission-option {
+    padding: 8px;
+    gap: 6px;
+  }
+
+  .tsm-permission-option input[type="radio"] {
+    width: 16px;
+    height: 16px;
+  }
+
+  .tsm-permission-name {
+    font-size: 12px;
+  }
+
+  .tsm-permission-desc {
+    font-size: 10px;
+  }
+
+  .tsm-divider {
+    margin: 16px 0 12px 0;
+    font-size: 13px;
+  }
+
+  .tsm-shared-list {
+    border-radius: 6px;
+  }
+
+  .tsm-shared-item {
+    padding: 10px;
+    gap: 10px;
+  }
+
+  .tsm-shared-email {
+    font-size: 14px;
+  }
+
+  .tsm-shared-date {
+    font-size: 12px;
+  }
+
+  .tsm-shared-actions {
+    gap: 6px;
+  }
+
+  .tsm-permission-select {
+    padding: 6px;
+    font-size: 11px;
+    min-width: 0;
+  }
+
+  .tsm-btn-remove {
+    font-size: 14px;
+    padding: 2px 6px;
+  }
+
+  .tsm-empty {
+    padding: 16px;
+    font-size: 13px;
+  }
+
+  .tsm-info-box {
+    padding: 10px;
+    margin-bottom: 12px;
+    border-radius: 6px;
+  }
+
+  .tsm-info-box h4 {
+    font-size: 12px;
+    margin-bottom: 8px;
+  }
+
+  .tsm-info-items {
+    gap: 8px;
+  }
+
+  .tsm-info-item {
+    padding-left: 10px;
+    border-left-width: 2px;
+  }
+
+  .tsm-info-item strong {
+    font-size: 12px;
+    margin-bottom: 2px;
+  }
+
+  .tsm-info-item p {
+    font-size: 10px;
+  }
+
+  .tsm-alert {
+    gap: 10px;
+    padding: 10px;
+    font-size: 12px;
+    margin-bottom: 12px;
+  }
+
+  .tsm-alert span {
+    font-size: 16px;
   }
 
   .tsm-footer {
-    padding: 12px 16px;
+    padding: 10px 12px;
+    gap: 8px;
   }
 
   .tsm-btn {
-    flex: 1;
+    padding: 8px 12px;
+    font-size: 13px;
+    gap: 4px;
+  }
+
+  .app-save-btn {
+    width: 100%;
+    font-size: 14px;
+    padding: 10px 12px;
   }
 
   .tsm-tree-list {
-    max-height: 300px;
+    max-height: 250px;
+  }
+
+  .tsm-tree-item {
+    padding: 10px;
+    gap: 8px;
+  }
+
+  .tsm-tree-item input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    margin-top: 2px;
+  }
+
+  .tsm-tree-title {
+    font-size: 14px;
+    margin-bottom: 4px;
   }
 
   .tsm-tree-meta {
     flex-direction: column;
-    gap: 4px;
+    gap: 3px;
+    font-size: 11px;
+  }
+
+  .tsm-search-input {
+    font-size: 13px;
+    padding: 8px;
+  }
+
+  .tsm-btn-select-all {
+    padding: 8px 12px;
+    font-size: 12px;
   }
 }
