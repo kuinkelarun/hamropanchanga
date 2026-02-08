@@ -17,15 +17,26 @@ window.migrateSharedTreesInBrowser = async function() {
   console.log('🔧 Starting migration of shared trees...');
   
   try {
-    // Get Firestore from the global firebase object
-    const { collection, getDocs, updateDoc, doc } = await import('firebase/firestore');
+    const helpers = window.__firestoreHelpers;
+    if (!helpers) {
+      console.error('Firestore helpers not available. Refresh the app and try again.');
+      console.log('Expected window.__firestoreHelpers to be set by src/index.js');
+      return;
+    }
+
+    const {
+      collection,
+      getDocs,
+      updateDoc,
+      doc
+    } = helpers;
     
-    // Get db from window (assuming it's exposed via firebase.js)
-    const db = window.db || (window.firebase && window.firebase.db);
+    // Get db from window (exposed by src/index.js)
+    const db = window.db;
     
     if (!db) {
       console.error('❌ Firestore database not found. Make sure you\'re logged in and the app is loaded.');
-      console.log('💡 Try: Make sure firebase is initialized');
+      console.log('💡 Expected window.db to be set by the app (see src/index.js)');
       return;
     }
 

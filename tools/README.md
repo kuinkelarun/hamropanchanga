@@ -15,6 +15,27 @@ This directory contains tools for validating and maintaining the bulk upload sys
 
 ## Tools
 
+### Tree Sharing Normalization
+
+**Purpose**: Fixes stale/unreliable tree sharing state by rebuilding `sharedWith` and `sharedWithEmails`.
+This resolves cases where a tree was unshared but still appears in a target user's "Shared With Me" list.
+
+**Usage**:
+```bash
+# Dry run (recommended)
+node tools/normalizeTreeSharing.node.js --dry-run
+
+# Apply changes
+node tools/normalizeTreeSharing.node.js
+
+# Limit for testing
+node tools/normalizeTreeSharing.node.js --dry-run --limit=20
+```
+
+**Credentials**:
+- Preferred: set `GOOGLE_APPLICATION_CREDENTIALS` to a service account JSON path
+- Or place `firebase-service-account.json` in the project root
+
 ### 1. Data Validation Tool
 
 **Purpose**: Validates database integrity without making any changes.

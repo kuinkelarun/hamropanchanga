@@ -103,8 +103,9 @@ export const getTreeAccessType = (ownerId, currentUserId, currentUserEmail, shar
     };
   }
 
-  // Check if shared with this user
-  const shareData = sharedWith[currentUserEmail];
+  // Check if shared with this user (emails are stored normalized in Firestore)
+  const normalizedEmail = String(currentUserEmail || '').toLowerCase().trim();
+  const shareData = normalizedEmail ? sharedWith[normalizedEmail] : null;
   if (shareData) {
     return {
       type: 'shared',

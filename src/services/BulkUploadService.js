@@ -14,6 +14,7 @@ import {
   updateDoc,
   setDoc,
   doc,
+  FieldPath,
   query,
   where,
   getDocs,
@@ -21,7 +22,8 @@ import {
   writeBatch,
   Timestamp,
   increment,
-  deleteField
+  deleteField,
+  arrayUnion
 } from 'firebase/firestore';
 import { SHARE_PERMISSIONS } from '../utils/TreeSharingUtils';
 import { USER_ROLES, DEFAULT_ROLE_PERMISSIONS } from '../constants/roles';
@@ -1327,28 +1329,24 @@ export const addEventsFromBulkUpload = async (eventData, userId, treeMap, member
 export const shareTreeWithUser = async (treeId, recipientEmail, permission, ownerEmail) => {
   try {
     const treeRef = doc(db, 'trees', treeId);
-    const normalizedEmail = recipientEmail.toLowerCase();
-    
-    // Get current tree to check existing sharedWithEmails
-    const treeSnap = await getDoc(treeRef);
-    const treeData = treeSnap.data();
-    const currentSharedEmails = treeData?.sharedWithEmails || [];
-    
-    // Add email to array if not already present
-    const updatedEmails = currentSharedEmails.includes(normalizedEmail) 
-      ? currentSharedEmails 
-      : [...currentSharedEmails, normalizedEmail];
 
-    await updateDoc(treeRef, {
-      // Keep the detailed sharedWith map for permission info
-      [`sharedWith.${normalizedEmail}`]: {
+    const normalizedEmail = (recipientEmail || '').toLowerCase().trim();
+    if (!normalizedEmail) {
+      throw new Error('Recipient email is required');
+    }
+
+    // IMPORTANT: use FieldPath so emails containing '.' are treated as a single map key segment.
+    await updateDoc(
+      treeRef,
+      new FieldPath('sharedWith', normalizedEmail),
+      {
         permission: permission || SHARE_PERMISSIONS.VIEW,
         sharedAt: Timestamp.now(),
         sharedBy: ownerEmail
       },
-      // Also maintain sharedWithEmails array for querying
-      sharedWithEmails: updatedEmails
-    });
+      'sharedWithEmails',
+      arrayUnion(normalizedEmail)
+    );
 
     return true;
   } catch (error) {
@@ -1368,9 +1366,16 @@ export const updateSharePermission = async (treeId, recipientEmail, newPermissio
   try {
     const treeRef = doc(db, 'trees', treeId);
 
-    await updateDoc(treeRef, {
-      [`sharedWith.${recipientEmail}.permission`]: newPermission
-    });
+    const normalizedEmail = (recipientEmail || '').toLowerCase().trim();
+    if (!normalizedEmail) {
+      throw new Error('Recipient email is required');
+    }
+
+    await updateDoc(
+      treeRef,
+      new FieldPath('sharedWith', normalizedEmail, 'permission'),
+      newPermission
+    );
 
     return true;
   } catch (error) {
@@ -1388,7 +1393,10 @@ export const updateSharePermission = async (treeId, recipientEmail, newPermissio
 export const removeTreeShare = async (treeId, recipientEmail) => {
   try {
     const treeRef = doc(db, 'trees', treeId);
-    const normalizedEmail = recipientEmail.toLowerCase();
+    const normalizedEmail = (recipientEmail || '').toLowerCase().trim();
+    if (!normalizedEmail) {
+      throw new Error('Recipient email is required');
+    }
 
     // Get current tree to update sharedWithEmails array
     const treeSnap = await getDoc(treeRef);
@@ -1396,17 +1404,30 @@ export const removeTreeShare = async (treeId, recipientEmail) => {
       throw new Error('Tree not found');
     }
 
-    const treeData = treeSnap.data();
-    const currentSharedEmails = treeData?.sharedWithEmails || [];
-    
-    // Remove email from array
-    const updatedEmails = currentSharedEmails.filter(email => email !== normalizedEmail);
+    const treeData = treeSnap.data() || {};
 
-    // Remove from sharedWith map and update sharedWithEmails array
-    await updateDoc(treeRef, {
-      [`sharedWith.${normalizedEmail}`]: deleteField(),
-      sharedWithEmails: updatedEmails
-    });
+    // Remove email from array (case-insensitive) to clean up any legacy mixed-case entries.
+    const currentSharedEmails = Array.isArray(treeData.sharedWithEmails) ? treeData.sharedWithEmails : [];
+    const updatedEmails = currentSharedEmails
+      .filter((email) => String(email || '').toLowerCase().trim() !== normalizedEmail)
+      .map((email) => String(email || '').toLowerCase().trim())
+      .filter(Boolean);
+
+    // Remove from sharedWith map (case-insensitive) while handling '.' in email via FieldPath.
+    const sharedWith = treeData.sharedWith && typeof treeData.sharedWith === 'object' ? treeData.sharedWith : {};
+    const keysToDelete = Object.keys(sharedWith)
+      .filter((key) => String(key || '').toLowerCase().trim() === normalizedEmail);
+
+    const updateArgs = [];
+    for (const key of keysToDelete) {
+      updateArgs.push(new FieldPath('sharedWith', key), deleteField());
+    }
+
+    // Always attempt to delete the normalized key as well (safe even if it doesn't exist).
+    updateArgs.push(new FieldPath('sharedWith', normalizedEmail), deleteField());
+    updateArgs.push('sharedWithEmails', Array.from(new Set(updatedEmails)));
+
+    await updateDoc(treeRef, ...updateArgs);
 
     return true;
   } catch (error) {
@@ -1454,8 +1475,11 @@ export const shareBulkTreesWithUser = async (treeIds, recipientEmail, permission
  */
 export const getSharedTreesForUser = async (userEmail) => {
   try {
+    const normalizedEmail = (userEmail || '').toLowerCase().trim();
+    if (!normalizedEmail) return [];
+
     const treesSnap = await getDocs(
-      query(collection(db, 'trees'), where(`sharedWith.${userEmail}`, '!=', null))
+      query(collection(db, 'trees'), where('sharedWithEmails', 'array-contains', normalizedEmail))
     );
 
     return treesSnap.docs.map(doc => ({
