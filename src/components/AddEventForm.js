@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '../firebase';
 import NepaliDatePicker from './NepaliDatePicker';
-import { useSettings } from '../contexts/SettingsContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { nepaliMonths, getTithisForMonth, convertAdToBs, getTithiIndexByName, getTithiLunarMonthName, getTithiYearFromAdDate } from '../utils/nepaliDateUtils';
 
@@ -27,8 +26,6 @@ const AddEventForm = ({ onAdd, familyMembers, onCancel, editingEvent }) => {
     const [tithiMonth, setTithiMonth] = useState('');
     const [tithiId, setTithiId] = useState('');
     const [resolvingTithi, setResolvingTithi] = useState(false);
-    
-    const { isNepaliCalendar } = useSettings();
 
     // Populate form when editing
     useEffect(() => {
@@ -260,24 +257,13 @@ const AddEventForm = ({ onAdd, familyMembers, onCancel, editingEvent }) => {
                         {entryMode === 'date' ? (
                             <>
                                 <label htmlFor="event-date" className="block text-gray-700 font-semibold mb-1 text-sm">
-                                    {isNepaliCalendar ? t('addEventForm.dateNepaliCalendar') : t('addEventForm.dateGregorianCalendar')}
+                                    {t('addEventForm.dateNepaliCalendar')}
                                 </label>
-                                {isNepaliCalendar ? (
-                                    <NepaliDatePicker
-                                        value={date}
-                                        onChange={(adDate) => setDate(adDate)}
-                                        required
-                                    />
-                                ) : (
-                                    <input
-                                        id="event-date"
-                                        type="date"
-                                        value={date}
-                                        onChange={(e) => setDate(e.target.value)}
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-green-500"
-                                        required
-                                    />
-                                )}
+                                <NepaliDatePicker
+                                    value={date}
+                                    onChange={(adDate) => setDate(adDate)}
+                                    required
+                                />
                             </>
                         ) : (
                             <div className="grid grid-cols-2 gap-2">

@@ -1,25 +1,13 @@
 // Nepali Calendar utilities
 import bsCalendarData from '../data/bsCalendarData';
+import { NEPALI_MONTHS, ENGLISH_MONTHS, NEPALI_WEEKDAYS, ENGLISH_WEEKDAYS, NEPALI_NUMBERS, SHUKLA_TITHI_NAMES, KRISHNA_TITHI_NAMES } from '../constants/calendarConstants';
 
-const nepaliMonths = [
-  "वैशाख", "ज्येष्ठ", "आषाढ", "श्रावण", "भाद्र", "आश्विन",
-  "कार्तिक", "मार्ग", "पौष", "माघ", "फाल्गुन", "चैत्र"
-];
-
-const englishMonths = [
-  "January", "February", "March", "April", "May", "June",
-  "July", "August", "September", "October", "November", "December"
-];
-
-const nepaliWeekdays = [
-  "आइतबार", "सोमबार", "मंगलबार", "बुधबार", "बिहिबार", "शुक्रबार", "शनिबार"
-];
-
-const englishWeekdays = [
-  "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"
-];
-
-const nepaliNumbers = ["०","१","२","३","४","५","६","७","८","९"];
+// Re-export from calendarConstants for backward compatibility
+const nepaliMonths = NEPALI_MONTHS;
+const englishMonths = ENGLISH_MONTHS;
+const nepaliWeekdays = NEPALI_WEEKDAYS;
+const englishWeekdays = ENGLISH_WEEKDAYS;
+const nepaliNumbers = NEPALI_NUMBERS;
 
 const minBsYear = Math.min(...Object.keys(bsCalendarData).map(n=>+n));
 const maxBsYear = Math.max(...Object.keys(bsCalendarData).map(n=>+n));
@@ -1344,12 +1332,9 @@ export function getTestCaseCharitaPurnima2081() {
 
 
 export function getTithisForMonth(monthNumber) {
-  const shuklaNames = ["प्रतिपदा", "द्वितीया", "तृतीया", "चतुर्थी", "पञ्चमी", "षष्ठी", "सप्तमी", "अष्टमी", "नवमी", "दशमी", "एकादशी", "द्वादशी", "त्रयोदशी", "चतुर्दशी", "पूर्णिमा"];
-  const krishnaNames = ["प्रतिपदा", "द्वितीया", "तृतीया", "चतुर्थी", "पञ्चमी", "षष्ठी", "सप्तमी", "अष्टमी", "नवमी", "दशमी", "एकादशी", "द्वादशी", "त्रयोदशी", "चतुर्दशी", "औंसी"];
-  
   return [
-    ...shuklaNames.map(name => ({ name, pakshya: 'शुक्लपक्ष', tithiId: `shukla-${name}` })),
-    ...krishnaNames.map(name => ({ name, pakshya: 'कृष्णपक्ष', tithiId: `krishna-${name}` }))
+    ...SHUKLA_TITHI_NAMES.map(name => ({ name, pakshya: 'शुक्लपक्ष', tithiId: `shukla-${name}` })),
+    ...KRISHNA_TITHI_NAMES.map(name => ({ name, pakshya: 'कृष्णपक्ष', tithiId: `krishna-${name}` }))
   ];
 }
 

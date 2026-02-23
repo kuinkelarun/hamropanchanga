@@ -30,6 +30,7 @@ import { USER_ROLES, DEFAULT_ROLE_PERMISSIONS } from '../constants/roles';
 import { convertBsToAd, getTithisForMonth, nepaliMonths, convertAdToBs } from '../utils/nepaliDateUtils';
 import { getTithiIndexByName, getTithiLunarMonthName, getTithiYearFromAdDate } from '../utils/nepaliDateUtils';
 import { normalizeForCompare } from '../utils/textNormalize';
+import { ENGLISH_TO_NEPALI_TITHI_MAP, ENGLISH_TO_NEPALI_MONTH_MAP } from '../constants/calendarConstants';
 
 // Helper function to build structured member lookup keys
 // Uses JSON to avoid delimiter conflicts when tree/member names contain colons or other special chars
@@ -94,70 +95,26 @@ function normalizeRepetition(raw) {
 }
 
 /**
- * English to Nepali tithi name mapping
+ * English to Nepali tithi name mapping — imported from centralized constants
  */
-const englishToNepaliTithiMap = {
-  'Pratipada': 'प्रतिपदा',
-  'Dwitiya': 'द्वितीया',
-  'Tritiya': 'तृतीया',
-  'Chaturthi': 'चतुर्थी',
-  'Panchami': 'पञ्चमी',
-  'Shashthi': 'षष्ठी',
-  'Saptami': 'सप्तमी',
-  'Ashtami': 'अष्टमी',
-  'Navami': 'नवमी',
-  'Dashami': 'दशमी',
-  'Ekadashi': 'एकादशी',
-  'Dvadashi': 'द्वादशी',
-  'Trayodashi': 'त्रयोदशी',
-  'Chaturdashi': 'चतुर्दशी',
-  'Purnima': 'पूर्णिमा',
-  'Amavasya': 'औंसी'
-};
+const englishToNepaliTithiMap = ENGLISH_TO_NEPALI_TITHI_MAP;
 
 /**
- * English to Nepali script month mapping
- * Maps English month names to Nepali script names as used in nepaliMonths array
+ * English to Nepali script month mapping — imported from centralized constants
+ * Extended with additional aliases specific to bulk upload
  */
 const englishToNepaliMonthMap = {
-  // Standard names
-  'Baishakh': 'वैशाख',
-  'Jyeshtha': 'ज्येष्ठ',
-  'Ashadh': 'आषाढ',
-  'Shravan': 'श्रावण',
-  'Bhadra': 'भाद्र',
-  'Ashwin': 'आश्विन',
-  'Kartik': 'कार्तिक',
-  'Mangsir': 'मार्ग',
-  'Poush': 'पौष',
-  'Magh': 'माघ',
-  'Phalgun': 'फाल्गुन',
-  'Chaitra': 'चैत्र',
-  
-  // Common variations/aliases
-  'Baisakh': 'वैशाख',
-  'Baisak': 'वैशाख',
-  'Baisekh': 'वैशाख',
-  'Vaisakh': 'वैशाख',
-  'Jyaistha': 'ज्येष्ठ',
-  'Jestha': 'ज्येष्ठ',
-  'Asadh': 'आषाढ',
-  'Asarh': 'आषाढ',
+  ...ENGLISH_TO_NEPALI_MONTH_MAP,
+  // Bulk-upload-specific aliases not in the shared constants
   'Shravana': 'श्रावण',
   'Sravana': 'श्रावण',
-  'Bhadau': 'भाद्र',
   'Bhado': 'भाद्र',
-  'Asoj': 'आश्विन',
   'Aswini': 'आश्विन',
   'Kartick': 'कार्तिक',
   'Kartikk': 'कार्तिक',
-  'Mansir': 'मार्ग',
-  'Mangseer': 'मार्ग',
-  'Paush': 'पौष',
-  'Push': 'पौष',
   'Phalguna': 'फाल्गुन',
   'Margshirsha': 'मार्ग',
-  'Margshir': 'मार्ग'
+  'Margshir': 'मार्ग',
 };
 
 /**

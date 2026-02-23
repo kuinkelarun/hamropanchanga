@@ -1,0 +1,183 @@
+[debug] [2026-02-23T04:27:57.348Z] ----------------------------------------------------------------------
+[debug] [2026-02-23T04:27:57.352Z] Command:       C:\Program Files\nodejs\node.exe C:\Users\User\AppData\Roaming\npm\node_modules\firebase-tools\lib\bin\firebase.js deploy
+[debug] [2026-02-23T04:27:57.353Z] CLI Version:   15.5.1
+[debug] [2026-02-23T04:27:57.353Z] Platform:      win32
+[debug] [2026-02-23T04:27:57.353Z] Node Version:  v22.18.0
+[debug] [2026-02-23T04:27:57.354Z] Time:          Sun Feb 22 2026 23:27:57 GMT-0500 (Eastern Standard Time)
+[debug] [2026-02-23T04:27:57.354Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2026-02-23T04:27:57.357Z] >>> [apiv2][query] GET https://firebase-public.firebaseio.com/cli.json [none]
+[debug] [2026-02-23T04:28:01.218Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2026-02-23T04:28:01.219Z] > authorizing via signed-in user (kuinkelarun@gmail.com)
+[debug] [2026-02-23T04:28:01.219Z] [iam] checking project hamropanchanga for permissions ["cloudfunctions.functions.create","cloudfunctions.functions.delete","cloudfunctions.functions.get","cloudfunctions.functions.list","cloudfunctions.functions.update","cloudfunctions.operations.get","datastore.indexes.create","datastore.indexes.delete","datastore.indexes.list","datastore.indexes.update","firebase.projects.get","firebasehosting.sites.update","firebaserules.releases.create","firebaserules.releases.update","firebaserules.rulesets.create"]
+[debug] [2026-02-23T04:28:01.221Z] Checked if tokens are valid: false, expires at: 1771516098903
+[debug] [2026-02-23T04:28:01.221Z] Checked if tokens are valid: false, expires at: 1771516098903
+[debug] [2026-02-23T04:28:01.222Z] > refreshing access token with scopes: []
+[debug] [2026-02-23T04:28:01.224Z] >>> [apiv2][query] POST https://www.googleapis.com/oauth2/v3/token [none]
+[debug] [2026-02-23T04:28:01.224Z] >>> [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2026-02-23T04:28:01.402Z] <<< [apiv2][status] GET https://firebase-public.firebaseio.com/cli.json 200
+[debug] [2026-02-23T04:28:01.402Z] <<< [apiv2][body] GET https://firebase-public.firebaseio.com/cli.json {"cloudBuildErrorAfter":1594252800000,"cloudBuildWarnAfter":1590019200000,"defaultNode10After":1594252800000,"minVersion":"3.0.5","node8DeploysDisabledAfter":1613390400000,"node8RuntimeDisabledAfter":1615809600000,"node8WarnAfter":1600128000000}
+[debug] [2026-02-23T04:28:01.455Z] <<< [apiv2][status] POST https://www.googleapis.com/oauth2/v3/token 200
+[debug] [2026-02-23T04:28:01.456Z] <<< [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2026-02-23T04:28:01.463Z] >>> [apiv2][query] POST https://cloudresourcemanager.googleapis.com/v1/projects/hamropanchanga:testIamPermissions [none]
+[debug] [2026-02-23T04:28:01.463Z] >>> [apiv2][(partial)header] POST https://cloudresourcemanager.googleapis.com/v1/projects/hamropanchanga:testIamPermissions  x-goog-user-project=hamropanchanga
+[debug] [2026-02-23T04:28:01.463Z] >>> [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/hamropanchanga:testIamPermissions {"permissions":["cloudfunctions.functions.create","cloudfunctions.functions.delete","cloudfunctions.functions.get","cloudfunctions.functions.list","cloudfunctions.functions.update","cloudfunctions.operations.get","datastore.indexes.create","datastore.indexes.delete","datastore.indexes.list","datastore.indexes.update","firebase.projects.get","firebasehosting.sites.update","firebaserules.releases.create","firebaserules.releases.update","firebaserules.rulesets.create"]}
+[debug] [2026-02-23T04:28:01.770Z] <<< [apiv2][status] POST https://cloudresourcemanager.googleapis.com/v1/projects/hamropanchanga:testIamPermissions 200
+[debug] [2026-02-23T04:28:01.770Z] <<< [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/hamropanchanga:testIamPermissions {"permissions":["cloudfunctions.functions.create","cloudfunctions.functions.delete","cloudfunctions.functions.get","cloudfunctions.functions.list","cloudfunctions.functions.update","cloudfunctions.operations.get","datastore.indexes.create","datastore.indexes.delete","datastore.indexes.list","datastore.indexes.update","firebase.projects.get","firebasehosting.sites.update","firebaserules.releases.create","firebaserules.releases.update","firebaserules.rulesets.create"]}
+[debug] [2026-02-23T04:28:01.770Z] Checked if tokens are valid: true, expires at: 1771824480456
+[debug] [2026-02-23T04:28:01.770Z] Checked if tokens are valid: true, expires at: 1771824480456
+[debug] [2026-02-23T04:28:01.770Z] >>> [apiv2][query] POST https://iam.googleapis.com/v1/projects/hamropanchanga/serviceAccounts/hamropanchanga@appspot.gserviceaccount.com:testIamPermissions [none]
+[debug] [2026-02-23T04:28:01.771Z] >>> [apiv2][body] POST https://iam.googleapis.com/v1/projects/hamropanchanga/serviceAccounts/hamropanchanga@appspot.gserviceaccount.com:testIamPermissions {"permissions":["iam.serviceAccounts.actAs"]}
+[debug] [2026-02-23T04:28:01.999Z] <<< [apiv2][status] POST https://iam.googleapis.com/v1/projects/hamropanchanga/serviceAccounts/hamropanchanga@appspot.gserviceaccount.com:testIamPermissions 200
+[debug] [2026-02-23T04:28:01.999Z] <<< [apiv2][body] POST https://iam.googleapis.com/v1/projects/hamropanchanga/serviceAccounts/hamropanchanga@appspot.gserviceaccount.com:testIamPermissions {"permissions":["iam.serviceAccounts.actAs"]}
+[debug] [2026-02-23T04:28:02.000Z] Checked if tokens are valid: true, expires at: 1771824480456
+[debug] [2026-02-23T04:28:02.000Z] Checked if tokens are valid: true, expires at: 1771824480456
+[debug] [2026-02-23T04:28:02.000Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects/hamropanchanga [none]
+[debug] [2026-02-23T04:28:02.414Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects/hamropanchanga 200
+[debug] [2026-02-23T04:28:02.414Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects/hamropanchanga {"projectId":"hamropanchanga","projectNumber":"731963474318","displayName":"hamropanchanga","name":"projects/hamropanchanga","resources":{"hostingSite":"hamropanchanga"},"state":"ACTIVE","etag":"1_0fc23f3d-f578-4f61-a82f-e17d60ed0f0a"}
+[info] 
+[info] === Deploying to 'hamropanchanga'...
+[info] 
+[info] i  deploying storage, firestore, functions, hosting 
+[info] i  storage: ensuring required API firebasestorage.googleapis.com is enabled... 
+[debug] [2026-02-23T04:28:02.424Z] Checked if tokens are valid: true, expires at: 1771824480456
+[debug] [2026-02-23T04:28:02.425Z] Checked if tokens are valid: true, expires at: 1771824480456
+[debug] [2026-02-23T04:28:02.425Z] >>> [apiv2][query] GET https://firebasestorage.googleapis.com/v1alpha/projects/hamropanchanga/defaultBucket [none]
+[debug] [2026-02-23T04:28:02.733Z] <<< [apiv2][status] GET https://firebasestorage.googleapis.com/v1alpha/projects/hamropanchanga/defaultBucket 200
+[debug] [2026-02-23T04:28:02.733Z] <<< [apiv2][body] GET https://firebasestorage.googleapis.com/v1alpha/projects/hamropanchanga/defaultBucket {"name":"projects/hamropanchanga/defaultBucket","location":"US-EAST1","bucket":{"name":"projects/hamropanchanga/buckets/hamropanchanga.firebasestorage.app"},"storageClass":"REGIONAL"}
+[info] i  firebase.storage: checking storage.rules for compilation errors... 
+[debug] [2026-02-23T04:28:02.735Z] Checked if tokens are valid: true, expires at: 1771824480456
+[debug] [2026-02-23T04:28:02.735Z] Checked if tokens are valid: true, expires at: 1771824480456
+[debug] [2026-02-23T04:28:02.736Z] >>> [apiv2][query] POST https://firebaserules.googleapis.com/v1/projects/hamropanchanga:test [none]
+[debug] [2026-02-23T04:28:02.736Z] >>> [apiv2][body] POST https://firebaserules.googleapis.com/v1/projects/hamropanchanga:test [omitted]
+[debug] [2026-02-23T04:28:03.056Z] <<< [apiv2][status] POST https://firebaserules.googleapis.com/v1/projects/hamropanchanga:test 200
+[debug] [2026-02-23T04:28:03.056Z] <<< [apiv2][body] POST https://firebaserules.googleapis.com/v1/projects/hamropanchanga:test {}
+[info] +  firebase.storage: rules file storage.rules compiled successfully 
+[info] i  firestore: ensuring required API firestore.googleapis.com is enabled... 
+[info] i  firestore: ensuring required API firestore.googleapis.com is enabled... 
+[debug] [2026-02-23T04:28:03.059Z] Checked if tokens are valid: true, expires at: 1771824480456
+[debug] [2026-02-23T04:28:03.059Z] Checked if tokens are valid: true, expires at: 1771824480456
+[debug] [2026-02-23T04:28:03.059Z] >>> [apiv2][query] GET https://firestore.googleapis.com/v1/projects/hamropanchanga/databases/hamropanchanga-db [none]
+[debug] [2026-02-23T04:28:03.310Z] <<< [apiv2][status] GET https://firestore.googleapis.com/v1/projects/hamropanchanga/databases/hamropanchanga-db 200
+[debug] [2026-02-23T04:28:03.311Z] <<< [apiv2][body] GET https://firestore.googleapis.com/v1/projects/hamropanchanga/databases/hamropanchanga-db {"name":"projects/hamropanchanga/databases/hamropanchanga-db","uid":"2a5c9dc0-3c51-41d2-a0fd-9d1e6b3a3a6e","createTime":"2026-02-08T19:33:23.746818Z","updateTime":"2026-02-08T19:33:23.746818Z","locationId":"us-east4","type":"FIRESTORE_NATIVE","concurrencyMode":"PESSIMISTIC","versionRetentionPeriod":"3600s","earliestVersionTime":"2026-02-23T03:28:03.280511Z","appEngineIntegrationMode":"DISABLED","pointInTimeRecoveryEnablement":"POINT_IN_TIME_RECOVERY_DISABLED","deleteProtectionState":"DELETE_PROTECTION_DISABLED","databaseEdition":"STANDARD","freeTier":true,"realtimeUpdatesMode":"REALTIME_UPDATES_MODE_ENABLED","etag":"IIn/6ZLj7pIDMPiVkaOU15ID"}
+[info] i  firestore: reading indexes from firestore.indexes.json... 
+[info] i  cloud.firestore: checking firestore.rules for compilation errors... 
+[debug] [2026-02-23T04:28:03.313Z] Checked if tokens are valid: true, expires at: 1771824480456
+[debug] [2026-02-23T04:28:03.313Z] Checked if tokens are valid: true, expires at: 1771824480456
+[debug] [2026-02-23T04:28:03.313Z] >>> [apiv2][query] POST https://firebaserules.googleapis.com/v1/projects/hamropanchanga:test [none]
+[debug] [2026-02-23T04:28:03.313Z] >>> [apiv2][body] POST https://firebaserules.googleapis.com/v1/projects/hamropanchanga:test [omitted]
+[debug] [2026-02-23T04:28:03.644Z] <<< [apiv2][status] POST https://firebaserules.googleapis.com/v1/projects/hamropanchanga:test 200
+[debug] [2026-02-23T04:28:03.644Z] <<< [apiv2][body] POST https://firebaserules.googleapis.com/v1/projects/hamropanchanga:test {"issues":[{"sourcePosition":{"fileName":"firestore.rules","line":32,"column":17,"currentOffset":1448,"endOffset":1448},"description":"Ternary operator result if condition is true has a different type than if condition is false.","severity":"WARNING"},{"sourcePosition":{"fileName":"firestore.rules","line":49,"column":15,"currentOffset":2162,"endOffset":2162},"description":"Ternary operator result if condition is true has a different type than if condition is false.","severity":"WARNING"}]}
+[warn] !  [W] 32:17 - Ternary operator result if condition is true has a different type than if condition is false. 
+[warn] !  [W] 49:15 - Ternary operator result if condition is true has a different type than if condition is false. 
+[info] +  cloud.firestore: rules file firestore.rules compiled successfully 
+[debug] [2026-02-23T04:28:03.647Z] Checked if tokens are valid: true, expires at: 1771824480456
+[debug] [2026-02-23T04:28:03.647Z] Checked if tokens are valid: true, expires at: 1771824480456
+[debug] [2026-02-23T04:28:03.647Z] >>> [apiv2][query] GET https://cloudresourcemanager.googleapis.com/v1/projects/hamropanchanga [none]
+[debug] [2026-02-23T04:28:03.754Z] <<< [apiv2][status] GET https://cloudresourcemanager.googleapis.com/v1/projects/hamropanchanga 200
+[debug] [2026-02-23T04:28:03.754Z] <<< [apiv2][body] GET https://cloudresourcemanager.googleapis.com/v1/projects/hamropanchanga {"projectNumber":"731963474318","projectId":"hamropanchanga","lifecycleState":"ACTIVE","name":"hamropanchanga","labels":{"firebase":"enabled","firebase-core":"disabled"},"createTime":"2026-02-08T18:32:00.159533Z"}
+[info] i  functions: preparing codebase default for deployment 
+[info] i  functions: ensuring required API cloudfunctions.googleapis.com is enabled... 
+[info] i  functions: ensuring required API cloudbuild.googleapis.com is enabled... 
+[info] i  artifactregistry: ensuring required API artifactregistry.googleapis.com is enabled... 
+[debug] [2026-02-23T04:28:03.757Z] Checked if tokens are valid: true, expires at: 1771824480456
+[debug] [2026-02-23T04:28:03.758Z] Checked if tokens are valid: true, expires at: 1771824480456
+[debug] [2026-02-23T04:28:03.758Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects/hamropanchanga/adminSdkConfig [none]
+[debug] [2026-02-23T04:28:04.042Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects/hamropanchanga/adminSdkConfig 200
+[debug] [2026-02-23T04:28:04.042Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects/hamropanchanga/adminSdkConfig {"projectId":"hamropanchanga","storageBucket":"hamropanchanga.firebasestorage.app"}
+[debug] [2026-02-23T04:28:04.042Z] Checked if tokens are valid: true, expires at: 1771824480456
+[debug] [2026-02-23T04:28:04.042Z] Checked if tokens are valid: true, expires at: 1771824480456
+[debug] [2026-02-23T04:28:04.043Z] >>> [apiv2][query] GET https://runtimeconfig.googleapis.com/v1beta1/projects/hamropanchanga/configs [none]
+[debug] [2026-02-23T04:28:04.303Z] <<< [apiv2][status] GET https://runtimeconfig.googleapis.com/v1beta1/projects/hamropanchanga/configs 200
+[debug] [2026-02-23T04:28:04.303Z] <<< [apiv2][body] GET https://runtimeconfig.googleapis.com/v1beta1/projects/hamropanchanga/configs {}
+[debug] [2026-02-23T04:28:04.306Z] Validating nodejs source
+[warn] !  functions: Runtime Node.js 20 will be deprecated on 2026-04-30 and will be decommissioned on 2026-10-30, after which you will not be able to deploy without upgrading. Consider upgrading now to avoid disruption. See https://cloud.google.com/functions/docs/runtime-support for full details on the lifecycle policy 
+[warn] !  functions: package.json indicates an outdated version of firebase-functions. Please upgrade using npm install --save firebase-functions@latest in your functions directory. 
+[warn] !  functions: Please note that there will be breaking changes when you upgrade. 
+[debug] [2026-02-23T04:28:05.564Z] > [functions] package.json contents: {
+  "name": "family-tree-functions",
+  "description": "Cloud Functions for Family Tree app",
+  "private": true,
+  "engines": {
+    "node": "20"
+  },
+  "dependencies": {
+    "astronomy-engine": "^2.1.19",
+    "firebase-admin": "^11.0.0",
+    "firebase-functions": "^4.0.0"
+  }
+}
+[debug] [2026-02-23T04:28:05.565Z] Building nodejs source
+[info] i  functions: Loading and analyzing source code for codebase default to determine what to deploy 
+[info] i  functions: You are using a version of firebase-functions SDK (4.9.0) that does not have support for the newest Firebase Extensions features. Please update firebase-functions SDK to >=5.1.0 to use them correctly 
+[debug] [2026-02-23T04:28:05.567Z] Could not find functions.yaml. Must use http discovery
+[debug] [2026-02-23T04:28:05.583Z] Found firebase-functions binary at 'E:\Arun\Side - Projects\Family Tree\family-tree-app\functions\node_modules\.bin\firebase-functions'
+[info] Serving at port 8228
+
+[debug] [2026-02-23T04:28:06.393Z] Got response from /__/functions.yaml {"endpoints":{"setAdminRole":{"platform":"gcfv1","labels":{},"availableMemoryMb":null,"timeoutSeconds":null,"minInstances":null,"maxInstances":null,"ingressSettings":null,"serviceAccountEmail":null,"vpc":null,"callableTrigger":{},"entryPoint":"setAdminRole"},"syncAuthUsersToFirestore":{"platform":"gcfv1","labels":{},"availableMemoryMb":null,"timeoutSeconds":null,"minInstances":null,"maxInstances":null,"ingressSettings":null,"serviceAccountEmail":null,"vpc":null,"callableTrigger":{},"entryPoint":"syncAuthUsersToFirestore"},"computeEphemeris":{"platform":"gcfv1","labels":{},"availableMemoryMb":null,"timeoutSeconds":null,"minInstances":null,"maxInstances":null,"ingressSettings":null,"serviceAccountEmail":null,"vpc":null,"callableTrigger":{},"entryPoint":"computeEphemeris"}},"specVersion":"v1alpha1","requiredAPIs":[]}
+[info] i  functions: preparing functions directory for uploading... 
+[info] i  functions: packaged E:\Arun\Side - Projects\Family Tree\family-tree-app\functions (41.37 KB) for uploading 
+[debug] [2026-02-23T04:28:10.506Z] Checked if tokens are valid: true, expires at: 1771824480456
+[debug] [2026-02-23T04:28:10.506Z] Checked if tokens are valid: true, expires at: 1771824480456
+[debug] [2026-02-23T04:28:10.506Z] >>> [apiv2][query] GET https://cloudfunctions.googleapis.com/v1/projects/hamropanchanga/locations/-/functions [none]
+[debug] [2026-02-23T04:28:11.143Z] <<< [apiv2][status] GET https://cloudfunctions.googleapis.com/v1/projects/hamropanchanga/locations/-/functions 200
+[debug] [2026-02-23T04:28:11.143Z] <<< [apiv2][body] GET https://cloudfunctions.googleapis.com/v1/projects/hamropanchanga/locations/-/functions {"functions":[{"name":"projects/hamropanchanga/locations/us-central1/functions/setAdminRole","httpsTrigger":{"url":"https://us-central1-hamropanchanga.cloudfunctions.net/setAdminRole","securityLevel":"SECURE_ALWAYS"},"status":"ACTIVE","entryPoint":"setAdminRole","timeout":"60s","availableMemoryMb":256,"serviceAccountEmail":"hamropanchanga@appspot.gserviceaccount.com","updateTime":"2026-02-08T19:08:24.719764411Z","versionId":"1","labels":{"firebase-functions-hash":"ad3e453334102371b77abbf2e3d15b7de7961b0e","deployment-tool":"cli-firebase","deployment-callable":"true"},"sourceUploadUrl":"https://storage.googleapis.com/uploads-124450944087.us-central1.cloudfunctions.appspot.com/ab135b5a-e854-43be-8b3c-3c28edd89301.zip","environmentVariables":{"FIREBASE_CONFIG":"{\"projectId\":\"hamropanchanga\",\"storageBucket\":\"hamropanchanga.firebasestorage.app\"}","GCLOUD_PROJECT":"hamropanchanga","EVENTARC_CLOUD_EVENT_SOURCE":"projects/hamropanchanga/locations/us-central1/functions/setAdminRole"},"runtime":"nodejs20","ingressSettings":"ALLOW_ALL","buildId":"6cb4068c-76fe-474c-8734-fa2c77532805","buildEnvironmentVariables":{"GOOGLE_NODE_RUN_SCRIPTS":""},"buildName":"projects/731963474318/locations/us-central1/builds/6cb4068c-76fe-474c-8734-fa2c77532805","dockerRegistry":"ARTIFACT_REGISTRY","automaticUpdatePolicy":{},"buildServiceAccount":"projects/hamropanchanga/serviceAccounts/731963474318-compute@developer.gserviceaccount.com","satisfiesPzi":true},{"name":"projects/hamropanchanga/locations/us-central1/functions/syncAuthUsersToFirestore","httpsTrigger":{"url":"https://us-central1-hamropanchanga.cloudfunctions.net/syncAuthUsersToFirestore","securityLevel":"SECURE_ALWAYS"},"status":"ACTIVE","entryPoint":"syncAuthUsersToFirestore","timeout":"60s","availableMemoryMb":256,"serviceAccountEmail":"hamropanchanga@appspot.gserviceaccount.com","updateTime":"2026-02-08T19:08:30.692807464Z","versionId":"1","labels":{"deployment-tool":"cli-firebase","deployment-callable":"true","firebase-functions-hash":"ad3e453334102371b77abbf2e3d15b7de7961b0e"},"sourceUploadUrl":"https://storage.googleapis.com/uploads-124450944087.us-central1.cloudfunctions.appspot.com/ab135b5a-e854-43be-8b3c-3c28edd89301.zip","environmentVariables":{"FIREBASE_CONFIG":"{\"projectId\":\"hamropanchanga\",\"storageBucket\":\"hamropanchanga.firebasestorage.app\"}","GCLOUD_PROJECT":"hamropanchanga","EVENTARC_CLOUD_EVENT_SOURCE":"projects/hamropanchanga/locations/us-central1/functions/syncAuthUsersToFirestore"},"runtime":"nodejs20","ingressSettings":"ALLOW_ALL","buildId":"6cb4068c-76fe-474c-8734-fa2c77532805","buildEnvironmentVariables":{"GOOGLE_NODE_RUN_SCRIPTS":""},"buildName":"projects/731963474318/locations/us-central1/builds/6cb4068c-76fe-474c-8734-fa2c77532805","dockerRegistry":"ARTIFACT_REGISTRY","automaticUpdatePolicy":{},"buildServiceAccount":"projects/hamropanchanga/serviceAccounts/731963474318-compute@developer.gserviceaccount.com","satisfiesPzi":true},{"name":"projects/hamropanchanga/locations/us-central1/functions/computeEphemeris","httpsTrigger":{"url":"https://us-central1-hamropanchanga.cloudfunctions.net/computeEphemeris","securityLevel":"SECURE_ALWAYS"},"status":"ACTIVE","entryPoint":"computeEphemeris","timeout":"60s","availableMemoryMb":256,"serviceAccountEmail":"hamropanchanga@appspot.gserviceaccount.com","updateTime":"2026-02-08T19:08:32.213098230Z","versionId":"1","labels":{"deployment-tool":"cli-firebase","deployment-callable":"true","firebase-functions-hash":"ad3e453334102371b77abbf2e3d15b7de7961b0e"},"sourceUploadUrl":"https://storage.googleapis.com/uploads-124450944087.us-central1.cloudfunctions.appspot.com/ab135b5a-e854-43be-8b3c-3c28edd89301.zip","environmentVariables":{"FIREBASE_CONFIG":"{\"projectId\":\"hamropanchanga\",\"storageBucket\":\"hamropanchanga.firebasestorage.app\"}","GCLOUD_PROJECT":"hamropanchanga","EVENTARC_CLOUD_EVENT_SOURCE":"projects/hamropanchanga/locations/us-central1/functions/computeEphemeris"},"runtime":"nodejs20","ingressSettings":"ALLOW_ALL","buildId":"6cb4068c-76fe-474c-8734-fa2c77532805","buildEnvironmentVariables":{"GOOGLE_NODE_RUN_SCRIPTS":""},"buildName":"projects/731963474318/locations/us-central1/builds/6cb4068c-76fe-474c-8734-fa2c77532805","dockerRegistry":"ARTIFACT_REGISTRY","automaticUpdatePolicy":{},"buildServiceAccount":"projects/hamropanchanga/serviceAccounts/731963474318-compute@developer.gserviceaccount.com","satisfiesPzi":true}]}
+[debug] [2026-02-23T04:28:11.145Z] Checked if tokens are valid: true, expires at: 1771824480456
+[debug] [2026-02-23T04:28:11.145Z] Checked if tokens are valid: true, expires at: 1771824480456
+[debug] [2026-02-23T04:28:11.146Z] >>> [apiv2][query] GET https://cloudfunctions.googleapis.com/v2/projects/hamropanchanga/locations/-/functions filter=environment%3D%22GEN_2%22
+[debug] [2026-02-23T04:28:11.614Z] <<< [apiv2][status] GET https://cloudfunctions.googleapis.com/v2/projects/hamropanchanga/locations/-/functions 200
+[debug] [2026-02-23T04:28:11.614Z] <<< [apiv2][body] GET https://cloudfunctions.googleapis.com/v2/projects/hamropanchanga/locations/-/functions {}
+[debug] [2026-02-23T04:28:11.619Z] Checked if tokens are valid: true, expires at: 1771824480456
+[debug] [2026-02-23T04:28:11.619Z] Checked if tokens are valid: true, expires at: 1771824480456
+[debug] [2026-02-23T04:28:11.619Z] >>> [apiv2][query] GET https://cloudresourcemanager.googleapis.com/v1/projects/hamropanchanga [none]
+[debug] [2026-02-23T04:28:11.895Z] <<< [apiv2][status] GET https://cloudresourcemanager.googleapis.com/v1/projects/hamropanchanga 200
+[debug] [2026-02-23T04:28:11.895Z] <<< [apiv2][body] GET https://cloudresourcemanager.googleapis.com/v1/projects/hamropanchanga {"projectNumber":"731963474318","projectId":"hamropanchanga","lifecycleState":"ACTIVE","name":"hamropanchanga","labels":{"firebase":"enabled","firebase-core":"disabled"},"createTime":"2026-02-08T18:32:00.159533Z"}
+[debug] [2026-02-23T04:28:11.899Z] Checked if tokens are valid: true, expires at: 1771824480456
+[debug] [2026-02-23T04:28:11.899Z] Checked if tokens are valid: true, expires at: 1771824480456
+[debug] [2026-02-23T04:28:11.899Z] >>> [apiv2][query] POST https://firebasehosting.googleapis.com/v1beta1/projects/-/sites/hamropanchanga/versions [none]
+[debug] [2026-02-23T04:28:11.900Z] >>> [apiv2][body] POST https://firebasehosting.googleapis.com/v1beta1/projects/-/sites/hamropanchanga/versions {"status":"CREATED","labels":{"deployment-tool":"cli-firebase"}}
+[debug] [2026-02-23T04:28:12.893Z] <<< [apiv2][status] POST https://firebasehosting.googleapis.com/v1beta1/projects/-/sites/hamropanchanga/versions 200
+[debug] [2026-02-23T04:28:12.893Z] <<< [apiv2][body] POST https://firebasehosting.googleapis.com/v1beta1/projects/-/sites/hamropanchanga/versions {"name":"projects/731963474318/sites/hamropanchanga/versions/54997795040d4456","status":"CREATED","config":{},"labels":{"deployment-tool":"cli-firebase"}}
+[debug] [2026-02-23T04:28:12.894Z] Checked if tokens are valid: true, expires at: 1771824480456
+[debug] [2026-02-23T04:28:12.894Z] Checked if tokens are valid: true, expires at: 1771824480456
+[debug] [2026-02-23T04:28:12.894Z] >>> [apiv2][query] GET https://firebaserules.googleapis.com/v1/projects/hamropanchanga/releases pageSize=10&pageToken=
+[debug] [2026-02-23T04:28:13.114Z] <<< [apiv2][status] GET https://firebaserules.googleapis.com/v1/projects/hamropanchanga/releases 200
+[debug] [2026-02-23T04:28:13.114Z] <<< [apiv2][body] GET https://firebaserules.googleapis.com/v1/projects/hamropanchanga/releases {"releases":[{"name":"projects/hamropanchanga/releases/cloud.firestore/hamropanchanga-db","rulesetName":"projects/hamropanchanga/rulesets/88221eb0-4917-4621-a07a-b70377d8c6f6","createTime":"2026-02-08T19:33:25.073681Z","updateTime":"2026-02-14T15:05:30.378076Z"},{"name":"projects/hamropanchanga/releases/firebase.storage/hamropanchanga.firebasestorage.app","rulesetName":"projects/hamropanchanga/rulesets/3f8133d6-3628-4524-8089-e8985dea151e","createTime":"2026-02-08T18:46:50.574499Z","updateTime":"2026-02-08T19:39:59.615725Z"}]}
+[debug] [2026-02-23T04:28:13.131Z] Checked if tokens are valid: true, expires at: 1771824480456
+[debug] [2026-02-23T04:28:13.131Z] Checked if tokens are valid: true, expires at: 1771824480456
+[debug] [2026-02-23T04:28:13.131Z] >>> [apiv2][query] GET https://firebaserules.googleapis.com/v1/projects/hamropanchanga/rulesets/3f8133d6-3628-4524-8089-e8985dea151e [none]
+[debug] [2026-02-23T04:28:13.295Z] <<< [apiv2][status] GET https://firebaserules.googleapis.com/v1/projects/hamropanchanga/rulesets/3f8133d6-3628-4524-8089-e8985dea151e 200
+[debug] [2026-02-23T04:28:13.295Z] <<< [apiv2][body] GET https://firebaserules.googleapis.com/v1/projects/hamropanchanga/rulesets/3f8133d6-3628-4524-8089-e8985dea151e [omitted]
+[info] i  storage: latest version of storage.rules already up to date, skipping upload... 
+[debug] [2026-02-23T04:28:13.297Z] Checked if tokens are valid: true, expires at: 1771824480456
+[debug] [2026-02-23T04:28:13.297Z] Checked if tokens are valid: true, expires at: 1771824480456
+[debug] [2026-02-23T04:28:13.297Z] >>> [apiv2][query] GET https://firebaserules.googleapis.com/v1/projects/hamropanchanga/releases pageSize=10&pageToken=
+[debug] [2026-02-23T04:28:13.432Z] <<< [apiv2][status] GET https://firebaserules.googleapis.com/v1/projects/hamropanchanga/releases 200
+[debug] [2026-02-23T04:28:13.432Z] <<< [apiv2][body] GET https://firebaserules.googleapis.com/v1/projects/hamropanchanga/releases {"releases":[{"name":"projects/hamropanchanga/releases/cloud.firestore/hamropanchanga-db","rulesetName":"projects/hamropanchanga/rulesets/88221eb0-4917-4621-a07a-b70377d8c6f6","createTime":"2026-02-08T19:33:25.073681Z","updateTime":"2026-02-14T15:05:30.378076Z"},{"name":"projects/hamropanchanga/releases/firebase.storage/hamropanchanga.firebasestorage.app","rulesetName":"projects/hamropanchanga/rulesets/3f8133d6-3628-4524-8089-e8985dea151e","createTime":"2026-02-08T18:46:50.574499Z","updateTime":"2026-02-08T19:39:59.615725Z"}]}
+[debug] [2026-02-23T04:28:13.432Z] Checked if tokens are valid: true, expires at: 1771824480456
+[debug] [2026-02-23T04:28:13.432Z] Checked if tokens are valid: true, expires at: 1771824480456
+[debug] [2026-02-23T04:28:13.432Z] >>> [apiv2][query] GET https://firebaserules.googleapis.com/v1/projects/hamropanchanga/rulesets/88221eb0-4917-4621-a07a-b70377d8c6f6 [none]
+[debug] [2026-02-23T04:28:13.596Z] <<< [apiv2][status] GET https://firebaserules.googleapis.com/v1/projects/hamropanchanga/rulesets/88221eb0-4917-4621-a07a-b70377d8c6f6 200
+[debug] [2026-02-23T04:28:13.596Z] <<< [apiv2][body] GET https://firebaserules.googleapis.com/v1/projects/hamropanchanga/rulesets/88221eb0-4917-4621-a07a-b70377d8c6f6 [omitted]
+[info] i  firestore: latest version of firestore.rules already up to date, skipping upload... 
+[info] i  firestore: deploying indexes... 
+[debug] [2026-02-23T04:28:13.600Z] Checked if tokens are valid: true, expires at: 1771824480456
+[debug] [2026-02-23T04:28:13.600Z] Checked if tokens are valid: true, expires at: 1771824480456
+[debug] [2026-02-23T04:28:13.600Z] >>> [apiv2][query] GET https://firestore.googleapis.com/v1/projects/hamropanchanga/databases/hamropanchanga-db/collectionGroups/-/indexes [none]
+[debug] [2026-02-23T04:28:13.844Z] <<< [apiv2][status] GET https://firestore.googleapis.com/v1/projects/hamropanchanga/databases/hamropanchanga-db/collectionGroups/-/indexes 200
+[debug] [2026-02-23T04:28:13.844Z] <<< [apiv2][body] GET https://firestore.googleapis.com/v1/projects/hamropanchanga/databases/hamropanchanga-db/collectionGroups/-/indexes {"indexes":[{"name":"projects/hamropanchanga/databases/hamropanchanga-db/collectionGroups/calendarEvents/indexes/CICAgNiav4AJ","queryScope":"COLLECTION","fields":[{"fieldPath":"createdBy","order":"ASCENDING"},{"fieldPath":"dateKey","order":"ASCENDING"},{"fieldPath":"__name__","order":"ASCENDING"}],"state":"READY","density":"SPARSE_ALL"},{"name":"projects/hamropanchanga/databases/hamropanchanga-db/collectionGroups/tithis/indexes/CICAgNiav4AK","queryScope":"COLLECTION","fields":[{"fieldPath":"startDate","order":"ASCENDING"},{"fieldPath":"startTime","order":"ASCENDING"},{"fieldPath":"__name__","order":"ASCENDING"}],"state":"READY","density":"SPARSE_ALL"},{"name":"projects/hamropanchanga/databases/hamropanchanga-db/collectionGroups/calendarEvents/indexes/CICAgJim14AK","queryScope":"COLLECTION","fields":[{"fieldPath":"createdBy","order":"ASCENDING"},{"fieldPath":"treeId","order":"ASCENDING"},{"fieldPath":"__name__","order":"ASCENDING"}],"state":"READY","density":"SPARSE_ALL"},{"name":"projects/hamropanchanga/databases/hamropanchanga-db/collectionGroups/calendarEvents/indexes/CICAgOjXh4EK","queryScope":"COLLECTION","fields":[{"fieldPath":"createdByAdmin","order":"ASCENDING"},{"fieldPath":"isPublic","order":"ASCENDING"},{"fieldPath":"dateKey","order":"ASCENDING"},{"fieldPath":"__name__","order":"ASCENDING"}],"state":"READY","density":"SPARSE_ALL"},{"name":"projects/hamropanchanga/databases/hamropanchanga-db/collectionGroups/calendarEvents/indexes/CICAgJj7z4EK","queryScope":"COLLECTION","fields":[{"fieldPath":"treeId","order":"ASCENDING"},{"fieldPath":"memberId","order":"ASCENDING"},{"fieldPath":"__name__","order":"ASCENDING"}],"state":"READY","density":"SPARSE_ALL"},{"name":"projects/hamropanchanga/databases/hamropanchanga-db/collectionGroups/homeCards/indexes/CICAgNjpgYIK","queryScope":"COLLECTION","fields":[{"fieldPath":"published","order":"ASCENDING"},{"fieldPath":"order","order":"ASCENDING"},{"fieldPath":"__name__","order":"ASCENDING"}],"state":"READY","density":"SPARSE_ALL"},{"name":"projects/hamropanchanga/databases/hamropanchanga-db/collectionGroups/trees/indexes/CICAgJjF9oIK","queryScope":"COLLECTION","fields":[{"fieldPath":"owner","order":"ASCENDING"},{"fieldPath":"nameNormalized","order":"ASCENDING"},{"fieldPath":"__name__","order":"ASCENDING"}],"state":"READY","density":"SPARSE_ALL"},{"name":"projects/hamropanchanga/databases/hamropanchanga-db/collectionGroups/calendarEvents/indexes/CICAgJiUpoMK","queryScope":"COLLECTION","fields":[{"fieldPath":"treeId","order":"ASCENDING"},{"fieldPath":"dateKey","order":"ASCENDING"},{"fieldPath":"__name__","order":"ASCENDING"}],"state":"READY","density":"SPARSE_ALL"},{"name":"projects/hamropanchanga/databases/hamropanchanga-db/collectionGroups/calendarEvents/indexes/CICAgNi47oMK","queryScope":"COLLECTION","fields":[{"fieldPath":"isPublic","order":"ASCENDING"},{"fieldPath":"dateKey","order":"ASCENDING"},{"fieldPath":"__name__","order":"ASCENDING"}],"state":"READY","density":"SPARSE_ALL"},{"name":"projects/hamropanchanga/databases/hamropanchanga-db/collectionGroups/members/indexes/CICAgJjmnIgK","queryScope":"COLLECTION_GROUP","fields":[{"fieldPath":"treeId","order":"ASCENDING"},{"fieldPath":"nameNormalized","order":"ASCENDING"},{"fieldPath":"__name__","order":"ASCENDING"}],"state":"READY","density":"SPARSE_ALL"},{"name":"projects/hamropanchanga/databases/hamropanchanga-db/collectionGroups/trees/indexes/CICAgJjmiJEK","queryScope":"COLLECTION","fields":[{"fieldPath":"owner","order":"ASCENDING"},{"fieldPath":"deleted","order":"ASCENDING"},{"fieldPath":"__name__","order":"ASCENDING"}],"state":"READY","density":"SPARSE_ALL"}]}
+[debug] [2026-02-23T04:28:13.844Z] Checked if tokens are valid: true, expires at: 1771824480456
+[debug] [2026-02-23T04:28:13.844Z] Checked if tokens are valid: true, expires at: 1771824480456
+[debug] [2026-02-23T04:28:13.845Z] >>> [apiv2][query] GET https://firestore.googleapis.com/v1/projects/hamropanchanga/databases/hamropanchanga-db/collectionGroups/-/fields?filter=indexConfig.usesAncestorConfig=false OR ttlConfig:* [none]
+[debug] [2026-02-23T04:28:13.946Z] <<< [apiv2][status] GET https://firestore.googleapis.com/v1/projects/hamropanchanga/databases/hamropanchanga-db/collectionGroups/-/fields?filter=indexConfig.usesAncestorConfig=false OR ttlConfig:* 200
+[debug] [2026-02-23T04:28:13.946Z] <<< [apiv2][body] GET https://firestore.googleapis.com/v1/projects/hamropanchanga/databases/hamropanchanga-db/collectionGroups/-/fields?filter=indexConfig.usesAncestorConfig=false OR ttlConfig:* {"fields":[{"name":"projects/hamropanchanga/databases/hamropanchanga-db/collectionGroups/__default__/fields/*","indexConfig":{"indexes":[{"queryScope":"COLLECTION","fields":[{"fieldPath":"*","order":"ASCENDING"}],"state":"READY"},{"queryScope":"COLLECTION","fields":[{"fieldPath":"*","order":"DESCENDING"}],"state":"READY"},{"queryScope":"COLLECTION","fields":[{"fieldPath":"*","arrayConfig":"CONTAINS"}],"state":"READY"}]}}]}
+[debug] [2026-02-23T04:28:13.946Z] Checked if tokens are valid: true, expires at: 1771824480456
+[debug] [2026-02-23T04:28:13.946Z] Checked if tokens are valid: true, expires at: 1771824480456
+[debug] [2026-02-23T04:28:13.946Z] >>> [apiv2][query] GET https://firestore.googleapis.com/v1/projects/hamropanchanga/databases/hamropanchanga-db [none]
+[debug] [2026-02-23T04:28:14.001Z] <<< [apiv2][status] GET https://firestore.googleapis.com/v1/projects/hamropanchanga/databases/hamropanchanga-db 200
+[debug] [2026-02-23T04:28:14.002Z] <<< [apiv2][body] GET https://firestore.googleapis.com/v1/projects/hamropanchanga/databases/hamropanchanga-db {"name":"projects/hamropanchanga/databases/hamropanchanga-db","uid":"2a5c9dc0-3c51-41d2-a0fd-9d1e6b3a3a6e","createTime":"2026-02-08T19:33:23.746818Z","updateTime":"2026-02-08T19:33:23.746818Z","locationId":"us-east4","type":"FIRESTORE_NATIVE","concurrencyMode":"PESSIMISTIC","versionRetentionPeriod":"3600s","earliestVersionTime":"2026-02-23T03:28:13.973659Z","appEngineIntegrationMode":"DISABLED","pointInTimeRecoveryEnablement":"POINT_IN_TIME_RECOVERY_DISABLED","deleteProtectionState":"DELETE_PROTECTION_DISABLED","databaseEdition":"STANDARD","freeTier":true,"realtimeUpdatesMode":"REALTIME_UPDATES_MODE_ENABLED","etag":"IInV9pfj7pIDMPiVkaOU15ID"}
+[info] i  firestore: The following indexes are defined in your project but are not present in your firestore indexes file:
+	(calendarEvents) -- (createdBy,ASCENDING) (dateKey,ASCENDING)  -- Density:SPARSE_ALL 
+	(tithis) -- (startDate,ASCENDING) (startTime,ASCENDING)  -- Density:SPARSE_ALL 
+	(homeCards) -- (published,ASCENDING) (order,ASCENDING)  -- Density:SPARSE_ALL 
+	(calendarEvents) -- (isPublic,ASCENDING) (dateKey,ASCENDING)  -- Density:SPARSE_ALL  

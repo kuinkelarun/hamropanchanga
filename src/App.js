@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { BrowserRouter as Router, Routes, Route, useNavigate, useLocation } from 'react-router-dom';
-import { collection, query, where, onSnapshot, doc, getDoc, setDoc, updateDoc, getDocs } from 'firebase/firestore';
-import { onAuthStateChanged, signOut, getIdTokenResult } from 'firebase/auth';
-import { auth, signInWithGoogle, db } from './firebase';
+import { collection, query, where, onSnapshot, doc, getDoc } from 'firebase/firestore';
+import { signInWithGoogle, db } from './firebase';
 import { SettingsProvider } from './contexts/SettingsContext';
 import { LanguageProvider, useLanguage } from './contexts/LanguageContext';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
 import SettingsMenu from './components/SettingsMenu';
 import LanguageSelector from './components/LanguageSelector';
 import LandingPage from './components/LandingPage';
@@ -20,8 +20,6 @@ import EmbeddedBuilderPage from './components/TreeBuilder/EmbeddedBuilderPage';
 import TreeSelectionPage from './components/TreeBuilder/TreeSelectionPage';
 import TreeDetailPage from './components/TreeBuilder/TreeDetailPage';
 import { useUserPermissions } from './hooks/usePermissions';
-import { USER_ROLES, DEFAULT_ROLE_PERMISSIONS } from './constants/roles';
-import { convertAdToBs, convertBsToAd, getTithiIndexByName, getTithiLunarMonthName } from './utils/nepaliDateUtils';
 
 // Tithi Calculator Button Component with visibility control
 function TithiCalculatorButton({ onClick }) {
@@ -58,13 +56,15 @@ function TithiCalculatorButton({ onClick }) {
 
 export default function App() {
     return (
-        <LanguageProvider>
-            <SettingsProvider>
-                <Router>
-                    <AppContent />
-                </Router>
-            </SettingsProvider>
-        </LanguageProvider>
+        <AuthProvider>
+            <LanguageProvider>
+                <SettingsProvider>
+                    <Router>
+                        <AppContent />
+                    </Router>
+                </SettingsProvider>
+            </LanguageProvider>
+        </AuthProvider>
     );
 }
 
@@ -73,14 +73,12 @@ function AppContent() {
     const location = useLocation();
     const { t } = useLanguage();
     
-    // STATE MANAGEMENT
-    const [user, setUser] = useState(null);
+    // AUTH STATE (from AuthContext)
+    const { user, isAdmin, isLoading, logout } = useAuth();
     const [trees, setTrees] = useState([]);
     const [treeCalendarEvents, setTreeCalendarEvents] = useState([]);
     const [personalCalendarEvents, setPersonalCalendarEvents] = useState([]);
     const [treeMembers, setTreeMembers] = useState([]);
-    const [isLoading, setIsLoading] = useState(true);
-    const [isAdmin, setIsAdmin] = useState(false);
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
     const hamburgerButtonRef = useRef(null);
@@ -159,200 +157,6 @@ function AppContent() {
         document.addEventListener('pointerdown', onPointerDown);
         return () => document.removeEventListener('pointerdown', onPointerDown);
     }, [mobileMenuOpen]);
-
-    // --- HOOKS ---
-    useEffect(() => {
-        const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-            if (currentUser) {
-                setUser(currentUser);
-
-                // STEP 1: Check if user has a pending invitation and process it
-                try {
-                    const rawEmail = currentUser.email || '';
-                    const lowerEmail = rawEmail.toLowerCase();
-                    if (process.env.NODE_ENV !== 'production') {
-                        console.log('Processing potential invitation for signed-in user');
-                    }
-
-                    // Try both possible document IDs: lowercased email and raw email
-                    const invitationRefs = [
-                        doc(db, 'userInvitations', lowerEmail),
-                        doc(db, 'userInvitations', rawEmail)
-                    ];
-
-                    let invitationSnap = null;
-                    let invitationRefUsed = null;
-
-                    for (const ref of invitationRefs) {
-                        try {
-                            const snap = await getDoc(ref);
-                            if (snap.exists()) {
-                                invitationSnap = snap;
-                                invitationRefUsed = ref;
-                                break;
-                            }
-                        } catch (readErr) {
-                            // Log read error for diagnostics but continue to try other refs
-                            if (process.env.NODE_ENV !== 'production') {
-                                console.warn('Invitation read attempt failed for', ref.path, readErr.code, readErr.message);
-                            }
-                        }
-                    }
-
-                    if (invitationSnap && invitationSnap.exists()) {
-                        const invitationData = invitationSnap.data();
-                        const isProcessed = invitationData.processed;
-                        if (process.env.NODE_ENV !== 'production') {
-                            console.log('Found invitation doc (using):', invitationRefUsed.path, 'processed:', isProcessed);
-                        }
-
-                        const userDocRef = doc(db, 'users', currentUser.uid);
-                        
-                        // Check if user document already exists
-                        const existingUserDoc = await getDoc(userDocRef);
-                        
-                        // Create/update user document if it doesn't exist OR if invitation hasn't been processed yet
-                        if (!existingUserDoc.exists() || !isProcessed) {
-                            try {
-                                if (existingUserDoc.exists()) {
-                                    // Update existing user with invitation data
-                                    await updateDoc(userDocRef, {
-                                        email: currentUser.email,
-                                        displayName: currentUser.displayName || invitationData.displayName || existingUserDoc.data().displayName || '',
-                                        role: invitationData.role,
-                                        permissions: invitationData.permissions,
-                                        active: true,
-                                        updatedAt: new Date().toISOString()
-                                    });
-                                    if (process.env.NODE_ENV !== 'production') {
-                                        console.log('Updated existing user document with invitation data');
-                                    }
-                                } else {
-                                    // Create new user document
-                                    await setDoc(userDocRef, {
-                                        email: currentUser.email,
-                                        displayName: currentUser.displayName || invitationData.displayName || '',
-                                        role: invitationData.role,
-                                        permissions: invitationData.permissions,
-                                        active: true,
-                                        createdAt: new Date().toISOString(),
-                                        updatedAt: new Date().toISOString()
-                                    });
-                                    if (process.env.NODE_ENV !== 'production') {
-                                        console.log('Created new user document from invitation');
-                                    }
-                                }
-
-                                // If invited as admin, also add to adminList
-                                if (invitationData.role === 'admin') {
-                                    const adminDocRef = doc(db, 'adminList', currentUser.uid);
-                                    const adminDocSnap = await getDoc(adminDocRef);
-                                    if (!adminDocSnap.exists()) {
-                                        await setDoc(adminDocRef, {
-                                            email: currentUser.email,
-                                            addedAt: new Date().toISOString()
-                                        });
-                                        if (process.env.NODE_ENV !== 'production') {
-                                            console.log('Added user to adminList');
-                                        }
-                                    }
-                                }
-
-                                // Mark invitation as processed (only if not already processed)
-                                if (!isProcessed) {
-                                    try {
-                                        await updateDoc(invitationRefUsed, {
-                                            processed: true,
-                                            processedAt: new Date().toISOString(),
-                                            processedUid: currentUser.uid
-                                        });
-                                        if (process.env.NODE_ENV !== 'production') {
-                                            console.log('User invitation processed successfully');
-                                        }
-                                    } catch (udErr) {
-                                        console.error('Failed to mark invitation processed for', invitationRefUsed.path, udErr.code, udErr.message);
-                                    }
-                                }
-                            } catch (userDocErr) {
-                                console.error('Error creating/updating user document:', userDocErr);
-                            }
-                        } else {
-                            if (process.env.NODE_ENV !== 'production') {
-                                console.log('User document already exists and invitation already processed');
-                            }
-                        }
-                    } else {
-                        if (process.env.NODE_ENV !== 'production') {
-                            console.log('No invitation found for signed-in user');
-                        }
-                        // User signed in without invitation - create default user document
-                        try {
-                            const userDocRef = doc(db, 'users', currentUser.uid);
-                            const existingUserDoc = await getDoc(userDocRef);
-                            
-                            if (!existingUserDoc.exists()) {
-                                if (process.env.NODE_ENV !== 'production') {
-                                    console.log('Creating default user document for signed-in user');
-                                }
-                                await setDoc(userDocRef, {
-                                    email: currentUser.email,
-                                    displayName: currentUser.displayName || '',
-                                    role: USER_ROLES.USER,
-                                    permissions: DEFAULT_ROLE_PERMISSIONS[USER_ROLES.USER],
-                                    active: true,
-                                    createdAt: new Date().toISOString(),
-                                    updatedAt: new Date().toISOString()
-                                });
-                                if (process.env.NODE_ENV !== 'production') {
-                                    console.log('Successfully created default user document');
-                                }
-                            }
-                        } catch (defaultUserErr) {
-                            console.error('Error creating default user document:', defaultUserErr);
-                        }
-                    }
-                } catch (err) {
-                    console.error('Error processing user invitation:', err.code || err.message || err);
-                }
-
-                // STEP 2: Check adminList collection in Firestore for admin status (no-cost server-side APIs required)
-                try {
-                    // First check adminList/{uid} doc existence (admin bootstrap: create this doc via Firestore console for initial admin)
-                    const adminDocRef = doc(db, 'adminList', currentUser.uid);
-                    const adminDocSnap = await getDoc(adminDocRef);
-                    
-                    if (adminDocSnap.exists()) {
-                        setIsAdmin(true);
-                    } else {
-                        // Optional: also check token claims if you used custom claims previously
-                        try {
-                            const idTokenResult = await getIdTokenResult(currentUser);
-                            const tokenAdmin = !!(idTokenResult && idTokenResult.claims && idTokenResult.claims.admin);
-                            if (tokenAdmin) {
-                                setIsAdmin(true);
-                            }
-                        } catch (tErr) {
-                            // ignore token errors and fallback to users doc
-                        }
-
-                        // Final fallback: check users/{uid}.role if present (useful for auditing or legacy data)
-                        const userDocRef = doc(db, 'users', currentUser.uid);
-                        const userDocSnap = await getDoc(userDocRef);
-                        setIsAdmin(userDocSnap.exists() && userDocSnap.data().role === 'admin');
-                    }
-                } catch (err) {
-                    console.error('Error checking admin status:', err);
-                    setIsAdmin(false);
-                }
-            } else {
-                setUser(null);
-                setIsAdmin(false);
-                setTrees([]);
-            }
-            setIsLoading(false);
-        });
-        return () => unsubscribe();
-    }, []);
 
     // Load trees for current user
     useEffect(() => {
@@ -521,26 +325,16 @@ function AppContent() {
 
     // --- HANDLERS ---
     const handleLogout = async () => {
-        try {
-            await signOut(auth);
-        } catch (err) {
-            console.error('Logout error:', err);
-        }
+        await logout();
     };
 
     const handleBackToList = () => {
         navigate('/');
     };
 
-    const handleSignOut = () => {
-        signOut(auth)
-            .then(() => {
-                // Redirect to home page after successful logout
-                navigate('/');
-            })
-            .catch((error) => {
-                console.error("Sign out error: ", error);
-            });
+    const handleSignOut = async () => {
+        await logout();
+        navigate('/');
     };
 
     const handleAdminEditCards = () => {

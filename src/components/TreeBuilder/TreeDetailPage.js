@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { normalizeForCompare } from '../../utils/textNormalize';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { Trees, Members, Relationships, MarriagePoints } from './utils/firestoreTreeApi';
 import AddEventForm from '../AddEventForm';
@@ -7,9 +6,10 @@ import TreePreview from './TreePreview';
 import MemberModal from './MemberModal';
 import KebabMenu from './KebabMenu';
 import { db } from '../../firebase';
-import { collection, addDoc, serverTimestamp, query, where, getDocs, doc, updateDoc } from 'firebase/firestore';
-import { formatAdDateToNepaliStringWithNumerals, convertAdToBs } from '../../utils/nepaliDateUtils';
-// Use Unicode `title`/`description` fields stored on events
+import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { formatAdDateToNepaliStringWithNumerals } from '../../utils/nepaliDateUtils';
+import { normalizeForCompare } from '../../utils/textNormalize';
+import { createEvent, updateEvent, deleteEvent, getEventsByTree } from '../../services/CalendarEventService';
 import { useLanguage } from '../../contexts/LanguageContext';
 import TreeShareModal from '../TreeShareModal';
 
@@ -92,19 +92,15 @@ export default function TreeDetailPage({ user }) {
         membersList,
         relationshipsList,
         marriagePointsList,
-        eventsSnap
+        eventsList
       ] = await Promise.all([
         Trees.get(treeId),
         Members.list(treeId),
         Relationships.list(treeId),
         MarriagePoints.list(treeId),
-        getDocs(query(
-          collection(db, 'calendarEvents'),
-          where('treeId', '==', treeId)
-        ))
+        getEventsByTree(treeId)
       ]);
 
-      console.log('Tree loaded:', treeData);
       setTree(treeData);
 
       // Backfill ownerEmail for older trees so shared users can see consistent attribution.
@@ -125,8 +121,7 @@ export default function TreeDetailPage({ user }) {
       setRelationships(relationshipsList || []);
       setMarriagePoints(marriagePointsList || []);
       
-      const eventsList = eventsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      setEvents(eventsList);
+      setEvents(eventsList || []);
 
       // Load About Family data
       const aboutFamily = treeData.aboutFamily || [];
@@ -152,47 +147,7 @@ export default function TreeDetailPage({ user }) {
   const handleAddEvent = async ({ name, description, date, personId, repetition, tithi }) => {
     if (!user || !treeId) return;
     try {
-      // For any repeating non-tithi events, store the original Nepali date
-      // so we can match it correctly across repetitions (same logic as NepaliCalendar.js)
-      let nepaliDateForRecurrence = null;
-      if ((repetition === 'yearly' || repetition === 'monthly') && !tithi) {
-        // Extract Nepali date from the AD date selected
-        const [adY, adM, adD] = date.split('-').map(Number);
-        const bsDate = convertAdToBs(adY, adM - 1, adD);
-        nepaliDateForRecurrence = {
-          year: bsDate.year,
-          month: bsDate.month,
-          day: bsDate.day
-        };
-        if (process.env.NODE_ENV !== 'production') {
-          console.log(`[TreeDetailPage] Storing Nepali date for ${repetition} recurrence:`, {
-            nepaliDate: `${bsDate.year}/${bsDate.month}/${bsDate.day}`,
-            adDate: date,
-            title: name
-          });
-        }
-      }
-
-      const eventData = {
-        title: name,
-        titleNormalized: normalizeForCompare(name),
-        description: description || '',
-        descriptionNormalized: normalizeForCompare(description || ''),
-        dateKey: date,
-        repetition,
-        // Standardize: always set `tithi` field; null when not used.
-        tithi: tithi || null,
-        // Store original Nepali date for yearly/monthly recurrence (non-tithi events)
-        nepaliDateForRecurrence: nepaliDateForRecurrence || null,
-        isPublic: false,
-        createdBy: user.uid,
-        createdByAdmin: false,
-        treeId: treeId,
-        memberId: personId,
-        createdAt: serverTimestamp(),
-      };
-      
-      await addDoc(collection(db, 'calendarEvents'), eventData);
+      await createEvent({ name, description, date, personId, repetition, tithi, userId: user.uid, treeId });
       setIsAddingEvent(false);
       loadTreeData(); // Refresh events
     } catch (err) {
@@ -231,50 +186,7 @@ export default function TreeDetailPage({ user }) {
   const handleUpdateEvent = async ({ name, description, date, personId, repetition, tithi }) => {
     if (!user || !treeId || !editingEvent) return;
     try {
-      const { doc, updateDoc } = await import('firebase/firestore');
-      const eventRef = doc(db, 'calendarEvents', editingEvent.id);
-      
-      // For any repeating non-tithi events, store the original Nepali date
-      // (same logic as handleAddEvent and NepaliCalendar.js)
-      let nepaliDateForRecurrence = null;
-      if ((repetition === 'yearly' || repetition === 'monthly') && !tithi) {
-        const [adY, adM, adD] = date.split('-').map(Number);
-        const bsDate = convertAdToBs(adY, adM - 1, adD);
-        nepaliDateForRecurrence = {
-          year: bsDate.year,
-          month: bsDate.month,
-          day: bsDate.day
-        };
-        if (process.env.NODE_ENV !== 'production') {
-          console.log(`[TreeDetailPage] Updating Nepali date for ${repetition} recurrence:`, {
-            nepaliDate: `${bsDate.year}/${bsDate.month}/${bsDate.day}`,
-            adDate: date,
-            title: name
-          });
-        }
-      }
-      
-      const updateData = {
-        title: name,
-        titleNormalized: normalizeForCompare(name),
-        description: description || '',
-        descriptionNormalized: normalizeForCompare(description || ''),
-        dateKey: date,
-        repetition,
-        memberId: personId,
-        // Update nepaliDateForRecurrence for recurring events
-        nepaliDateForRecurrence: nepaliDateForRecurrence || null,
-      };
-      
-      // Update tithi info if provided
-      if (tithi) {
-        updateData.tithi = tithi;
-      } else {
-        // Clear tithi if switching from tithi mode to date mode
-        updateData.tithi = null;
-      }
-      
-      await updateDoc(eventRef, updateData);
+      await updateEvent(editingEvent.id, { name, description, date, personId, repetition, tithi });
       setIsAddingEvent(false);
       setEditingEvent(null);
       loadTreeData(); // Refresh events
@@ -287,8 +199,7 @@ export default function TreeDetailPage({ user }) {
   const handleDeleteEvent = async (eventId) => {
     if (!window.confirm('Are you sure you want to delete this event?')) return;
     try {
-      const { doc, deleteDoc } = await import('firebase/firestore');
-      await deleteDoc(doc(db, 'calendarEvents', eventId));
+      await deleteEvent(eventId);
       loadTreeData(); // Refresh events
     } catch (err) {
       console.error('Error deleting event:', err);

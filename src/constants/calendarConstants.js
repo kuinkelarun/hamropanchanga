@@ -1,0 +1,125 @@
+/**
+ * calendarConstants.js
+ *
+ * Single source of truth for all Nepali calendar, month, tithi, and weekday
+ * name arrays. Previously these were duplicated across NepaliDatePicker,
+ * TithiCalculator, BulkUploadService, and nepaliDateUtils.
+ *
+ * Import from here instead of re-defining locally.
+ */
+
+// ──── Nepali month names (BS calendar, Devanagari) ────
+export const NEPALI_MONTHS = [
+  "वैशाख", "ज्येष्ठ", "आषाढ", "श्रावण", "भाद्र", "आश्विन",
+  "कार्तिक", "मार्ग", "पौष", "माघ", "फाल्गुन", "चैत्र"
+];
+
+// ──── English transliterations of Nepali months ────
+export const ENGLISH_NEPALI_MONTHS = [
+  "Baishakh", "Jeshtha", "Ashadh", "Shrawan", "Bhadra", "Ashwin",
+  "Kartik", "Marga", "Poush", "Magh", "Falgun", "Chaitra"
+];
+
+// ──── Gregorian month names ────
+export const ENGLISH_MONTHS = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December"
+];
+
+// ──── Nepali weekday names (Devanagari) ────
+export const NEPALI_WEEKDAYS = [
+  "आइतबार", "सोमबार", "मंगलबार", "बुधबार", "बिहिबार", "शुक्रबार", "शनिबार"
+];
+
+// ──── English weekday names ────
+export const ENGLISH_WEEKDAYS = [
+  "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"
+];
+
+// ──── Nepali numeral characters ────
+export const NEPALI_NUMBERS = ["०","१","२","३","४","५","६","७","८","९"];
+
+// ──── Shukla Paksha (waxing moon) tithi names ────
+export const SHUKLA_TITHI_NAMES = [
+  "प्रतिपदा", "द्वितीया", "तृतीया", "चतुर्थी", "पञ्चमी",
+  "षष्ठी", "सप्तमी", "अष्टमी", "नवमी", "दशमी",
+  "एकादशी", "द्वादशी", "त्रयोदशी", "चतुर्दशी", "पूर्णिमा"
+];
+
+// ──── Krishna Paksha (waning moon) tithi names ────
+export const KRISHNA_TITHI_NAMES = [
+  "प्रतिपदा", "द्वितीया", "तृतीया", "चतुर्थी", "पञ्चमी",
+  "षष्ठी", "सप्तमी", "अष्टमी", "नवमी", "दशमी",
+  "एकादशी", "द्वादशी", "त्रयोदशी", "चतुर्दशी", "औंसी"
+];
+
+// ──── English → Nepali tithi name mapping (for bulk upload and data import) ────
+export const ENGLISH_TO_NEPALI_TITHI_MAP = {
+  'Pratipada': 'प्रतिपदा',
+  'Dwitiya': 'द्वितीया',
+  'Tritiya': 'तृतीया',
+  'Chaturthi': 'चतुर्थी',
+  'Panchami': 'पञ्चमी',
+  'Shashthi': 'षष्ठी',
+  'Saptami': 'सप्तमी',
+  'Ashtami': 'अष्टमी',
+  'Navami': 'नवमी',
+  'Dashami': 'दशमी',
+  'Ekadashi': 'एकादशी',
+  'Dvadashi': 'द्वादशी',
+  'Trayodashi': 'त्रयोदशी',
+  'Chaturdashi': 'चतुर्दशी',
+  'Purnima': 'पूर्णिमा',
+  'Amavasya': 'औंसी',
+};
+
+// ──── English → Nepali month name mapping (with common aliases) ────
+export const ENGLISH_TO_NEPALI_MONTH_MAP = {
+  // Standard names
+  'Baishakh': 'वैशाख',
+  'Jyeshtha': 'ज्येष्ठ',
+  'Ashadh': 'आषाढ',
+  'Shravan': 'श्रावण',
+  'Bhadra': 'भाद्र',
+  'Ashwin': 'आश्विन',
+  'Kartik': 'कार्तिक',
+  'Mangsir': 'मार्ग',
+  'Poush': 'पौष',
+  'Magh': 'माघ',
+  'Phalgun': 'फाल्गुन',
+  'Chaitra': 'चैत्र',
+  // Common variations / aliases
+  'Baisakh': 'वैशाख',
+  'Baisak': 'वैशाख',
+  'Baisekh': 'वैशाख',
+  'Vaisakh': 'वैशाख',
+  'Jyaistha': 'ज्येष्ठ',
+  'Jestha': 'ज्येष्ठ',
+  'Jeshtha': 'ज्येष्ठ',
+  'Asarh': 'आषाढ',
+  'Asadh': 'आषाढ',
+  'Shrawan': 'श्रावण',
+  'Sawan': 'श्रावण',
+  'Bhadau': 'भाद्र',
+  'Ashoj': 'आश्विन',
+  'Asoj': 'आश्विन',
+  'Mangseer': 'मार्ग',
+  'Mansir': 'मार्ग',
+  'Marg': 'मार्ग',
+  'Paush': 'पौष',
+  'Push': 'पौष',
+  'Phagun': 'फाल्गुन',
+  'Falgun': 'फाल्गुन',
+  'Chait': 'चैत्र',
+};
+// ──── Gregorian month names in Nepali (Devanagari script) ────
+export const ENGLISH_MONTHS_NEPALI = [
+  "जनवरी", "फेब्रुअरी", "मार्च", "अप्रिल", "मे", "जुन",
+  "जुलाई", "अगस्ट", "सेप्टेम्बर", "अक्टोबर", "नोभेम्बर", "डिसेम्बर"
+];
+
+// ──── Time-of-day period labels (bilingual) ────
+export const TIME_PERIODS = {
+  ne: ['बिहान', 'दिउँसो', 'साँझ', 'रात'],
+  en: ['Morning', 'Afternoon', 'Evening', 'Night'],
+};
