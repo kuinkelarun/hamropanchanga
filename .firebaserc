@@ -1,5 +1,7 @@
 {
   "projects": {
-    "default": "family-tree-crm"
+    "default": "hamropanchanga",
+    "old": "family-tree-crm",
+    "new": "hamropanchanga"
   }
 }

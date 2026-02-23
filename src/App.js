@@ -320,6 +320,7 @@ function AppContent() {
                     // First check adminList/{uid} doc existence (admin bootstrap: create this doc via Firestore console for initial admin)
                     const adminDocRef = doc(db, 'adminList', currentUser.uid);
                     const adminDocSnap = await getDoc(adminDocRef);
+                    
                     if (adminDocSnap.exists()) {
                         setIsAdmin(true);
                     } else {
