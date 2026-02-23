@@ -6,6 +6,7 @@ import { signInWithGoogle } from '../../firebase';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { normalizeForCompare } from '../../utils/textNormalize';
+import { createEvent } from '../../services/CalendarEventService';
 import { useLanguage } from '../../contexts/LanguageContext';
 import BulkUploadModal from '../BulkUploadModal';
 import BulkTreeShareModal from '../BulkTreeShareModal';
@@ -60,18 +61,14 @@ export default function TreeSelectionPage({ user, isAdmin }) {
       }
       setLoading(true);
       try {
-        console.log('[TreeSelectionPage] Loading trees for user:', { uid: user.uid, email: user.email, isAdmin });
         // If admin, fetch all trees (pass null). Otherwise fetch user's trees + shared trees.
         const all = await Trees.list(isAdmin ? null : user.uid, {
           includeShared: !isAdmin, // Regular users should see shared trees
           userEmail: user.email,
           includeDeleted: false
         });
-        console.log('[TreeSelectionPage] Raw trees from Trees.list:', all.length, 'trees');
-        console.log('[TreeSelectionPage] Trees details:', all.map(t => ({ id: t.id, name: t.name, deleted: t.deleted, ownerUid: t.ownerUid })));
         // Trees.list already filters deleted trees, but double-check
         const active = (all || []).filter(t => !t.deleted);
-        console.log('[TreeSelectionPage] Loaded trees:', active.length, 'trees');
         setTrees(active);
       } catch (err) {
         console.error('Error loading trees:', err);
@@ -380,22 +377,7 @@ export default function TreeSelectionPage({ user, isAdmin }) {
   const handleAddEventFromModal = async ({ name, description, date, personId, repetition, tithi }) => {
     try {
       if (!eventModal.treeId || !user) return;
-      const { addDoc, collection, serverTimestamp } = await import('firebase/firestore');
-      await addDoc(collection(db, 'calendarEvents'), {
-        title: name,
-        titleNormalized: normalizeForCompare(name),
-        description: description || '',
-        descriptionNormalized: normalizeForCompare(description || ''),
-        dateKey: date,
-        repetition,
-        tithi: tithi || null,
-        isPublic: false,
-        createdBy: user.uid,
-        createdByAdmin: false,
-        treeId: eventModal.treeId,
-        memberId: personId,
-        createdAt: serverTimestamp(),
-      });
+      await createEvent({ name, description, date, personId, repetition, tithi, userId: user.uid, treeId: eventModal.treeId });
       setEventModal({ open: false, treeId: null, members: [] });
     } catch (err) {
       console.error('Error adding event:', err);

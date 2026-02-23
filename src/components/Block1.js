@@ -25,15 +25,12 @@ const Block1 = () => {
                 id: doc.id,
                 ...doc.data()
             }));
-            console.log('Fetched cards:', cardsData); // Debug log
             setCards(cardsData);
             setLoading(false);
         }, (error) => {
             console.error('Error fetching cards:', error);
-            console.error('Error details:', error.message);
             // If index is missing, try without orderBy as fallback
             if (error.code === 'failed-precondition') {
-                console.log('Trying query without index...');
                 const fallbackQuery = query(
                     collection(db, 'homeCards'),
                     where('published', '==', true)
@@ -43,7 +40,7 @@ const Block1 = () => {
                         id: doc.id,
                         ...doc.data()
                     })).sort((a, b) => (a.order || 0) - (b.order || 0)); // Manual sort
-                    console.log('Fetched cards (fallback):', cardsData);
+                    setCards(cardsData);
                     setCards(cardsData);
                     setLoading(false);
                 });

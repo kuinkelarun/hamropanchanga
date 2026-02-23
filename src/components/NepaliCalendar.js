@@ -1,7 +1,7 @@
-import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react';
-import { collection, addDoc, deleteDoc, doc, onSnapshot, query, orderBy, getDocs, where, serverTimestamp } from 'firebase/firestore';
+import React, { useEffect, useMemo, useState, useCallback } from 'react';
+import { collection, addDoc, deleteDoc, doc, onSnapshot, query, orderBy, getDocs, where } from 'firebase/firestore';
 import { onAuthStateChanged } from 'firebase/auth';
-import { db, auth, signInWithGoogle } from '../firebase';
+import { db, auth } from '../firebase';
 import { useUserPermissions } from '../hooks/usePermissions';
 import { PERMISSIONS } from '../constants/roles';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -9,72 +9,40 @@ import './NepaliCalendar.css';
 import ConfirmModal from './ConfirmModal';
 import bsCalendarData from '../data/bsCalendarData';
 import { useSettings } from '../contexts/SettingsContext';
-import NepaliDatePicker from './NepaliDatePicker';
-import { 
-  getTithiLunarMonthName, 
-  getTithiIndexByName, 
+import {
+  getTithiLunarMonthName,
+  getTithiIndexByName,
   getTithiYearFromAdDate,
-  nepaliMonths as utilNepaliMonths, 
-  formatAdDateToNepaliStringWithNumerals,
   convertAdToBs,
   convertBsToAd
 } from '../utils/nepaliDateUtils';
-import { normalizeForCompare } from '../utils/textNormalize';
-
-const nepaliMonths = utilNepaliMonths;
-const englishMonths = [
-  "January", "February", "March", "April", "May", "June",
-  "July", "August", "September", "October", "November", "December"
-];
-const englishMonthsNepali = [
-  "जनवरी", "फेब्रुअरी", "मार्च", "अप्रिल", "मे", "जुन",
-  "जुलाई", "अगस्ट", "सेप्टेम्बर", "अक्टोबर", "नोभेम्बर", "डिसेम्बर"
-];
-// English transliterations of Nepali lunar months (Bikram Sambat)
-const englishNepaliMonths = [
-  "Baishakh", "Jeshtha", "Ashadh", "Shrawan", "Bhadra", "Ashwin",
-  "Kartik", "Marga", "Poush", "Magh", "Falgun", "Chaitra"
-];
-const nepaliWeekdays = [
-  "आइतबार", "सोमबार", "मंगलबार", "बुधबार", "बिहिबार", "शुक्रबार", "शनिबार"
-];
-const englishWeekdays = [
-  "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"
-];
-// Time periods in both languages
-const timePeriods = {
-  ne: ['बिहान', 'दिउँसो', 'साँझ', 'रात'],
-  en: ['Morning', 'Afternoon', 'Evening', 'Night']
-};
-
-const shuklaPackshyaTithis = [
-  "प्रतिपदा", "द्वितीया", "तृतीया", "चतुर्थी", "पञ्चमी", "षष्ठी", "सप्तमी", 
-  "अष्टमी", "नवमी", "दशमी", "एकादशी", "द्वादशी", "त्रयोदशी", "चतुर्दशी", "पूर्णिमा"
-];
-
-const krishnaPackshyaTithis = [
-  "प्रतिपदा", "द्वितीया", "तृतीया", "चतुर्थी", "पञ्चमी", "षष्ठी", "सप्तमी", 
-  "अष्टमी", "नवमी", "दशमी", "एकादशी", "द्वादशी", "त्रयोदशी", "चतुर्दशी", "औंसी"
-];
-
-// English transliterations of Tithis (Lunar days)
-const englishTithis = [
-  "Pratipada", "Dwitiya", "Tritiya", "Chaturthi", "Panchami", "Shashthi", "Saptami",
-  "Ashtami", "Navami", "Dashami", "Ekadashi", "Dwadashi", "Trayodashi", "Chaturdashi", "Purnima"
-];
-
-const englishTithisKrishna = [
-  "Pratipada", "Dwitiya", "Tritiya", "Chaturthi", "Panchami", "Shashthi", "Saptami",
-  "Ashtami", "Navami", "Dashami", "Ekadashi", "Dwadashi", "Trayodashi", "Chaturdashi", "Amavasya"
-];
-
-// Pakshya (Lunar phase) names in both languages
-const pakshyaNames = {
-  ne: { shukla: 'शुक्लपक्ष', krishna: 'कृष्णपक्ष' },
-  en: { shukla: 'Suklapakshya', krishna: 'Krishnapakshya' }
-};
-
-const nepaliNumbers = ["०","१","२","३","४","५","६","७","८","९"];
+import {
+  NEPALI_MONTHS as nepaliMonths,
+  ENGLISH_MONTHS as englishMonths,
+  ENGLISH_MONTHS_NEPALI as englishMonthsNepali,
+  ENGLISH_NEPALI_MONTHS as englishNepaliMonths,
+  NEPALI_WEEKDAYS as nepaliWeekdays,
+  ENGLISH_WEEKDAYS as englishWeekdays,
+  SHUKLA_TITHI_NAMES as shuklaPackshyaTithis,
+  KRISHNA_TITHI_NAMES as krishnaPackshyaTithis,
+  TIME_PERIODS as timePeriods,
+} from '../constants/calendarConstants';
+import {
+  toNepaliNumber,
+  getNepalDate,
+  formatTime12Hour,
+  parseTithiName,
+  getEnglishTithiName,
+  getEnglishPakshyaName,
+  getTithiStartMillis,
+  getTithiEndMillis,
+  compareTithisByStart,
+  dateKeyFromAd,
+  padDateKey,
+} from '../utils/calendarHelpers';
+import AddEventModal from './calendar/AddEventModal';
+import AddTithiModal from './calendar/AddTithiModal';
+import DayDetailsModal from './calendar/DayDetailsModal';
 
 // bsCalendarData moved to src/data/bsCalendarData.js
 // Note: This is a fallback; we'll load updated data from Firestore if available
@@ -86,46 +54,6 @@ const maxBsYear = Math.max(...Object.keys(bsCalendarData).map(n=>+n));
 const getCalendarData = (year) => {
   return mergedCalendarData[year] || bsCalendarData[year];
 };
-
-function toNepaliNumber(num){
-  return String(num).split('').map(d => nepaliNumbers[+d] ?? d).join('');
-}
-
-function getNepalDate(){
-  const now = new Date();
-  const nptOffset = 5.75 * 3600000;
-  return new Date(now.getTime() + nptOffset);
-}
-
-// Convert 24-hour time (HH:MM) to 12-hour format with AM/PM
-function formatTime12Hour(time24, isNepali = false, tn = null) {
-  if (!time24) return '';
-  const [hours, minutes] = time24.split(':').map(Number);
-  const period = hours >= 12 ? 'PM' : 'AM';
-  const hours12 = hours % 12 || 12;
-  const minutesStr = String(minutes).padStart(2, '0');
-  
-  if (isNepali && tn) {
-    return `${tn(hours12)}:${tn(minutesStr)} ${period}`;
-  }
-  return `${hours12}:${minutesStr} ${period}`;
-}
-
-// Convert 12-hour time with AM/PM to 24-hour format (HH:MM)
-// eslint-disable-next-line no-unused-vars
-function formatTime24Hour(time12) {
-  if (!time12) return '';
-  const match = time12.match(/(\d+):(\d+)\s*(AM|PM)/i);
-  if (!match) return time12; // Return as-is if format doesn't match
-  let hours = parseInt(match[1]);
-  const minutes = match[2];
-  const period = match[3].toUpperCase();
-  
-  if (period === 'PM' && hours !== 12) hours += 12;
-  if (period === 'AM' && hours === 12) hours = 0;
-  
-  return `${String(hours).padStart(2, '0')}:${minutes}`;
-}
 
 // Note: AD↔BS conversions are centralized in nepaliDateUtils to ensure
 // consistent, Nepal-time-based handling across the app. We import and use
@@ -190,8 +118,6 @@ export default function NepaliCalendar({ user: propUser, isAdmin, treeMembers = 
   const [detailsModalOpen, setDetailsModalOpen] = useState(false);
   const [addTithiModalOpen, setAddTithiModalOpen] = useState(false);
   const [modalFocusHint, setModalFocusHint] = useState(null);
-
-  const tithiInputRef = useRef(null);
 
   // Load tithis from Firebase on component mount.
   // Note: `tithis` is public-read in Firestore rules, so this should not wait for auth.
@@ -586,16 +512,6 @@ export default function NepaliCalendar({ user: propUser, isAdmin, treeMembers = 
     return new Date(firstDayOfBsMonthAd.year, firstDayOfBsMonthAd.month, firstDayOfBsMonthAd.day).getDay();
   }, [firstDayOfBsMonthAd]);
 
-  // Helper to create a dateKey from AD date object
-  function dateKeyFromAd(ad){ 
-    return `${ad.year}-${String(ad.month+1).padStart(2, '0')}-${String(ad.day).padStart(2, '0')}`; 
-  }
-
-  // Helper to create a zero-padded date key from numeric year, month(1-12), day
-  function padDateKey(year, month, day){
-    return `${year}-${String(month).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
-  }
-
   // Robust lookup for tithis: try common dateKey formats (no padding and zero-padded)
   const findTithisForAdDate = useCallback((adYear, adMonthZeroBased, adDay) => {
     const y = adYear;
@@ -761,44 +677,19 @@ export default function NepaliCalendar({ user: propUser, isAdmin, treeMembers = 
   // open add tithi modal from + button or details modal
   function openAddTithiModalForDate(adYear, adMonthZeroBased, adDay, focusHint = null){
     if (isDev) console.log('openAddTithiModalForDate called with:', { adYear, adMonthZeroBased, adDay });
-    // Use consistently padded YYYY-MM-DD for activeDate
     const key = `${adYear}-${String(adMonthZeroBased + 1).padStart(2, '0')}-${String(adDay).padStart(2, '0')}`;
     setActiveDate(key);
     setModalFocusHint(focusHint);
-    
-    // Set default start and end dates to the selected date (in YYYY-MM-DD format)
-    const defaultDate = `${adYear}-${String(adMonthZeroBased + 1).padStart(2, '0')}-${String(adDay).padStart(2, '0')}`;
-    if (isDev) console.log('openAddTithiModalForDate: Setting defaultDate to:', defaultDate);
-    setStartDate(defaultDate);
-    setEndDate(defaultDate);
-    
-    setDetailsModalOpen(false); // Close details modal if open
+    setDetailsModalOpen(false);
     setAddTithiModalOpen(true);
   }
 
   // open add event modal from + button or details modal
   function openAddEventModalForDate(adYear, adMonthZeroBased, adDay){
     if (isDev) console.log('openAddEventModalForDate called with:', { adYear, adMonthZeroBased, adDay });
-    // Use consistently padded YYYY-MM-DD for activeDate
     const key = `${adYear}-${String(adMonthZeroBased + 1).padStart(2, '0')}-${String(adDay).padStart(2, '0')}`;
     setActiveDate(key);
-    
-    // Set default event date
-    const defaultDate = `${adYear}-${String(adMonthZeroBased + 1).padStart(2, '0')}-${String(adDay).padStart(2, '0')}`;
-    setEventDate(defaultDate);
-    
-    // Reset form
-    setEventTitle('');
-    setEventDescription('');
-    setEventRepetition('none');
-    setEventType('private'); // Default to private events
-    setEventAssociateMode('date');
-    setSelectedEventTithiId('');
-    setSelectedTreeId('');
-    setSelectedTreeMemberId('');
-    setEventValidation('');
-    
-    setDetailsModalOpen(false); // Close details modal if open
+    setDetailsModalOpen(false);
     setAddEventModalOpen(true);
   }
 
@@ -806,14 +697,14 @@ export default function NepaliCalendar({ user: propUser, isAdmin, treeMembers = 
     if (isDev) console.log('addTithi called with:', { dateKey, name, startDate, startTime, endDate, endTime, user: !!user });
 
     if (!user) {
-      setValidation('Please log in to add tithis.');
-      return;
+      throw new Error('Please log in to add tithis.');
     }
 
+    const tempId = crypto.randomUUID(); // Generate temporary ID for optimistic update
     try {
       // Create the new tithi object with date range
       const newTithi = {
-        id: crypto.randomUUID(), // Generate temporary ID
+        id: tempId,
         name: name,
         startDate: startDate, // YYYY-MM-DD format
         startTime: startTime,
@@ -920,8 +811,6 @@ export default function NepaliCalendar({ user: propUser, isAdmin, treeMembers = 
         console.error('Error message:', error.message);
         console.error('Full error object:', error);
       }
-      setValidation(`Error adding tithi: ${error.message}`);
-      
       // Revert local state on error - remove from all affected dates
       const startDateObj = new Date(startDate + 'T00:00:00');
       const endDateObj = new Date(endDate + 'T00:00:00');
@@ -943,156 +832,12 @@ export default function NepaliCalendar({ user: propUser, isAdmin, treeMembers = 
         const updatedTithis = { ...prevTithis };
         affectedDates.forEach(affectedDateKey => {
           if (updatedTithis[affectedDateKey]) {
-            updatedTithis[affectedDateKey] = updatedTithis[affectedDateKey].filter(t => t.id !== newTithi.id);
+            updatedTithis[affectedDateKey] = updatedTithis[affectedDateKey].filter(t => t.id !== tempId);
           }
         });
         return updatedTithis;
       });
-    }
-  }
-
-  // submit add event form
-  async function submitAddEvent() {
-    if (!user) {
-      setEventValidation('Please log in to add events.');
-      return;
-    }
-
-    if (!eventTitle.trim()) {
-      setEventValidation('Please enter an event title.');
-      return;
-    }
-
-    if (!eventDate) {
-      setEventValidation('Please select a date.');
-      return;
-    }
-
-    // Optional tithi association (used for recurring events)
-    let tithiPayload = null;
-    if (eventAssociateMode === 'tithi') {
-      const [y, m, d] = eventDate.split('-').map(Number);
-      const tithisForEventDate = findTithisForAdDate(y, m - 1, d) || [];
-
-      if (tithisForEventDate.length === 0) {
-        setEventValidation('No tithi is available for the selected date.');
-        return;
-      }
-
-      const selectedTithi = tithisForEventDate.find(t => t.id === selectedEventTithiId) || tithisForEventDate[0];
-      if (!selectedTithi) {
-        setEventValidation('Please select a tithi.');
-        return;
-      }
-
-      const { pakshya, tithi: tithiName } = parseTithiName(selectedTithi.name);
-      const pakshaNormalized = pakshya === 'शुक्लपक्ष' ? 'Shukla' : 'Krishna';
-      const tithiIndex = getTithiIndexByName(tithiName, { fallbackToOne: false });
-      if (!tithiIndex) {
-        setEventValidation('Could not determine the selected tithi. Please try selecting the tithi again.');
-        return;
-      }
-      const lunarMonthName = tithiIndex != null ? getTithiLunarMonthName(pakshaNormalized, tithiIndex, eventDate) : null;
-
-      tithiPayload = {
-        id: selectedTithi.id,
-        name: tithiName,
-        paksha: pakshaNormalized,
-        month: lunarMonthName || null
-      };
-    }
-
-    // Validate selection for family-member events
-    if (eventType === 'customer') {
-      if (!selectedTreeId) {
-        setEventValidation('Please select a tree.');
-        return;
-      }
-      if (!selectedTreeMemberId) {
-        setEventValidation('Please select a family member.');
-        return;
-      }
-    }
-
-    setIsAddingEvent(true);
-    setEventValidation('');
-
-    try {
-      // Add to calendarEvents collection
-      // - public: isPublic === true
-      // - private (self): isPublic === false, no treeId/memberId
-      // - family member (tree-linked): isPublic === false, with treeId + memberId
-      const isPublic = eventType === 'public';
-      const createdByAdmin = isAdmin || isSuperUser;
-
-      // For any repeating non-tithi events, we need to store the original Nepali date
-      // so we can match it correctly across repetitions
-      let nepaliDateForRecurrence = null;
-      if ((eventRepetition === 'yearly' || eventRepetition === 'monthly') && !tithiPayload) {
-        // Always store Nepali date for recurrence (user is selecting Nepali date via NepaliDatePicker)
-        // Extract Nepali date from the AD date selected
-        const [adY, adM, adD] = eventDate.split('-').map(Number);
-        const bsDate = convertAdToBs(adY, adM - 1, adD);
-        nepaliDateForRecurrence = {
-          year: bsDate.year,
-          month: bsDate.month,
-          day: bsDate.day
-        };
-        if (isDev) {
-          console.log(`[submitAddEvent] Storing Nepali date for ${eventRepetition} recurrence:`, {
-            nepaliDate: `${bsDate.year}/${bsDate.month}/${bsDate.day}`,
-            adDate: eventDate,
-            title: eventTitle.trim()
-          });
-        }
-      }
-
-      const payload = {
-        title: eventTitle,
-        titleNormalized: normalizeForCompare(eventTitle),
-        description: eventDescription,
-        descriptionNormalized: normalizeForCompare(eventDescription),
-        dateKey: eventDate,
-        // Standardize: always set `tithi` field; null when not used.
-        tithi: tithiPayload || null,
-        repetition: eventRepetition,
-        // Store original Nepali date for yearly recurrence (non-tithi events)
-        nepaliDateForRecurrence: nepaliDateForRecurrence || null,
-        isPublic: isPublic,
-        createdBy: user.uid,
-        createdByAdmin: createdByAdmin,
-        createdAt: serverTimestamp()
-      };
-
-      if (eventType === 'customer') {
-        payload.treeId = selectedTreeId;
-        payload.memberId = selectedTreeMemberId;
-      }
-
-      await addDoc(collection(db, 'calendarEvents'), payload);
-
-      if (isDev) {
-        if (eventType === 'customer') console.log('Family member (tree) event added successfully');
-        else console.log(`${isPublic ? 'Public' : 'Private'} event added successfully`);
-      }
-
-      // Close modal and reset form
-      setAddEventModalOpen(false);
-      setEventTitle('');
-      setEventDescription('');
-      setEventDate('');
-      setEventRepetition('none');
-      setEventType('private');
-      setEventAssociateMode('date');
-      setSelectedEventTithiId('');
-      setSelectedTreeId('');
-      setSelectedTreeMemberId('');
-      setEventValidation('');
-    } catch (error) {
-      console.error('Error adding event:', error);
-      setEventValidation(`Error adding event: ${error.message}`);
-    } finally {
-      setIsAddingEvent(false);
+      throw error; // Re-throw so child component can display the error
     }
   }
 
@@ -1186,237 +931,19 @@ export default function NepaliCalendar({ user: propUser, isAdmin, treeMembers = 
     }
   }
 
-  // controlled inputs inside modal
-  const [newPakshya, setNewPakshya] = useState('शुक्लपक्ष');
-  const [newTithi, setNewTithi] = useState('');
-  const [startDate, setStartDate] = useState(''); // Start date (YYYY-MM-DD)
-  const [startTime, setStartTime] = useState('06:00'); // Default morning time
-  const [endDate, setEndDate] = useState(''); // End date (YYYY-MM-DD)
-  const [endTime, setEndTime] = useState('18:00'); // Default evening time
-  const [validation, setValidation] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [tithiDropdownOpen, setTithiDropdownOpen] = useState(false);
-
-  // Event form state - moved to dedicated modal
+  // Event modal visibility (form state is inside AddEventModal)
   const [addEventModalOpen, setAddEventModalOpen] = useState(false);
-  const [eventTitle, setEventTitle] = useState('');
-  const [eventDescription, setEventDescription] = useState('');
-  const [eventDate, setEventDate] = useState('');
-  const [eventRepetition, setEventRepetition] = useState('none'); // 'none', 'monthly', 'yearly'
-  const [eventType, setEventType] = useState('private'); // 'public', 'private', 'customer'
-  const [eventAssociateMode, setEventAssociateMode] = useState('date'); // 'date' | 'tithi'
-  const [selectedEventTithiId, setSelectedEventTithiId] = useState('');
-  const [selectedTreeId, setSelectedTreeId] = useState('');
-  const [selectedTreeMemberId, setSelectedTreeMemberId] = useState('');
-  const [eventValidation, setEventValidation] = useState('');
-  const [isAddingEvent, setIsAddingEvent] = useState(false);
-
-  // Tree + family member selection for "For Family Member" events
-  const [availableTrees, setAvailableTrees] = useState([]);
-  const [availableTreeMembers, setAvailableTreeMembers] = useState([]);
 
   useEffect(() => {
-    if (!user) {
-      setAvailableTrees([]);
-      return;
-    }
-
-    const treesCol = collection(db, 'trees');
-    const q = isAdmin
-      ? query(treesCol)
-      : query(treesCol, where('ownerUid', '==', user.uid));
-
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const treesList = snapshot.docs
-        .map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }))
-        .filter((t) => !t.deleted);
-
-      treesList.sort((a, b) => String(a.title || '').localeCompare(String(b.title || '')));
-      setAvailableTrees(treesList);
-    });
-
-    return () => unsubscribe();
-  }, [user, isAdmin]);
-
-  useEffect(() => {
-    // Only load members while the add-event modal is open and "For Family Member" is selected.
-    if (!addEventModalOpen || eventType !== 'customer') {
-      setAvailableTreeMembers([]);
-      return;
-    }
-    if (!selectedTreeId) {
-      setAvailableTreeMembers([]);
-      return;
-    }
-
-    const membersCol = collection(db, 'trees', selectedTreeId, 'members');
-    const unsubscribe = onSnapshot(membersCol, (snapshot) => {
-      const membersList = snapshot.docs
-        .map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }))
-        .filter((m) => !m.archived);
-
-      membersList.sort((a, b) => String(a.name || '').localeCompare(String(b.name || '')));
-      setAvailableTreeMembers(membersList);
-    });
-
-    return () => unsubscribe();
-  }, [addEventModalOpen, eventType, selectedTreeId]);
-
-  // Keep selected tithi in sync with the selected event date when associating by tithi
-  useEffect(() => {
-    if (eventAssociateMode !== 'tithi') return;
-    if (!eventDate) {
-      setSelectedEventTithiId('');
-      return;
-    }
-
-    const [y, m, d] = eventDate.split('-').map(Number);
-    const tithisForEventDate = findTithisForAdDate(y, m - 1, d) || [];
-
-    if (tithisForEventDate.length === 0) {
-      setSelectedEventTithiId('');
-      return;
-    }
-
-    if (!selectedEventTithiId || !tithisForEventDate.some(t => t.id === selectedEventTithiId)) {
-      setSelectedEventTithiId(tithisForEventDate[0].id);
-    }
-  }, [eventAssociateMode, eventDate, findTithisForAdDate, selectedEventTithiId]);
-
-  useEffect(() => {
-    if (addTithiModalOpen && modalFocusHint === 'tithi') {
-      // focus after modal render
-      setTimeout(() => {
-        tithiInputRef.current?.focus();
-      }, 40);
-    }
     if (!addTithiModalOpen) {
       setModalFocusHint(null);
-      setNewPakshya('शुक्लपक्ष'); 
-      setNewTithi(''); 
-      setStartDate('');
-      setStartTime('06:00'); 
-      setEndDate('');
-      setEndTime('18:00'); 
-      setValidation(''); 
-      setIsLoading(false);
-      setTithiDropdownOpen(false); // Close dropdown when modal closes
     }
     if (!detailsModalOpen && !addTithiModalOpen && !addEventModalOpen) {
       setActiveDate(null); // Clear active tile when all modals are closed
     }
-    if (!addEventModalOpen) {
-      // Reset event form when event modal closes
-      setEventTitle('');
-      setEventDescription('');
-      setEventDate('');
-      setEventRepetition('none');
-      setEventType('private');
-      setEventAssociateMode('date');
-      setSelectedEventTithiId('');
-      setSelectedTreeId('');
-      setSelectedTreeMemberId('');
-      setEventValidation('');
-      setIsAddingEvent(false);
-    }
-  }, [addTithiModalOpen, detailsModalOpen, addEventModalOpen, modalFocusHint]);
+  }, [addTithiModalOpen, detailsModalOpen, addEventModalOpen]);
 
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    function handleClickOutside(event) {
-      if (tithiInputRef.current && !tithiInputRef.current.closest('.nc-custom-dropdown').contains(event.target)) {
-        setTithiDropdownOpen(false);
-      }
-    }
 
-    if (tithiDropdownOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-      return () => document.removeEventListener('mousedown', handleClickOutside);
-    }
-  }, [tithiDropdownOpen]);
-
-  async function submitAdd(){
-    if (isLoading) return; // Prevent double submission
-    
-    if (isDev) console.log('submitAdd called with:', { newPakshya, newTithi, startDate, startTime, endDate, endTime, activeDate });
-    
-    setValidation('');
-    if (!newPakshya) { 
-      if (isDev) console.log('Validation failed: No pakshya selected');
-      setValidation('Select a Pakshya'); 
-      return; 
-    }
-    if (!newTithi) { 
-      if (isDev) console.log('Validation failed: No tithi selected');
-      setValidation('Select a Tithi'); 
-      return; 
-    }
-    if (!startDate || !endDate) {
-      if (isDev) console.log('Validation failed: Missing date fields', { startDate, endDate });
-      if (!startDate) {
-        setValidation('Please select a start date');
-      } else {
-        setValidation('Please select an end date');
-      }
-      return;
-    }
-    if (!startTime || !endTime) { 
-      if (isDev) console.log('Validation failed: Missing time fields', { startTime, endTime });
-      if (!startTime) {
-        setValidation('Please select a start time'); 
-      } else {
-        setValidation('Please select an end time');
-      }
-      return; 
-    }
-    
-    // Validate time format (HH:MM)
-    const timePattern = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
-    if (!timePattern.test(startTime) || !timePattern.test(endTime)) {
-      if (isDev) console.log('Validation failed: Invalid time format', { startTime, endTime });
-      setValidation('Please enter valid time format (HH:MM)');
-      return;
-    }
-    
-    // Validate date range: endDate must be >= startDate
-    const startDateObj = new Date(startDate);
-    const endDateObj = new Date(endDate);
-    if (endDateObj < startDateObj) {
-      if (isDev) console.log('Validation failed: End date before start date', { startDate, endDate });
-      setValidation('End date cannot be before start date');
-      return;
-    }
-    
-    // If same date, validate time range
-    if (startDate === endDate && endTime <= startTime) { 
-      if (isDev) console.log('Validation failed: End time before start time on same date', { startTime, endTime });
-      setValidation('End time must be after start time'); 
-      return; 
-    }
-    
-    if (isDev) console.log('Validation passed, attempting to add tithi...');
-    setIsLoading(true);
-    try {
-      const fullTithiName = `${newPakshya} ${newTithi}`;
-      await addTithi(activeDate, fullTithiName, startDate, startTime, endDate, endTime);
-      if (isDev) console.log('Tithi added successfully, clearing form and closing modal');
-      
-      // Clear form and close modal on success
-      setNewPakshya('शुक्लपक्ष'); 
-      setNewTithi(''); 
-      setStartDate('');
-      setStartTime('06:00'); 
-      setEndDate('');
-      setEndTime('18:00');
-      setValidation('');
-      setAddTithiModalOpen(false);
-    } catch (error) {
-      console.error('Error in submitAdd:', error);
-      setValidation('Failed to add tithi. Please try again.');
-    } finally {
-      setIsLoading(false);
-    }
-  }
 
   // State to cache resolved tithi event dates for different years
   const [tithiEventDateCache, setTithiEventDateCache] = useState({});
@@ -1676,51 +1203,6 @@ export default function NepaliCalendar({ user: propUser, isAdmin, treeMembers = 
     return display;
   }, []);
 
-  // Helper function to parse pakshya and tithi from full tithi name
-  const parseTithiName = (fullName) => {
-    // Extract pakshya (first part before space) and tithi (remaining part)
-    const parts = fullName.split(' ');
-    if (parts.length >= 2) {
-      const pakshya = parts[0]; // शुक्लपक्ष or कृष्णपक्ष
-      const tithi = parts.slice(1).join(' '); // rest is tithi name
-      return { pakshya, tithi };
-    }
-    return { pakshya: '', tithi: fullName };
-  };
-
-  // Helper function to get English translation of tithi name
-  const getEnglishTithiName = (nepaliTithiName) => {
-    // Map of Nepali tithi names to their English equivalents
-    const tithiNameMap = {
-      'प्रतिपदा': 'Pratipada',
-      'द्वितीया': 'Dwitiya',
-      'तृतीया': 'Tritiya',
-      'चतुर्थी': 'Chaturthi',
-      'पञ्चमी': 'Panchami',
-      'षष्ठी': 'Shashthi',
-      'सप्तमी': 'Saptami',
-      'अष्टमी': 'Ashtami',
-      'नवमी': 'Navami',
-      'दशमी': 'Dashami',
-      'एकादशी': 'Ekadashi',
-      'द्वादशी': 'Dwadashi',
-      'त्रयोदशी': 'Trayodashi',
-      'चतुर्दशी': 'Chaturdashi',
-      'पूर्णिमा': 'Purnima',
-      'औंसी': 'Amavasya'
-    };
-    return tithiNameMap[nepaliTithiName] || nepaliTithiName;
-  };
-
-  // Helper function to get English translation of pakshya name
-  const getEnglishPakshyaName = (nepaliPakshyaName) => {
-    const pakshyaMap = {
-      'शुक्लपक्ष': 'Sukla',
-      'कृष्णपक्ष': 'Krishna'
-    };
-    return pakshyaMap[nepaliPakshyaName] || nepaliPakshyaName;
-  };
-
   // Helper function to get tithi display name with lunar month
   const getTithiDisplayName = (tithi) => {
     const { pakshya, tithi: tithiName } = parseTithiName(tithi.name);
@@ -1776,70 +1258,6 @@ export default function NepaliCalendar({ user: propUser, isAdmin, treeMembers = 
     return `${startDateStr}, ${formatTime12Hour(tithi.startTime, isNepali, tn)} — ${endDateStr}, ${formatTime12Hour(tithi.endTime, isNepali, tn)}`;
 }
 
-// Helpers to compute millisecond timestamps for tithi start/end for robust ordering
-// Normalize time strings: accept 'HH:MM', 'H:MM', or 'H:MM AM/PM' variations and return 'HH:MM' 24-hour or null
-function normalizeTimeTo24(timeStr){
-  if (!timeStr) return null;
-  timeStr = String(timeStr).trim();
-  // If already in 24-hour 'HH:MM' format
-  const m24 = timeStr.match(/^([01]?\d|2[0-3]):([0-5]\d)$/);
-  if (m24) return `${m24[1].padStart(2,'0')}:${m24[2]}`;
-  // Match 12-hour with AM/PM e.g., '3:06 PM' or '03:06AM'
-  const m12 = timeStr.match(/^(\d{1,2}):(\d{2})\s*([AaPp][Mm])$/);
-  if (m12) {
-    let h = parseInt(m12[1],10);
-    const mm = m12[2];
-    const ampm = m12[3].toUpperCase();
-    if (ampm === 'PM' && h !== 12) h += 12;
-    if (ampm === 'AM' && h === 12) h = 0;
-    return `${String(h).padStart(2,'0')}:${mm}`;
-  }
-  return null;
-}
-
-function getTithiStartMillis(tithi){
-  try{
-    if (!tithi) return Infinity;
-    if (tithi.startDate && tithi.startTime) {
-      const t24 = normalizeTimeTo24(tithi.startTime) || tithi.startTime;
-      // If normalization failed and t24 contains AM/PM, attempt Date parse fallback
-      if (!t24 || !/^\d{2}:\d{2}$/.test(t24)) {
-        const dt = new Date(`${tithi.startDate} ${tithi.startTime}`);
-        const ms = dt.getTime();
-        return Number.isFinite(ms) ? ms : Infinity;
-      }
-      return new Date(`${tithi.startDate}T${t24}:00`).getTime();
-    }
-    if (tithi.startDate) {
-      return new Date(`${tithi.startDate}T00:00:00`).getTime();
-    }
-    return Infinity;
-  }catch(e){
-    return Infinity;
-  }
-}
-
-function getTithiEndMillis(tithi){
-  try{
-    if (!tithi) return Infinity;
-    if (tithi.endDate && tithi.endTime) {
-      const t24 = normalizeTimeTo24(tithi.endTime) || tithi.endTime;
-      if (!t24 || !/^\d{2}:\d{2}$/.test(t24)) {
-        const dt = new Date(`${tithi.endDate} ${tithi.endTime}`);
-        const ms = dt.getTime();
-        return Number.isFinite(ms) ? ms : Infinity;
-      }
-      return new Date(`${tithi.endDate}T${t24}:00`).getTime();
-    }
-    if (tithi.endDate) {
-      return new Date(`${tithi.endDate}T23:59:59`).getTime();
-    }
-    return Infinity;
-  }catch(e){
-    return Infinity;
-  }
-}
-
   // Format tithi display for calendar day cards with paksha information
   // Handles edge cases where paksha changes within the same day
   const formatTithiForDayCard = (sortedParsedTithis) => {
@@ -1875,16 +1293,6 @@ function getTithiEndMillis(tithi){
     }
   };
 
-function compareTithisByStart(a,b){
-  const sa = getTithiStartMillis(a);
-  const sb = getTithiStartMillis(b);
-  if (sa !== sb) return sa - sb;
-  const ea = getTithiEndMillis(a);
-  const eb = getTithiEndMillis(b);
-  if (ea !== eb) return ea - eb;
-  return (a.name || '').localeCompare(b.name || '');
-}
- 
   function renderDayTiles(){
     const tiles = [];
 
@@ -2078,6 +1486,17 @@ function compareTithisByStart(a,b){
     return tiles;
   }
 
+  // Callback for DayDetailsModal to delete a personal event
+  const handleDeleteEvent = useCallback(async (eventId) => {
+    try {
+      await deleteDoc(doc(db, 'calendarEvents', eventId));
+      setCalendarEvents((prev) => prev.filter((e) => e.id !== eventId));
+    } catch (err) {
+      console.error('Error deleting event:', err);
+      alert('Failed to delete event');
+    }
+  }, []);
+
   const modalTithis = useMemo(() => {
     if (!activeDate) return [];
     const parts = activeDate.split('-').map(p=>+p);
@@ -2257,258 +1676,29 @@ function compareTithisByStart(a,b){
 
       {/* Tithi Calculator removed from inline calendar; now available as separate block component */}
 
-      {/* Details Modal - shows existing tithis and events with role-based visibility */}
-      {detailsModalOpen && (
-        <div className="nc-modal-backdrop" onClick={()=> setDetailsModalOpen(false)}>
-          <div className="nc-modal" onClick={(e)=>e.stopPropagation()} style={{ maxWidth: '600px' }}>
-            <div className="nc-modal-header">
-              <h3 className="nc-modal-title" style={{ fontSize: '0.95rem', color: '#666' }}>
-                {
-                  (() => {
-                    if (!activeDate) return '';
-                    
-                    const [year, month, day] = activeDate.split('-').map(Number);
-                    const bs = convertAdToBs(year, month - 1, day);
-                    
-                    // Display BS (lunar) date with correct month name based on language
-                    // bs.month is 1-indexed (1-12), so subtract 1 for array access (0-11)
-                    const monthIndex = bs.month - 1;
-                    const monthName = isNepali ? nepaliMonths[monthIndex] : englishNepaliMonths[monthIndex];
-                    
-                    return isNepali 
-                      ? `${tn(bs.day)} ${monthName} ${tn(bs.year)}`
-                      : `${bs.day} ${monthName} ${bs.year}`;
-                  })()
-                }
-              </h3>
-              <button onClick={()=> setDetailsModalOpen(false)} aria-label="Close">✕</button>
-            </div>
-
-            <div className="nc-modal-body">
-
-            {/* Tithis Section */}
-            <div className="nc-modal-section">
-              <h4>{t('calendar.tithis')}</h4>
-              {modalTithis.length===0 && <div className="muted">✨ Tithis will be added soon for this date</div>}
-              {modalTithis
-                .sort(compareTithisByStart)
-                .map(t => (
-                <div key={t.id} className="nc-item">
-                  <div>
-                    <div className="nc-item-title">{getTithiDisplayName(t)}</div>
-                    <div className="muted">{formatTithiDateTime(t)}</div>
-                  </div>
-                  {/* Delete functionality removed - admins should use Admin Management page */}
-                </div>
-              ))}
-            </div>
-
-            {/* Public Events Section */}
-            <div className="nc-modal-section" style={{ borderTop: '1px solid #eee', paddingTop: '1rem' }}>
-              <h4>{t('calendar.publicEvents')}</h4>
-              {modalEvents.length===0 && <div className="muted">No public events for this date</div>}
-              {modalEvents.map(event => {
-                return (
-                <div key={event.id} className="nc-item" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '0.5rem' }}>
-                  <div style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
-                    <div style={{ flex: 1 }}>
-                      <div className="nc-item-title">
-                        {event.title}
-                        {event.createdByAdmin && <span style={{ marginLeft: '0.5rem', fontSize: '0.75rem', padding: '0.125rem 0.375rem', background: '#fbbf24', color: '#78350f', borderRadius: '0.25rem', fontWeight: '600' }}>Admin</span>}
-                      </div>
-                      {event.description && <div className="muted" style={{ marginTop: '0.25rem' }}>{event.description}</div>}
-                    </div>
-                    {/* Delete functionality removed - users/admins should use Admin Management page */}
-                  </div>
-                </div>
-                );
-              })}
-            </div>
-
-            {/* Private Events Section - user's own private events */}
-            <div className="nc-modal-section" style={{ borderTop: '1px solid #eee', paddingTop: '1rem' }}>
-              <h4 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                {t('calendar.privateEvents')}
-              </h4>
-              {modalPersonalEvents.length===0 && <div className="muted">No private events for this date</div>}
-              {modalPersonalEvents.map(event => {
-                const memberName = getTreeMemberName(event.treeId, event.memberId);
-                const isTreeEvent = !!event.treeId;
-
-                // For tithi events spanning multiple days, show the date being viewed (activeDate)
-                // For other events, use their dateKey or resolved date
-                let displayDateKey = event.dateKey;
-                if (event.tithi) {
-                  // For tithi-based events, show the activeDate (day being viewed)
-                  // since tithis can span multiple days
-                  displayDateKey = activeDate;
-                } else if (event.repetition === 'yearly') {
-                  // For non-tithi yearly repeating events, use the resolved date
-                  displayDateKey = getResolvedTithiEventDate(event);
-                }
-
-                // Use the same AD->BS formatting as Tree Detail page, based on display dateKey
-                const eventNepaliDate = displayDateKey 
-                  ? formatAdDateToNepaliStringWithNumerals(displayDateKey) 
-                  : '';
-                
-                // Format tithi display if present
-                let tithiDisplay = '';
-                if (event.tithi) {
-                  // Normalize paksha to Nepali if it's in English (legacy data)
-                  let pakshaDisplay = event.tithi.paksha;
-                  if (pakshaDisplay === 'Shukla' || pakshaDisplay === 'शुक्ल') {
-                    pakshaDisplay = 'शुक्लपक्ष';
-                  } else if (pakshaDisplay === 'Krishna' || pakshaDisplay === 'कृष्ण') {
-                    pakshaDisplay = 'कृष्णपक्ष';
-                  }
-                  tithiDisplay = ` (${event.tithi.month} ${pakshaDisplay} ${event.tithi.name})`;
-                }
-                
-                return (
-                  <div 
-                    key={event.id} 
-                    className="nc-item" 
-                    style={{ 
-                      flexDirection: 'column', 
-                      alignItems: 'flex-start', 
-                      gap: '0.5rem',
-                      cursor: isTreeEvent && onTreeEventClick ? 'pointer' : 'default'
-                    }}
-                    onDoubleClick={() => {
-                      if (isTreeEvent && onTreeEventClick) {
-                        const eventData = {
-                          ...event,
-                          name: event.title,
-                          date: event.dateKey,
-                          personId: event.memberId
-                        };
-                        onTreeEventClick(eventData);
-                        setDetailsModalOpen(false);
-                      }
-                    }}
-                  >
-                    <div style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
-                      <div style={{ flex: 1 }}>
-                        <div className="nc-item-title">{event.title}</div>
-                        {memberName && (
-                          <div style={{ marginTop: '0.25rem', fontSize: '0.875rem', color: '#7c3aed', fontWeight: '500' }}>
-                            For: {memberName}
-                          </div>
-                        )}
-                        {displayDateKey && (
-                          <div style={{ marginTop: '0.5rem', fontSize: '0.875rem', color: '#666' }}>
-                            📅 {displayDateKey}
-                            {eventNepaliDate && (
-                              <div style={{ color: '#7c3aed', marginTop: '0.25rem', fontWeight: '500' }}>🗓️ {eventNepaliDate}{tithiDisplay}</div>
-                            )}
-                          </div>
-                        )}
-                        {event.description && <div className="muted" style={{ marginTop: '0.25rem' }}>{event.description}</div>}
-                      </div>
-                      {!isTreeEvent && (
-                        <button
-                          onClick={async (e) => {
-                            e.stopPropagation();
-                            if (window.confirm('Are you sure you want to delete this event?')) {
-                              try {
-                                await deleteDoc(doc(db, 'calendarEvents', event.id));
-                                setCalendarEvents((prev) => prev.filter((e) => e.id !== event.id));
-                              } catch (err) {
-                                console.error('Error deleting event:', err);
-                                alert('Failed to delete event');
-                              }
-                            }
-                          }}
-                          style={{ 
-                            background: 'none', 
-                            border: 'none', 
-                            cursor: 'pointer', 
-                            fontSize: '1.1rem',
-                            padding: '0 0 0 8px',
-                            opacity: 0.7
-                          }}
-                          title="Delete Event"
-                          onMouseOver={(e) => e.target.style.opacity = 1}
-                          onMouseOut={(e) => e.target.style.opacity = 0.7}
-                        >
-                          🗑️
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-
-            {/* Modal Actions */}
-            <div className="nc-modal-actions" style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-              <button
-                type="button"
-                className="app-cancel-btn"
-                onClick={()=> setDetailsModalOpen(false)}
-                style={{ flex: '1 1 auto' }}
-              >
-                {t('calendar.cancel') || 'Cancel'}
-              </button>
-
-              {/* For Guests: Show "Login to Add Events" button */}
-              {!user && (
-                <button 
-                  onClick={async () => {
-                    try {
-                      await signInWithGoogle();
-                    } catch (err) {
-                      console.error('Login error:', err);
-                    }
-                  }}
-                  className="app-save-btn"
-                  style={{ flex: '1 1 auto' }}
-                >
-                  Login to Add Events
-                </button>
-              )}
-              
-              {/* For Logged-in Users: Show "Add Event" button */}
-              {user && (
-                <button 
-                  onClick={() => {
-                    if (!activeDate) return;
-                    const parts = activeDate.split('-').map(p=>+p);
-                    const adYear = parts[0];
-                    const adMonthZeroBased = parts[1]-1;
-                    const adDay = parts[2];
-                    openAddEventModalForDate(adYear, adMonthZeroBased, adDay);
-                  }}
-                  className="app-save-btn"
-                  style={{ flex: '1 1 auto' }}
-                >
-                  Add Event
-                </button>
-              )}
-
-              {/* For Admins and Super Users with tithi permission: Show "Add Tithi" when in edit mode */}
-              {(isAdmin || (isSuperUser && !permsLoading && hasPermission(PERMISSIONS.MANAGE_TITHIS))) && isEditMode && (
-                <button 
-                  onClick={() => {
-                    if (!activeDate) return;
-                    const parts = activeDate.split('-').map(p=>+p);
-                    const adYear = parts[0];
-                    const adMonthZeroBased = parts[1]-1;
-                    const adDay = parts[2];
-                    openAddTithiModalForDate(adYear, adMonthZeroBased, adDay, 'tithi');
-                  }}
-                  className="app-save-btn"
-                  style={{ flex: '1 1 auto' }}
-                >
-                  Add Tithi
-                </button>
-              )}
-            </div>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Details Modal */}
+      <DayDetailsModal
+        isOpen={detailsModalOpen}
+        onClose={() => setDetailsModalOpen(false)}
+        activeDate={activeDate}
+        tithis={modalTithis}
+        publicEvents={modalEvents}
+        personalEvents={modalPersonalEvents}
+        user={user}
+        isAdmin={isAdmin}
+        isSuperUser={isSuperUser}
+        isEditMode={isEditMode}
+        permsLoading={permsLoading}
+        hasPermission={hasPermission}
+        onOpenAddEvent={openAddEventModalForDate}
+        onOpenAddTithi={openAddTithiModalForDate}
+        onDeleteEvent={handleDeleteEvent}
+        onTreeEventClick={onTreeEventClick}
+        getTithiDisplayName={getTithiDisplayName}
+        formatTithiDateTime={formatTithiDateTime}
+        getTreeMemberName={getTreeMemberName}
+        getResolvedTithiEventDate={getResolvedTithiEventDate}
+      />
 
       {/* App confirm modal for unsaved edits before jumping to today */}
       <ConfirmModal
@@ -2520,432 +1710,28 @@ function compareTithisByStart(a,b){
         onCancel={() => setConfirmOpen(false)}
       />
 
-      {/* Add Tithi Modal - form for adding new tithi */}
-      {addTithiModalOpen && (
-        <div className="nc-modal-backdrop" onClick={()=> setAddTithiModalOpen(false)}>
-          <div className="nc-modal" onClick={(e)=>e.stopPropagation()}>
-            <div className="nc-modal-header">
-              <h3 className="nc-modal-title">{
-                (() => {
-                  if (!activeDate) return '';
-                  const parts = activeDate.split('-').map(p=>+p);
-                  const adYear = parts[0];
-                  const adMonthZeroBased = parts[1]-1;
-                  const adDay = parts[2];
-                  const bs = convertAdToBs(adYear, adMonthZeroBased, adDay);
-                  return `Add Tithi - ${nepaliMonths[bs.month-1]} ${toNepaliNumber(bs.day)}, ${toNepaliNumber(bs.year)}`;
-                })()
-              }</h3>
-              <button onClick={()=> setAddTithiModalOpen(false)} aria-label="Close">✕</button>
-            </div>
+      {/* Add Tithi Modal */}
+      <AddTithiModal
+        isOpen={addTithiModalOpen}
+        onClose={() => setAddTithiModalOpen(false)}
+        activeDate={activeDate}
+        focusHint={modalFocusHint}
+        user={user}
+        authLoading={authLoading}
+        onAddTithi={addTithi}
+      />
 
-            <div className="nc-modal-body">
-              <div className="nc-modal-section">
-              {/* Pakshya Field */}
-              <div className="nc-form-row">
-                <label className="nc-label">पक्ष (Pakshya):</label>
-                <select
-                  value={newPakshya}
-                  onChange={e => {
-                    setNewPakshya(e.target.value);
-                    setNewTithi(''); // Reset tithi when pakshya changes
-                  }}
-                  className="nc-select"
-                >
-                  <option value="शुक्लपक्ष">शुक्लपक्ष (Shukla Pakshya)</option>
-                  <option value="कृष्णपक्ष">कृष्णपक्ष (Krishna Pakshya)</option>
-                </select>
-              </div>
-
-              {/* Tithi Field */}
-              <div className="nc-form-row">
-                <label className="nc-label">तिथि (Tithi):</label>
-                <div className="nc-custom-dropdown">
-                  <div 
-                    className="nc-dropdown-trigger nc-input"
-                    onClick={() => setTithiDropdownOpen(!tithiDropdownOpen)}
-                    ref={tithiInputRef}
-                  >
-                    <span className={!newTithi ? 'nc-placeholder' : ''}>
-                      {newTithi || 'Select Tithi'}
-                    </span>
-                    <span className="nc-dropdown-arrow">▼</span>
-                  </div>
-                  {tithiDropdownOpen && (
-                    <div className="nc-dropdown-menu">
-                      <div 
-                        className="nc-dropdown-option"
-                        onClick={() => {
-                          setNewTithi('');
-                          setTithiDropdownOpen(false);
-                        }}
-                      >
-                        Select Tithi
-                      </div>
-                      {(newPakshya === 'शुक्लपक्ष' ? shuklaPackshyaTithis : krishnaPackshyaTithis).map(tithi => (
-                        <div 
-                          key={tithi} 
-                          className={`nc-dropdown-option ${newTithi === tithi ? 'selected' : ''}`}
-                          onClick={() => {
-                            setNewTithi(tithi);
-                            setTithiDropdownOpen(false);
-                          }}
-                        >
-                          {tithi}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Date Range Fields - Start */}
-              <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1rem' }}>
-                <div style={{ flex: 1 }}>
-                  <NepaliDatePicker
-                    value={startDate}
-                    onChange={setStartDate}
-                    label="आरम्भ मिति (Start Date)"
-                    required
-                  />
-                </div>
-                <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-                  <label className="nc-label" style={{ marginBottom: '0.25rem' }}>आरम्भकाल (Start Time) *</label>
-                  <input 
-                    type="time" 
-                    value={startTime} 
-                    onChange={e => setStartTime(e.target.value)}
-                    onBlur={e => setStartTime(e.target.value)}
-                    className="nc-input-time"
-                    step="300"
-                    required
-                  />
-                  <div style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '0.25rem' }}>
-                    {startTime && formatTime12Hour(startTime)}
-                  </div>
-                </div>
-              </div>
-
-              {/* Date Range Fields - End */}
-              <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1rem' }}>
-                <div style={{ flex: 1 }}>
-                  <NepaliDatePicker
-                    value={endDate}
-                    onChange={setEndDate}
-                    label="समाप्ति मिति (End Date)"
-                    required
-                  />
-                </div>
-                <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-                  <label className="nc-label" style={{ marginBottom: '0.25rem' }}>समाप्तिकाल (End Time) *</label>
-                  <input 
-                    type="time" 
-                    value={endTime} 
-                    onChange={e => setEndTime(e.target.value)}
-                    onBlur={e => setEndTime(e.target.value)}
-                    className="nc-input-time"
-                    step="300"
-                    required
-                  />
-                  <div style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '0.25rem' }}>
-                    {endTime && formatTime12Hour(endTime)}
-                  </div>
-                </div>
-              </div>
-
-              {/* Multi-day indicator */}
-              {startDate && endDate && startDate !== endDate && (
-                <div style={{ 
-                  padding: '0.5rem', 
-                  background: '#dbeafe', 
-                  borderLeft: '3px solid #3b82f6',
-                  borderRadius: '4px',
-                  fontSize: '0.85rem',
-                  marginBottom: '1rem'
-                }}>
-                  ℹ️ This Tithi spans multiple days and will appear on all day cards from {startDate} to {endDate}
-                </div>
-              )}
-
-              {validation && <div className="nc-validation">{validation}</div>}
-              {!user && !authLoading && <div className="nc-validation">Please log in to add tithis</div>}
-              
-              <div className="nc-modal-actions">
-                <button
-                  type="button"
-                  className="app-cancel-btn"
-                  onClick={()=>{ setAddTithiModalOpen(false); setValidation(''); }}
-                  style={{ flex: '1 1 auto' }}
-                >
-                  {t('calendar.cancel') || 'Cancel'}
-                </button>
-                <button 
-                  onClick={submitAdd} 
-                  className="app-save-btn"
-                  disabled={isLoading || !user || authLoading || !newTithi || !startDate || !endDate || !startTime || !endTime}
-                  style={{ flex: '1 1 auto' }}
-                >
-                  {isLoading ? 'Adding...' : !user ? 'Log in to Add' : 'Add Tithi'}
-                </button>
-              </div>
-            </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Add Event Modal - form for adding new event */}
-      {addEventModalOpen && (
-        <div className="nc-modal-backdrop" onClick={()=> setAddEventModalOpen(false)}>
-          <div className="nc-modal" onClick={(e)=>e.stopPropagation()}>
-            <div className="nc-modal-header">
-              <h3 className="nc-modal-title">{
-                (() => {
-                  if (!activeDate) return '';
-                  const parts = activeDate.split('-').map(p=>+p);
-                  const adYear = parts[0];
-                  const adMonthZeroBased = parts[1]-1;
-                  const adDay = parts[2];
-                  const bs = convertAdToBs(adYear, adMonthZeroBased, adDay);
-                  const monthIndex = bs.month - 1;
-                  const monthName = isNepali ? nepaliMonths[monthIndex] : englishNepaliMonths[monthIndex];
-                  return isNepali 
-                    ? `${toNepaliNumber(bs.day)} ${monthName}, ${toNepaliNumber(bs.year)}`
-                    : `${bs.day} ${monthName}, ${bs.year}`;
-                })()
-              }</h3>
-              <button onClick={()=> setAddEventModalOpen(false)} aria-label="Close">✕</button>
-            </div>
-
-            <div className="nc-modal-body">
-              <div className="nc-modal-section">
-              {/* Event Type Selection */}
-              <div className="nc-form-row" style={{ marginBottom: '1rem' }}>
-                <label className="nc-label">{t('calendar.addEvent')}</label>
-                <div className="nc-event-type-tabs" role="tablist" aria-label="Event type">
-                  <button
-                    type="button"
-                    className={`nc-event-type-tab ${eventType === 'private' ? 'active' : ''}`}
-                    onClick={() => {
-                      setEventType('private');
-                      setSelectedTreeId('');
-                      setSelectedTreeMemberId('');
-                    }}
-                    aria-selected={eventType === 'private'}
-                    role="tab"
-                  >
-                    {t('calendar.forSelf')}
-                  </button>
-                  <button
-                    type="button"
-                    className={`nc-event-type-tab ${eventType === 'customer' ? 'active' : ''}`}
-                    onClick={() => {
-                      setEventType('customer');
-                    }}
-                    aria-selected={eventType === 'customer'}
-                    role="tab"
-                  >
-                    {t('calendar.forFamilyMember')}
-                  </button>
-                  {(isAdmin || isSuperUser) && (
-                    <button
-                      type="button"
-                      className={`nc-event-type-tab ${eventType === 'public' ? 'active' : ''}`}
-                      onClick={() => {
-                        setEventType('public');
-                        setSelectedTreeId('');
-                        setSelectedTreeMemberId('');
-                      }}
-                      aria-selected={eventType === 'public'}
-                      role="tab"
-                    >
-                      {t('calendar.public')}
-                    </button>
-                  )}
-                </div>
-              </div>
-
-              {/* Tree + Family Member Selection - shown when eventType is 'customer' */}
-              {eventType === 'customer' && (
-                <>
-                  <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1rem' }}>
-                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-                      <label className="nc-label">{t('calendar.selectTree')}</label>
-                      <select
-                        value={selectedTreeId}
-                        onChange={(e) => {
-                          setSelectedTreeId(e.target.value);
-                          setSelectedTreeMemberId('');
-                        }}
-                        className="nc-select"
-                      >
-                        <option value="">{t('calendar.selectTreePlaceholder')}</option>
-                        {availableTrees.map((tree) => (
-                          <option key={tree.id} value={tree.id}>
-                            {tree.title || 'Untitled Tree'}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-
-                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-                      <label className="nc-label">{t('calendar.selectMember')}</label>
-                      <select
-                        value={selectedTreeMemberId}
-                        onChange={(e) => setSelectedTreeMemberId(e.target.value)}
-                        className="nc-select"
-                        disabled={!selectedTreeId}
-                      >
-                        <option value="">{t('calendar.selectMemberPlaceholder')}</option>
-                        {availableTreeMembers.map((m) => (
-                          <option key={m.id} value={m.id}>
-                            {m.name || 'Unknown'}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-                </>
-              )}
-
-              {/* Event Title */}
-              <div className="nc-form-row" style={{ marginBottom: '1rem' }}>
-                <label className="nc-label">{t('calendar.eventTitle')}</label>
-                <input
-                  type="text"
-                  value={eventTitle}
-                  onChange={(e) => setEventTitle(e.target.value)}
-                  placeholder={t('calendar.eventTitlePlaceholder')}
-                  className="nc-input"
-                />
-              </div>
-
-              {/* Event Description */}
-              <div className="nc-form-row" style={{ marginBottom: '1rem' }}>
-                <label className="nc-label">{t('calendar.description')}</label>
-                <textarea
-                  value={eventDescription}
-                  onChange={(e) => setEventDescription(e.target.value)}
-                  placeholder={t('calendar.descriptionPlaceholder')}
-                  className="nc-input"
-                  rows={3}
-                  style={{ resize: 'vertical' }}
-                />
-              </div>
-
-              {/* Associate event with date or tithi */}
-              <div className="nc-form-row" style={{ marginBottom: '1rem' }}>
-                <label className="nc-label">{t('calendar.associateWith')}</label>
-                <div className="nc-event-type-tabs" role="tablist" aria-label="Associate event with">
-                  <button
-                    type="button"
-                    className={`nc-event-type-tab ${eventAssociateMode === 'date' ? 'active' : ''}`}
-                    onClick={() => setEventAssociateMode('date')}
-                    aria-selected={eventAssociateMode === 'date'}
-                    role="tab"
-                  >
-                    {t('calendar.date')}
-                  </button>
-                  <button
-                    type="button"
-                    className={`nc-event-type-tab ${eventAssociateMode === 'tithi' ? 'active' : ''}`}
-                    onClick={() => setEventAssociateMode('tithi')}
-                    aria-selected={eventAssociateMode === 'tithi'}
-                    role="tab"
-                  >
-                    {t('calendar.tithi')}
-                  </button>
-                </div>
-              </div>
-
-              {eventAssociateMode === 'tithi' && (
-                <div className="nc-form-row" style={{ marginBottom: '1rem' }}>
-                  <label className="nc-label">{t('calendar.selectTithi')}</label>
-                  {(() => {
-                    if (!eventDate) {
-                      return <div className="muted">No day selected. Close and reopen from a calendar day.</div>;
-                    }
-
-                    const [y, m, d] = eventDate.split('-').map(Number);
-                    const tithisForEventDate = (findTithisForAdDate(y, m - 1, d) || []).slice().sort(compareTithisByStart);
-
-                    if (tithisForEventDate.length === 0) {
-                      return <div className="muted">No tithi found for the selected date.</div>;
-                    }
-
-                    return (
-                      <select
-                        value={selectedEventTithiId}
-                        onChange={(e) => setSelectedEventTithiId(e.target.value)}
-                        className="nc-select"
-                      >
-                        {tithisForEventDate.map(t => (
-                          <option key={t.id} value={t.id}>
-                            {getTithiDisplayName(t)}
-                          </option>
-                        ))}
-                      </select>
-                    );
-                  })()}
-                </div>
-              )}
-
-              {eventAssociateMode === 'date' && (
-                <div className="nc-form-row" style={{ marginBottom: '1rem' }}>
-                  <NepaliDatePicker
-                    value={eventDate}
-                    onChange={setEventDate}
-                    label={t('calendar.eventDate')}
-                    required
-                  />
-                </div>
-              )}
-
-              {/* Event Repetition */}
-              <div className="nc-form-row" style={{ marginBottom: '1rem' }}>
-                <label className="nc-label">{t('calendar.repeats')}</label>
-                <select
-                  value={eventRepetition}
-                  onChange={(e) => setEventRepetition(e.target.value)}
-                  className="nc-select"
-                >
-                  <option value="none">{t('calendar.doesNotRepeat')}</option>
-                  <option value="monthly">{t('calendar.monthly')}</option>
-                  <option value="yearly">{t('calendar.yearly')}</option>
-                </select>
-              </div>
-
-              {eventValidation && <div className="nc-validation">{eventValidation}</div>}
-              {!user && !authLoading && <div className="nc-validation">Please log in to add events</div>}
-              
-              <div className="nc-modal-actions">
-                <button
-                  type="button"
-                  className="app-cancel-btn"
-                  onClick={()=>{ setAddEventModalOpen(false); setEventValidation(''); }}
-                  style={{ flex: '1 1 auto' }}
-                >
-                  {t('calendar.cancel')}
-                </button>
-                <button 
-                  onClick={submitAddEvent} 
-                  className="app-save-btn"
-                  disabled={
-                    isAddingEvent || !user || authLoading || !eventTitle ||
-                    (eventAssociateMode === 'date' && !eventDate) ||
-                    (eventAssociateMode === 'tithi' && !selectedEventTithiId) ||
-                    (eventType === 'customer' && !selectedTreeMemberId)
-                  }
-                  style={{ flex: '1 1 auto' }}
-                >
-                  {isAddingEvent ? 'Adding...' : !user ? 'Log in to Add' : t('calendar.addEventButton')}
-                </button>
-              </div>
-            </div>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Add Event Modal */}
+      <AddEventModal
+        isOpen={addEventModalOpen}
+        onClose={() => setAddEventModalOpen(false)}
+        activeDate={activeDate}
+        user={user}
+        authLoading={authLoading}
+        isAdmin={isAdmin}
+        isSuperUser={isSuperUser}
+        findTithisForAdDate={findTithisForAdDate}
+      />
     </div>
   );
 };

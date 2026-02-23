@@ -3,10 +3,7 @@ import './TithiCalculator.css';
 import { computeTithiFromLongitudes, getEphemerisData } from '../utils/ephemeris';
 import { toNepaliNumber, formatNepaliDateTime, nepaliMonths, convertAdToBs, getTithiYearFromAdDate, getTithiLunarMonthName } from '../utils/nepaliDateUtils';
 import { useLanguage } from '../contexts/LanguageContext';
-
-// Nepali Tithi names
-const shuklaNames = ["प्रतिपदा", "द्वितीया", "तृतीया", "चतुर्थी", "पञ्चमी", "षष्ठी", "सप्तमी", "अष्टमी", "नवमी", "दशमी", "एकादशी", "द्वादशी", "त्रयोदशी", "चतुर्दशी", "पूर्णिमा"];
-const krishnaNames = ["प्रतिपदा", "द्वितीया", "तृतीया", "चतुर्थी", "पञ्चमी", "षष्ठी", "सप्तमी", "अष्टमी", "नवमी", "दशमी", "एकादशी", "द्वादशी", "त्रयोदशी", "चतुर्दशी", "औंसी"];
+import { SHUKLA_TITHI_NAMES, KRISHNA_TITHI_NAMES } from '../constants/calendarConstants';
 
 export default function TithiCalculator() {
   const { t } = useLanguage();
@@ -292,7 +289,7 @@ export default function TithiCalculator() {
           <div className="tc-main-tithi">
             <div className="tithi-number">{toNepaliNumber(result.tithi)}</div>
             <div className="tithi-name">
-              {(result.paksha === 'Shukla' ? shuklaNames : krishnaNames)[result.pakshaIndex - 1]}
+              {(result.paksha === 'Shukla' ? SHUKLA_TITHI_NAMES : KRISHNA_TITHI_NAMES)[result.pakshaIndex - 1]}
             </div>
             <div className="tithi-paksha">
               {result.paksha === 'Shukla' ? 'शुक्लपक्ष' : 'कृष्णपक्ष'} 

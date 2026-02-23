@@ -26,8 +26,8 @@ import {
   serverTimestamp,
 } from 'firebase/firestore';
 
-// Expose db globally for migration scripts in development
-if (process.env.NODE_ENV === 'development' || true) { // Always expose for admin tools
+// Expose db globally for migration scripts in development ONLY
+if (process.env.NODE_ENV === 'development') {
   window.db = db;
   // Expose auth for diagnostics (token claims, currentUser)
   window.auth = auth;

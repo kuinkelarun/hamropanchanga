@@ -1,18 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { convertAdToBs, convertBsToAd, toNepaliNumber, getNepalDate, minBsYear, maxBsYear } from '../utils/nepaliDateUtils';
 import { useLanguage } from '../contexts/LanguageContext';
+import { NEPALI_MONTHS, ENGLISH_NEPALI_MONTHS } from '../constants/calendarConstants';
 import './NepaliDatePicker.css';
-
-const nepaliMonths = [
-  "वैशाख", "ज्येष्ठ", "आषाढ", "श्रावण", "भाद्र", "आश्विन",
-  "कार्तिक", "मार्ग", "पौष", "माघ", "फाल्गुन", "चैत्र"
-];
-
-// English transliterations of Nepali lunar months
-const englishNepaliMonths = [
-  "Baishakh", "Jeshtha", "Ashadh", "Shrawan", "Bhadra", "Ashwin",
-  "Kartik", "Marga", "Poush", "Magh", "Falgun", "Chaitra"
-];
 
 const NepaliDatePicker = ({ value, onChange, label, required = false }) => {
   const { t, tn, isNepali } = useLanguage();
@@ -42,16 +32,12 @@ const NepaliDatePicker = ({ value, onChange, label, required = false }) => {
     const newBs = { ...bsDate, [field]: Number(val) };
     setBsDate(newBs);
     
-    console.log('NepaliDatePicker: BS Date Selected:', newBs);
-    
     // Convert to AD and update
     const ad = convertBsToAd(newBs.year, newBs.month, newBs.day);
-    console.log('NepaliDatePicker: AD conversion result:', ad);
     
     if (ad) {
       // ad.month is 0-indexed (0=Jan, 11=Dec), so add 1 for YYYY-MM-DD string format
       const formatted = `${ad.year}-${String(ad.month + 1).padStart(2, '0')}-${String(ad.day).padStart(2, '0')}`;
-      console.log('NepaliDatePicker: Formatted AD date:', formatted);
       setAdValue(formatted);
       onChange?.(formatted);
     }
@@ -69,8 +55,8 @@ const NepaliDatePicker = ({ value, onChange, label, required = false }) => {
         </select>
         
         <select value={bsDate.month} onChange={(e) => handleChange('month', e.target.value)}>
-          {nepaliMonths.map((month, i) => {
-            const displayMonth = isNepali ? month : englishNepaliMonths[i];
+          {NEPALI_MONTHS.map((month, i) => {
+            const displayMonth = isNepali ? month : ENGLISH_NEPALI_MONTHS[i];
             return <option key={i + 1} value={i + 1}>{displayMonth}</option>;
           })}
         </select>
