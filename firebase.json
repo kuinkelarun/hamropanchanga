@@ -3,7 +3,12 @@
     "source": "functions"
   },
   "firestore": {
-    "rules": "firestore.rules"
+    "rules": "firestore.rules",
+    "indexes": "firestore.indexes.json",
+    "database": "hamropanchanga-db"
+  },
+  "storage": {
+    "rules": "storage.rules"
   },
   "hosting": {
     "public": "build",

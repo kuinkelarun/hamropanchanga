@@ -52,10 +52,13 @@ service cloud.firestore {
     }
 
     // Admin if auth token has admin claim OR there exists an adminList document for their uid
+    // OR user document has role == 'admin'
     function isAdmin() {
       return isAuthenticated() && (
         request.auth.token.admin == true ||
-        exists(/databases/$(database)/documents/adminList/$(request.auth.uid))
+        exists(/databases/$(database)/documents/adminList/$(request.auth.uid)) ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin')
       );
     }
 
