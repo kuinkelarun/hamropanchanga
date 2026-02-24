@@ -1,6 +1,6 @@
 /**
  * Excel template download, data export, and tithi auto-generation logic.
- * Extracted from AdminManagement.js for maintainability.
+ * Extracted from AdminManagement.js for maintainability. Seperated from adminmanagement page.
  */
 
 import * as XLSX from 'xlsx';
