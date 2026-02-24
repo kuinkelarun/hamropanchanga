@@ -1,11 +1,34 @@
 const functions = require('firebase-functions');
 const admin = require('firebase-admin');
+const crypto = require('crypto');
 const path = require('path');
-// const { spawn } = require('child_process'); // No longer needed
+const express = require('express');
+const cors = require('cors');
 const { computeTithi } = require('./tithiCalculator');
+const { apiKeyMiddleware } = require('./api/middleware');
+const apiRoutes = require('./api/routes');
 
 // Initialize admin SDK (Cloud Functions provide credentials automatically)
 admin.initializeApp();
+
+// ─── Public Nepali Calendar REST API ─────────────────────────────────────────
+
+const app = express();
+app.use(cors({ origin: true }));
+app.use(express.json());
+
+// Health check — no auth required
+app.get('/v1/health', (req, res) => {
+  res.json({ status: 'ok', version: 'v1', timestamp: new Date().toISOString() });
+});
+
+// All /v1/* routes require a valid API key
+app.use('/v1', apiKeyMiddleware, apiRoutes);
+
+// Catch-all 404
+app.use((req, res) => res.status(404).json({ error: 'Not Found', message: `No route for ${req.method} ${req.path}` }));
+
+exports.api = functions.https.onRequest(app);
 
 /**
  * Callable function to set or remove admin role for a user by email.
@@ -204,4 +227,120 @@ exports.computeEphemeris = functions.https.onCall(async (data, context) => {
     console.error('computeTithi error:', err);
     throw new functions.https.HttpsError('internal', err.message);
   }
+});
+
+// ─── Daily rate-limit counter reset (runs at 00:00 UTC) ────────────────────
+
+exports.resetApiRateLimits = functions.pubsub
+  .schedule('0 0 * * *')
+  .timeZone('UTC')
+  .onRun(async () => {
+    const db = admin.firestore();
+    const snap = await db.collection('apiKeys').where('active', '==', true).get();
+    if (snap.empty) return null;
+
+    const todayStr = new Date().toISOString().slice(0, 10);
+    const batch = db.batch();
+    snap.docs.forEach(doc => {
+      batch.update(doc.ref, { requestsToday: 0, rateLimitDate: todayStr });
+    });
+    await batch.commit();
+    console.log(`Reset rate limits for ${snap.size} API keys.`);
+    return null;
+  });
+
+// ─── Approve API Key Request (admin-only callable) ──────────────────────────
+
+exports.approveApiKeyRequest = functions.https.onCall(async (data, context) => {
+  if (!context.auth) {
+    throw new functions.https.HttpsError('unauthenticated', 'Must be signed in.');
+  }
+
+  // Verify caller is an admin
+  const isAdminClaim = context.auth.token && context.auth.token.admin === true;
+  const adminDoc = await admin.firestore().collection('adminList').doc(context.auth.uid).get();
+  if (!isAdminClaim && !adminDoc.exists) {
+    throw new functions.https.HttpsError('permission-denied', 'Only admins can approve API key requests.');
+  }
+
+  const { requestId } = data;
+  if (!requestId || typeof requestId !== 'string') {
+    throw new functions.https.HttpsError('invalid-argument', 'requestId is required.');
+  }
+
+  const db = admin.firestore();
+  const requestRef = db.collection('apiKeyRequests').doc(requestId);
+  const requestSnap = await requestRef.get();
+
+  if (!requestSnap.exists) {
+    throw new functions.https.HttpsError('not-found', 'API key request not found.');
+  }
+
+  const requestData = requestSnap.data();
+  if (requestData.status !== 'pending') {
+    throw new functions.https.HttpsError('failed-precondition', `Request is already ${requestData.status}.`);
+  }
+
+  // Generate a new API key: npcal_<32 random hex bytes>
+  const rawKey = 'npcal_' + crypto.randomBytes(32).toString('hex');
+  const keyHash = crypto.createHash('sha256').update(rawKey).digest('hex');
+
+  // Write to apiKeys collection (hash only — never store raw key there)
+  const keyRef = db.collection('apiKeys').doc();
+  await keyRef.set({
+    keyHash,
+    owner: requestData.name || requestData.email,
+    email: requestData.email,
+    uid: requestData.uid,
+    plan: 'free',
+    active: true,
+    rateLimit: 1000,
+    requestsToday: 0,
+    rateLimitDate: new Date().toISOString().slice(0, 10),
+    createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    lastUsed: null,
+  });
+
+  // Update the request document: store raw key once for the user to copy
+  await requestRef.update({
+    status: 'approved',
+    keyId: keyRef.id,
+    rawKey,                   // shown once; user acknowledges and it stays masked
+    rawKeyAcknowledged: false,
+    reviewedAt: admin.firestore.FieldValue.serverTimestamp(),
+    reviewedBy: context.auth.uid,
+  });
+
+  return { success: true, keyId: keyRef.id };
+});
+
+// ─── Reject API Key Request (admin-only callable) ───────────────────────────
+
+exports.rejectApiKeyRequest = functions.https.onCall(async (data, context) => {
+  if (!context.auth) {
+    throw new functions.https.HttpsError('unauthenticated', 'Must be signed in.');
+  }
+
+  const isAdminClaim = context.auth.token && context.auth.token.admin === true;
+  const adminDoc = await admin.firestore().collection('adminList').doc(context.auth.uid).get();
+  if (!isAdminClaim && !adminDoc.exists) {
+    throw new functions.https.HttpsError('permission-denied', 'Only admins can reject API key requests.');
+  }
+
+  const { requestId, rejectionReason } = data;
+  if (!requestId) throw new functions.https.HttpsError('invalid-argument', 'requestId is required.');
+
+  const db = admin.firestore();
+  const requestRef = db.collection('apiKeyRequests').doc(requestId);
+  const snap = await requestRef.get();
+  if (!snap.exists) throw new functions.https.HttpsError('not-found', 'Request not found.');
+
+  await requestRef.update({
+    status: 'rejected',
+    rejectionReason: rejectionReason || '',
+    reviewedAt: admin.firestore.FieldValue.serverTimestamp(),
+    reviewedBy: context.auth.uid,
+  });
+
+  return { success: true };
 });

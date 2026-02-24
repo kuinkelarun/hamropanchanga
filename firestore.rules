@@ -140,6 +140,25 @@ service cloud.firestore {
       allow write: if isAdmin() || isSuperUser() || (isAuthenticated() && request.auth.uid == userId);
     }
 
+    // API keys collection — admin write only, no public read (keys are hashed here)
+    match /apiKeys/{keyId} {
+      allow read, write: if isAdmin();
+    }
+
+    // API key requests — authenticated users submit requests; admins approve
+    match /apiKeyRequests/{requestId} {
+      // Any signed-in user can create a request (must match their own UID)
+      allow create: if isAuthenticated() && request.resource.data.uid == request.auth.uid;
+      // Users can read their own request; admins can read all
+      allow read: if isAdmin() || (isAuthenticated() && resource.data.uid == request.auth.uid);
+      // Admins can update any field; users can only flip rawKeyAcknowledged
+      allow update: if isAdmin() || (
+        isAuthenticated() && resource.data.uid == request.auth.uid &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['rawKeyAcknowledged'])
+      );
+      allow delete: if isAdmin();
+    }
+
     // Tithis collection - public read access, permission-based write access
     match /tithis/{tithiId} {
       // Anyone can read tithis (calendar is shown on public landing page)
