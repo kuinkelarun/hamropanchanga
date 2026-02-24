@@ -164,22 +164,27 @@ export default function AddEventModal({
 
   // ── Tithi display name (local helper) ───────────────────────
   const getTithiDisplayName = (tithi) => {
-    const { pakshya, tithi: tithiName } = parseTithiName(tithi.name);
+    const { tithiMonth: parsedMonth, pakshya, tithi: tithiName } = parseTithiName(tithi.name);
     if (!tithi.startDate) return tithi.name;
 
-    const pakshaNormalized = normalizePakshaToEnglish(pakshya);
-    const tithiIndex = getTithiIndexByName(tithiName);
+    // Prefer stored tithiMonth, then parsed from name, then compute
+    let lunarMonth = tithi.tithiMonth || parsedMonth || '';
 
-    if (tithiIndex) {
-      const lunarMonth = getTithiLunarMonthName(pakshaNormalized, tithiIndex, tithi.startDate);
-      if (lunarMonth) {
-        const monthIndex = nepaliMonths.indexOf(lunarMonth);
-        const monthDisplay =
-          monthIndex !== -1 ? (isNepali ? nepaliMonths[monthIndex] : englishNepaliMonths[monthIndex]) : lunarMonth;
-        const pakshyaDisplay = isNepali ? pakshya : getEnglishPakshyaName(pakshya);
-        const tithiDisplay = isNepali ? tithiName : getEnglishTithiName(tithiName);
-        return `${monthDisplay} ${pakshyaDisplay} ${tithiDisplay}`;
+    if (!lunarMonth) {
+      const pakshaNormalized = normalizePakshaToEnglish(pakshya);
+      const tithiIndex = getTithiIndexByName(tithiName);
+      if (tithiIndex) {
+        lunarMonth = getTithiLunarMonthName(pakshaNormalized, tithiIndex, tithi.startDate);
       }
+    }
+
+    if (lunarMonth) {
+      const monthIndex = nepaliMonths.indexOf(lunarMonth);
+      const monthDisplay =
+        monthIndex !== -1 ? (isNepali ? nepaliMonths[monthIndex] : englishNepaliMonths[monthIndex]) : lunarMonth;
+      const pakshyaDisplay = isNepali ? pakshya : getEnglishPakshyaName(pakshya);
+      const tithiDisplay = isNepali ? tithiName : getEnglishTithiName(tithiName);
+      return `${monthDisplay} ${pakshyaDisplay} ${tithiDisplay}`;
     }
     return tithi.name;
   };

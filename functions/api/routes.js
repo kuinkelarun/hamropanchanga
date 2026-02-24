@@ -105,11 +105,13 @@ function attachTithisTodays(days, tithiDocs) {
     let cur = start;
     while (cur <= end) {
       if (!byDate[cur]) byDate[cur] = [];
-      const nameParts = (ti.name || '').split(' ');
+      // Parse name: handles both 3-part "month pakshya tithi" and 2-part "pakshya tithi"
+      const parsed = parseTithiNameApi(ti.name || '');
       byDate[cur].push({
         name: ti.name || '',
-        paksha: normalizePaksha(nameParts[0] || ''),
-        tithiName: nameParts.slice(1).join(' ') || ti.name || '',
+        tithiMonth: ti.tithiMonth || parsed.tithiMonth || '',
+        paksha: normalizePaksha(parsed.pakshya),
+        tithiName: parsed.tithi || ti.name || '',
         startDate: ti.startDate || ti.dateKey || '',
         startTime: ti.startTime || '',
         endDate: ti.endDate || ti.startDate || ti.dateKey || '',
@@ -129,14 +131,35 @@ function normalizePaksha(nepaliPaksha) {
   return nepaliPaksha;
 }
 
+/**
+ * Parse tithi name — handles both 2-part and 3-part formats.
+ * Server-side counterpart of the client-side parseTithiName.
+ */
+function parseTithiNameApi(fullName) {
+  if (!fullName) return { tithiMonth: '', pakshya: '', tithi: '' };
+  const parts = fullName.split(' ');
+  const NEPALI_MONTHS = [
+    "वैशाख", "ज्येष्ठ", "आषाढ", "श्रावण", "भाद्र", "आश्विन",
+    "कार्तिक", "मार्ग", "पौष", "माघ", "फाल्गुन", "चैत्र"
+  ];
+  if (parts.length >= 3 && NEPALI_MONTHS.includes(parts[0])) {
+    return { tithiMonth: parts[0], pakshya: parts[1], tithi: parts.slice(2).join(' ') };
+  }
+  if (parts.length >= 2) {
+    return { tithiMonth: '', pakshya: parts[0], tithi: parts.slice(1).join(' ') };
+  }
+  return { tithiMonth: '', pakshya: '', tithi: fullName };
+}
+
 function formatTithiDoc(doc) {
   const data = doc.data ? doc.data() : doc;
-  const nameParts = (data.name || '').split(' ');
+  const parsed = parseTithiNameApi(data.name || '');
   return {
     id: doc.id || undefined,
     name: data.name || '',
-    paksha: normalizePaksha(nameParts[0] || ''),
-    tithiName: nameParts.slice(1).join(' ') || data.name || '',
+    tithiMonth: data.tithiMonth || parsed.tithiMonth || '',
+    paksha: normalizePaksha(parsed.pakshya),
+    tithiName: parsed.tithi || data.name || '',
     startDate: data.startDate || data.dateKey || '',
     startTime: data.startTime || '',
     endDate: data.endDate || data.startDate || data.dateKey || '',

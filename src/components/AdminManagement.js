@@ -14,6 +14,7 @@ import { useUserPermissions } from '../hooks/usePermissions';
 import { PERMISSIONS } from '../constants/roles';
 import { ALL_TITHI_NAMES, normalizePakshaToNepali, normalizePakshaToEnglish } from '../constants/calendarConstants';
 import { formatTime12Hour, getTithiStartMillis, getTithiEndMillis } from '../utils/adminUtils';
+import { parseTithiName } from '../utils/calendarHelpers';
 import { validateTithisData as validateTithisDataExternal, validateEventsData as validateEventsDataExternal } from '../utils/adminValidation';
 import { downloadTemplate as downloadTemplateExcel, exportData as exportDataExcel, exportProblematicRows as exportProblematicRowsExcel, downloadTreesExcel as downloadTreesExcelService, generateTithiExcel as generateTithiExcelService } from '../services/adminExcelService';
 import AdminTreesTab from './Admin/AdminTreesTab';
@@ -67,12 +68,17 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(false);
   const [trees, setTrees] = useState([]);
+  const [softDeletedTreesCount, setSoftDeletedTreesCount] = useState(0);
+  const [deletionProgress, setDeletionProgress] = useState({ active: false, deleted: 0, total: 0, currentTree: '' });
     // Load trees for admin (all trees, or by owner)
     const loadTrees = useCallback(async () => {
       try {
-        // Admin: fetch all trees
-        const treesList = await Trees.list();
-        setTrees(treesList.filter(t => !t.deleted));
+        // Admin: fetch all trees including soft-deleted so we can show purge button
+        const treesList = await Trees.list(null, { includeDeleted: true });
+        const active = treesList.filter(t => !t.deleted);
+        const softDeleted = treesList.filter(t => t.deleted);
+        setTrees(active);
+        setSoftDeletedTreesCount(softDeleted.length);
       } catch (error) {
         console.error('Error loading trees:', error);
         setUploadStatus('Error loading trees: ' + error.message);
@@ -322,8 +328,10 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
     setLoading(true);
     setUploadStatus('🔍 Counting trees in database...');
     try {
-      const allTrees = await Trees.list();
-      const actualCount = allTrees.filter(t => !t.deleted).length;
+      // Include soft-deleted trees so the confirmation modal opens even when
+      // all trees have been archived but not yet hard-deleted.
+      const allTrees = await Trees.list(null, { includeDeleted: true });
+      const actualCount = allTrees.length;
       if (actualCount === 0) {
         setUploadStatus('ℹ️ No trees found in database');
         setLoading(false);
@@ -356,14 +364,17 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
     setLoading(true);
     setUploadStatus('🔍 Fetching trees for deletion...');
     try {
-      let allTrees = await Trees.list();
-      allTrees = allTrees.filter(t => !t.deleted);
-      // Filter by range
+      // Fetch ALL trees (including soft-deleted) so we can fully purge them
+      let allTrees = await Trees.list(null, { includeDeleted: true });
+      // Separate active and soft-deleted trees
+      const activeTrees = allTrees.filter(t => !t.deleted);
+      const softDeletedTrees = allTrees.filter(t => t.deleted);
+      // Filter active trees by range
       const days = parseInt(range, 10);
       const cutoff = new Date();
       cutoff.setDate(cutoff.getDate() - days);
       const cutoffDate = cutoff.toISOString();
-      let filteredTrees = allTrees.filter(t => {
+      let filteredActive = activeTrees.filter(t => {
         if (!t.createdAt) return false;
         let createdAtIso = '';
         if (typeof t.createdAt === 'string') {
@@ -378,10 +389,12 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
       });
       // Filter by user
       if (userType === 'email' && userFilter) {
-        filteredTrees = filteredTrees.filter(t => t.ownerEmail === userFilter);
+        filteredActive = filteredActive.filter(t => t.ownerEmail === userFilter);
       } else if (userType === 'id' && userFilter) {
-        filteredTrees = filteredTrees.filter(t => t.ownerUid === userFilter);
+        filteredActive = filteredActive.filter(t => t.ownerUid === userFilter);
       }
+      // Combine: active trees matching filters + ALL soft-deleted trees (always purge)
+      const filteredTrees = [...filteredActive, ...softDeletedTrees];
       if (filteredTrees.length === 0) {
         setUploadStatus('ℹ️ No trees found for the selected filter');
         setLoading(false);
@@ -401,23 +414,28 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
       XLSX.utils.book_append_sheet(workbook, worksheet, 'Trees Backup');
       const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
       XLSX.writeFile(workbook, `trees_backup_${timestamp}.xlsx`);
-      setUploadStatus(`🗑️ Deleting ${filteredTrees.length} trees...`);
+      // Close confirmation modal and show full-screen progress overlay
+      setDeleteConfirmation({ show: false, type: '', count: 0, confirmText: '' });
+      setDeletionProgress({ active: true, deleted: 0, total: filteredTrees.length, currentTree: '' });
       // Delete recursively
       let deletedCount = 0;
       for (const tree of filteredTrees) {
         try {
+          setDeletionProgress(prev => ({ ...prev, currentTree: tree.title || tree.name || tree.id }));
           await deleteTreeAndAssociations(tree.id);
           deletedCount++;
+          setDeletionProgress(prev => ({ ...prev, deleted: deletedCount }));
           setUploadStatus(`🗑️ Deleted ${deletedCount} of ${filteredTrees.length} trees...`);
         } catch (err) {
           console.error('Error deleting tree', tree.id, err);
         }
       }
+      setDeletionProgress({ active: false, deleted: 0, total: 0, currentTree: '' });
       setUploadStatus(`✅ Successfully deleted ${deletedCount} trees. Backup saved to Downloads.`);
       await loadTrees();
-      setDeleteConfirmation({ show: false, type: '', count: 0, confirmText: '' });
     } catch (error) {
       console.error('Error deleting trees:', error);
+      setDeletionProgress({ active: false, deleted: 0, total: 0, currentTree: '' });
       setUploadStatus('❌ Error deleting trees: ' + error.message);
     } finally {
       setLoading(false);
@@ -744,6 +762,88 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
     }
   }
 
+  // ─── Migrate existing tithi docs: add tithiMonth, tithiYear, pakshya, tithiName fields ───
+  async function migrateTithiData() {
+    if (!window.confirm(
+      'This will migrate ALL tithi documents to add tithiMonth, tithiYear, pakshya, and tithiName fields, and update names to 3-part format.\n\nThis is safe to run multiple times. Continue?'
+    )) return;
+
+    setLoading(true);
+    setUploadStatus('🔄 Migrating tithi data...');
+
+    try {
+      const snapshot = await getDocs(collection(db, COLLECTIONS.TITHIS));
+      let currentBatch = writeBatch(db);
+      let migratedCount = 0;
+      let skippedCount = 0;
+      let batchCount = 0;
+
+      for (const docSnap of snapshot.docs) {
+        const data = docSnap.data();
+
+        // Skip if already migrated (has tithiMonth field with value)
+        if (data.tithiMonth && data.pakshya && data.tithiName) {
+          skippedCount++;
+          continue;
+        }
+
+        // Parse the existing name (2-part or 3-part)
+        const parsed = parseTithiName(data.name || '');
+        let tithiMonthVal = parsed.tithiMonth || '';
+        let tithiYearVal = null;
+
+        // Compute tithiMonth and tithiYear from startDate if not already in name
+        if (!tithiMonthVal && parsed.pakshya && parsed.tithi && data.startDate) {
+          const pakshaEn = normalizePakshaToEnglish(parsed.pakshya);
+          const tIdx = getTithiIndexByName(parsed.tithi, { fallbackToOne: false });
+          if (tIdx) {
+            tithiMonthVal = getTithiLunarMonthName(pakshaEn, tIdx, data.startDate) || '';
+            const yearInfo = getTithiYearFromAdDate(data.startDate, null, pakshaEn, tIdx);
+            tithiYearVal = yearInfo.tithiYear || null;
+          }
+        }
+
+        // Build 3-part name
+        const newName = tithiMonthVal
+          ? `${tithiMonthVal} ${parsed.pakshya} ${parsed.tithi}`
+          : `${parsed.pakshya} ${parsed.tithi}`;
+
+        const updateFields = {
+          name: newName,
+          tithiMonth: tithiMonthVal,
+          tithiYear: tithiYearVal,
+          pakshya: parsed.pakshya || '',
+          tithiName: parsed.tithi || '',
+        };
+
+        currentBatch.update(doc(db, COLLECTIONS.TITHIS, docSnap.id), updateFields);
+        migratedCount++;
+        batchCount++;
+
+        // Firestore batch limit is 500 — commit and start new batch
+        if (batchCount >= 450) {
+          await currentBatch.commit();
+          currentBatch = writeBatch(db);
+          batchCount = 0;
+          setUploadStatus(`🔄 Migrated ${migratedCount} tithis so far...`);
+        }
+      }
+
+      // Commit remaining
+      if (batchCount > 0) {
+        await currentBatch.commit();
+      }
+
+      setUploadStatus(`✅ Migration complete: ${migratedCount} migrated, ${skippedCount} already up-to-date`);
+      await loadTithis();
+    } catch (error) {
+      console.error('Migration error:', error);
+      setUploadStatus('❌ Migration error: ' + error.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
   // Delete single record
   async function deleteRecord(id) {
     if (!id) {
@@ -838,11 +938,28 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
       
       const updateData = { ...editingData };
       
-      // For Tithis, recombine tithi and pakshya into name
+      // For Tithis, recombine tithi and pakshya into name with tithiMonth
       if (activeTab === 'tithis' && updateData.tithi && updateData.pakshya) {
-        updateData.name = `${updateData.pakshya} ${updateData.tithi}`;
+        // Compute tithiMonth from startDate if available
+        let editTithiMonth = updateData.tithiMonth || '';
+        let editTithiYear = updateData.tithiYear || null;
+        if (updateData.startDate && !editTithiMonth) {
+          const pakshaEn = normalizePakshaToEnglish(updateData.pakshya);
+          const tIdx = getTithiIndexByName(updateData.tithi, { fallbackToOne: false });
+          if (tIdx) {
+            editTithiMonth = getTithiLunarMonthName(pakshaEn, tIdx, updateData.startDate) || '';
+            const yearInfo = getTithiYearFromAdDate(updateData.startDate, null, pakshaEn, tIdx);
+            editTithiYear = yearInfo.tithiYear || null;
+          }
+        }
+        updateData.name = editTithiMonth
+          ? `${editTithiMonth} ${updateData.pakshya} ${updateData.tithi}`
+          : `${updateData.pakshya} ${updateData.tithi}`;
+        updateData.tithiMonth = editTithiMonth;
+        updateData.tithiYear = editTithiYear;
+        updateData.pakshya = updateData.pakshya;
+        updateData.tithiName = updateData.tithi;
         delete updateData.tithi;
-        delete updateData.pakshya;
       }
       
       updateData.updatedAt = new Date().toISOString();
@@ -880,9 +997,31 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
           return;
         }
         
+        // Compute tithiMonth and tithiYear from start date
+        let computedTithiMonth = '';
+        let computedTithiYear = null;
+        if (newRecordData.startDate && newRecordData.pakshya && newRecordData.tithi) {
+          const pakshaEn = normalizePakshaToEnglish(newRecordData.pakshya);
+          const tIdx = getTithiIndexByName(newRecordData.tithi, { fallbackToOne: false });
+          if (tIdx) {
+            computedTithiMonth = getTithiLunarMonthName(pakshaEn, tIdx, newRecordData.startDate) || '';
+            const yearInfo = getTithiYearFromAdDate(newRecordData.startDate, null, pakshaEn, tIdx);
+            computedTithiYear = yearInfo.tithiYear || null;
+          }
+        }
+
+        // Build 3-part name: "month pakshya tithi"
+        const tithiFullName = computedTithiMonth
+          ? `${computedTithiMonth} ${newRecordData.pakshya} ${newRecordData.tithi}`
+          : `${newRecordData.pakshya} ${newRecordData.tithi}`;
+
         // Create Tithi record
         const tithiData = {
-          name: `${newRecordData.pakshya} ${newRecordData.tithi}`,
+          name: tithiFullName,
+          tithiMonth: computedTithiMonth,
+          tithiYear: computedTithiYear,
+          pakshya: newRecordData.pakshya || '',
+          tithiName: newRecordData.tithi || '',
           startDate: newRecordData.startDate,
           endDate: newRecordData.endDate,
           startTime: newRecordData.startTime,
@@ -1083,10 +1222,12 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
         backupData = allRecords.map(item => {
           const d = item.data || {};
           if (type === 'tithis') {
-            const parts = (d.name || '').split(' ') || [];
+            const parsed = parseTithiName(d.name || '');
             return {
-              Tithi: parts.slice(1).join(' ') || '',
-              Pakshya: parts[0] || '',
+              Tithi: d.tithiName || parsed.tithi || '',
+              Pakshya: d.pakshya || parsed.pakshya || '',
+              'Tithi Month': d.tithiMonth || parsed.tithiMonth || '',
+              'Tithi Year': d.tithiYear || '',
               'Start Date': d.startDate ? formatAdDateToNepaliStringWithNumerals(d.startDate) : 'N/A',
               'Start Time': d.startTime || 'N/A',
               'End Date': d.endDate ? formatAdDateToNepaliStringWithNumerals(d.endDate) : 'N/A',
@@ -1280,11 +1421,13 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
     setEditingId(record.id);
     const editData = { ...record };
     
-    // Split name into tithi and pakshya for Tithis
+    // Parse name into components for Tithis (handles 2-part and 3-part names)
     if (activeTab === 'tithis' && record.name) {
-      const parts = record.name.split(' ');
-      editData.pakshya = parts[0] || 'शुक्लपक्ष';
-      editData.tithi = parts.slice(1).join(' ') || '';
+      const { tithiMonth: parsedMonth, pakshya: parsedPakshya, tithi: parsedTithi } = parseTithiName(record.name);
+      editData.pakshya = parsedPakshya || 'शुक्लपक्ष';
+      editData.tithi = parsedTithi || '';
+      editData.tithiMonth = record.tithiMonth || parsedMonth || '';
+      editData.tithiYear = record.tithiYear || null;
     }
     
     setEditingData(editData);
@@ -1452,6 +1595,7 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
           tithis={tithis}
           events={events}
           trees={trees}
+          softDeletedTreesCount={softDeletedTreesCount}
           loading={loading}
           scanning={scanning}
           scanResults={scanResults}
@@ -1753,7 +1897,7 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
           </div>
         )}
         {activeTab === 'tithis' && (
-          <div style={{ marginBottom: '1rem' }}>
+          <div style={{ marginBottom: '1rem', display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
             <button 
               onClick={() => {
                 setIsAddingNew(true);
@@ -1764,6 +1908,15 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
               disabled={isAddingNew}
             >
               Add Tithi
+            </button>
+            <button
+              onClick={migrateTithiData}
+              className="btn-primary"
+              title="Migrate existing tithis to add tithiMonth, tithiYear fields and 3-part name format"
+              disabled={loading}
+              style={{ backgroundColor: '#6366f1' }}
+            >
+              {loading ? '⏳ Migrating...' : '🔄 Migrate Tithi Data'}
             </button>
           </div>
         )}
@@ -1776,6 +1929,7 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
                   <>
                     <th>Tithi</th>
                     <th>Pakshya</th>
+                    <th>Tithi Month</th>
                     <th>Start Date</th>
                     <th>Start Time</th>
                     <th>End Date</th>
@@ -1818,6 +1972,9 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
                       <option value="शुक्लपक्ष">शुक्लपक्ष</option>
                       <option value="कृष्णपक्ष">कृष्णपक्ष</option>
                     </select>
+                  </td>
+                  <td>
+                    <span className="computed-field">(auto)</span>
                   </td>
                   <td>
                     {newRecordData.startDate ? (
@@ -1913,6 +2070,9 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
                             </select>
                           </td>
                           <td>
+                            <span className="computed-field">{editingData.tithiMonth || '(auto)'}</span>
+                          </td>
+                          <td>
                             <NepaliDatePicker
                               value={editingData.startDate || ''}
                               onChange={(adDate) => updateEditField('startDate', adDate)}
@@ -1950,8 +2110,9 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
                       ) : (
                         // View mode
                         <>
-                          <td>{(tithi.name || '').split(' ').slice(1).join(' ') || tithi.name}</td>
-                          <td>{(tithi.name || '').split(' ')[0] || ''}</td>
+                          <td>{tithi.tithiName || parseTithiName(tithi.name).tithi || tithi.name}</td>
+                          <td>{tithi.pakshya || parseTithiName(tithi.name).pakshya || ''}</td>
+                          <td>{tithi.tithiMonth || parseTithiName(tithi.name).tithiMonth || ''}</td>
                           <td>{formatDateToNepali(tithi.startDate)}</td>
                           <td>{formatTime12Hour(tithi.startTime)}</td>
                           <td>{formatDateToNepali(tithi.endDate)}</td>
@@ -1967,7 +2128,7 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
                     </tr>
                   ))
                 ) : (
-                  <tr><td colSpan="6" className="empty-state">No tithis found</td></tr>
+                  <tr><td colSpan="8" className="empty-state">No tithis found</td></tr>
                 )
               ) : (
                 <>
@@ -2151,11 +2312,38 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
         deleteConfirmation={deleteConfirmation}
         setDeleteConfirmation={setDeleteConfirmation}
         filteredTreesForModal={filteredTreesForModal}
+        softDeletedTreesCount={softDeletedTreesCount}
         trees={trees}
         onExecuteBulkDelete={executeBulkDelete}
         onExecuteBulkDeleteTrees={executeBulkDeleteTrees}
         onPerformDeleteTestData={performDeleteTestData}
       />
+
+      {/* Deletion Progress Overlay */}
+      {deletionProgress.active && (
+        <div className="deletion-progress-overlay">
+          <div className="deletion-progress-card">
+            <div className="deletion-spinner"></div>
+            <h3>🗑️ Deletion In Progress</h3>
+            <div className="deletion-progress-bar-track">
+              <div
+                className="deletion-progress-bar-fill"
+                style={{ width: `${Math.round((deletionProgress.deleted / deletionProgress.total) * 100)}%` }}
+              />
+            </div>
+            <p className="deletion-count">
+              {deletionProgress.deleted} of {deletionProgress.total} trees deleted
+              ({Math.round((deletionProgress.deleted / deletionProgress.total) * 100)}%)
+            </p>
+            {deletionProgress.currentTree && (
+              <p className="deletion-current">Currently: {deletionProgress.currentTree}</p>
+            )}
+            <p className="deletion-warning">
+              ⚠️ Please do not close or refresh this tab — closing the page will interrupt the deletion and leave partial data in the database.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Tithi Auto Generator Section - Only show for tithis tab */}
       {activeTab === 'tithis' && (

@@ -246,16 +246,18 @@ export const createTreesFromBulkUpload = async (treeData, userId, userEmail) => 
     }
 
     // Check for existing trees - build both exact and normalized name sets
+    // Filter out soft-deleted trees so re-uploading after "Delete All" works
     const existingTreesSnap = await getDocs(
       query(collection(db, COLLECTIONS.TREES), where('ownerUid', '==', userId))
     );
+    const activeDocs = existingTreesSnap.docs.filter(d => !d.data().deleted);
     const existingTreeNames = new Set(
-      existingTreesSnap.docs.map(doc => doc.data().title || doc.data().name)
+      activeDocs.map(d => d.data().title || d.data().name)
     );
     const existingTreeNamesNormalized = new Set(
-      existingTreesSnap.docs.map(doc => 
-        doc.data().titleNormalized || doc.data().nameNormalized || 
-        normalizeForCompare(doc.data().title || doc.data().name || '')
+      activeDocs.map(d => 
+        d.data().titleNormalized || d.data().nameNormalized || 
+        normalizeForCompare(d.data().title || d.data().name || '')
       )
     );
 
@@ -377,6 +379,24 @@ export const addFamilyMembersFromBulkUpload = async (memberData, userId, treeMap
   const OPS_PER_MEMBER = 2;
   let currentBatchOps = 0;
 
+  // Commit helper: commits once, then always creates a fresh batch.
+  // Firestore v9 SDK invalidates a batch after commit() (success or failure),
+  // so retrying commit() on the same batch object is not possible.
+  const commitBatch = async (label = '') => {
+    if (currentBatchOps === 0) return;
+    try {
+      await batch.commit();
+      console.log(`Committed member batch (ops=${currentBatchOps})${label ? ' ' + label : ''}`);
+    } catch (err) {
+      console.error(`Member batch commit failed${label ? ' ' + label : ''}:`, err.message || err);
+      throw err;
+    } finally {
+      // Always create a fresh batch regardless of success/failure
+      batch = writeBatch(db);
+      currentBatchOps = 0;
+    }
+  };
+
   try {
     // Ensure user document exists before attempting to add members
     const userDocRef = doc(db, COLLECTIONS.USERS, userId);
@@ -470,22 +490,7 @@ export const addFamilyMembersFromBulkUpload = async (memberData, userId, treeMap
           if (notesValue) {
             // Ensure batch has room for single update
             if (currentBatchOps + 1 > MAX_BATCH_OPS) {
-              let committed = false;
-              let attempts = 0;
-              while (!committed && attempts < 3) {
-                try {
-                  attempts++;
-                  await batch.commit();
-                  console.log(`Committed batch (ops=${currentBatchOps}) before member-update after ${attempts} attempt(s)`);
-                  committed = true;
-                } catch (err) {
-                  console.warn(`Batch commit attempt ${attempts} failed:`, err.message);
-                  if (attempts < 3) await new Promise(r => setTimeout(r, 500 * attempts));
-                  else throw err;
-                }
-              }
-              batch = writeBatch(db);
-              currentBatchOps = 0;
+              await commitBatch('before member-update');
             }
 
             const memberDocRef = doc(db, COLLECTIONS.TREES, treeId, COLLECTIONS.MEMBERS, existing.id);
@@ -523,21 +528,7 @@ export const addFamilyMembersFromBulkUpload = async (memberData, userId, treeMap
             const notesValue = (memberItem['Notes'] || memberItem['Note'] || '').toString().trim();
             if (notesValue) {
               if (currentBatchOps + 1 > MAX_BATCH_OPS) {
-                let committed = false;
-                let attempts = 0;
-                while (!committed && attempts < 3) {
-                  try {
-                    attempts++;
-                    await batch.commit();
-                    committed = true;
-                  } catch (err) {
-                    console.warn(`Batch commit attempt ${attempts} failed:`, err.message);
-                    if (attempts < 3) await new Promise(r => setTimeout(r, 500 * attempts));
-                    else throw err;
-                  }
-                }
-                batch = writeBatch(db);
-                currentBatchOps = 0;
+                await commitBatch('before fallback member-update');
               }
 
               const memberDocRef = doc(db, COLLECTIONS.TREES, treeId, COLLECTIONS.MEMBERS, existingId);
@@ -630,34 +621,19 @@ export const addFamilyMembersFromBulkUpload = async (memberData, userId, treeMap
         // If adding this member would exceed Firestore's per-batch operation
         // limit, commit the current batch first and start a fresh one.
         if (currentBatchOps + OPS_PER_MEMBER > MAX_BATCH_OPS) {
-          // commit with simple retry/backoff
-          let committed = false;
-          let attempts = 0;
-          while (!committed && attempts < 3) {
-            try {
-              attempts++;
-              await batch.commit();
-              console.log(`Committed batch (ops=${currentBatchOps}) after ${attempts} attempt(s)`);
-              committed = true;
-            } catch (err) {
-              console.warn(`Batch commit attempt ${attempts} failed:`, err.message);
-              if (attempts < 3) await new Promise(r => setTimeout(r, 500 * attempts));
-              else throw err;
-            }
-          }
-          batch = writeBatch(db);
-          currentBatchOps = 0;
+          await commitBatch();
         }
 
         const memberRef = doc(collection(db, COLLECTIONS.TREES, treeId, COLLECTIONS.MEMBERS));
         batch.set(memberRef, newMember);
 
-        // Increment member count on tree
+        // Increment member count on tree (use set+merge so it works even if tree
+        // doc was deleted between validation and commit)
         const treeRef = doc(db, COLLECTIONS.TREES, treeId);
-        batch.update(treeRef, {
+        batch.set(treeRef, {
           memberCount: increment(1),
           updatedAt: Timestamp.now()
-        });
+        }, { merge: true });
 
         results.success.push({
           name: memberName,
@@ -667,9 +643,11 @@ export const addFamilyMembersFromBulkUpload = async (memberData, userId, treeMap
         });
         results.stats.created++;
 
-        // Add to prefetched map so subsequent rows in the same upload don't duplicate
+        // Add to prefetched map so subsequent rows in the same upload don't duplicate.
+        // Use memberRef.id (actual Firestore doc ID) — NOT the custom memberId field
+        // — so that any later batch.update() targets the correct document path.
         if (!existingMembersByTree.has(treeId)) existingMembersByTree.set(treeId, new Map());
-        existingMembersByTree.get(treeId).set(normalizeForCompare(memberName), { id: memberId, notes: '' });
+        existingMembersByTree.get(treeId).set(normalizeForCompare(memberName), { id: memberRef.id, notes: '' });
 
         // Track ops consumed by this member (set + update)
         currentBatchOps += OPS_PER_MEMBER;
@@ -690,15 +668,7 @@ export const addFamilyMembersFromBulkUpload = async (memberData, userId, treeMap
     }
 
     // Commit remaining batch (if any)
-    if (currentBatchOps > 0) {
-      try {
-        await batch.commit();
-        console.log(`Final batch committed with ${currentBatchOps} operations`);
-      } catch (commitErr) {
-        console.error('Error committing final batch:', commitErr);
-        throw new Error(`Failed to commit members: ${commitErr.message}`);
-      }
-    }
+    await commitBatch('(final)');
 
     console.log('Member creation completed:', results.stats);
     return results;
@@ -854,25 +824,21 @@ export const addEventsFromBulkUpload = async (eventData, userId, treeMap, member
     const OPS_PER_EVENT = 1; // single set per event
     let currentBatchOps = 0;
 
-    // commit helper with retry/backoff
+    // Commit helper: commits once, then always creates a fresh batch.
+    // Firestore v9 SDK invalidates a batch after commit() (success or failure),
+    // so retrying commit() on the same batch object is not possible.
     const commitBatch = async () => {
       if (currentBatchOps === 0) return;
-      let committed = false;
-      let attempts = 0;
-      while (!committed && attempts < 4) {
-        try {
-          attempts++;
-          await batch.commit();
-          console.log(`[BulkUpload] Committed event batch (ops=${currentBatchOps}) after ${attempts} attempt(s)`);
-          committed = true;
-        } catch (err) {
-          console.warn(`[BulkUpload] Batch commit attempt ${attempts} failed:`, err.message || err);
-          if (attempts < 4) await new Promise(r => setTimeout(r, 300 * attempts));
-          else throw err;
-        }
+      try {
+        await batch.commit();
+        console.log(`[BulkUpload] Committed event batch (ops=${currentBatchOps})`);
+      } catch (err) {
+        console.error('[BulkUpload] Event batch commit failed:', err.message || err);
+        throw err;
+      } finally {
+        batch = writeBatch(db);
+        currentBatchOps = 0;
       }
-      batch = writeBatch(db);
-      currentBatchOps = 0;
     };
 
     // Cache for tithi query results to avoid repeated DB queries for same tithi
@@ -1107,21 +1073,28 @@ export const addEventsFromBulkUpload = async (eventData, userId, treeMap, member
             const selectedMonthName = englishToNepaliMonthMap[tithiMonth.trim()] || tithiMonth;
             
             const pakshaNepali = normalizePakshaToNepali(paksha);
-            const fullName = `${pakshaNepali} ${tithiMapping.nepaliName}`;
-            const cacheKey = `${fullName}::${currentBsYear}`;
+            const cacheKey = `${pakshaNepali}::${tithiMapping.nepaliName}::${currentBsYear}`;
             let snapshotDocs = tithiQueryCache.get(cacheKey);
             if (!snapshotDocs) {
-              const q = query(collection(db, COLLECTIONS.TITHIS), where('name', '>=', fullName), where('name', '<=', fullName + '\uf8ff'));
-              const snap = await getDocs(q);
-              snapshotDocs = snap.docs;
+              // Query both new fields and legacy name prefix — merge results
+              const qNew = query(collection(db, COLLECTIONS.TITHIS), where('pakshya', '==', pakshaNepali), where('tithiName', '==', tithiMapping.nepaliName));
+              const old2PartName = `${pakshaNepali} ${tithiMapping.nepaliName}`;
+              const qOld = query(collection(db, COLLECTIONS.TITHIS), where('name', '>=', old2PartName), where('name', '<=', old2PartName + '\uf8ff'));
+              const [snapNew, snapOld] = await Promise.all([getDocs(qNew), getDocs(qOld)]);
+              
+              // Merge by doc ID
+              const merged = new Map();
+              snapNew.docs.forEach(d => merged.set(d.id, d));
+              snapOld.docs.forEach(d => { if (!merged.has(d.id)) merged.set(d.id, d); });
+              snapshotDocs = Array.from(merged.values());
               tithiQueryCache.set(cacheKey, snapshotDocs);
             }
 
             let matchingTithi = null;
             let actualTithiLunarMonth = null;
 
-            snapshotDocs.forEach(doc => {
-              const t = doc.data();
+            snapshotDocs.forEach(docSnap => {
+              const t = docSnap.data ? docSnap.data() : docSnap;
               if (!t.name.includes(tithiMapping.nepaliName) || !t.name.includes(pakshaNepali)) return;
 
               const tithiIndex = getTithiIndexByName(tithiMapping.nepaliName, { fallbackToOne: false });
@@ -1156,7 +1129,7 @@ export const addEventsFromBulkUpload = async (eventData, userId, treeMap, member
                 name: tithiMapping.nepaliName,
                 paksha: paksha
               };
-              console.warn(`[BulkUpload] Could not resolve concrete date for ${fullName} in year ${currentBsYear}. Event saved in tithi-only mode.`);
+              console.warn(`[BulkUpload] Could not resolve concrete date for ${pakshaNepali} ${tithiMapping.nepaliName} in year ${currentBsYear}. Event saved in tithi-only mode.`);
             }
           } catch (tErr) {
             console.error('[BulkUpload] Error while resolving tithi date:', tErr);

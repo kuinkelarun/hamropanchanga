@@ -63,7 +63,7 @@ const getCalendarData = (year) => {
 // convertAdToBs / convertBsToAd from there instead of maintaining a
 // separate implementation here.
 
-export default function NepaliCalendar({ user: propUser, isAdmin, treeMembers = [], onTreeEventClick }) {
+export default function NepaliCalendar({ user: propUser, isAdmin, treeMembers = [], onTreeEventClick, sharedTreeIds = [] }) {
   const { t, tn, isNepali } = useLanguage();
   const isDev = process.env.NODE_ENV !== 'production';
   const [user, setUser] = useState(propUser || null);
@@ -382,14 +382,16 @@ export default function NepaliCalendar({ user: propUser, isAdmin, treeMembers = 
           orderBy('dateKey')
         );
       } else {
-        // For regular users, we can't just fetch "all events" and filter client-side.
-        // We must fetch only what they are allowed to see.
-        // Since we already fetch public events (publicQuery) and their own events (userQuery),
-        // we don't need a broad "treeQuery" that fails permissions.
-        // If we want to show events for trees they belong to, we'd need a specific query for that.
-        // For now, we'll skip this broad query for regular users to avoid errors.
+        // For regular users the broad treeQuery stays null; shared-tree events
+        // are handled below via per-chunk sharedTreeIds queries.
         treeQuery = null;
       }
+
+      // Build per-chunk queries for trees explicitly shared with this user
+      const sharedChunks = (!isAdmin && sharedTreeIds && sharedTreeIds.length > 0)
+        ? Array.from({ length: Math.ceil(sharedTreeIds.length / 30) }, (_, i) =>
+            sharedTreeIds.slice(i * 30, i * 30 + 30))
+        : [];
       
       let publicEventsById = new Map();
       let userEventsById = new Map();
@@ -439,6 +441,23 @@ export default function NepaliCalendar({ user: propUser, isAdmin, treeMembers = 
         console.error('Tree events error:', error);
       }) : () => {}; // No-op unsubscribe if treeQuery is null
 
+      // Listeners for events from trees explicitly shared with (but not owned by) this user
+      const sharedUnsubscribers = sharedChunks.map(chunk => {
+        const sharedQ = query(eventsCollection, where('treeId', 'in', chunk));
+        return onSnapshot(sharedQ, (snapshot) => {
+          if (isDev) console.log('Shared tree events snapshot:', snapshot.docs.length);
+          snapshot.docs.forEach(docSnap => {
+            const data = docSnap.data();
+            if (data.treeId) {
+              treeEventsById.set(docSnap.id, { id: docSnap.id, ...data });
+            }
+          });
+          emitMergedEvents();
+        }, (error) => {
+          console.error('Shared tree events error:', error);
+        });
+      });
+
       // If admin, also fetch all admin-created private events
       let unsubscribe4 = null;
       if (isAdmin) {
@@ -466,9 +485,10 @@ export default function NepaliCalendar({ user: propUser, isAdmin, treeMembers = 
         unsubscribe2();
         unsubscribe3();
         if (unsubscribe4) unsubscribe4();
+        sharedUnsubscribers.forEach(u => u());
       };
     }
-  }, [authLoading, user, isAdmin, isDev]);
+  }, [authLoading, user, isAdmin, isDev, sharedTreeIds]);
 
   useEffect(()=>{
     if (currentBsYear < minBsYear) setCurrentBsYear(minBsYear);
@@ -704,12 +724,37 @@ export default function NepaliCalendar({ user: propUser, isAdmin, treeMembers = 
       throw new Error('Please log in to add tithis.');
     }
 
+    // Parse the incoming name (may be 2-part or 3-part)
+    const parsed = parseTithiName(name);
+    let tithiMonth = parsed.tithiMonth || '';
+    let tithiYear = null;
+
+    // If tithiMonth is not in the name, compute it from the start date
+    if (!tithiMonth && parsed.pakshya && parsed.tithi && startDate) {
+      const pakshaEn = normalizePakshaToEnglish(parsed.pakshya);
+      const tIdx = getTithiIndexByName(parsed.tithi, { fallbackToOne: false });
+      if (tIdx) {
+        tithiMonth = getTithiLunarMonthName(pakshaEn, tIdx, startDate) || '';
+        const yearInfo = getTithiYearFromAdDate(startDate, null, pakshaEn, tIdx);
+        tithiYear = yearInfo.tithiYear || null;
+      }
+    }
+
+    // Build 3-part name: "month pakshya tithi"
+    const fullName = tithiMonth
+      ? `${tithiMonth} ${parsed.pakshya} ${parsed.tithi}`
+      : `${parsed.pakshya} ${parsed.tithi}`;
+
     const tempId = crypto.randomUUID(); // Generate temporary ID for optimistic update
     try {
       // Create the new tithi object with date range
       const newTithi = {
         id: tempId,
-        name: name,
+        name: fullName,
+        tithiMonth: tithiMonth || '',
+        tithiYear: tithiYear || null,
+        pakshya: parsed.pakshya || '',
+        tithiName: parsed.tithi || '',
         startDate: startDate, // YYYY-MM-DD format
         startTime: startTime,
         endDate: endDate, // YYYY-MM-DD format
@@ -774,6 +819,10 @@ export default function NepaliCalendar({ user: propUser, isAdmin, treeMembers = 
       // Create data for Firestore (without the temporary ID)
       const tithiData = {
         name: newTithi.name,
+        tithiMonth: newTithi.tithiMonth,
+        tithiYear: newTithi.tithiYear,
+        pakshya: newTithi.pakshya,
+        tithiName: newTithi.tithiName,
         startDate: newTithi.startDate,
         startTime: newTithi.startTime,
         endDate: newTithi.endDate,
@@ -977,16 +1026,23 @@ export default function NepaliCalendar({ user: propUser, isAdmin, treeMembers = 
           
           // Build the full tithi name to search for
           const pakshaNepali = normalizePakshaToNepali(paksha);
-          const fullName = `${pakshaNepali} ${name}`;
           
-          // Query Firestore for tithis matching this name
-          const q = query(collection(db, COLLECTIONS.TITHIS), where('name', '>=', fullName), where('name', '<=', fullName + '\uf8ff'));
-          const snapshot = await getDocs(q);
+          // Query using new separate fields (for migrated/new data)
+          // and also legacy prefix query (for old 2-part names) — merge results
+          const qNew = query(collection(db, COLLECTIONS.TITHIS), where('pakshya', '==', pakshaNepali), where('tithiName', '==', name));
+          const old2PartName = `${pakshaNepali} ${name}`;
+          const qOld = query(collection(db, COLLECTIONS.TITHIS), where('name', '>=', old2PartName), where('name', '<=', old2PartName + '\uf8ff'));
+          const [snapNew, snapOld] = await Promise.all([getDocs(qNew), getDocs(qOld)]);
+          
+          // Merge by doc ID
+          const allDocs = new Map();
+          snapNew.docs.forEach(d => allDocs.set(d.id, d));
+          snapOld.docs.forEach(d => { if (!allDocs.has(d.id)) allDocs.set(d.id, d); });
           
           // Find the tithi that falls in the target year with matching lunar month
           let foundDate = null;
-          snapshot.docs.forEach(doc => {
-            const t = doc.data();
+          allDocs.forEach((docSnap) => {
+            const t = docSnap.data();
             if (!t.name.includes(name) || !t.name.includes(pakshaNepali)) return;
             
             const tithiIndex = getTithiIndexByName(name, { fallbackToOne: false });
@@ -1199,27 +1255,31 @@ export default function NepaliCalendar({ user: propUser, isAdmin, treeMembers = 
 
   // Helper function to get tithi display name with lunar month
   const getTithiDisplayName = (tithi) => {
-    const { pakshya, tithi: tithiName } = parseTithiName(tithi.name);
+    const { tithiMonth: parsedMonth, pakshya, tithi: tithiName } = parseTithiName(tithi.name);
     if (!tithi.startDate) {
       return tithi.name; // Fallback if no date
     }
     
-    // Get the tithi lunar month for the start date
-    const pakshaNormalized = normalizePakshaToEnglish(pakshya);
-    const tithiIndex = getTithiIndexByName(tithiName);
+    // Prefer stored tithiMonth from Firestore doc, then parsed from name, then compute
+    let lunarMonth = tithi.tithiMonth || parsedMonth || '';
     
-    if (tithiIndex) {
-      const lunarMonth = getTithiLunarMonthName(pakshaNormalized, tithiIndex, tithi.startDate);
-      if (lunarMonth) {
-        // lunarMonth is in Nepali (e.g., 'माघ'), find its index and convert to English if needed
-        const monthIndex = nepaliMonths.indexOf(lunarMonth);
-        const monthDisplay = monthIndex !== -1 
-          ? (isNepali ? nepaliMonths[monthIndex] : englishNepaliMonths[monthIndex])
-          : lunarMonth;
-        const pakshyaDisplay = isNepali ? pakshya : getEnglishPakshyaName(pakshya);
-        const tithiDisplay = isNepali ? tithiName : getEnglishTithiName(tithiName);
-        return `${monthDisplay} ${pakshyaDisplay} ${tithiDisplay}`;
+    if (!lunarMonth) {
+      // Compute the tithi lunar month for the start date
+      const pakshaNormalized = normalizePakshaToEnglish(pakshya);
+      const tithiIndex = getTithiIndexByName(tithiName);
+      if (tithiIndex) {
+        lunarMonth = getTithiLunarMonthName(pakshaNormalized, tithiIndex, tithi.startDate);
       }
+    }
+
+    if (lunarMonth) {
+      const monthIndex = nepaliMonths.indexOf(lunarMonth);
+      const monthDisplay = monthIndex !== -1 
+        ? (isNepali ? nepaliMonths[monthIndex] : englishNepaliMonths[monthIndex])
+        : lunarMonth;
+      const pakshyaDisplay = isNepali ? pakshya : getEnglishPakshyaName(pakshya);
+      const tithiDisplay = isNepali ? tithiName : getEnglishTithiName(tithiName);
+      return `${monthDisplay} ${pakshyaDisplay} ${tithiDisplay}`;
     }
     
     return tithi.name; // Fallback to original name if calculation fails

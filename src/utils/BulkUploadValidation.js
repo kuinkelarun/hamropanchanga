@@ -36,6 +36,10 @@ export const validateTreeData = (data = [], existingTrees = []) => {
   data.forEach((row, i) => {
     const r = i + 2;
     const name = String(row['Tree Name *'] || '').trim();
+    const primaryMember = String(row['Primary Member Name *'] || '').trim();
+    const contact = String(row['Contact Information *'] || '').trim();
+    const location = String(row['Location *'] || '').trim();
+
     if (!name) result.addError('Tree Name is required', r);
     else {
       if (seen.has(name)) result.addWarning('Duplicate tree name: ' + name, r);
@@ -43,6 +47,9 @@ export const validateTreeData = (data = [], existingTrees = []) => {
       if (existingTrees.includes(name)) result.addWarning('Tree ' + name + ' already exists. It will be skipped.', r);
       if (name.length > 255) result.addError('Tree Name exceeds 255 characters', r);
     }
+    if (!primaryMember) result.addError('Primary Member Name is required', r);
+    if (!contact) result.addError('Contact Information is required', r);
+    if (!location) result.addError('Location is required', r);
   });
   return { isValid: result.isValid, errors: result.errors, warnings: result.warnings, summary: { totalRows: data.length, errorsCount: result.errors.length, warningsCount: result.warnings.length } };
 };

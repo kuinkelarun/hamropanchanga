@@ -34,8 +34,9 @@ export async function deleteTreeAndAssociations(treeId) {
   const eventsSnap = await getDocs(query(collection(db, COLLECTIONS.CALENDAR_EVENTS), where('treeId', '==', treeId)));
   await Promise.all(eventsSnap.docs.map(d => deleteDoc(d.ref)));
 
-  // Soft delete the tree itself
-  await Trees.delete(treeId);
+  // Hard-delete the tree document itself (all subcollections were already removed above)
+  const treeRef = doc(db, COLLECTIONS.TREES, treeId);
+  await deleteDoc(treeRef);
   return { ok: true };
 }
 
