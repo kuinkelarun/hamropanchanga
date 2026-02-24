@@ -274,5 +274,36 @@
       "november": "November",
       "december": "December"
     }
+  },
+  "developer": {
+    "navLabel": "Developer API",
+    "pageTitle": "HamroPanchanga Developer API",
+    "pageSubtitle": "Nepali Calendar & Tithi data for your applications",
+    "requestKey": "Request a Free API Key",
+    "requestSubtitle": "Free plan: 1,000 requests/day. We'll review and send your key within 24 hours.",
+    "nameLabel": "Your Name",
+    "useCaseLabel": "Use Case",
+    "useCaseRequired": "Please describe your use case.",
+    "useCasePlaceholder": "e.g. Building a Nepali calendar app, research project...",
+    "websiteLabel": "Website / Project URL",
+    "websitePlaceholder": "https://yourapp.com (optional)",
+    "submit": "Submit Request",
+    "submitting": "Submitting...",
+    "signInPrompt": "Sign in to Request an API Key",
+    "signInSubtitle": "Create a free account to get started with the HamroPanchanga API.",
+    "signInButton": "Sign in with Google",
+    "pendingTitle": "Request Under Review",
+    "pendingSubtitle": "Your request has been received and is being reviewed. You'll see your key here once approved — usually within 24 hours.",
+    "approvedTitle": "API Key Approved!",
+    "approvedWarning": "Copy your key now. For security, it will be masked after you acknowledge it.",
+    "copyKey": "Copy",
+    "copied": "Copied",
+    "acknowledgeButton": "I have saved my key — Continue",
+    "rejectedTitle": "Request Not Approved",
+    "resubmit": "Submit New Request",
+    "activeKey": "Your API Key",
+    "activePlan": "Active · Free Plan",
+    "rateLimitNote": "Rate limit: 1,000 requests / day.",
+    "supportNote": "Need a higher limit? Contact us at"
   }
 }

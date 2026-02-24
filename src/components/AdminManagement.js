@@ -18,6 +18,7 @@ import { validateTithisData as validateTithisDataExternal, validateEventsData as
 import { downloadTemplate as downloadTemplateExcel, exportData as exportDataExcel, exportProblematicRows as exportProblematicRowsExcel, downloadTreesExcel as downloadTreesExcelService, generateTithiExcel as generateTithiExcelService } from '../services/adminExcelService';
 import AdminTreesTab from './Admin/AdminTreesTab';
 import AdminDataManagementTab from './Admin/AdminDataManagementTab';
+import AdminApiKeyRequestsTab from './Admin/AdminApiKeyRequestsTab';
 import DeleteConfirmationModal from './Admin/DeleteConfirmationModal';
 
 // Tithi lists from single source of truth
@@ -1411,6 +1412,14 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
         >
           🗂️ Data Management
         </button>
+        {isAdmin && (
+          <button 
+            className={`admin-tab ${activeTab === 'api-keys' ? 'active' : ''}`}
+            onClick={() => setActiveTab('api-keys')}
+          >
+            🔑 API Keys
+          </button>
+        )}
       </div>
 
       {/* Tab Descriptions */}
@@ -1462,6 +1471,14 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
           PERMISSIONS={PERMISSIONS}
         />
       )}
+
+      {/* API Key Requests Tab */}
+      {activeTab === 'api-keys' && isAdmin && (
+        <div className="admin-section">
+          <AdminApiKeyRequestsTab user={user} />
+        </div>
+      )}
+
       {/* Bulk Upload Section - Only show for tithis/events tabs */}
       {(activeTab === 'tithis' || activeTab === 'events') && (
       <div className="admin-section">

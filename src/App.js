@@ -20,6 +20,7 @@ import TithiCalculatorPage from './components/TithiCalculatorPage';
 import EmbeddedBuilderPage from './components/TreeBuilder/EmbeddedBuilderPage';
 import TreeSelectionPage from './components/TreeBuilder/TreeSelectionPage';
 import TreeDetailPage from './components/TreeBuilder/TreeDetailPage';
+import DeveloperPage from './components/DeveloperPage';
 import { useUserPermissions } from './hooks/usePermissions';
 
 // Tithi Calculator Button Component with visibility control
@@ -350,6 +351,10 @@ function AppContent() {
         navigate('/user-management');
     };
 
+    const handleDeveloperPage = () => {
+        navigate('/developer');
+    };
+
     const handleTithiCalculator = () => {
         navigate('/tithi-calculator');
         setMobileMenuOpen(false);
@@ -559,6 +564,7 @@ function AppContent() {
                                         onAdminEditCards={handleAdminEditCards}
                                         onAdminManagement={handleAdminManagement}
                                         onUserManagement={handleUserManagement}
+                                        onDeveloperPage={handleDeveloperPage}
                                     />
                                 </div>
                             ) : (
@@ -718,6 +724,13 @@ function AppContent() {
                     {/* New embedded Tree Builder route backed by Firestore trees */}
                     <Route path="/builder" element={
                         <EmbeddedBuilderPage
+                            user={user}
+                            isAdmin={isAdmin}
+                        />
+                    } />
+
+                    <Route path="/developer" element={
+                        <DeveloperPage
                             user={user}
                             isAdmin={isAdmin}
                         />

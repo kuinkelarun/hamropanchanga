@@ -274,5 +274,36 @@
       "november": "नोभेम्बर",
       "december": "डिसेम्बर"
     }
+  },
+  "developer": {
+    "navLabel": "डेभलपर API",
+    "pageTitle": "HamroPanchanga API",
+    "pageSubtitle": "तपाईंको एप्लिकेसनका लागि नेपाली पात्रो र तिथि डेटा",
+    "requestKey": "निःशुल्क API कुञ्जी अनुरोध गर्नुहोस्",
+    "requestSubtitle": "निःशुल्क योजना: दिनमा १,०००  अनुरोध। हामी २४ घण्टाभित्र समीक्षा गरेर कुञ्जी पठाउनेछौं।",
+    "nameLabel": "तपाईंको नाम",
+    "useCaseLabel": "प्रयोगको उद्देश्य",
+    "useCaseRequired": "कृपया आफ्नो प्रयोगको उद्देश्य लेख्नुहोस्।",
+    "useCasePlaceholder": "उदाहरण: नेपाली पात्रो एप बनाउन, अनुसन्धानको लागि...",
+    "websiteLabel": "वेबसाइट / परियोजना URL",
+    "websitePlaceholder": "https://yourapp.com (वैकल्पिक)",
+    "submit": "अनुरोध पेश गर्नुहोस्",
+    "submitting": "पेश हुँदैछ...",
+    "signInPrompt": "API कुञ्जी अनुरोद गर्न साइन इन गर्नुहोस्",
+    "signInSubtitle": "HamroPanchanga API सुरु गर्न निःशुल्क खाता बनाउनुहोस्।",
+    "signInButton": "Google बाट साइन इन गर्नुहोस्",
+    "pendingTitle": "अनुरोध समीक्षाधीन छ",
+    "pendingSubtitle": "तपाईंको अनुरोध प्राप्त भयो र समीक्षा हुँदैछ। स्वीकृत भएपछि यहाँ कुञ्जी देखिनेछ।",
+    "approvedTitle": "API कुञ्जी स्वीकृत!",
+    "approvedWarning": "अहिलेनै कुञ्जी प्रतिलिपि गर्नुहोस्। स्वीकार गरेपछि यो लुकाइनेछ।",
+    "copyKey": "प्रतिलिपि",
+    "copied": "प्रतिलिपि भयो",
+    "acknowledgeButton": "मैले कुञ्जी सुरक्षित गरेँ — जारी राख्नुहोस्",
+    "rejectedTitle": "अनुरोध अस्वीकृत",
+    "resubmit": "नयाँ अनुरोध पठाउनुहोस्",
+    "activeKey": "तपाईंको API कुञ्जी",
+    "activePlan": "सक्रिय · निःशुल्क योजना",
+    "rateLimitNote": "दर सीमा: दिनमा १,००० अनुरोध।",
+    "supportNote": "बढी सीमा चाहिन्छ? हामीलाई सम्पर्क गर्नुहोस्"
   }
 }
