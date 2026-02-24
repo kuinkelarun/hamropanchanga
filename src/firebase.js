@@ -28,8 +28,9 @@ export const db = getFirestore(app, databaseId);
 export const storage = getStorage(app);
 export const functions = getFunctions(app);
 
-// Connect to emulators in development
-if (process.env.NODE_ENV === 'development') {
+// Connect to emulators only when explicitly opted in via REACT_APP_USE_EMULATOR=true
+// (avoids hitting localhost:5001 when emulator is not running)
+if (process.env.NODE_ENV === 'development' && process.env.REACT_APP_USE_EMULATOR === 'true') {
   connectFunctionsEmulator(functions, "localhost", 5001);
 }
 

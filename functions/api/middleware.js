@@ -15,8 +15,8 @@ const crypto = require('crypto');
 
 const FREE_TIER_LIMIT = 1000;
 const KEY_PREFIX = 'npcal_';
-// key format: npcal_ + 32 hex chars = 38 chars total
-const KEY_REGEX = /^npcal_[0-9a-f]{32}$/i;
+// key format: npcal_ + 64 hex chars (crypto.randomBytes(32).toString('hex')) = 70 chars total
+const KEY_REGEX = /^npcal_[0-9a-f]{64}$/i;
 
 function hashKey(rawKey) {
   return crypto.createHash('sha256').update(rawKey).digest('hex');

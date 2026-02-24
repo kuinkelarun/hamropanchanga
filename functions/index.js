@@ -10,6 +10,8 @@ const apiRoutes = require('./api/routes');
 
 // Initialize admin SDK (Cloud Functions provide credentials automatically)
 admin.initializeApp();
+// Use the named Firestore database (this project does not use the default database)
+admin.firestore().settings({ databaseId: 'hamropanchanga-db' });
 
 // ─── Public Nepali Calendar REST API ─────────────────────────────────────────
 
@@ -343,4 +345,76 @@ exports.rejectApiKeyRequest = functions.https.onCall(async (data, context) => {
   });
 
   return { success: true };
+});
+
+// ─── Regenerate API Key (admin-only callable) ────────────────────────────────
+
+exports.regenerateApiKey = functions.https.onCall(async (data, context) => {
+  if (!context.auth) {
+    throw new functions.https.HttpsError('unauthenticated', 'Must be signed in.');
+  }
+
+  const isAdminClaim = context.auth.token && context.auth.token.admin === true;
+  const adminDoc = await admin.firestore().collection('adminList').doc(context.auth.uid).get();
+  if (!isAdminClaim && !adminDoc.exists) {
+    throw new functions.https.HttpsError('permission-denied', 'Only admins can regenerate API keys.');
+  }
+
+  const { requestId } = data;
+  if (!requestId || typeof requestId !== 'string') {
+    throw new functions.https.HttpsError('invalid-argument', 'requestId is required.');
+  }
+
+  const db = admin.firestore();
+  const requestRef = db.collection('apiKeyRequests').doc(requestId);
+  const requestSnap = await requestRef.get();
+
+  if (!requestSnap.exists) {
+    throw new functions.https.HttpsError('not-found', 'API key request not found.');
+  }
+
+  const requestData = requestSnap.data();
+  if (requestData.status !== 'approved') {
+    throw new functions.https.HttpsError('failed-precondition', 'Can only regenerate keys for approved requests.');
+  }
+
+  // Revoke the old API key if it exists
+  if (requestData.keyId) {
+    try {
+      await db.collection('apiKeys').doc(requestData.keyId).delete();
+    } catch (e) {
+      console.warn('Could not delete old apiKey doc:', e.message);
+    }
+  }
+
+  // Generate a fresh key
+  const rawKey = 'npcal_' + crypto.randomBytes(32).toString('hex');
+  const keyHash = crypto.createHash('sha256').update(rawKey).digest('hex');
+
+  // Write new apiKeys doc
+  const keyRef = db.collection('apiKeys').doc();
+  await keyRef.set({
+    keyHash,
+    owner: requestData.name || requestData.email,
+    email: requestData.email,
+    uid: requestData.uid,
+    plan: 'free',
+    active: true,
+    rateLimit: 1000,
+    requestsToday: 0,
+    rateLimitDate: new Date().toISOString().slice(0, 10),
+    createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    lastUsed: null,
+  });
+
+  // Reset rawKey on the request — user will see the copy-key screen again
+  await requestRef.update({
+    keyId: keyRef.id,
+    rawKey,
+    rawKeyAcknowledged: false,
+    regeneratedAt: admin.firestore.FieldValue.serverTimestamp(),
+    regeneratedBy: context.auth.uid,
+  });
+
+  return { success: true, keyId: keyRef.id };
 });

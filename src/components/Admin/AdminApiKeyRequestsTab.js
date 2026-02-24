@@ -47,6 +47,22 @@ export default function AdminApiKeyRequestsTab({ user }) {
     }
   };
 
+  const handleRegenerate = async (requestId) => {
+    if (!window.confirm('Regenerate this API key? The old key will stop working immediately and the user will need to copy their new key.')) return;
+    setActionLoading(requestId);
+    try {
+      const fns = getFunctions();
+      const regen = httpsCallable(fns, 'regenerateApiKey');
+      await regen({ requestId });
+      await load();
+    } catch (err) {
+      console.error('Regeneration failed:', err);
+      alert(`Regeneration failed: ${err.message}`);
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
   const handleRejectConfirm = async () => {
     if (!rejectModal) return;
     setActionLoading(rejectModal.id);
@@ -145,6 +161,7 @@ export default function AdminApiKeyRequestsTab({ user }) {
                 actionLoading={actionLoading}
                 onApprove={handleApprove}
                 onReject={(id) => { setRejectModal({ id }); setRejectReason(''); }}
+                onRegenerate={handleRegenerate}
               />
             ))}
           </div>
@@ -186,7 +203,7 @@ export default function AdminApiKeyRequestsTab({ user }) {
   );
 }
 
-function RequestCard({ req, formatDate, actionLoading, onApprove, onReject }) {
+function RequestCard({ req, formatDate, actionLoading, onApprove, onReject, onRegenerate }) {
   return (
     <div className="bg-white border border-gray-200 rounded-xl p-5">
       <div className="flex items-start justify-between gap-4">
@@ -211,7 +228,22 @@ function RequestCard({ req, formatDate, actionLoading, onApprove, onReject }) {
           {req.reviewedAt && (
             <p className="text-xs text-gray-400">Reviewed: {formatDate(req.reviewedAt)}</p>
           )}
+          {req.regeneratedAt && (
+            <p className="text-xs text-amber-600 mt-1">🔄 Key regenerated: {formatDate(req.regeneratedAt)}</p>
+          )}
         </div>
+
+        {req.status === 'approved' && (
+          <div className="flex flex-col gap-2 flex-shrink-0">
+            <button
+              onClick={() => onRegenerate(req.id)}
+              disabled={actionLoading === req.id}
+              className="px-4 py-1.5 bg-amber-500 text-white text-xs font-medium rounded-lg hover:bg-amber-600 disabled:opacity-50 transition-colors"
+            >
+              {actionLoading === req.id ? '...' : '🔄 Regenerate'}
+            </button>
+          </div>
+        )}
 
         {req.status === 'pending' && (
           <div className="flex flex-col gap-2 flex-shrink-0">
