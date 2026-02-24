@@ -246,15 +246,21 @@ router.get('/tithis', async (req, res) => {
   }
 
   try {
+    // orderBy('startDate') only — avoids needing composite index while it builds.
+    // Sort by startTime in JS after fetch (dataset is small per date range).
     const snap = await admin.firestore()
       .collection('tithis')
       .where('startDate', '>=', startDate)
       .where('startDate', '<=', endDate)
       .orderBy('startDate')
-      .orderBy('startTime')
       .get();
 
-    const tithis = snap.docs.map(formatTithiDoc);
+    const tithis = snap.docs
+      .map(formatTithiDoc)
+      .sort((a, b) => {
+        if (a.startDate !== b.startDate) return a.startDate.localeCompare(b.startDate);
+        return (a.startTime || '').localeCompare(b.startTime || '');
+      });
     return res.json({ count: tithis.length, startDate, endDate, tithis });
   } catch (err) {
     console.error('/v1/tithis error:', err);

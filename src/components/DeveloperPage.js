@@ -237,7 +237,10 @@ function KeyPanel({
             {copyKeyDone ? '✓ Copied' : 'Copy'}
           </button>
         </div>
-        <p className="text-xs text-gray-500 mb-4">Send this header with every request: <code className="bg-gray-100 px-1 py-0.5 rounded">X-API-Key: {request.rawKey}</code></p>
+        <div className="bg-gray-100 rounded p-2 mb-4 overflow-x-auto">
+          <p className="text-xs text-gray-500 mb-1">Send this header with every request:</p>
+          <code className="text-xs font-mono break-all">X-API-Key: {request.rawKey}</code>
+        </div>
         <button
           onClick={onAcknowledge}
           disabled={acknowledging}

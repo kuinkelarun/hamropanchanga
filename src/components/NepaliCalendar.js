@@ -126,7 +126,9 @@ export default function NepaliCalendar({ user: propUser, isAdmin, treeMembers = 
   useEffect(() => {
     if (isDev) console.log('Setting up Firebase listener for tithis...');
     const tithisCollection = collection(db, COLLECTIONS.TITHIS);
-    const q = query(tithisCollection, orderBy('startDate'), orderBy('startTime'));
+    // Order by startDate only — composite startDate+startTime index may not exist yet.
+    // startTime sorting is handled in JS below.
+    const q = query(tithisCollection, orderBy('startDate'));
     
     const unsubscribe = onSnapshot(q, (snapshot) => {
       if (isDev) {

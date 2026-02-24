@@ -1,4 +1,6 @@
-# HamroPanchanga API — Developer Guide
+# Ha
+
+mroPachanga API — Developer Guide
 
 > **Base URL:** `https://us-central1-hamropanchanga.cloudfunctions.net/api`
 
