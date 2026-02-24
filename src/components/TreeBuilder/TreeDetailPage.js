@@ -14,6 +14,7 @@ import { normalizeForCompare } from '../../utils/textNormalize';
 import { createEvent, updateEvent, deleteEvent, getEventsByTree } from '../../services/CalendarEventService';
 import { useLanguage } from '../../contexts/LanguageContext';
 import TreeShareModal from '../TreeShareModal';
+import { useTithiDateResolver } from '../../hooks/useTithiDateResolver';
 
 export default function TreeDetailPage({ user }) {
   const { t, tn, isNepali } = useLanguage();
@@ -47,6 +48,9 @@ export default function TreeDetailPage({ user }) {
 
   // Tree sharing state
   const [showShareModal, setShowShareModal] = useState(false);
+
+  // Resolve tithi-based event dates dynamically from live tithis data
+  const resolveEventDate = useTithiDateResolver();
 
   // Check for highlighted event ID from navigation state
   useEffect(() => {
@@ -589,7 +593,8 @@ export default function TreeDetailPage({ user }) {
               {events.length > 0 ? (
                 <div className="space-y-3">
                   {events.map(event => {
-                    const nepaliDate = event.dateKey ? formatAdDateToNepaliStringWithNumerals(event.dateKey) : '';
+                    const displayDateKey = resolveEventDate(event) || event.dateKey;
+                    const nepaliDate = displayDateKey ? formatAdDateToNepaliStringWithNumerals(displayDateKey) : '';
                     const tithiDisplay = getTithiDisplayString(event.tithi);
                     return (
                       <div 
@@ -610,7 +615,7 @@ export default function TreeDetailPage({ user }) {
                                 <span className="cursor-pointer hover:text-purple-900 hover:underline" onClick={(e) => {e.stopPropagation(); handleMemberNameClick(event.memberId);}} title="Click to go to family member">👤 {getMemberName(event.memberId)}</span>
                               </p>
                             )}
-                            <p className="text-sm text-gray-600 mt-1">📅 {event.dateKey}</p>
+                            <p className="text-sm text-gray-600 mt-1">📅 {displayDateKey || '—'}</p>
                             {nepaliDate && (
                               <p className="text-sm text-purple-600 mt-0.5">🗓️ {nepaliDate}{tithiDisplay}</p>
                             )}
@@ -723,15 +728,15 @@ export default function TreeDetailPage({ user }) {
               <div>
                 <label className="text-xs font-semibold text-gray-700">{t('eventPreview.dateGregorian')}</label>
                 <div className="mt-1 px-3 py-2 bg-white text-gray-900 rounded-md text-sm border border-gray-300">
-                  {previewingEvent.dateKey || '—'}
+                  {(resolveEventDate(previewingEvent) || previewingEvent.dateKey) || '—'}
                 </div>
               </div>
 
-              {previewingEvent.dateKey && (
+              {(resolveEventDate(previewingEvent) || previewingEvent.dateKey) && (
                 <div>
                   <label className="text-xs font-semibold text-gray-700">{t('eventPreview.dateNepali')}</label>
                   <div className="mt-1 px-3 py-2 bg-white text-gray-900 rounded-md text-sm border border-gray-300">
-                    {formatAdDateToNepaliStringWithNumerals(previewingEvent.dateKey)}
+                    {formatAdDateToNepaliStringWithNumerals(resolveEventDate(previewingEvent) || previewingEvent.dateKey)}
                     {getTithiDisplayString(previewingEvent.tithi)}
                   </div>
                 </div>

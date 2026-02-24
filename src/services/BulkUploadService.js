@@ -1144,9 +1144,11 @@ export const addEventsFromBulkUpload = async (eventData, userId, treeMap, member
           
           eventPayload.entryMode = 'tithi';
           
-          // Delete dateKey if not set (tithi-only mode)
+          // Set empty dateKey sentinel if not resolved (tithi-only mode).
+          // This ensures the field always exists on the Firestore document so
+          // it is never silently excluded by orderBy('dateKey') queries.
           if (!('dateKey' in eventPayload)) {
-            delete eventPayload.dateKey;
+            eventPayload.dateKey = '';
           }
           
           // Minimal log indicating tithi event creation (do not log full payload)
