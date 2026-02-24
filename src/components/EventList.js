@@ -1,12 +1,10 @@
 import React, { useState } from 'react';
 import EventMenu from './EventMenu';
-import { useSettings } from '../contexts/SettingsContext';
-import { formatNepaliDate, formatEnglishDate, formatNepaliMonthYear, formatGregorianMonthYear } from '../utils/nepaliDateUtils';
+import { formatNepaliDate, formatEnglishDate, formatNepaliMonthYear } from '../utils/nepaliDateUtils';
 // Titles are expected as Unicode in `event.title`
 
 // Component to list all events
 const EventList = ({ events, eventFilter, onEdit, onDelete }) => {
-    const { isNepaliCalendar } = useSettings(); // Use global settings
     // Helper function to calculate the next occurrence of a repeating event
     const getNextOccurrence = (originalDate, repetition) => {
         const today = new Date();
@@ -76,9 +74,7 @@ const EventList = ({ events, eventFilter, onEdit, onDelete }) => {
     const groupedEvents = {};
     if (shouldGroup) {
         sortedAndFilteredEvents.forEach(event => {
-            const monthYear = isNepaliCalendar 
-                ? formatNepaliMonthYear(event.displayDate).nepali
-                : formatGregorianMonthYear(event.displayDate).full;
+            const monthYear = formatNepaliMonthYear(event.displayDate).nepali;
             if (!groupedEvents[monthYear]) {
                 groupedEvents[monthYear] = [];
             }
@@ -121,16 +117,10 @@ const EventList = ({ events, eventFilter, onEdit, onDelete }) => {
                                             </div>
                                             <div className="text-sm text-gray-600">
                                                 <div className="font-medium text-gray-700">
-                                                    {isNepaliCalendar 
-                                                        ? formatNepaliDate(event.displayDate).withDayShortNepali
-                                                        : formatEnglishDate(event.displayDate).withDayShort
-                                                    }
+                                                    {formatNepaliDate(event.displayDate).withDayShortNepali}
                                                 </div>
                                                 <div className="text-xs text-gray-500 mt-0.5">
-                                                    {isNepaliCalendar 
-                                                        ? formatEnglishDate(event.displayDate).short
-                                                        : formatNepaliDate(event.displayDate).shortNepali
-                                                    }
+                                                    {formatEnglishDate(event.displayDate).short}
                                                 </div>
                                             </div>
                                             {event.personName && (
@@ -166,16 +156,10 @@ const EventList = ({ events, eventFilter, onEdit, onDelete }) => {
                                     </div>
                                     <div className="text-sm text-gray-600">
                                         <div className="font-medium text-gray-700">
-                                            {isNepaliCalendar 
-                                                ? formatNepaliDate(event.displayDate).withDayShortNepali
-                                                : formatEnglishDate(event.displayDate).withDayShort
-                                            }
+                                            {formatNepaliDate(event.displayDate).withDayShortNepali}
                                         </div>
                                         <div className="text-xs text-gray-500 mt-0.5">
-                                            {isNepaliCalendar 
-                                                ? formatEnglishDate(event.displayDate).short
-                                                : formatNepaliDate(event.displayDate).shortNepali
-                                            }
+                                            {formatEnglishDate(event.displayDate).short}
                                         </div>
                                     </div>
                                     {event.personName && (

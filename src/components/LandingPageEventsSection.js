@@ -1,15 +1,13 @@
 import React, { useState, useCallback } from 'react';
 import './LandingPageEventsSection.css';
-import { useSettings } from '../contexts/SettingsContext';
 import { useLanguage } from '../contexts/LanguageContext';
-import { formatNepaliDate, formatEnglishDate, formatNepaliMonthYear, formatGregorianMonthYear, convertAdToBs, convertBsToAd } from '../utils/nepaliDateUtils';
+import { formatNepaliDate, formatEnglishDate, formatNepaliMonthYear, convertAdToBs, convertBsToAd } from '../utils/nepaliDateUtils';
 import { normalizePakshaToNepali } from '../constants/calendarConstants';
 // Use Unicode `event.title` when present
 
 const LandingPageEventsSection = ({ events, familyMembers, onDoubleClickEvent, onEventClick }) => {
     const { t } = useLanguage();
     const [eventFilter, setEventFilter] = useState('next-week');
-    const { isNepaliCalendar } = useSettings(); // Use global settings
 
     // Helper function to get tithi display string with normalized paksha
     const getTithiDisplayString = useCallback((event) => {
@@ -154,9 +152,7 @@ const LandingPageEventsSection = ({ events, familyMembers, onDoubleClickEvent, o
 
     if (shouldGroup) {
         sortedAndFilteredEvents.forEach(event => {
-            const monthYear = isNepaliCalendar 
-                ? formatNepaliMonthYear(event.displayDate).nepali
-                : formatGregorianMonthYear(event.displayDate).full;
+            const monthYear = formatNepaliMonthYear(event.displayDate).nepali;
             if (!groupedEvents[monthYear]) {
                 groupedEvents[monthYear] = [];
             }
@@ -207,16 +203,10 @@ const LandingPageEventsSection = ({ events, familyMembers, onDoubleClickEvent, o
                                         </div>
                                         <div className="text-sm text-gray-600">
                                             <div className="font-medium text-gray-700">
-                                                {isNepaliCalendar 
-                                                    ? formatNepaliDate(event.displayDate).withDayShortNepali
-                                                    : formatEnglishDate(event.displayDate).withDayShort
-                                                }
+                                                {formatNepaliDate(event.displayDate).withDayShortNepali}
                                             </div>
                                             <div className="text-xs text-gray-500 mt-0.5">
-                                                {isNepaliCalendar 
-                                                    ? formatEnglishDate(event.displayDate).short
-                                                    : formatNepaliDate(event.displayDate).shortNepali
-                                                }
+                                                {formatEnglishDate(event.displayDate).short}
                                                 {event.tithi && getTithiDisplayString(event)}
                                             </div>
                                         </div>
@@ -245,16 +235,10 @@ const LandingPageEventsSection = ({ events, familyMembers, onDoubleClickEvent, o
                                 </div>
                                 <div className="text-sm text-gray-600">
                                     <div className="font-medium text-gray-700">
-                                        {isNepaliCalendar 
-                                            ? formatNepaliDate(event.displayDate).withDayShortNepali
-                                            : formatEnglishDate(event.displayDate).withDayShort
-                                        }
+                                        {formatNepaliDate(event.displayDate).withDayShortNepali}
                                     </div>
                                     <div className="text-xs text-gray-500 mt-0.5">
-                                        {isNepaliCalendar 
-                                            ? formatEnglishDate(event.displayDate).short
-                                            : formatNepaliDate(event.displayDate).shortNepali
-                                        }
+                                        {formatEnglishDate(event.displayDate).short}
                                         {event.tithi && getTithiDisplayString(event)}
                                     </div>
                                 </div>
