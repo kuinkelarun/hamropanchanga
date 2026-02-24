@@ -305,14 +305,13 @@ export default function NepaliCalendar({ user: propUser, isAdmin, treeMembers = 
       // Guests: public events AND tree member events
       const publicQuery = query(
         eventsCollection, 
-        where('isPublic', '==', true),
-        orderBy('dateKey')
+        where('isPublic', '==', true)
       );
       
-      // Simplified treeQuery: only order by dateKey; filter treeId client-side to avoid composite index
+      // Simplified treeQuery: fetch all events; filter treeId client-side to avoid composite index
+      // NOTE: No orderBy('dateKey') — that silently excludes tithi-only docs without a dateKey field.
       const treeQuery = query(
-        eventsCollection,
-        orderBy('dateKey')
+        eventsCollection
       );
       
       let publicEventsById = new Map();
@@ -362,24 +361,22 @@ export default function NepaliCalendar({ user: propUser, isAdmin, treeMembers = 
       // Use queries and merge the results
       const publicQuery = query(
         eventsCollection,
-        where('isPublic', '==', true),
-        orderBy('dateKey')
+        where('isPublic', '==', true)
       );
       
       const userQuery = query(
         eventsCollection,
-        where('createdBy', '==', user.uid),
-        orderBy('dateKey')
+        where('createdBy', '==', user.uid)
       );
 
-      // Simplified treeQuery: only order by dateKey; filter treeId client-side to avoid composite index
+      // Simplified treeQuery: fetch all events; filter treeId client-side to avoid composite index.
+      // NOTE: No orderBy('dateKey') — that silently excludes tithi-only docs without a dateKey field.
       // FIX: Regular users cannot query ALL events because some might be private to other users.
       // We must restrict the query to what the user is allowed to see.
       let treeQuery;
       if (isAdmin) {
         treeQuery = query(
-          eventsCollection,
-          orderBy('dateKey')
+          eventsCollection
         );
       } else {
         // For regular users the broad treeQuery stays null; shared-tree events
@@ -464,8 +461,7 @@ export default function NepaliCalendar({ user: propUser, isAdmin, treeMembers = 
         const adminPrivateQuery = query(
           eventsCollection,
           where('createdByAdmin', '==', true),
-          where('isPublic', '==', false),
-          orderBy('dateKey')
+          where('isPublic', '==', false)
         );
         
         unsubscribe4 = onSnapshot(adminPrivateQuery, (snapshot) => {
@@ -998,98 +994,70 @@ export default function NepaliCalendar({ user: propUser, isAdmin, treeMembers = 
 
 
 
-  // State to cache resolved tithi event dates for different years
-  const [tithiEventDateCache, setTithiEventDateCache] = useState({});
+  // Synchronous lookup: (pakshaNepali || tithiName || bsYear || lunarMonth) → startDate.
+  // Built entirely from the in-memory tithisByDate that is already kept live by onSnapshot.
+  // No extra Firestore reads needed — automatically reflects any tithi add/edit/delete.
+  const tithiDateLookup = useMemo(() => {
+    const map = new Map();
+    const seen = new Set(); // deduplicate: a multi-day tithi appears in many dateKey buckets
 
-  // Helper function to resolve yearly tithi events - builds a cache key
-  const getTithiEventCacheKey = useCallback((eventId, bsYear) => {
-    return `${eventId}_${bsYear}`;
-  }, []);
+    Object.values(tithisByDate).forEach(tithisArr => {
+      tithisArr.forEach(t => {
+        if (!t.startDate || !t.name) return;
+        const dedupeKey = (t.id || '') + '|' + t.startDate + '|' + t.name;
+        if (seen.has(dedupeKey)) return;
+        seen.add(dedupeKey);
 
-  // Effect to resolve yearly tithi events for the current viewing year
-  useEffect(() => {
-    const resolveYearlyTithiEventsForYear = async () => {
-      const yearlyTithiEvents = calendarEvents.filter(e => e.repetition === 'yearly' && e.tithi);
-      
-      if (yearlyTithiEvents.length === 0) return;
-      
-      const newCache = { ...tithiEventDateCache };
-      
-      for (const event of yearlyTithiEvents) {
-        const cacheKey = getTithiEventCacheKey(event.id, currentBsYear);
-        
-        // Skip if already cached
-        if (cacheKey in newCache) continue;
-        
-        try {
-          const { paksha, name, month: expectedTithiMonth } = event.tithi;
-          
-          // Build the full tithi name to search for
-          const pakshaNepali = normalizePakshaToNepali(paksha);
-          
-          // Query using new separate fields (for migrated/new data)
-          // and also legacy prefix query (for old 2-part names) — merge results
-          const qNew = query(collection(db, COLLECTIONS.TITHIS), where('pakshya', '==', pakshaNepali), where('tithiName', '==', name));
-          const old2PartName = `${pakshaNepali} ${name}`;
-          const qOld = query(collection(db, COLLECTIONS.TITHIS), where('name', '>=', old2PartName), where('name', '<=', old2PartName + '\uf8ff'));
-          const [snapNew, snapOld] = await Promise.all([getDocs(qNew), getDocs(qOld)]);
-          
-          // Merge by doc ID
-          const allDocs = new Map();
-          snapNew.docs.forEach(d => allDocs.set(d.id, d));
-          snapOld.docs.forEach(d => { if (!allDocs.has(d.id)) allDocs.set(d.id, d); });
-          
-          // Find the tithi that falls in the target year with matching lunar month
-          let foundDate = null;
-          allDocs.forEach((docSnap) => {
-            const t = docSnap.data();
-            if (!t.name.includes(name) || !t.name.includes(pakshaNepali)) return;
-            
-            const tithiIndex = getTithiIndexByName(name, { fallbackToOne: false });
-            if (!tithiIndex) return;
-            
-            // Get the date of this tithi from Firestore
-            const tithiStartDate = t.startDate; // Should be in YYYY-MM-DD format
-            if (!tithiStartDate) return;
-            
-            // Check if this tithi is in the target year and matches the expected lunar month
-            const tithiYear = getTithiYearFromAdDate(tithiStartDate, null, paksha, tithiIndex).tithiYear;
-            
-            // Check if the lunar month matches
-            const lunarMonth = getTithiLunarMonthName(paksha, tithiIndex, tithiStartDate);
-            
-            let expectedMonth = expectedTithiMonth;
-            if (typeof expectedMonth === 'number') {
-              expectedMonth = nepaliMonths[expectedMonth - 1];
-            }
-            
-            if (tithiYear === currentBsYear && lunarMonth === expectedMonth) {
-              foundDate = tithiStartDate;
-            }
-          });
-          
-          newCache[cacheKey] = foundDate || event.dateKey;
-        } catch (err) {
-          console.error(`Error resolving yearly tithi event ${event.id}:`, err);
-          newCache[cacheKey] = event.dateKey;
+        const { tithiMonth, pakshya, tithi: tithiName } = parseTithiName(t.name);
+        if (!pakshya || !tithiName || !tithiMonth) return;
+
+        const pakshaEn = (pakshya === 'शुक्लपक्ष') ? 'Shukla' : 'Krishna';
+        const tithiIndex = getTithiIndexByName(tithiName, { fallbackToOne: false });
+        if (!tithiIndex) return;
+
+        const { tithiYear } = getTithiYearFromAdDate(t.startDate, null, pakshaEn, tithiIndex);
+        if (!tithiYear) return;
+
+        const key = `${pakshya}||${tithiName}||${tithiYear}||${tithiMonth}`;
+        if (!map.has(key)) {
+          map.set(key, t.startDate);
         }
-      }
-      
-      setTithiEventDateCache(newCache);
-    };
-    
-    resolveYearlyTithiEventsForYear();
-  }, [currentBsYear, calendarEvents, getTithiEventCacheKey]);
+      });
+    });
+    return map;
+  }, [tithisByDate]);
 
-  // Helper function to get the resolved date for a yearly tithi event
+  // Resolve the live AD dateKey for a tithi-based event using the in-memory lookup.
+  //   Returns a date string  → tithi present, show event on that day
+  //   Returns null           → tithi absent/deleted, hide event
   const getResolvedTithiEventDate = useCallback((event) => {
-    if (!event.tithi || event.repetition !== 'yearly') {
-      return event.dateKey;
+    if (!event.tithi || event.repetition === 'monthly') {
+      return event.dateKey; // monthly handled live; non-tithi events keep stored dateKey
     }
-    
-    const cacheKey = getTithiEventCacheKey(event.id, currentBsYear);
-    return tithiEventDateCache[cacheKey] || event.dateKey;
-  }, [currentBsYear, tithiEventDateCache, getTithiEventCacheKey]);
+
+    const pakshaNepali = normalizePakshaToNepali(event.tithi.paksha);
+    const tithiName = event.tithi.name;
+    let expectedMonth = event.tithi.month;
+    if (typeof expectedMonth === 'number') {
+      expectedMonth = nepaliMonths[expectedMonth - 1];
+    }
+
+    // For yearly events use the current viewing year.
+    // For one-time (none) events derive the target year from the stored dateKey if present;
+    // otherwise fall back to currentBsYear (covers tithi-only events with no dateKey).
+    let targetYear = currentBsYear;
+    if (event.repetition === 'none' && event.dateKey) {
+      try {
+        const [adY, adM, adD] = event.dateKey.split('-').map(Number);
+        const bsDate = convertAdToBs(adY, adM - 1, adD);
+        if (bsDate?.year) targetYear = bsDate.year;
+      } catch (e) { /* keep currentBsYear */ }
+    }
+
+    const key = `${pakshaNepali}||${tithiName}||${targetYear}||${expectedMonth}`;
+    const found = tithiDateLookup.get(key);
+    return found !== undefined ? found : null; // null = tithi absent, hide event
+  }, [currentBsYear, tithiDateLookup]);
 
   // Helper function to get events for a specific date
   const getEventsForDate = useCallback((adYear, adMonthZeroBased, adDay) => {
@@ -1100,12 +1068,16 @@ export default function NepaliCalendar({ user: propUser, isAdmin, treeMembers = 
     const currentBsDate = convertAdToBs(adYear, adMonthZeroBased, adDay);
     
     return calendarEvents.filter(event => {
-      // For yearly repeating tithi events, resolve the date for the current viewing year
+      // For tithi-based events (yearly + none), resolve live from tithiDateLookup.
+      // null  → tithi not in DB (deleted or not yet added) → hide event.
+      // monthly tithi events use the live tithisByDate match in section 2A below.
       let eventDateKeyToMatch = event.dateKey;
-      if (event.repetition === 'yearly' && event.tithi && currentBsDate) {
-        eventDateKeyToMatch = getResolvedTithiEventDate(event);
+      if (event.tithi && event.repetition !== 'monthly') {
+        const resolved = getResolvedTithiEventDate(event);
+        if (resolved === null || resolved === undefined) return false;
+        eventDateKeyToMatch = resolved;
       }
-      
+
       // 1. Exact Date Match
       if (eventDateKeyToMatch === dateKey) {
         return true;
