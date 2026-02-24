@@ -9,6 +9,7 @@ export default function AdminDataManagementTab({
   tithis,
   events,
   trees,
+  softDeletedTreesCount = 0,
   loading,
   scanning,
   scanResults,
@@ -67,11 +68,16 @@ export default function AdminDataManagementTab({
         <div className="danger-action-info">
           <h4>🗑️ Delete All Trees</h4>
           <p>Remove all trees and all associated members, relationships, marriage points, and events. A backup file will be downloaded automatically.</p>
+          {softDeletedTreesCount > 0 && trees.length === 0 && (
+            <p style={{ color: '#e67e22', fontSize: '0.85em', marginTop: '4px' }}>
+              ⚠️ {softDeletedTreesCount} archived (soft-deleted) tree{softDeletedTreesCount !== 1 ? 's' : ''} pending purge.
+            </p>
+          )}
         </div>
         <button
           onClick={onBulkDeleteTrees}
           className="btn-danger"
-          disabled={loading || trees.length === 0}
+          disabled={loading || (trees.length === 0 && softDeletedTreesCount === 0)}
         >
           Delete All Trees
         </button>

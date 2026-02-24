@@ -6,7 +6,7 @@
  * safe to call from any module.
  */
 
-import { NEPALI_TO_ENGLISH_TITHI_MAP, normalizePakshaToEnglish } from '../constants/calendarConstants';
+import { NEPALI_TO_ENGLISH_TITHI_MAP, NEPALI_MONTHS, normalizePakshaToEnglish } from '../constants/calendarConstants';
 import { toNepaliNumber, getNepalDate } from './nepaliDateUtils';
 
 // Re-export so existing imports from calendarHelpers keep working
@@ -34,18 +34,31 @@ export function formatTime12Hour(time24, isNepali = false, tn = null) {
 // ──── Tithi name parsing / translation ────
 
 /**
- * Split a combined tithi name like "शुक्लपक्ष प्रतिपदा" into
- * `{ pakshya: "शुक्लपक्ष", tithi: "प्रतिपदा" }`.
+ * Split a combined tithi name into its components.
+ *
+ * Handles both legacy 2-part names ("शुक्लपक्ष प्रतिपदा") and
+ * new 3-part names ("फाल्गुन शुक्लपक्ष प्रतिपदा").
+ *
+ * Detection: if the first word is a known Nepali month name from
+ * NEPALI_MONTHS, treat the name as 3-part (month + pakshya + tithi).
+ *
+ * @returns {{ tithiMonth: string, pakshya: string, tithi: string }}
  */
 export function parseTithiName(fullName) {
-  if (!fullName) return { pakshya: '', tithi: '' };
+  if (!fullName) return { tithiMonth: '', pakshya: '', tithi: '' };
   const parts = fullName.split(' ');
-  if (parts.length >= 2) {
-    const pakshya = parts[0];
-    const tithi = parts.slice(1).join(' ');
-    return { pakshya, tithi };
+
+  if (parts.length >= 3 && NEPALI_MONTHS.includes(parts[0])) {
+    // New 3-part format: "फाल्गुन शुक्लपक्ष प्रतिपदा"
+    return { tithiMonth: parts[0], pakshya: parts[1], tithi: parts.slice(2).join(' ') };
   }
-  return { pakshya: '', tithi: fullName };
+
+  if (parts.length >= 2) {
+    // Legacy 2-part format: "शुक्लपक्ष प्रतिपदा"
+    return { tithiMonth: '', pakshya: parts[0], tithi: parts.slice(1).join(' ') };
+  }
+
+  return { tithiMonth: '', pakshya: '', tithi: fullName };
 }
 
 /** Map a Nepali tithi name (e.g. "प्रतिपदा") to its English transliteration. */

@@ -129,14 +129,41 @@ export function exportData(activeTab, tithis, events) {
     const seen = new Set();
     const uniqueRows = [];
     tithis.forEach(t => {
-      const nameParts = (t.name || '').split(' ');
-      const pakshya = nameParts[0] || '';
-      const tithi = nameParts.slice(1).join(' ') || t.name || '';
-      const pakshType = normalizePakshaToEnglish(pakshya);
-      const tithiIndex = getTithiIndexByName(tithi);
-      const tithiLunarMonthName = getTithiLunarMonthName(pakshType, tithiIndex, t.startDate || '');
-      const tithiYearInfo = getTithiYearFromAdDate(t.startDate || '', null, pakshType, tithiIndex);
-      const tithiYear = tithiYearInfo.tithiYear || '';
+      // Prefer stored separate fields, fall back to parsing name
+      let pakshya = t.pakshya || '';
+      let tithi = t.tithiName || '';
+      let tithiLunarMonthName = t.tithiMonth || '';
+      let tithiYear = t.tithiYear || '';
+
+      if (!pakshya || !tithi) {
+        const nameParts = (t.name || '').split(' ');
+        // Check if first part is a known Nepali month (3-part name)
+        const NEPALI_MONTHS = [
+          "वैशाख", "ज्येष्ठ", "आषाढ", "श्रावण", "भाद्र", "आश्विन",
+          "कार्तिक", "मार्ग", "पौष", "माघ", "फाल्गुन", "चैत्र"
+        ];
+        if (nameParts.length >= 3 && NEPALI_MONTHS.includes(nameParts[0])) {
+          if (!tithiLunarMonthName) tithiLunarMonthName = nameParts[0];
+          pakshya = pakshya || nameParts[1] || '';
+          tithi = tithi || nameParts.slice(2).join(' ') || t.name || '';
+        } else {
+          pakshya = pakshya || nameParts[0] || '';
+          tithi = tithi || nameParts.slice(1).join(' ') || t.name || '';
+        }
+      }
+
+      // If still no tithiMonth/tithiYear, compute from date
+      if ((!tithiLunarMonthName || !tithiYear) && t.startDate) {
+        const pakshType = normalizePakshaToEnglish(pakshya);
+        const tithiIndex = getTithiIndexByName(tithi);
+        if (!tithiLunarMonthName) {
+          tithiLunarMonthName = getTithiLunarMonthName(pakshType, tithiIndex, t.startDate || '');
+        }
+        if (!tithiYear) {
+          const tithiYearInfo = getTithiYearFromAdDate(t.startDate || '', null, pakshType, tithiIndex);
+          tithiYear = tithiYearInfo.tithiYear || '';
+        }
+      }
 
       const row = [
         tithi, pakshya, tithiYear, tithiLunarMonthName,
@@ -144,7 +171,8 @@ export function exportData(activeTab, tithis, events) {
         t.startTime || '',
         formatAdDateToNepaliStringWithNumerals(t.endDate),
         t.endTime || '',
-        'ADD'
+        'ADD',
+        t.category || ''
       ];
       const key = `${tithi}|${pakshya}|${t.startDate || ''}|${t.startTime || ''}|${t.endDate || ''}|${t.endTime || ''}`;
       if (!seen.has(key)) {
@@ -154,11 +182,11 @@ export function exportData(activeTab, tithis, events) {
     });
 
     const wsData = [
-      ['Tithi*', 'Pakshya*', 'Tithi Year*', 'Tithi Month (Nepali)*', 'Start Date* (YYYY-MM-DD Nepali)', 'Start Time* (HH:MM)', 'End Date* (YYYY-MM-DD Nepali)', 'End Time* (HH:MM)', 'AddOrReplace*'],
+      ['Tithi*', 'Pakshya*', 'Tithi Year*', 'Tithi Month (Nepali)*', 'Start Date* (YYYY-MM-DD Nepali)', 'Start Time* (HH:MM)', 'End Date* (YYYY-MM-DD Nepali)', 'End Time* (HH:MM)', 'AddOrReplace*', 'Category (optional)'],
       ...uniqueRows
     ];
     const ws = XLSX.utils.aoa_to_sheet(wsData);
-    ws['!cols'] = [{ wch: 25 }, { wch: 15 }, { wch: 15 }, { wch: 20 }, { wch: 30 }, { wch: 20 }, { wch: 30 }, { wch: 20 }, { wch: 15 }];
+    ws['!cols'] = [{ wch: 25 }, { wch: 15 }, { wch: 15 }, { wch: 20 }, { wch: 30 }, { wch: 20 }, { wch: 30 }, { wch: 20 }, { wch: 15 }, { wch: 20 }];
     XLSX.utils.book_append_sheet(wb, ws, 'Tithis');
     XLSX.writeFile(wb, 'Tithis_Export.xlsx');
     return { fileName: 'Tithis_Export.xlsx', count: uniqueRows.length, duplicatesRemoved: tithis.length - uniqueRows.length };
@@ -411,7 +439,7 @@ export async function generateTithiExcel(startDateStr, endDateStr, { setAutoProg
 
     if (!ws['!dataValidation']) ws['!dataValidation'] = [];
     ws['!dataValidation'].push({ type: 'list', allowBlank: false, sqref: 'B2:B1000', formulas: ['"शुक्लपक्ष,कृष्णपक्ष"'] });
-    ws['!dataValidation'].push({ type: 'list', allowBlank: false, sqref: 'G2:G1000', formulas: ['"ADD,REPLACE"'] });
+    ws['!dataValidation'].push({ type: 'list', allowBlank: false, sqref: 'I2:I1000', formulas: ['"ADD,REPLACE"'] });
 
     XLSX.utils.book_append_sheet(wb, ws, 'Tithis');
 

@@ -98,15 +98,21 @@ const AddEventForm = ({ onAdd, familyMembers, onCancel, editingEvent }) => {
                 const currentBsYear = bsToday.year;
                 const selectedMonthName = nepaliMonths[parseInt(tithiMonth) - 1];
                 
-                // Query Firestore for matching tithi
-                const fullName = `${pakshaNepali} ${tithiName}`;
-                const q = query(collection(db, COLLECTIONS.TITHIS), where('name', '>=', fullName), where('name', '<=', fullName + '\uf8ff'));
-                const snapshot = await getDocs(q);
+                // Query using both new fields and legacy name prefix — merge results
+                const qNew = query(collection(db, COLLECTIONS.TITHIS), where('pakshya', '==', pakshaNepali), where('tithiName', '==', tithiName));
+                const old2PartName = `${pakshaNepali} ${tithiName}`;
+                const qOld = query(collection(db, COLLECTIONS.TITHIS), where('name', '>=', old2PartName), where('name', '<=', old2PartName + '\uf8ff'));
+                const [snapNew, snapOld] = await Promise.all([getDocs(qNew), getDocs(qOld)]);
+                
+                // Merge by doc ID
+                const allDocs = new Map();
+                snapNew.docs.forEach(d => allDocs.set(d.id, d));
+                snapOld.docs.forEach(d => { if (!allDocs.has(d.id)) allDocs.set(d.id, d); });
                 
                 let matchingTithi = null;
                 let actualTithiLunarMonth = null;
-                snapshot.docs.forEach(doc => {
-                    const t = doc.data();
+                allDocs.forEach((docSnap) => {
+                    const t = docSnap.data();
                     if (!t.name.includes(tithiName) || !t.name.includes(pakshaNepali)) return;
                     
                     const tithiIndex = getTithiIndexByName(tithiName, { fallbackToOne: false });

@@ -80,6 +80,7 @@ function AppContent() {
     const [trees, setTrees] = useState([]);
     const [treeCalendarEvents, setTreeCalendarEvents] = useState([]);
     const [personalCalendarEvents, setPersonalCalendarEvents] = useState([]);
+    const [sharedTreeCalendarEvents, setSharedTreeCalendarEvents] = useState([]);
     const [treeMembers, setTreeMembers] = useState([]);
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -160,29 +161,50 @@ function AppContent() {
         return () => document.removeEventListener('pointerdown', onPointerDown);
     }, [mobileMenuOpen]);
 
-    // Load trees for current user
+    // Load trees for current user — includes both owned trees and trees shared with this user
     useEffect(() => {
         if (!user) { setTrees([]); return; }
 
         const colRef = collection(db, COLLECTIONS.TREES);
-        let qRef = colRef;
-        
-        // If not admin, filter by ownerUid
-        if (!isAdmin) {
-            qRef = query(colRef, where('ownerUid', '==', user.uid));
+
+        if (isAdmin) {
+            // Admins see all trees
+            const unsubscribe = onSnapshot(query(colRef), (snapshot) => {
+                setTrees(snapshot.docs.map(d => ({ id: d.id, ...d.data() })).filter(t => !t.deleted));
+            }, (error) => console.error('Error listening to trees:', error));
+            return () => unsubscribe();
         }
 
-        const unsubscribe = onSnapshot(qRef, (snapshot) => {
-            const allTrees = snapshot.docs.map(doc => ({
-                id: doc.id,
-                ...doc.data()
-            }));
-            setTrees(allTrees.filter(t => !t.deleted));
-        }, (error) => {
-            console.error('Error listening to trees:', error);
-        });
+        // Non-admin: merge owned trees + trees explicitly shared with this user
+        const ownedById = new Map();
+        const sharedById = new Map();
+        const mergeAndSet = () => {
+            const merged = new Map([...ownedById, ...sharedById]);
+            setTrees([...merged.values()].filter(t => !t.deleted));
+        };
 
-        return () => unsubscribe();
+        const unsubOwned = onSnapshot(
+            query(colRef, where('ownerUid', '==', user.uid)),
+            (snapshot) => {
+                ownedById.clear();
+                snapshot.docs.forEach(d => ownedById.set(d.id, { id: d.id, ...d.data() }));
+                mergeAndSet();
+            },
+            (error) => console.error('Error listening to owned trees:', error)
+        );
+
+        const userEmailLower = (user.email || '').toLowerCase();
+        const unsubShared = onSnapshot(
+            query(colRef, where('sharedWithEmails', 'array-contains', userEmailLower)),
+            (snapshot) => {
+                sharedById.clear();
+                snapshot.docs.forEach(d => sharedById.set(d.id, { id: d.id, ...d.data() }));
+                mergeAndSet();
+            },
+            (error) => console.error('Error listening to shared trees:', error)
+        );
+
+        return () => { unsubOwned(); unsubShared(); };
     }, [user, isAdmin]);
 
     // Load calendar events for the landing-page feed:
@@ -248,6 +270,33 @@ function AppContent() {
             unsubscribePersonal();
         };
     }, [user, isAdmin]);
+
+    // Load calendar events from trees shared with (but not owned by) this user
+    useEffect(() => {
+        if (!user || isAdmin) { setSharedTreeCalendarEvents([]); return; }
+
+        const sharedTreeIds = (trees || [])
+            .filter(t => t.ownerUid !== user.uid)
+            .map(t => t.id);
+
+        if (sharedTreeIds.length === 0) { setSharedTreeCalendarEvents([]); return; }
+
+        const eventsCollection = collection(db, COLLECTIONS.CALENDAR_EVENTS);
+        const byId = new Map();
+        const unsubs = [];
+
+        // Chunk into groups of 30 (Firestore `in` operator limit)
+        for (let i = 0; i < sharedTreeIds.length; i += 30) {
+            const chunk = sharedTreeIds.slice(i, i + 30);
+            const sharedQ = query(eventsCollection, where('treeId', 'in', chunk));
+            unsubs.push(onSnapshot(sharedQ, (snap) => {
+                snap.docs.forEach(d => byId.set(d.id, { id: d.id, ...d.data() }));
+                setSharedTreeCalendarEvents(Array.from(byId.values()));
+            }, (err) => console.error('Error fetching shared tree events:', err)));
+        }
+
+        return () => unsubs.forEach(u => { try { u(); } catch (e) { /* ignore */ } });
+    }, [user, isAdmin, trees]);
 
     // Load tree members for all user's trees (realtime)
     useEffect(() => {
@@ -415,7 +464,7 @@ function AppContent() {
     };
 
     const mergedCalendarEventsById = new Map();
-    [...treeCalendarEvents, ...personalCalendarEvents].forEach((event) => {
+    [...treeCalendarEvents, ...personalCalendarEvents, ...sharedTreeCalendarEvents].forEach((event) => {
         if (event?.id) mergedCalendarEventsById.set(event.id, event);
     });
 

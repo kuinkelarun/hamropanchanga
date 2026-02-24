@@ -49,6 +49,8 @@ const BulkUploadModal = ({ isOpen, onClose, onComplete, userId, userEmail, isAdm
   const [error, setError] = useState(null);
   const [uploadResults, setUploadResults] = useState(null);
   const [dragActive, setDragActive] = useState(false);
+  // Track the tab that was committed so onComplete can be called on close
+  const [committedTab, setCommittedTab] = useState(null);
 
   // State for fetching existing data
   const [existingTrees, setExistingTrees] = useState([]);
@@ -432,9 +434,10 @@ const BulkUploadModal = ({ isOpen, onClose, onComplete, userId, userEmail, isAdm
       }
 
       setUploadResults(results);
-      if (onComplete) {
-        onComplete(results, activeTab);
-      }
+      // Remember which tab was committed; onComplete will fire when the user
+      // dismisses the results screen ("Done" button) so they can see the
+      // upload summary first.
+      setCommittedTab(activeTab);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -443,12 +446,17 @@ const BulkUploadModal = ({ isOpen, onClose, onComplete, userId, userEmail, isAdm
   };
 
   const handleClose = () => {
+    // If we have upload results, notify the parent so it can refresh data
+    if (uploadResults && onComplete) {
+      onComplete(uploadResults, committedTab || activeTab);
+    }
     // Reset state
     setUploadFile(null);
     setValidationResult(null);
     setPreviewData(null);
     setError(null);
     setUploadResults(null);
+    setCommittedTab(null);
     onClose();
   };
 

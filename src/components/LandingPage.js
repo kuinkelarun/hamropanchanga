@@ -62,6 +62,9 @@ const LandingPage = ({ user, isAdmin, trees = [], treeMembers = [], events, fami
     // Filter trees to show only those owned by the current user
     const myTrees = user ? trees.filter(tree => tree.ownerUid === user.uid) : [];
 
+    // IDs of trees explicitly shared with this user (not owned)
+    const sharedTreeIds = user ? trees.filter(t => t.ownerUid !== user.uid).map(t => t.id) : [];
+
         // Note: BlockTithi has its own visibility loader; we render it alongside Block1
     
         return (
@@ -109,6 +112,7 @@ const LandingPage = ({ user, isAdmin, trees = [], treeMembers = [], events, fami
                             user={user} 
                             isAdmin={isAdmin} 
                             treeMembers={treeMembers}
+                            sharedTreeIds={sharedTreeIds}
                             onTreeEventClick={onDoubleClickEvent}
                         />
                     </div>

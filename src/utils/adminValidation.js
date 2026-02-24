@@ -3,7 +3,7 @@
  * Extracted from AdminManagement.js for maintainability.
  */
 
-import { nepaliMonths, parseNepaliDate, getTithiIndexByName, getTithiLunarMonthName } from './nepaliDateUtils';
+import { nepaliMonths, parseNepaliDate, getTithiIndexByName, getTithiLunarMonthName, getTithiYearFromAdDate } from './nepaliDateUtils';
 import { normalizePakshaToEnglish } from '../constants/calendarConstants';
 import { normalizeTimeTo24 } from './adminUtils';
 
@@ -109,10 +109,26 @@ export function validateTithisData(jsonData, results, { existingTithis = [], cal
     } else if (isProblematic) {
       results.problematic.push({ row: rowNum, data: row, reason: 'End time is earlier than start time on the same date' });
     } else {
-      const fullName = `${pakshya} ${tithi}`;
+      // Build 3-part name: "month pakshya tithi"
+      const fullName = monthName ? `${monthName} ${pakshya} ${tithi}` : `${pakshya} ${tithi}`;
+
+      // Compute tithiYear from startDate
+      let tithiYear = null;
+      if (startDate && pakshya && tithi) {
+        const pakshaNorm = normalizePakshaToEnglish(pakshya);
+        const tIdx = getTithiIndexByName(tithi);
+        if (tIdx) {
+          const yearInfo = getTithiYearFromAdDate(startDate, null, pakshaNorm, tIdx);
+          tithiYear = yearInfo.tithiYear || null;
+        }
+      }
 
       const tithiData = {
         name: fullName,
+        tithiMonth: monthName || '',
+        tithiYear: tithiYear,
+        pakshya: pakshya || '',
+        tithiName: tithi || '',
         startDate,
         startTime: parsedStartTime || startTime,
         endDate,

@@ -72,6 +72,7 @@ export default function DeleteConfirmationModal({
   deleteConfirmation,
   setDeleteConfirmation,
   filteredTreesForModal,
+  softDeletedTreesCount = 0,
   trees,
   onExecuteBulkDelete,
   onExecuteBulkDeleteTrees,
@@ -100,9 +101,11 @@ export default function DeleteConfirmationModal({
     }
   };
 
+  const totalTreesToDelete = filteredTreesForModal.length + softDeletedTreesCount;
+
   const getButtonLabel = () => {
     if (deleteConfirmation.type === 'recent') return `Delete ${deleteConfirmation.count} Recent Test Records`;
-    if (deleteConfirmation.type === 'trees') return `Delete All ${filteredTreesForModal.length} Trees`;
+    if (deleteConfirmation.type === 'trees') return `Delete All ${totalTreesToDelete} Trees`;
     return `Delete All ${deleteConfirmation.count} ${deleteConfirmation.type}`;
   };
 
@@ -129,7 +132,12 @@ export default function DeleteConfirmationModal({
             ) : (
               <>
                 <p className="warning-text">
-                  You are about to permanently delete <strong>{deleteConfirmation.type === 'trees' ? filteredTreesForModal.length : deleteConfirmation.count} {deleteConfirmation.type}</strong>.
+                  You are about to permanently delete <strong>{deleteConfirmation.type === 'trees' ? totalTreesToDelete : deleteConfirmation.count} {deleteConfirmation.type}</strong>.
+                  {deleteConfirmation.type === 'trees' && softDeletedTreesCount > 0 && (
+                    <span style={{ display: 'block', fontSize: '0.85em', color: '#d97706', marginTop: 4 }}>
+                      ({filteredTreesForModal.length} matching filter + {softDeletedTreesCount} archived/pending purge)
+                    </span>
+                  )}
                 </p>
                 <p className="warning-subtext">
                   A backup file will be automatically downloaded before deletion.
