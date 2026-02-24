@@ -1,6 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useSettings } from '../contexts/SettingsContext';
-import CalendarSwitchConfirmation from './CalendarSwitchConfirmation';
 import { useUserPermissions } from '../hooks/usePermissions';
 import { PERMISSIONS } from '../constants/roles';
 
@@ -13,8 +12,7 @@ const SettingsMenu = ({
     onUserManagement 
 }) => {
     const [isOpen, setIsOpen] = useState(false);
-    const [showConfirmation, setShowConfirmation] = useState(false);
-    const { isNepaliCalendar, toggleCalendarLanguage, isEditMode, toggleEditMode } = useSettings();
+    const { isEditMode, toggleEditMode } = useSettings();
     const menuRef = useRef(null);
 
     // Get user permissions
@@ -43,20 +41,6 @@ const SettingsMenu = ({
             document.removeEventListener('mousedown', handleClickOutside);
         };
     }, []);
-
-    const handleCalendarSwitchClick = () => {
-        setShowConfirmation(true);
-        setIsOpen(false); // Close the settings menu
-    };
-
-    const handleConfirmSwitch = () => {
-        toggleCalendarLanguage();
-        setShowConfirmation(false);
-    };
-
-    const handleCancelSwitch = () => {
-        setShowConfirmation(false);
-    };
 
     // Calculate user initials
     const getInitials = () => {
@@ -91,25 +75,6 @@ const SettingsMenu = ({
                     <div className="px-4 py-2 border-b border-gray-100">
                         <p className="text-xs text-gray-500 mb-1">Logged in as</p>
                         <p className="text-sm font-medium text-gray-700 truncate">{user.email}</p>
-                    </div>
-
-                    {/* Calendar Language Setting */}
-                    <div className="px-4 py-3 border-b border-gray-100">
-                        <h3 className="text-sm font-semibold text-gray-700 mb-2">Calendar Language</h3>
-                        <div className="flex items-center justify-between">
-                            <span className="text-sm text-gray-600">
-                                Current: {isNepaliCalendar ? 'नेपाली' : 'English'}
-                            </span>
-                            <button
-                                onClick={handleCalendarSwitchClick}
-                                className="px-3 py-1 text-xs bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-lg transition-colors"
-                            >
-                                Switch to {isNepaliCalendar ? 'English' : 'नेपाली'}
-                            </button>
-                        </div>
-                        <p className="text-xs text-gray-500 mt-1">
-                            This affects date display and event grouping throughout the app
-                        </p>
                     </div>
 
                     {/* Admin/Super User Options */}
@@ -212,14 +177,6 @@ const SettingsMenu = ({
                 </div>
             )}
 
-            {/* Confirmation Modal */}
-            <CalendarSwitchConfirmation
-                isOpen={showConfirmation}
-                onConfirm={handleConfirmSwitch}
-                onCancel={handleCancelSwitch}
-                currentLanguage={isNepaliCalendar ? 'nepali' : 'gregorian'}
-                targetLanguage={isNepaliCalendar ? 'gregorian' : 'nepali'}
-            />
         </div>
     );
 };

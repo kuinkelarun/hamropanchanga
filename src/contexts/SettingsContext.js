@@ -11,13 +11,6 @@ export const useSettings = () => {
 };
 
 export const SettingsProvider = ({ children }) => {
-    // Default to Nepali calendar as requested
-    const [isNepaliCalendar, setIsNepaliCalendar] = useState(() => {
-        // Load from localStorage if available, otherwise default to Nepali
-        const saved = localStorage.getItem('calendarPreference');
-        return saved ? JSON.parse(saved) : true;
-    });
-
     // Admin Edit Mode for managing tithis and calendar events
     const [isEditMode, setIsEditMode] = useState(() => {
         // Load from localStorage if available, otherwise default to false
@@ -25,28 +18,15 @@ export const SettingsProvider = ({ children }) => {
         return saved ? JSON.parse(saved) : false;
     });
 
-    // Persist settings to localStorage whenever they change
-    useEffect(() => {
-        localStorage.setItem('calendarPreference', JSON.stringify(isNepaliCalendar));
-    }, [isNepaliCalendar]);
-
     useEffect(() => {
         localStorage.setItem('adminEditMode', JSON.stringify(isEditMode));
     }, [isEditMode]);
-
-    const toggleCalendarLanguage = () => {
-        setIsNepaliCalendar(prev => !prev);
-    };
 
     const toggleEditMode = () => {
         setIsEditMode(prev => !prev);
     };
 
     const value = {
-        isNepaliCalendar,
-        setIsNepaliCalendar,
-        toggleCalendarLanguage,
-        calendarLanguage: isNepaliCalendar ? 'nepali' : 'gregorian',
         isEditMode,
         setIsEditMode,
         toggleEditMode

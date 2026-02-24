@@ -309,20 +309,10 @@ export async function generateTithiExcel(startDateStr, endDateStr, { setAutoProg
       let ephemerisData;
       try {
         ephemerisData = await getEphemerisData(current);
-        if (ephemerisData && ephemerisData.error) {
-          console.error('Firebase function error:', ephemerisData.error);
-          setAutoStatus(`❌ Firebase function error for ${current.toDateString()}: ${ephemerisData.error.message || 'Unknown error'}`);
-          break;
-        }
       } catch (error) {
-        console.error('Error calling getEphemerisData for', current.toISOString(), ':', error);
-        ephemerisData = {
-          moonLon: 0,
-          sunLon: 0,
-          tithiStart: current.toISOString().replace(/\.\d{3}Z$/, 'Z'),
-          tithiEnd: new Date(current.getTime() + 12 * 60 * 60 * 1000).toISOString().replace(/\.\d{3}Z$/, 'Z')
-        };
-        setAutoStatus(`⚠️ Using estimated data for ${current.toDateString()} (Firebase unavailable)`);
+        console.error('Error computing ephemeris for', current.toISOString(), ':', error);
+        setAutoStatus(`❌ Ephemeris computation error: ${error.message}`);
+        return null;
       }
 
       if (!ephemerisData || typeof ephemerisData !== 'object' || !ephemerisData.tithiStart || !ephemerisData.tithiEnd) {
