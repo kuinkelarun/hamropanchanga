@@ -98,6 +98,206 @@ function MethodBadge({ method }) {
   );
 }
 
+// ── Key Status Panel (top-level component to prevent remount on parent re-render) ──
+function KeyPanel({
+  user,
+  loadingRequest,
+  request,
+  form,
+  setForm,
+  formError,
+  submitting,
+  copyKeyDone,
+  acknowledging,
+  onSubmit,
+  onCopyKey,
+  onAcknowledge,
+  onResetRequest,
+}) {
+  if (!user) {
+    return (
+      <div className="bg-white rounded-xl border border-gray-200 p-6 text-center">
+        <div className="w-16 h-16 bg-indigo-100 rounded-full flex items-center justify-center mx-auto mb-4">
+          <svg className="w-8 h-8 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+          </svg>
+        </div>
+        <h3 className="text-lg font-semibold text-gray-900 mb-2">Sign in to Request an API Key</h3>
+        <p className="text-sm text-gray-500 mb-4">Create a free account to get started with the HamroPanchanga API.</p>
+        <button
+          onClick={async () => { try { await signInWithGoogle(); } catch (_) {} }}
+          className="inline-flex items-center gap-2 bg-gray-900 text-white px-5 py-2.5 rounded-lg text-sm font-medium hover:bg-gray-800 transition-colors"
+        >
+          Sign in with Google
+        </button>
+      </div>
+    );
+  }
+
+  if (loadingRequest) {
+    return (
+      <div className="bg-white rounded-xl border border-gray-200 p-6 flex justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+      </div>
+    );
+  }
+
+  if (!request) {
+    return (
+      <div className="bg-white rounded-xl border border-gray-200 p-6">
+        <h3 className="text-lg font-semibold text-gray-900 mb-1">Request a Free API Key</h3>
+        <p className="text-sm text-gray-500 mb-5">Free plan: 1,000 requests/day. We'll review your request and send your key within 24 hours.</p>
+        <form onSubmit={onSubmit} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Your Name</label>
+            <input
+              type="text"
+              value={form.name}
+              onChange={(e) => setForm(f => ({ ...f, name: e.target.value }))}
+              placeholder={user.displayName || ''}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Use Case <span className="text-red-500">*</span></label>
+            <textarea
+              value={form.useCase}
+              onChange={(e) => setForm(f => ({ ...f, useCase: e.target.value }))}
+              placeholder="e.g. Building a Nepali calendar app, research project, personal website..."
+              rows={3}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Website / Project URL</label>
+            <input
+              type="url"
+              value={form.website}
+              onChange={(e) => setForm(f => ({ ...f, website: e.target.value }))}
+              placeholder="https://yourapp.com (optional)"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            />
+          </div>
+          {formError && <p className="text-sm text-red-600">{formError}</p>}
+          <button
+            type="submit"
+            disabled={submitting}
+            className="w-full bg-indigo-600 text-white py-2.5 rounded-lg text-sm font-medium hover:bg-indigo-700 disabled:opacity-50 transition-colors"
+          >
+            {submitting ? 'Submitting...' : 'Submit Request'}
+          </button>
+        </form>
+      </div>
+    );
+  }
+
+  if (request.status === 'pending') {
+    return (
+      <div className="bg-white rounded-xl border border-amber-200 p-6">
+        <div className="flex items-start gap-3">
+          <div className="w-10 h-10 bg-amber-100 rounded-full flex items-center justify-center flex-shrink-0">
+            <svg className="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <div>
+            <h3 className="font-semibold text-gray-900">Request Under Review</h3>
+            <p className="text-sm text-gray-600 mt-1">
+              Your API key request has been received and is being reviewed. You'll be able to see your key here once it's approved — usually within 24 hours.
+            </p>
+            <p className="text-xs text-gray-400 mt-2">
+              Submitted for: <span className="font-medium text-gray-600">{request.email}</span>
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (request.status === 'approved' && !request.rawKeyAcknowledged) {
+    return (
+      <div className="bg-white rounded-xl border border-green-200 p-6">
+        <div className="flex items-center gap-2 mb-3">
+          <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
+            <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+            </svg>
+          </div>
+          <h3 className="font-semibold text-green-900">API Key Approved!</h3>
+        </div>
+        <p className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-3 mb-4">
+          <strong>⚠ Copy your key now.</strong> For security, it will be masked after you acknowledge it and cannot be retrieved again.
+        </p>
+        <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 mb-4 font-mono text-sm break-all">
+          <span className="flex-1 text-gray-900">{request.rawKey}</span>
+          <button
+            onClick={onCopyKey}
+            className="ml-2 flex-shrink-0 px-3 py-1 bg-indigo-600 text-white text-xs rounded hover:bg-indigo-700 transition-colors"
+          >
+            {copyKeyDone ? '✓ Copied' : 'Copy'}
+          </button>
+        </div>
+        <p className="text-xs text-gray-500 mb-4">Send this header with every request: <code className="bg-gray-100 px-1 py-0.5 rounded">X-API-Key: {request.rawKey}</code></p>
+        <button
+          onClick={onAcknowledge}
+          disabled={acknowledging}
+          className="w-full border-2 border-green-600 text-green-700 py-2 rounded-lg text-sm font-medium hover:bg-green-50 disabled:opacity-50 transition-colors"
+        >
+          {acknowledging ? 'Saving...' : 'I have saved my key — Continue'}
+        </button>
+      </div>
+    );
+  }
+
+  if (request.status === 'approved' && request.rawKeyAcknowledged) {
+    const maskedKey = (request.rawKey || '').replace(/(?<=npcal_...).+/, '*'.repeat(16));
+    return (
+      <div className="bg-white rounded-xl border border-gray-200 p-6">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="font-semibold text-gray-900">Your API Key</h3>
+          <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium">Active · Free Plan</span>
+        </div>
+        <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 mb-3 font-mono text-sm">
+          <span className="flex-1 text-gray-500">{maskedKey}</span>
+        </div>
+        <p className="text-xs text-gray-500">Rate limit: <strong>1,000 requests / day</strong>. The key is masked for security; you cannot retrieve the original value.</p>
+        <div className="mt-4 pt-4 border-t border-gray-100">
+          <p className="text-xs text-gray-400">Need a higher limit? Contact us at <a href="mailto:admin@hamropanchanga.com" className="text-indigo-600 hover:underline">admin@hamropanchanga.com</a></p>
+        </div>
+      </div>
+    );
+  }
+
+  if (request.status === 'rejected') {
+    return (
+      <div className="bg-white rounded-xl border border-red-200 p-6">
+        <div className="flex items-start gap-3 mb-4">
+          <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center flex-shrink-0">
+            <svg className="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </div>
+          <div>
+            <h3 className="font-semibold text-gray-900">Request Not Approved</h3>
+            {request.rejectionReason && (
+              <p className="text-sm text-gray-600 mt-1">{request.rejectionReason}</p>
+            )}
+          </div>
+        </div>
+        <p className="text-sm text-gray-500 mb-4">You may submit a new request with more information about your use case.</p>
+        <button
+          onClick={onResetRequest}
+          className="w-full bg-indigo-600 text-white py-2 rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors"
+        >
+          Submit New Request
+        </button>
+      </div>
+    );
+  }
+
+  return null;
+}
+
 export default function DeveloperPage({ user, isAdmin }) {
   const [request, setRequest] = useState(null);
   const [loadingRequest, setLoadingRequest] = useState(false);
@@ -160,197 +360,6 @@ export default function DeveloperPage({ user, isAdmin }) {
       setAcknowledging(false);
     }
   };
-
-  // ── Key Status Panel ──────────────────────────────────────────────────────
-  function KeyPanel() {
-    if (!user) {
-      return (
-        <div className="bg-white rounded-xl border border-gray-200 p-6 text-center">
-          <div className="w-16 h-16 bg-indigo-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <svg className="w-8 h-8 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
-            </svg>
-          </div>
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">Sign in to Request an API Key</h3>
-          <p className="text-sm text-gray-500 mb-4">Create a free account to get started with the HamroPanchanga API.</p>
-          <button
-            onClick={async () => { try { await signInWithGoogle(); } catch (_) {} }}
-            className="inline-flex items-center gap-2 bg-gray-900 text-white px-5 py-2.5 rounded-lg text-sm font-medium hover:bg-gray-800 transition-colors"
-          >
-            Sign in with Google
-          </button>
-        </div>
-      );
-    }
-
-    if (loadingRequest) {
-      return (
-        <div className="bg-white rounded-xl border border-gray-200 p-6 flex justify-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
-        </div>
-      );
-    }
-
-    // No request yet
-    if (!request) {
-      return (
-        <div className="bg-white rounded-xl border border-gray-200 p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-1">Request a Free API Key</h3>
-          <p className="text-sm text-gray-500 mb-5">Free plan: 1,000 requests/day. We'll review your request and send your key within 24 hours.</p>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Your Name</label>
-              <input
-                type="text"
-                value={form.name}
-                onChange={(e) => setForm(f => ({ ...f, name: e.target.value }))}
-                placeholder={user.displayName || ''}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Use Case <span className="text-red-500">*</span></label>
-              <textarea
-                value={form.useCase}
-                onChange={(e) => setForm(f => ({ ...f, useCase: e.target.value }))}
-                placeholder="e.g. Building a Nepali calendar app, research project, personal website..."
-                rows={3}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Website / Project URL</label>
-              <input
-                type="url"
-                value={form.website}
-                onChange={(e) => setForm(f => ({ ...f, website: e.target.value }))}
-                placeholder="https://yourapp.com (optional)"
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              />
-            </div>
-            {formError && <p className="text-sm text-red-600">{formError}</p>}
-            <button
-              type="submit"
-              disabled={submitting}
-              className="w-full bg-indigo-600 text-white py-2.5 rounded-lg text-sm font-medium hover:bg-indigo-700 disabled:opacity-50 transition-colors"
-            >
-              {submitting ? 'Submitting...' : 'Submit Request'}
-            </button>
-          </form>
-        </div>
-      );
-    }
-
-    // Pending
-    if (request.status === 'pending') {
-      return (
-        <div className="bg-white rounded-xl border border-amber-200 p-6">
-          <div className="flex items-start gap-3">
-            <div className="w-10 h-10 bg-amber-100 rounded-full flex items-center justify-center flex-shrink-0">
-              <svg className="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-            </div>
-            <div>
-              <h3 className="font-semibold text-gray-900">Request Under Review</h3>
-              <p className="text-sm text-gray-600 mt-1">
-                Your API key request has been received and is being reviewed. You'll be able to see your key here once it's approved — usually within 24 hours.
-              </p>
-              <p className="text-xs text-gray-400 mt-2">
-                Submitted for: <span className="font-medium text-gray-600">{request.email}</span>
-              </p>
-            </div>
-          </div>
-        </div>
-      );
-    }
-
-    // Approved — show key (first time)
-    if (request.status === 'approved' && !request.rawKeyAcknowledged) {
-      return (
-        <div className="bg-white rounded-xl border border-green-200 p-6">
-          <div className="flex items-center gap-2 mb-3">
-            <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
-              <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-              </svg>
-            </div>
-            <h3 className="font-semibold text-green-900">API Key Approved!</h3>
-          </div>
-          <p className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-3 mb-4">
-            <strong>⚠ Copy your key now.</strong> For security, it will be masked after you acknowledge it and cannot be retrieved again.
-          </p>
-          <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 mb-4 font-mono text-sm break-all">
-            <span className="flex-1 text-gray-900">{request.rawKey}</span>
-            <button
-              onClick={handleCopyKey}
-              className="ml-2 flex-shrink-0 px-3 py-1 bg-indigo-600 text-white text-xs rounded hover:bg-indigo-700 transition-colors"
-            >
-              {copyKeyDone ? '✓ Copied' : 'Copy'}
-            </button>
-          </div>
-          <p className="text-xs text-gray-500 mb-4">Send this header with every request: <code className="bg-gray-100 px-1 py-0.5 rounded">X-API-Key: {request.rawKey}</code></p>
-          <button
-            onClick={handleAcknowledge}
-            disabled={acknowledging}
-            className="w-full border-2 border-green-600 text-green-700 py-2 rounded-lg text-sm font-medium hover:bg-green-50 disabled:opacity-50 transition-colors"
-          >
-            {acknowledging ? 'Saving...' : 'I have saved my key — Continue'}
-          </button>
-        </div>
-      );
-    }
-
-    // Approved + acknowledged
-    if (request.status === 'approved' && request.rawKeyAcknowledged) {
-      const maskedKey = (request.rawKey || '').replace(/(?<=npcal_...).+/, '*'.repeat(16));
-      return (
-        <div className="bg-white rounded-xl border border-gray-200 p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="font-semibold text-gray-900">Your API Key</h3>
-            <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium">Active · Free Plan</span>
-          </div>
-          <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 mb-3 font-mono text-sm">
-            <span className="flex-1 text-gray-500">{maskedKey}</span>
-          </div>
-          <p className="text-xs text-gray-500">Rate limit: <strong>1,000 requests / day</strong>. The key is masked for security; you cannot retrieve the original value.</p>
-          <div className="mt-4 pt-4 border-t border-gray-100">
-            <p className="text-xs text-gray-400">Need a higher limit? Contact us at <a href="mailto:admin@hamropanchanga.com" className="text-indigo-600 hover:underline">admin@hamropanchanga.com</a></p>
-          </div>
-        </div>
-      );
-    }
-
-    // Rejected
-    if (request.status === 'rejected') {
-      return (
-        <div className="bg-white rounded-xl border border-red-200 p-6">
-          <div className="flex items-start gap-3 mb-4">
-            <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center flex-shrink-0">
-              <svg className="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </div>
-            <div>
-              <h3 className="font-semibold text-gray-900">Request Not Approved</h3>
-              {request.rejectionReason && (
-                <p className="text-sm text-gray-600 mt-1">{request.rejectionReason}</p>
-              )}
-            </div>
-          </div>
-          <p className="text-sm text-gray-500 mb-4">You may submit a new request with more information about your use case.</p>
-          <button
-            onClick={() => setRequest(null)}
-            className="w-full bg-indigo-600 text-white py-2 rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors"
-          >
-            Submit New Request
-          </button>
-        </div>
-      );
-    }
-
-    return null;
-  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -465,7 +474,21 @@ export default function DeveloperPage({ user, isAdmin }) {
 
         {/* Right: Key Panel */}
         <div className="space-y-4">
-          <KeyPanel />
+          <KeyPanel
+            user={user}
+            loadingRequest={loadingRequest}
+            request={request}
+            form={form}
+            setForm={setForm}
+            formError={formError}
+            submitting={submitting}
+            copyKeyDone={copyKeyDone}
+            acknowledging={acknowledging}
+            onSubmit={handleSubmit}
+            onCopyKey={handleCopyKey}
+            onAcknowledge={handleAcknowledge}
+            onResetRequest={() => setRequest(null)}
+          />
 
           <div className="bg-white rounded-xl border border-gray-200 p-4">
             <h4 className="text-sm font-semibold text-gray-700 mb-2">Support</h4>
