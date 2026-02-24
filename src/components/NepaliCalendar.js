@@ -9,7 +9,7 @@ import { useLanguage } from '../contexts/LanguageContext';
 import './NepaliCalendar.css';
 import ConfirmModal from './ConfirmModal';
 import bsCalendarData from '../data/bsCalendarData';
-import { useSettings } from '../contexts/SettingsContext';
+
 import {
   getTithiLunarMonthName,
   getTithiIndexByName,
@@ -64,7 +64,6 @@ const getCalendarData = (year) => {
 // separate implementation here.
 
 export default function NepaliCalendar({ user: propUser, isAdmin, treeMembers = [], onTreeEventClick }) {
-  const { isEditMode } = useSettings();
   const { t, tn, isNepali } = useLanguage();
   const isDev = process.env.NODE_ENV !== 'production';
   const [user, setUser] = useState(propUser || null);
@@ -1373,7 +1372,7 @@ export default function NepaliCalendar({ user: propUser, isAdmin, treeMembers = 
           onKeyDown={(e)=> { if (e.key === 'Enter') openDetailsModalForDate(ad.year, ad.month, ad.day); }}
           data-date={dateKey}
         >
-          {(canManageTithis && isEditMode) && (
+          {canManageTithis && (
             <button
               className="nt-quick-add-btn"
               aria-label="Quick add tithi"
@@ -1680,7 +1679,6 @@ export default function NepaliCalendar({ user: propUser, isAdmin, treeMembers = 
         user={user}
         isAdmin={isAdmin}
         isSuperUser={isSuperUser}
-        isEditMode={isEditMode}
         permsLoading={permsLoading}
         hasPermission={hasPermission}
         onOpenAddEvent={openAddEventModalForDate}

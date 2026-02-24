@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext } from 'react';
 
 const SettingsContext = createContext();
 
@@ -11,29 +11,8 @@ export const useSettings = () => {
 };
 
 export const SettingsProvider = ({ children }) => {
-    // Admin Edit Mode for managing tithis and calendar events
-    const [isEditMode, setIsEditMode] = useState(() => {
-        // Load from localStorage if available, otherwise default to false
-        const saved = localStorage.getItem('adminEditMode');
-        return saved ? JSON.parse(saved) : false;
-    });
-
-    useEffect(() => {
-        localStorage.setItem('adminEditMode', JSON.stringify(isEditMode));
-    }, [isEditMode]);
-
-    const toggleEditMode = () => {
-        setIsEditMode(prev => !prev);
-    };
-
-    const value = {
-        isEditMode,
-        setIsEditMode,
-        toggleEditMode
-    };
-
     return (
-        <SettingsContext.Provider value={value}>
+        <SettingsContext.Provider value={{}}>
             {children}
         </SettingsContext.Provider>
     );

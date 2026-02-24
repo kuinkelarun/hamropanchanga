@@ -1,5 +1,4 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { useSettings } from '../contexts/SettingsContext';
 import { useUserPermissions } from '../hooks/usePermissions';
 import { PERMISSIONS } from '../constants/roles';
 
@@ -13,7 +12,6 @@ const SettingsMenu = ({
     onDeveloperPage 
 }) => {
     const [isOpen, setIsOpen] = useState(false);
-    const { isEditMode, toggleEditMode } = useSettings();
     const menuRef = useRef(null);
 
     // Get user permissions
@@ -25,8 +23,6 @@ const SettingsMenu = ({
     const canManageTithis = hasPermission(PERMISSIONS.MANAGE_TITHIS);
     const canManageEvents = hasPermission(PERMISSIONS.MANAGE_EVENTS);
     const canManageCalendar = hasPermission(PERMISSIONS.MANAGE_CALENDAR);
-    const canEditCalendar = isAdmin || isSuperUser || canManageTithis || canManageEvents;
-    
     const showAdminSection = isAdmin || isSuperUser || canManageHomeCards || canAccessBulkUpload || canManageTithis || canManageEvents || canManageCalendar;
 
     // Close menu when clicking outside
@@ -129,34 +125,6 @@ const SettingsMenu = ({
                                 </button>
                             )}
                             
-                            {/* Edit Mode Toggle - show for users who can edit calendar */}
-                            {canEditCalendar && (
-                                <div className="mt-2 px-2 py-2">
-                                    <div className="flex items-center justify-between">
-                                        <div className="flex items-center space-x-2">
-                                            <svg className="w-4 h-4 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                                            </svg>
-                                            <span className="text-sm text-gray-700">Edit Mode</span>
-                                        </div>
-                                        <button
-                                            onClick={toggleEditMode}
-                                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                                                isEditMode ? 'bg-orange-600' : 'bg-gray-300'
-                                            }`}
-                                        >
-                                            <span
-                                                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                                                    isEditMode ? 'translate-x-6' : 'translate-x-1'
-                                                }`}
-                                            />
-                                        </button>
-                                    </div>
-                                    <p className="text-xs text-gray-500 mt-1">
-                                        {isEditMode ? 'Edit calendar tithis and events' : 'Enable to edit tithis'}
-                                    </p>
-                                </div>
-                            )}
                         </div>
                     )}
 

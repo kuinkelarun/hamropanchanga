@@ -21,7 +21,7 @@ import { PERMISSIONS } from '../../constants/roles';
  *   user                 — Firebase auth user object or null
  *   isAdmin              — boolean
  *   isSuperUser          — boolean
- *   isEditMode           — boolean (settings toggle)
+
  *   permsLoading         — boolean
  *   hasPermission        — (permKey) => boolean
  *   onOpenAddEvent       — (adYear, adMonth0, adDay) => void
@@ -43,7 +43,6 @@ const DayDetailsModal = ({
   user,
   isAdmin,
   isSuperUser,
-  isEditMode,
   permsLoading,
   hasPermission,
   onOpenAddEvent,
@@ -289,9 +288,8 @@ const DayDetailsModal = ({
               </button>
             )}
 
-            {/* For Admins and Super Users with tithi permission: Show "Add Tithi" when in edit mode */}
-            {(isAdmin || (isSuperUser && !permsLoading && hasPermission(PERMISSIONS.MANAGE_TITHIS))) &&
-              isEditMode && (
+            {/* For Admins and Super Users with tithi permission: Show "Add Tithi" */}
+            {(isAdmin || (isSuperUser && !permsLoading && hasPermission(PERMISSIONS.MANAGE_TITHIS))) && (
                 <button
                   onClick={() => {
                     if (!activeDate) return;
