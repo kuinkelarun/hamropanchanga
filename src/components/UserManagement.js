@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { collection, getDocs, doc, setDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '../firebase';
+import { COLLECTIONS } from '../constants/firestoreCollections';
 import { 
   getAllUsers, 
   updateUserRole, 
@@ -57,7 +58,7 @@ export default function UserManagement({ currentUser }) {
       }
       
       // Get adminList to find users who may not be in users collection
-      const adminListSnapshot = await getDocs(collection(db, 'adminList'));
+      const adminListSnapshot = await getDocs(collection(db, COLLECTIONS.ADMIN_LIST));
       const adminUids = new Set();
       
       // Add admin users to the map if they don't exist
@@ -85,7 +86,7 @@ export default function UserManagement({ currentUser }) {
       });
       
       // Get pending invitations
-      const invitationsSnapshot = await getDocs(collection(db, 'userInvitations'));
+      const invitationsSnapshot = await getDocs(collection(db, COLLECTIONS.USER_INVITATIONS));
       invitationsSnapshot.docs.forEach(doc => {
         const inviteData = doc.data();
         
@@ -118,7 +119,7 @@ export default function UserManagement({ currentUser }) {
       });
       
       // Get customers to find users who have created data
-      const customersSnapshot = await getDocs(collection(db, 'customers'));
+      const customersSnapshot = await getDocs(collection(db, COLLECTIONS.CUSTOMERS));
       const customerUserIds = new Set(
         customersSnapshot.docs
           .map(doc => doc.data().userId)
@@ -210,7 +211,7 @@ export default function UserManagement({ currentUser }) {
       
       // Create an invitation document that will be processed when the user logs in
       // This ensures the user document is created with the correct Firebase Auth UID
-      const invitationRef = doc(db, 'userInvitations', newUserEmail.trim().toLowerCase());
+      const invitationRef = doc(db, COLLECTIONS.USER_INVITATIONS, newUserEmail.trim().toLowerCase());
       
       // Determine permissions to store on invitation
       const invitePermissions = newUserRole === USER_ROLES.ADMIN
@@ -281,7 +282,7 @@ export default function UserManagement({ currentUser }) {
       if (!window.confirm(confirmMsg)) return;
 
       if (user.isPending && user.invitationEmail) {
-        await deleteDoc(doc(db, 'userInvitations', user.invitationEmail.toLowerCase()));
+        await deleteDoc(doc(db, COLLECTIONS.USER_INVITATIONS, user.invitationEmail.toLowerCase()));
       } else {
         await removeUser(user.uid);
       }

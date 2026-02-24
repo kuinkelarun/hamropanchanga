@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { BrowserRouter as Router, Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import { collection, query, where, onSnapshot, doc, getDoc } from 'firebase/firestore';
 import { signInWithGoogle, db } from './firebase';
+import { COLLECTIONS } from './constants/firestoreCollections';
 import { SettingsProvider } from './contexts/SettingsContext';
 import { LanguageProvider, useLanguage } from './contexts/LanguageContext';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
@@ -162,7 +163,7 @@ function AppContent() {
     useEffect(() => {
         if (!user) { setTrees([]); return; }
 
-        const colRef = collection(db, 'trees');
+        const colRef = collection(db, COLLECTIONS.TREES);
         let qRef = colRef;
         
         // If not admin, filter by ownerUid
@@ -193,7 +194,7 @@ function AppContent() {
             return;
         }
 
-        const eventsCollection = collection(db, 'calendarEvents');
+        const eventsCollection = collection(db, COLLECTIONS.CALENDAR_EVENTS);
         
         // FIX: Regular users cannot query ALL tree events because some might be private to other users.
         // We must restrict the query to what the user is allowed to see.
@@ -266,7 +267,7 @@ function AppContent() {
         };
 
         trees.forEach((tree) => {
-            const membersRef = collection(db, 'trees', tree.id, 'members');
+            const membersRef = collection(db, COLLECTIONS.TREES, tree.id, COLLECTIONS.MEMBERS);
             const unsub = onSnapshot(
                 membersRef,
                 (snap) => {

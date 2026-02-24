@@ -3,6 +3,7 @@ import './LandingPageEventsSection.css';
 import { useSettings } from '../contexts/SettingsContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { formatNepaliDate, formatEnglishDate, formatNepaliMonthYear, formatGregorianMonthYear, convertAdToBs, convertBsToAd } from '../utils/nepaliDateUtils';
+import { normalizePakshaToNepali } from '../constants/calendarConstants';
 // Use Unicode `event.title` when present
 
 const LandingPageEventsSection = ({ events, familyMembers, onDoubleClickEvent, onEventClick }) => {
@@ -18,12 +19,7 @@ const LandingPageEventsSection = ({ events, familyMembers, onDoubleClickEvent, o
         if (!month || !name) return '';
         
         // Normalize paksha to Nepali
-        let pakshaDisplay = paksha;
-        if (paksha === 'Shukla' || paksha === 'शुक्ल') {
-            pakshaDisplay = 'शुक्लपक्ष';
-        } else if (paksha === 'Krishna' || paksha === 'कृष्ण') {
-            pakshaDisplay = 'कृष्णपक्ष';
-        }
+        const pakshaDisplay = normalizePakshaToNepali(paksha);
         
         return ` (${month} ${pakshaDisplay} ${name})`;
     }, []);

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../firebase';
+import { COLLECTIONS } from '../constants/firestoreCollections';
 import { USER_ROLES, DEFAULT_ROLE_PERMISSIONS } from '../constants/roles';
 
 /**
@@ -27,7 +28,7 @@ export function useUserPermissions(user) {
       setError(null);
 
       // Check if user is in adminList collection (primary admin check)
-      const adminDocRef = doc(db, 'adminList', user.uid);
+      const adminDocRef = doc(db, COLLECTIONS.ADMIN_LIST, user.uid);
       const adminDocSnap = await getDoc(adminDocRef);
       
       if (adminDocSnap.exists()) {
@@ -38,7 +39,7 @@ export function useUserPermissions(user) {
       }
 
       // Check users collection for role and permissions
-      const userDocRef = doc(db, 'users', user.uid);
+      const userDocRef = doc(db, COLLECTIONS.USERS, user.uid);
       const userDocSnap = await getDoc(userDocRef);
 
       if (userDocSnap.exists()) {

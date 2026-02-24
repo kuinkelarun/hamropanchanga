@@ -25,6 +25,7 @@ import {
   writeBatch,
   serverTimestamp,
 } from 'firebase/firestore';
+import { COLLECTIONS } from './constants/firestoreCollections';
 
 // Expose db globally for migration scripts in development ONLY
 if (process.env.NODE_ENV === 'development') {
@@ -79,7 +80,7 @@ if (process.env.NODE_ENV === 'development') {
       if (window.__firestoreHelpers?.getDoc && window.__firestoreHelpers?.doc) {
         try {
           const userSnap = await window.__firestoreHelpers.getDoc(
-            window.__firestoreHelpers.doc(db, 'users', user.uid)
+            window.__firestoreHelpers.doc(db, COLLECTIONS.USERS, user.uid)
           );
           console.log('[__debugAuth] users/{uid} exists:', userSnap.exists());
           if (userSnap.exists()) {
@@ -95,7 +96,7 @@ if (process.env.NODE_ENV === 'development') {
       if (treeIdToTest && window.__firestoreHelpers?.getDoc && window.__firestoreHelpers?.doc) {
         try {
           const snap = await window.__firestoreHelpers.getDoc(
-            window.__firestoreHelpers.doc(db, 'trees', treeIdToTest)
+            window.__firestoreHelpers.doc(db, COLLECTIONS.TREES, treeIdToTest)
           );
           console.log('[__debugAuth] canReadTree:', treeIdToTest, snap.exists());
         } catch (e) {
@@ -134,7 +135,7 @@ if (process.env.NODE_ENV === 'development') {
         clauses.unshift(where('deleted', '==', false));
       }
 
-      const q = query(collection(db, 'trees'), ...clauses);
+      const q = query(collection(db, COLLECTIONS.TREES), ...clauses);
 
       const snaps = await getDocs(q);
       console.log('[__debugSharedQuery] docs:', snaps.size);
@@ -168,7 +169,7 @@ if (process.env.NODE_ENV === 'development') {
 
       // NOTE: this query should succeed if THAT specific doc is readable.
       const q = query(
-        collection(db, 'trees'),
+        collection(db, COLLECTIONS.TREES),
         where('sharedWithEmails', 'array-contains', emailLower),
         where(documentId(), '==', treeId),
         limit(1)
@@ -197,7 +198,7 @@ if (process.env.NODE_ENV === 'development') {
       console.log('[__repairPoisonSharesForEmail] start', { emailLower, dryRun, max });
 
       const q = query(
-        collection(db, 'trees'),
+        collection(db, COLLECTIONS.TREES),
         where('sharedWithEmails', 'array-contains', emailLower),
         limit(Math.max(1, Math.min(500, max)))
       );
@@ -279,7 +280,7 @@ if (process.env.NODE_ENV === 'development') {
         });
 
         if (!dryRun) {
-          batch.update(doc(db, 'trees', treeId), {
+          batch.update(doc(db, COLLECTIONS.TREES, treeId), {
             sharedWith: nextSharedWith,
             sharedWithEmails: nextEmails,
             updatedAt: serverTimestamp(),
@@ -333,7 +334,7 @@ if (process.env.NODE_ENV === 'development') {
         return;
       }
 
-      const treeRef = doc(db, 'trees', treeId);
+      const treeRef = doc(db, COLLECTIONS.TREES, treeId);
       const shareRecord = {
         permission,
         sharedAt: serverTimestamp(),
@@ -370,7 +371,7 @@ if (process.env.NODE_ENV === 'development') {
         return;
       }
 
-      const treeRef = doc(db, 'trees', treeId);
+      const treeRef = doc(db, COLLECTIONS.TREES, treeId);
       await updateDoc(
         treeRef,
         new FieldPath('sharedWith', emailLower),

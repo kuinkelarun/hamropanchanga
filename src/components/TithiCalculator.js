@@ -3,7 +3,7 @@ import './TithiCalculator.css';
 import { computeTithiFromLongitudes, getEphemerisData } from '../utils/ephemeris';
 import { toNepaliNumber, formatNepaliDateTime, nepaliMonths, convertAdToBs, getTithiYearFromAdDate, getTithiLunarMonthName } from '../utils/nepaliDateUtils';
 import { useLanguage } from '../contexts/LanguageContext';
-import { SHUKLA_TITHI_NAMES, KRISHNA_TITHI_NAMES } from '../constants/calendarConstants';
+import { SHUKLA_TITHI_NAMES, KRISHNA_TITHI_NAMES, normalizePakshaToNepali } from '../constants/calendarConstants';
 
 export default function TithiCalculator() {
   const { t } = useLanguage();
@@ -292,7 +292,7 @@ export default function TithiCalculator() {
               {(result.paksha === 'Shukla' ? SHUKLA_TITHI_NAMES : KRISHNA_TITHI_NAMES)[result.pakshaIndex - 1]}
             </div>
             <div className="tithi-paksha">
-              {result.paksha === 'Shukla' ? 'शुक्लपक्ष' : 'कृष्णपक्ष'} 
+              {normalizePakshaToNepali(result.paksha)} 
               {' '} | Tithi {result.tithi}/30
             </div>
             <div className="tc-progress-bar-container">

@@ -3,7 +3,7 @@ import { useLanguage } from '../../contexts/LanguageContext';
 import { convertAdToBs } from '../../utils/nepaliDateUtils';
 import { formatAdDateToNepaliStringWithNumerals } from '../../utils/nepaliDateUtils';
 import { compareTithisByStart, toNepaliNumber } from '../../utils/calendarHelpers';
-import { NEPALI_MONTHS, ENGLISH_NEPALI_MONTHS } from '../../constants/calendarConstants';
+import { NEPALI_MONTHS, ENGLISH_NEPALI_MONTHS, normalizePakshaToNepali } from '../../constants/calendarConstants';
 import { signInWithGoogle } from '../../firebase';
 import { PERMISSIONS } from '../../constants/roles';
 
@@ -166,12 +166,7 @@ const DayDetailsModal = ({
 
               let tithiDisplay = '';
               if (event.tithi) {
-                let pakshaDisplay = event.tithi.paksha;
-                if (pakshaDisplay === 'Shukla' || pakshaDisplay === 'शुक्ल') {
-                  pakshaDisplay = 'शुक्लपक्ष';
-                } else if (pakshaDisplay === 'Krishna' || pakshaDisplay === 'कृष्ण') {
-                  pakshaDisplay = 'कृष्णपक्ष';
-                }
+                const pakshaDisplay = normalizePakshaToNepali(event.tithi.paksha);
                 tithiDisplay = ` (${event.tithi.month} ${pakshaDisplay} ${event.tithi.name})`;
               }
 

@@ -5,6 +5,7 @@ import AddEventForm from '../AddEventForm';
 import { signInWithGoogle } from '../../firebase';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../../firebase';
+import { COLLECTIONS } from '../../constants/firestoreCollections';
 import { normalizeForCompare } from '../../utils/textNormalize';
 import { createEvent } from '../../services/CalendarEventService';
 import { useLanguage } from '../../contexts/LanguageContext';
@@ -156,7 +157,7 @@ export default function TreeSelectionPage({ user, isAdmin }) {
         const results = await Promise.all(
           missing.map(async (uid) => {
             try {
-              const snap = await getDoc(doc(db, 'users', uid));
+              const snap = await getDoc(doc(db, COLLECTIONS.USERS, uid));
               if (snap.exists()) {
                 const data = snap.data() || {};
                 return [uid, data.email || data.displayName || uid];

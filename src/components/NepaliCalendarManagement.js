@@ -1,23 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '../firebase';
 import { doc, setDoc, getDoc, collection, getDocs, query, where } from 'firebase/firestore';
+import { COLLECTIONS } from '../constants/firestoreCollections';
 import bsCalendarData from '../data/bsCalendarData';
+import { NEPALI_MONTHS } from '../constants/calendarConstants';
 import '../styles/NepaliCalendarManagement.css';
 
-const nepaliMonthNames = [
-  'वैशाख',      // 1. Baisakh (Vaishakh)
-  'ज्येष्ठ',      // 2. Jyeshtha
-  'आषाढ़',       // 3. Ashadh
-  'श्रावण',      // 4. Shravan
-  'भाद्रपद',    // 5. Bhadrapad
-  'आश्विन',      // 6. Ashwin
-  'कार्तिक',    // 7. Kartik
-  'मार्गशीर्ष',  // 8. Margshirsh
-  'पौष',        // 9. Paush
-  'माघ',        // 10. Magh
-  'फाल्गुन',    // 11. Phalgun
-  'चैत्र्र'       // 12. Chaitra
-];
+const nepaliMonthNames = NEPALI_MONTHS;
 
 const NepaliCalendarManagement = ({ hasPermission, PERMISSIONS }) => {
   const [mode, setMode] = useState('view'); // 'view', 'add', 'edit'
@@ -46,7 +35,7 @@ const NepaliCalendarManagement = ({ hasPermission, PERMISSIONS }) => {
       
       // Also try to load custom years from Firestore
       try {
-        const customYearsSnapshot = await getDocs(collection(db, 'nepaliCalendarYears'));
+        const customYearsSnapshot = await getDocs(collection(db, COLLECTIONS.NEPALI_CALENDAR_YEARS));
         const customYears = customYearsSnapshot.docs.map(doc => {
           const data = doc.data();
           const year = parseInt(data.year);
@@ -89,7 +78,7 @@ const NepaliCalendarManagement = ({ hasPermission, PERMISSIONS }) => {
       // Try to load from Firestore first (user edits)
       let yearData = null;
       try {
-        const docRef = doc(db, 'nepaliCalendarYears', year.toString());
+        const docRef = doc(db, COLLECTIONS.NEPALI_CALENDAR_YEARS, year.toString());
         const docSnap = await getDoc(docRef);
         if (docSnap.exists()) {
           yearData = docSnap.data();
@@ -202,7 +191,7 @@ const NepaliCalendarManagement = ({ hasPermission, PERMISSIONS }) => {
       };
 
       // Save to Firestore in nepaliCalendarYears collection
-      const yearDocRef = doc(db, 'nepaliCalendarYears', year.toString());
+      const yearDocRef = doc(db, COLLECTIONS.NEPALI_CALENDAR_YEARS, year.toString());
       await setDoc(yearDocRef, newYearData);
 
       const actionType = mode === 'add' ? 'added' : 'updated';

@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import { collection, addDoc, deleteDoc, doc, onSnapshot, query, orderBy, getDocs, where } from 'firebase/firestore';
 import { onAuthStateChanged } from 'firebase/auth';
 import { db, auth } from '../firebase';
+import { COLLECTIONS } from '../constants/firestoreCollections';
 import { useUserPermissions } from '../hooks/usePermissions';
 import { PERMISSIONS } from '../constants/roles';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -26,6 +27,8 @@ import {
   SHUKLA_TITHI_NAMES as shuklaPackshyaTithis,
   KRISHNA_TITHI_NAMES as krishnaPackshyaTithis,
   TIME_PERIODS as timePeriods,
+  normalizePakshaToNepali,
+  normalizePakshaToEnglish,
 } from '../constants/calendarConstants';
 import {
   toNepaliNumber,
@@ -123,7 +126,7 @@ export default function NepaliCalendar({ user: propUser, isAdmin, treeMembers = 
   // Note: `tithis` is public-read in Firestore rules, so this should not wait for auth.
   useEffect(() => {
     if (isDev) console.log('Setting up Firebase listener for tithis...');
-    const tithisCollection = collection(db, 'tithis');
+    const tithisCollection = collection(db, COLLECTIONS.TITHIS);
     const q = query(tithisCollection, orderBy('startDate'), orderBy('startTime'));
     
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -209,7 +212,7 @@ export default function NepaliCalendar({ user: propUser, isAdmin, treeMembers = 
   useEffect(() => {
     const loadCalendarConfiguration = async () => {
       try {
-        const calendarYearsSnapshot = await getDocs(collection(db, 'nepaliCalendarYears'));
+        const calendarYearsSnapshot = await getDocs(collection(db, COLLECTIONS.NEPALI_CALENDAR_YEARS));
         if (calendarYearsSnapshot.empty) {
           if (isDev) console.log('No custom calendar years found in Firestore, using defaults only');
           return;
@@ -263,7 +266,7 @@ export default function NepaliCalendar({ user: propUser, isAdmin, treeMembers = 
         if (isDev) {
           void (async () => {
             try {
-              const testCollection = collection(db, 'tithis');
+              const testCollection = collection(db, COLLECTIONS.TITHIS);
               const testQuery = query(testCollection, orderBy('startDate'), orderBy('startTime'));
               await getDocs(testQuery);
             } catch (permissionError) {
@@ -295,7 +298,7 @@ export default function NepaliCalendar({ user: propUser, isAdmin, treeMembers = 
     }
 
     if (isDev) console.log('Setting up Firebase listener for calendar events...', { user: !!user, isAdmin });
-    const eventsCollection = collection(db, 'calendarEvents');
+    const eventsCollection = collection(db, COLLECTIONS.CALENDAR_EVENTS);
     
     if (!user) {
       // Guests: public events AND tree member events
@@ -533,7 +536,7 @@ export default function NepaliCalendar({ user: propUser, isAdmin, treeMembers = 
   const refreshTithis = useCallback(async () => {
     if (isDev) console.log('Manual refresh triggered...');
     try {
-      const tithisCollection = collection(db, 'tithis');
+      const tithisCollection = collection(db, COLLECTIONS.TITHIS);
       const q = query(tithisCollection, orderBy('startDate'), orderBy('startTime'));
       const snapshot = await getDocs(q);
       
@@ -625,7 +628,7 @@ export default function NepaliCalendar({ user: propUser, isAdmin, treeMembers = 
     if (!isDev) return;
     try {
       console.log('=== FIRESTORE DEBUG CHECK ===');
-      const tithisCollection = collection(db, 'tithis');
+      const tithisCollection = collection(db, COLLECTIONS.TITHIS);
       const q = query(tithisCollection, orderBy('dateKey'));
       const snapshot = await getDocs(q);
       
@@ -781,7 +784,7 @@ export default function NepaliCalendar({ user: propUser, isAdmin, treeMembers = 
         console.log('Data to save:', tithiData);
       }
       
-      const tithisCollection = collection(db, 'tithis');
+      const tithisCollection = collection(db, COLLECTIONS.TITHIS);
       const docRef = await addDoc(tithisCollection, tithiData);
       if (process.env.NODE_ENV !== 'production') {
         console.log('Successfully added tithi to Firestore at', new Date().toLocaleTimeString(), 'with ID:', docRef.id);
@@ -910,7 +913,7 @@ export default function NepaliCalendar({ user: propUser, isAdmin, treeMembers = 
       });
 
       // Then sync to Firebase
-      await deleteDoc(doc(db, 'tithis', id));
+      await deleteDoc(doc(db, COLLECTIONS.TITHIS, id));
       if (isDev) console.log('Successfully deleted tithi from Firestore');
     } catch (error) {
       console.error('Error deleting tithi:', error);
@@ -972,16 +975,11 @@ export default function NepaliCalendar({ user: propUser, isAdmin, treeMembers = 
           const { paksha, name, month: expectedTithiMonth } = event.tithi;
           
           // Build the full tithi name to search for
-          let pakshaNepali = paksha;
-          if (paksha === 'Shukla' || paksha === 'शुक्ल') {
-            pakshaNepali = 'शुक्लपक्ष';
-          } else if (paksha === 'Krishna' || paksha === 'कृष्ण') {
-            pakshaNepali = 'कृष्णपक्ष';
-          }
+          const pakshaNepali = normalizePakshaToNepali(paksha);
           const fullName = `${pakshaNepali} ${name}`;
           
           // Query Firestore for tithis matching this name
-          const q = query(collection(db, 'tithis'), where('name', '>=', fullName), where('name', '<=', fullName + '\uf8ff'));
+          const q = query(collection(db, COLLECTIONS.TITHIS), where('name', '>=', fullName), where('name', '<=', fullName + '\uf8ff'));
           const snapshot = await getDocs(q);
           
           // Find the tithi that falls in the target year with matching lunar month
@@ -1067,7 +1065,7 @@ export default function NepaliCalendar({ user: propUser, isAdmin, treeMembers = 
             
             // Match Paksha and Tithi Name
             // Note: event.tithi.paksha is 'Shukla'/'Krishna', tPaksha is 'शुक्लपक्ष'/'कृष्णपक्ष'
-            const eventPakshaNepali = event.tithi.paksha === 'Shukla' ? 'शुक्लपक्ष' : 'कृष्णपक्ष';
+            const eventPakshaNepali = normalizePakshaToNepali(event.tithi.paksha);
             if (tPaksha !== eventPakshaNepali) return false;
             
             // Match Tithi Name (e.g., 'Pratipada')
@@ -1192,12 +1190,7 @@ export default function NepaliCalendar({ user: propUser, isAdmin, treeMembers = 
     let display = event.title;
     if (event.tithi) {
       // Normalize paksha to Nepali if it's in English (legacy data)
-      let pakshaDisplay = event.tithi.paksha;
-      if (pakshaDisplay === 'Shukla' || pakshaDisplay === 'शुक्ल') {
-        pakshaDisplay = 'शुक्लपक्ष';
-      } else if (pakshaDisplay === 'Krishna' || pakshaDisplay === 'कृष्ण') {
-        pakshaDisplay = 'कृष्णपक्ष';
-      }
+      const pakshaDisplay = normalizePakshaToNepali(event.tithi.paksha);
       display += ` (${event.tithi.month} ${pakshaDisplay} ${event.tithi.name})`;
     }
     return display;
@@ -1211,7 +1204,7 @@ export default function NepaliCalendar({ user: propUser, isAdmin, treeMembers = 
     }
     
     // Get the tithi lunar month for the start date
-    const pakshaNormalized = pakshya === 'शुक्लपक्ष' ? 'Shukla' : 'Krishna';
+    const pakshaNormalized = normalizePakshaToEnglish(pakshya);
     const tithiIndex = getTithiIndexByName(tithiName);
     
     if (tithiIndex) {
@@ -1489,7 +1482,7 @@ export default function NepaliCalendar({ user: propUser, isAdmin, treeMembers = 
   // Callback for DayDetailsModal to delete a personal event
   const handleDeleteEvent = useCallback(async (eventId) => {
     try {
-      await deleteDoc(doc(db, 'calendarEvents', eventId));
+      await deleteDoc(doc(db, COLLECTIONS.CALENDAR_EVENTS, eventId));
       setCalendarEvents((prev) => prev.filter((e) => e.id !== eventId));
     } catch (err) {
       console.error('Error deleting event:', err);

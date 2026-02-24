@@ -10,6 +10,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { onAuthStateChanged, signOut, getIdTokenResult } from 'firebase/auth';
 import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
 import { auth, db } from '../firebase';
+import { COLLECTIONS } from '../constants/firestoreCollections';
 import { USER_ROLES, DEFAULT_ROLE_PERMISSIONS } from '../constants/roles';
 
 const AuthContext = createContext({
@@ -29,8 +30,8 @@ async function processInvitation(currentUser) {
 
   // Try both possible document IDs: lowercased email and raw email
   const invitationRefs = [
-    doc(db, 'userInvitations', lowerEmail),
-    doc(db, 'userInvitations', rawEmail),
+    doc(db, COLLECTIONS.USER_INVITATIONS, lowerEmail),
+    doc(db, COLLECTIONS.USER_INVITATIONS, rawEmail),
   ];
 
   let invitationSnap = null;
@@ -53,7 +54,7 @@ async function processInvitation(currentUser) {
     const invitationData = invitationSnap.data();
     const isProcessed = invitationData.processed;
 
-    const userDocRef = doc(db, 'users', currentUser.uid);
+    const userDocRef = doc(db, COLLECTIONS.USERS, currentUser.uid);
     const existingUserDoc = await getDoc(userDocRef);
 
     // Create/update user document if it doesn't exist OR if invitation hasn't been processed yet
@@ -81,7 +82,7 @@ async function processInvitation(currentUser) {
 
       // If invited as admin, also add to adminList
       if (invitationData.role === 'admin') {
-        const adminDocRef = doc(db, 'adminList', currentUser.uid);
+        const adminDocRef = doc(db, COLLECTIONS.ADMIN_LIST, currentUser.uid);
         const adminDocSnap = await getDoc(adminDocRef);
         if (!adminDocSnap.exists()) {
           await setDoc(adminDocRef, {
@@ -106,7 +107,7 @@ async function processInvitation(currentUser) {
     }
   } else {
     // No invitation — create default user document
-    const userDocRef = doc(db, 'users', currentUser.uid);
+    const userDocRef = doc(db, COLLECTIONS.USERS, currentUser.uid);
     const existingUserDoc = await getDoc(userDocRef);
 
     if (!existingUserDoc.exists()) {
@@ -129,7 +130,7 @@ async function processInvitation(currentUser) {
  */
 async function checkAdminStatus(currentUser) {
   // Check adminList/{uid}
-  const adminDocRef = doc(db, 'adminList', currentUser.uid);
+  const adminDocRef = doc(db, COLLECTIONS.ADMIN_LIST, currentUser.uid);
   const adminDocSnap = await getDoc(adminDocRef);
   if (adminDocSnap.exists()) return true;
 
@@ -142,7 +143,7 @@ async function checkAdminStatus(currentUser) {
   }
 
   // Final fallback: check users/{uid}.role
-  const userDocRef = doc(db, 'users', currentUser.uid);
+  const userDocRef = doc(db, COLLECTIONS.USERS, currentUser.uid);
   const userDocSnap = await getDoc(userDocRef);
   return userDocSnap.exists() && userDocSnap.data().role === 'admin';
 }

@@ -13,24 +13,25 @@ import {
   setDoc,
 } from 'firebase/firestore';
 import { buildSearchFields, normalizeForCompare } from '../../../utils/textNormalize';
+import { COLLECTIONS } from '../../../constants/firestoreCollections';
 
 // Recursively delete a tree and all its members, relationships, marriage points, and events
 export async function deleteTreeAndAssociations(treeId) {
   if (!treeId) throw new Error('treeId is required');
   // Delete all members
-  const membersSnap = await getDocs(collection(db, 'trees', treeId, 'members'));
+  const membersSnap = await getDocs(collection(db, COLLECTIONS.TREES, treeId, COLLECTIONS.MEMBERS));
   await Promise.all(membersSnap.docs.map(d => deleteDoc(d.ref)));
 
   // Delete all relationships
-  const relSnap = await getDocs(collection(db, 'trees', treeId, 'relationships'));
+  const relSnap = await getDocs(collection(db, COLLECTIONS.TREES, treeId, COLLECTIONS.RELATIONSHIPS));
   await Promise.all(relSnap.docs.map(d => deleteDoc(d.ref)));
 
   // Delete all marriage points
-  const mpSnap = await getDocs(collection(db, 'trees', treeId, 'marriagePoints'));
+  const mpSnap = await getDocs(collection(db, COLLECTIONS.TREES, treeId, COLLECTIONS.MARRIAGE_POINTS));
   await Promise.all(mpSnap.docs.map(d => deleteDoc(d.ref)));
 
   // Delete all events in calendarEvents with this treeId
-  const eventsSnap = await getDocs(query(collection(db, 'calendarEvents'), where('treeId', '==', treeId)));
+  const eventsSnap = await getDocs(query(collection(db, COLLECTIONS.CALENDAR_EVENTS), where('treeId', '==', treeId)));
   await Promise.all(eventsSnap.docs.map(d => deleteDoc(d.ref)));
 
   // Soft delete the tree itself
@@ -40,7 +41,7 @@ export async function deleteTreeAndAssociations(treeId) {
 
 // Helper to get trees collection
 function treesCollection() {
-  return collection(db, 'trees');
+  return collection(db, COLLECTIONS.TREES);
 }
 
 // ---- Trees API ----
@@ -120,14 +121,14 @@ export const Trees = {
   },
 
   async get(id) {
-    const ref = doc(db, 'trees', id);
+    const ref = doc(db, COLLECTIONS.TREES, id);
     const snap = await getDoc(ref);
     if (!snap.exists()) throw new Error('Tree not found');
     return { id: snap.id, ...snap.data() };
   },
 
   async update(id, payload) {
-    const ref = doc(db, 'trees', id);
+    const ref = doc(db, COLLECTIONS.TREES, id);
     const sanitized = { ...(payload || {}) };
     if (Object.prototype.hasOwnProperty.call(sanitized, 'contact')) {
       sanitized.contact = String(sanitized.contact || '').trim();
@@ -169,7 +170,7 @@ export const Trees = {
 
   async delete(id) {
     // Soft delete by default (mark deleted = true)
-    const ref = doc(db, 'trees', id);
+    const ref = doc(db, COLLECTIONS.TREES, id);
     await updateDoc(ref, { deleted: true, updatedAt: serverTimestamp() });
     return { ok: true };
   },
@@ -178,7 +179,7 @@ export const Trees = {
 // ---- Members API ----
 
 function membersCollection(treeId) {
-  return collection(db, 'trees', treeId, 'members');
+  return collection(db, COLLECTIONS.TREES, treeId, COLLECTIONS.MEMBERS);
 }
 
 export const Members = {
@@ -210,7 +211,7 @@ export const Members = {
   async update(id, payload) {
     const { treeId, ...memberData } = payload;
     if (!treeId) throw new Error('treeId is required for Members.update');
-    const ref = doc(db, 'trees', treeId, 'members', id);
+    const ref = doc(db, COLLECTIONS.TREES, treeId, COLLECTIONS.MEMBERS, id);
 
     const sanitizedMember = { ...memberData };
     await updateDoc(ref, {
@@ -224,7 +225,7 @@ export const Members = {
 
   async delete(id, treeId) {
     if (!treeId) throw new Error('treeId is required for Members.delete');
-    const ref = doc(db, 'trees', treeId, 'members', id);
+    const ref = doc(db, COLLECTIONS.TREES, treeId, COLLECTIONS.MEMBERS, id);
     await deleteDoc(ref);
     return { ok: true };
   },
@@ -233,7 +234,7 @@ export const Members = {
 // ---- Relationships API ----
 
 function relationshipsCollection(treeId) {
-  return collection(db, 'trees', treeId, 'relationships');
+  return collection(db, COLLECTIONS.TREES, treeId, COLLECTIONS.RELATIONSHIPS);
 }
 
 export const Relationships = {
@@ -259,7 +260,7 @@ export const Relationships = {
   async update(id, payload) {
     const { treeId, ...relData } = payload;
     if (!treeId) throw new Error('treeId is required for Relationships.update');
-    const ref = doc(db, 'trees', treeId, 'relationships', id);
+    const ref = doc(db, COLLECTIONS.TREES, treeId, COLLECTIONS.RELATIONSHIPS, id);
     const cleanData = {};
     Object.entries(relData).forEach(([key, value]) => {
       if (value !== undefined) {
@@ -326,7 +327,7 @@ export const Relationships = {
   async delete(id, treeId) {
     if (!treeId) throw new Error('treeId is required for Relationships.delete');
     if (!id) return { ok: true };
-    const ref = doc(db, 'trees', treeId, 'relationships', id);
+    const ref = doc(db, COLLECTIONS.TREES, treeId, COLLECTIONS.RELATIONSHIPS, id);
     await deleteDoc(ref);
     return { ok: true };
   },
@@ -335,7 +336,7 @@ export const Relationships = {
 // ---- Marriage Points API ----
 
 function marriagePointsCollection(treeId) {
-  return collection(db, 'trees', treeId, 'marriagePoints');
+  return collection(db, COLLECTIONS.TREES, treeId, COLLECTIONS.MARRIAGE_POINTS);
 }
 
 export const MarriagePoints = {
@@ -349,7 +350,7 @@ export const MarriagePoints = {
   async upsert(treeId, id, payload) {
     if (!treeId) throw new Error('treeId is required for MarriagePoints.upsert');
     if (!id) throw new Error('id is required for MarriagePoints.upsert');
-    const ref = doc(db, 'trees', treeId, 'marriagePoints', id);
+    const ref = doc(db, COLLECTIONS.TREES, treeId, COLLECTIONS.MARRIAGE_POINTS, id);
     const current = await getDoc(ref);
     if (current.exists()) {
       await updateDoc(ref, { ...payload, updatedAt: serverTimestamp() });
@@ -363,7 +364,7 @@ export const MarriagePoints = {
   async delete(treeId, id) {
     if (!treeId) throw new Error('treeId is required for MarriagePoints.delete');
     if (!id) throw new Error('id is required for MarriagePoints.delete');
-    const ref = doc(db, 'trees', treeId, 'marriagePoints', id);
+    const ref = doc(db, COLLECTIONS.TREES, treeId, COLLECTIONS.MARRIAGE_POINTS, id);
     await deleteDoc(ref);
     return { ok: true };
   },
