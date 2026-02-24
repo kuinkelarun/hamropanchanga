@@ -8,11 +8,13 @@
 import React, { useEffect, useState } from 'react';
 import { collection, onSnapshot, query, where } from 'firebase/firestore';
 import { db } from '../../firebase';
+import { COLLECTIONS } from '../../constants/firestoreCollections';
 import { useLanguage } from '../../contexts/LanguageContext';
 import NepaliDatePicker from '../NepaliDatePicker';
 import {
   NEPALI_MONTHS as nepaliMonths,
   ENGLISH_NEPALI_MONTHS as englishNepaliMonths,
+  normalizePakshaToEnglish,
 } from '../../constants/calendarConstants';
 import {
   toNepaliNumber,
@@ -106,7 +108,7 @@ export default function AddEventModal({
       setAvailableTrees([]);
       return;
     }
-    const treesCol = collection(db, 'trees');
+    const treesCol = collection(db, COLLECTIONS.TREES);
     const q = isAdmin
       ? query(treesCol)
       : query(treesCol, where('ownerUid', '==', user.uid));
@@ -131,7 +133,7 @@ export default function AddEventModal({
       setAvailableTreeMembers([]);
       return;
     }
-    const membersCol = collection(db, 'trees', selectedTreeId, 'members');
+    const membersCol = collection(db, COLLECTIONS.TREES, selectedTreeId, COLLECTIONS.MEMBERS);
     const unsubscribe = onSnapshot(membersCol, (snapshot) => {
       const membersList = snapshot.docs
         .map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }))
@@ -165,7 +167,7 @@ export default function AddEventModal({
     const { pakshya, tithi: tithiName } = parseTithiName(tithi.name);
     if (!tithi.startDate) return tithi.name;
 
-    const pakshaNormalized = pakshya === 'शुक्लपक्ष' ? 'Shukla' : 'Krishna';
+    const pakshaNormalized = normalizePakshaToEnglish(pakshya);
     const tithiIndex = getTithiIndexByName(tithiName);
 
     if (tithiIndex) {
@@ -212,7 +214,7 @@ export default function AddEventModal({
         return;
       }
       const { pakshya, tithi: tithiName } = parseTithiName(selectedTithi.name);
-      const pakshaNormalized = pakshya === 'शुक्लपक्ष' ? 'Shukla' : 'Krishna';
+      const pakshaNormalized = normalizePakshaToEnglish(pakshya);
       const tithiIndex = getTithiIndexByName(tithiName, { fallbackToOne: false });
       if (!tithiIndex) {
         setEventValidation('Could not determine the selected tithi. Please try selecting the tithi again.');

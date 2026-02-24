@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '../firebase';
+import { COLLECTIONS } from '../constants/firestoreCollections';
 import NepaliDatePicker from './NepaliDatePicker';
 import { useLanguage } from '../contexts/LanguageContext';
 import { nepaliMonths, getTithisForMonth, convertAdToBs, getTithiIndexByName, getTithiLunarMonthName, getTithiYearFromAdDate } from '../utils/nepaliDateUtils';
+import { normalizePakshaToEnglish, normalizePakshaToNepali } from '../constants/calendarConstants';
 
 // Component to add/edit an event
 const AddEventForm = ({ onAdd, familyMembers, onCancel, editingEvent }) => {
@@ -87,8 +89,8 @@ const AddEventForm = ({ onAdd, familyMembers, onCancel, editingEvent }) => {
             try {
                 // Resolve date from Tithi
                 const [pakshaKey, tithiName] = tithiId.split('-');
-                const paksha = pakshaKey === 'shukla' ? 'Shukla' : 'Krishna';
-                const pakshaNepali = pakshaKey === 'shukla' ? 'शुक्लपक्ष' : 'कृष्णपक्ष';
+                const paksha = normalizePakshaToEnglish(pakshaKey);
+                const pakshaNepali = normalizePakshaToNepali(pakshaKey);
                 
                 // Determine current BS Year
                 const today = new Date();
@@ -98,7 +100,7 @@ const AddEventForm = ({ onAdd, familyMembers, onCancel, editingEvent }) => {
                 
                 // Query Firestore for matching tithi
                 const fullName = `${pakshaNepali} ${tithiName}`;
-                const q = query(collection(db, 'tithis'), where('name', '>=', fullName), where('name', '<=', fullName + '\uf8ff'));
+                const q = query(collection(db, COLLECTIONS.TITHIS), where('name', '>=', fullName), where('name', '<=', fullName + '\uf8ff'));
                 const snapshot = await getDocs(q);
                 
                 let matchingTithi = null;

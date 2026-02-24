@@ -6,25 +6,13 @@
  * safe to call from any module.
  */
 
-import { NEPALI_NUMBERS } from '../constants/calendarConstants';
+import { NEPALI_TO_ENGLISH_TITHI_MAP, normalizePakshaToEnglish } from '../constants/calendarConstants';
+import { toNepaliNumber, getNepalDate } from './nepaliDateUtils';
+
+// Re-export so existing imports from calendarHelpers keep working
+export { toNepaliNumber, getNepalDate };
 
 // ──── Number / Date formatting ────
-
-/** Convert an integer to its Nepali-numeral string (always Nepali). */
-export function toNepaliNumber(num) {
-  return String(num)
-    .split('')
-    .map(d => NEPALI_NUMBERS[+d] ?? d)
-    .join('');
-}
-
-/** Return a JS Date that represents "right now" in Nepal Standard Time (UTC+5:45). */
-export function getNepalDate() {
-  const now = new Date();
-  const nptOffset = 5.75 * 3600000;
-  return new Date(now.getTime() + nptOffset);
-}
-
 /**
  * Convert a 24-hour time string ("HH:MM") to 12-hour format with AM/PM.
  * When `isNepali` is true and a `tn` converter function is provided the
@@ -62,34 +50,12 @@ export function parseTithiName(fullName) {
 
 /** Map a Nepali tithi name (e.g. "प्रतिपदा") to its English transliteration. */
 export function getEnglishTithiName(nepaliTithiName) {
-  const tithiNameMap = {
-    'प्रतिपदा': 'Pratipada',
-    'द्वितीया': 'Dwitiya',
-    'तृतीया': 'Tritiya',
-    'चतुर्थी': 'Chaturthi',
-    'पञ्चमी': 'Panchami',
-    'षष्ठी': 'Shashthi',
-    'सप्तमी': 'Saptami',
-    'अष्टमी': 'Ashtami',
-    'नवमी': 'Navami',
-    'दशमी': 'Dashami',
-    'एकादशी': 'Ekadashi',
-    'द्वादशी': 'Dwadashi',
-    'त्रयोदशी': 'Trayodashi',
-    'चतुर्दशी': 'Chaturdashi',
-    'पूर्णिमा': 'Purnima',
-    'औंसी': 'Amavasya',
-  };
-  return tithiNameMap[nepaliTithiName] || nepaliTithiName;
+  return NEPALI_TO_ENGLISH_TITHI_MAP[nepaliTithiName] || nepaliTithiName;
 }
 
 /** Map a Nepali pakshya name (e.g. "शुक्लपक्ष") to its English transliteration. */
 export function getEnglishPakshyaName(nepaliPakshyaName) {
-  const pakshyaMap = {
-    'शुक्लपक्ष': 'Sukla',
-    'कृष्णपक्ष': 'Krishna',
-  };
-  return pakshyaMap[nepaliPakshyaName] || nepaliPakshyaName;
+  return normalizePakshaToEnglish(nepaliPakshyaName) || nepaliPakshyaName;
 }
 
 // ──── Time normalisation & tithi sort helpers ────

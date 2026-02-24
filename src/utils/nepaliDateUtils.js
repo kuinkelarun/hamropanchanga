@@ -1,6 +1,6 @@
 // Nepali Calendar utilities
 import bsCalendarData from '../data/bsCalendarData';
-import { NEPALI_MONTHS, ENGLISH_MONTHS, NEPALI_WEEKDAYS, ENGLISH_WEEKDAYS, NEPALI_NUMBERS, SHUKLA_TITHI_NAMES, KRISHNA_TITHI_NAMES } from '../constants/calendarConstants';
+import { NEPALI_MONTHS, ENGLISH_MONTHS, NEPALI_WEEKDAYS, ENGLISH_WEEKDAYS, NEPALI_NUMBERS, SHUKLA_TITHI_NAMES, KRISHNA_TITHI_NAMES, TITHI_NAME_INDEX_MAP } from '../constants/calendarConstants';
 
 // Re-export from calendarConstants for backward compatibility
 const nepaliMonths = NEPALI_MONTHS;
@@ -704,21 +704,8 @@ export function getTithiMonthBoundaries(lunarMonthNumber, bsYear, tithiLookupFn 
   // ...
   // 12 = Chaitra (ends at Chaitra Purnima, next year's Baishakh starts after)
   
-  // Lunar month names mapped to lunar months
-  const lunarMonthNames = [
-    'बैशाख',    // 1 - Baishakh
-    'ज्येष्ठ',       // 2 - Jyeshtha
-    'आषाढ',     // 3 - Ashar
-    'श्रावण',     // 4 - Saun
-    'भाद्र',      // 5 - Bhadau
-    'आश्विन',     // 6 - Asoj
-    'कार्तिक',  // 7 - Kartik
-    'मार्ग',    // 8 - Mangsir
-    'पौष',      // 9 - Pus
-    'माघ',      // 10 - Magh
-    'फाल्गुन',    // 11 - Phalgun
-    'चैत्र'       // 12 - Chaitra
-  ];
+  // Lunar month names — use central source of truth
+  const lunarMonthNames = NEPALI_MONTHS;
   
   if (lunarMonthNumber < 1 || lunarMonthNumber > 12) {
     return { error: 'Invalid lunar month number. Must be 1-12.' };
@@ -827,17 +814,8 @@ export function getTithiMonthBoundaries(lunarMonthNumber, bsYear, tithiLookupFn 
  * @param {string} paksha - Optional: 'Shukla' or 'Krishna' if already known
  * @returns {Object} { tithiYear: number, inCharitra: boolean, beforeNewYear: boolean }
  */
-export const tithiNameMapping = {
-  'Pratipada': 1, 'Dwitiya': 2, 'Tritiya': 3, 'Chaturthi': 4, 'Panchami': 5,
-  'Shashthi': 6, 'Saptami': 7, 'Ashtami': 8, 'Navami': 9, 'Dashami': 10,
-  'Ekadashi': 11, 'Dwadashi': 12, 'Trayodashi': 13, 'Chaturdashi': 14,
-  'Purnima': 15, 'Amavasya': 15, 'Aunsi': 15,
-  'प्रतिपदा': 1, 'द्वितीया': 2, 'तृतीया': 3, 'चतुर्थी': 4, 'पंचमी': 5,
-  'पञ्चमी': 5,
-  'षष्ठी': 6, 'सप्तमी': 7, 'अष्टमी': 8, 'नवमी': 9, 'दशमी': 10,
-  'एकादशी': 11, 'द्वादशी': 12, 'त्रयोदशी': 13, 'चतुर्दशी': 14,
-  'पूर्णिमा': 15, 'औंसी': 15, 'अमावस्या': 15
-};
+// Re-export from central source of truth (kept as named export for backward compat)
+export const tithiNameMapping = TITHI_NAME_INDEX_MAP;
 
 export function getTithiIndexByName(name, options = {}) {
   const { fallbackToOne = true } = options;
@@ -1027,17 +1005,9 @@ export async function getTithisForBsDate(bsYear, bsMonth, bsDay) {
     // Calculate tithi from moon/sun longitudes
     const tithiResult = computeTithiFromLongitudes(ephData.moonLon, ephData.sunLon);
     
-    // Tithi names (Nepali)
-    const shuklaNames = [
-      "प्रतिपदा", "द्वितीया", "तृतीया", "चतुर्थी", "पञ्चमी", "षष्ठी",
-      "सप्तमी", "अष्टमी", "नवमी", "दशमी", "एकादशी", "द्वादशी",
-      "त्रयोदशी", "चतुर्दशी", "पूर्णिमा"
-    ];
-    const krishnaNames = [
-      "प्रतिपदा", "द्वितीया", "तृतीया", "चतुर्थी", "पञ्चमी", "षष्ठी",
-      "सप्तमी", "अष्टमी", "नवमी", "दशमी", "एकादशी", "द्वादशी",
-      "त्रयोदशी", "चतुर्दशी", "औंसी"
-    ];
+    // Tithi names — use central source of truth
+    const shuklaNames = SHUKLA_TITHI_NAMES;
+    const krishnaNames = KRISHNA_TITHI_NAMES;
     
     // Get tithi name from paksha and index
     const isShukla = tithiResult.paksha === 'Shukla';

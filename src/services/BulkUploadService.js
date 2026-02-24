@@ -26,11 +26,12 @@ import {
   arrayUnion
 } from 'firebase/firestore';
 import { SHARE_PERMISSIONS } from '../utils/TreeSharingUtils';
+import { COLLECTIONS } from '../constants/firestoreCollections';
 import { USER_ROLES, DEFAULT_ROLE_PERMISSIONS } from '../constants/roles';
 import { convertBsToAd, getTithisForMonth, nepaliMonths, convertAdToBs } from '../utils/nepaliDateUtils';
 import { getTithiIndexByName, getTithiLunarMonthName, getTithiYearFromAdDate } from '../utils/nepaliDateUtils';
 import { normalizeForCompare } from '../utils/textNormalize';
-import { ENGLISH_TO_NEPALI_TITHI_MAP, ENGLISH_TO_NEPALI_MONTH_MAP } from '../constants/calendarConstants';
+import { ENGLISH_TO_NEPALI_TITHI_MAP, ENGLISH_TO_NEPALI_MONTH_MAP, normalizePakshaToEnglish, normalizePakshaToNepali } from '../constants/calendarConstants';
 
 // Helper function to build structured member lookup keys
 // Uses JSON to avoid delimiter conflicts when tree/member names contain colons or other special chars
@@ -220,7 +221,7 @@ export const createTreesFromBulkUpload = async (treeData, userId, userEmail) => 
 
   try {
     // Ensure user document exists before attempting to create trees
-    const userDocRef = doc(db, 'users', userId);
+    const userDocRef = doc(db, COLLECTIONS.USERS, userId);
     let userDocSnap = await getDoc(userDocRef);
     
     if (!userDocSnap.exists()) {
@@ -246,7 +247,7 @@ export const createTreesFromBulkUpload = async (treeData, userId, userEmail) => 
 
     // Check for existing trees - build both exact and normalized name sets
     const existingTreesSnap = await getDocs(
-      query(collection(db, 'trees'), where('ownerUid', '==', userId))
+      query(collection(db, COLLECTIONS.TREES), where('ownerUid', '==', userId))
     );
     const existingTreeNames = new Set(
       existingTreesSnap.docs.map(doc => doc.data().title || doc.data().name)
@@ -311,7 +312,7 @@ export const createTreesFromBulkUpload = async (treeData, userId, userEmail) => 
           sharedWith: {}
         };
 
-        const docRef = await addDoc(collection(db, 'trees'), newTree);
+        const docRef = await addDoc(collection(db, COLLECTIONS.TREES), newTree);
 
         results.success.push({
           name: treeName,
@@ -378,7 +379,7 @@ export const addFamilyMembersFromBulkUpload = async (memberData, userId, treeMap
 
   try {
     // Ensure user document exists before attempting to add members
-    const userDocRef = doc(db, 'users', userId);
+    const userDocRef = doc(db, COLLECTIONS.USERS, userId);
     const userDocSnap = await getDoc(userDocRef);
     
     if (!userDocSnap.exists()) {
@@ -403,7 +404,7 @@ export const addFamilyMembersFromBulkUpload = async (memberData, userId, treeMap
     const existingMembersByTree = new Map(); // treeId -> Map(normalized member name -> { id, notes })
     for (const tId of referencedTreeIds) {
       try {
-        const snap = await getDocs(collection(db, 'trees', tId, 'members'));
+        const snap = await getDocs(collection(db, COLLECTIONS.TREES, tId, COLLECTIONS.MEMBERS));
         const map = new Map();
         snap.docs.forEach(d => {
           const name = (d.data()?.name || '').toString();
@@ -420,7 +421,7 @@ export const addFamilyMembersFromBulkUpload = async (memberData, userId, treeMap
     const treeOwnerById = new Map();
     for (const tId of referencedTreeIds) {
       try {
-        const treeDoc = await getDoc(doc(db, 'trees', tId));
+        const treeDoc = await getDoc(doc(db, COLLECTIONS.TREES, tId));
         if (treeDoc.exists()) {
           const td = treeDoc.data() || {};
           const ownerUid = td.ownerUid || td.owner || null;
@@ -487,7 +488,7 @@ export const addFamilyMembersFromBulkUpload = async (memberData, userId, treeMap
               currentBatchOps = 0;
             }
 
-            const memberDocRef = doc(db, 'trees', treeId, 'members', existing.id);
+            const memberDocRef = doc(db, COLLECTIONS.TREES, treeId, COLLECTIONS.MEMBERS, existing.id);
             batch.update(memberDocRef, { notes: notesValue, updatedAt: Timestamp.now() });
             results.success.push({ name: memberName, tree: treeName, memberId: existing.id, updated: true });
             results.stats.updated++;
@@ -512,7 +513,7 @@ export const addFamilyMembersFromBulkUpload = async (memberData, userId, treeMap
           // Fallback to direct query if prefetch wasn't available
           const existingMembers = await getDocs(
             query(
-              collection(db, 'trees', treeId, 'members'),
+              collection(db, COLLECTIONS.TREES, treeId, COLLECTIONS.MEMBERS),
               where('name', '==', memberName)
             )
           );
@@ -539,7 +540,7 @@ export const addFamilyMembersFromBulkUpload = async (memberData, userId, treeMap
                 currentBatchOps = 0;
               }
 
-              const memberDocRef = doc(db, 'trees', treeId, 'members', existingId);
+              const memberDocRef = doc(db, COLLECTIONS.TREES, treeId, COLLECTIONS.MEMBERS, existingId);
               batch.update(memberDocRef, { notes: notesValue, updatedAt: Timestamp.now() });
               results.success.push({ name: memberName, tree: treeName, memberId: existingId, updated: true });
               results.stats.updated++;
@@ -648,11 +649,11 @@ export const addFamilyMembersFromBulkUpload = async (memberData, userId, treeMap
           currentBatchOps = 0;
         }
 
-        const memberRef = doc(collection(db, 'trees', treeId, 'members'));
+        const memberRef = doc(collection(db, COLLECTIONS.TREES, treeId, COLLECTIONS.MEMBERS));
         batch.set(memberRef, newMember);
 
         // Increment member count on tree
-        const treeRef = doc(db, 'trees', treeId);
+        const treeRef = doc(db, COLLECTIONS.TREES, treeId);
         batch.update(treeRef, {
           memberCount: increment(1),
           updatedAt: Timestamp.now()
@@ -733,7 +734,7 @@ export const addEventsFromBulkUpload = async (eventData, userId, treeMap, member
 
   try {
     // Ensure user document exists before attempting to add events
-    const userDocRef = doc(db, 'users', userId);
+    const userDocRef = doc(db, COLLECTIONS.USERS, userId);
     const userDocSnap = await getDoc(userDocRef);
     
     if (!userDocSnap.exists()) {
@@ -780,7 +781,7 @@ export const addEventsFromBulkUpload = async (eventData, userId, treeMap, member
       const treeIds = new Set(Array.from(treeMap.values()));
       for (const tId of treeIds) {
         try {
-          const treeDoc = await getDoc(doc(db, 'trees', tId));
+          const treeDoc = await getDoc(doc(db, COLLECTIONS.TREES, tId));
           if (treeDoc.exists()) {
             const td = treeDoc.data() || {};
             const ownerUid = td.ownerUid || td.owner || null;
@@ -825,7 +826,7 @@ export const addEventsFromBulkUpload = async (eventData, userId, treeMap, member
         for (let i = 0; i < memberArr.length; i += CHUNK_SIZE) {
           const chunk = memberArr.slice(i, i + CHUNK_SIZE);
           try {
-            const q = query(collection(db, 'calendarEvents'), where('treeId', '==', tId), where('memberId', 'in', chunk));
+            const q = query(collection(db, COLLECTIONS.CALENDAR_EVENTS), where('treeId', '==', tId), where('memberId', 'in', chunk));
             const snap = await getDocs(q);
             snap.docs.forEach(d => {
               const data = d.data() || {};
@@ -1095,7 +1096,7 @@ export const addEventsFromBulkUpload = async (eventData, userId, treeMap, member
           // month should be Nepali script (e.g., 'कार्तिक') as used in nepaliMonths array
           // Extract paksha from tithiId (e.g., "shukla-प्रतिपदा" → "Shukla")
           const pakshaFromId = tithiMapping.tithiId.split('-')[0];
-          const paksha = pakshaFromId === 'shukla' ? 'Shukla' : pakshaFromId === 'krishna' ? 'Krishna' : pakshaFromId;
+          const paksha = normalizePakshaToEnglish(pakshaFromId);
           
           // Resolve tithi date matching the manual form logic
           // The manual form matches by: current BS year + selected month + paksha + tithi name
@@ -1105,12 +1106,12 @@ export const addEventsFromBulkUpload = async (eventData, userId, treeMap, member
             const currentBsYear = bsToday.year;
             const selectedMonthName = englishToNepaliMonthMap[tithiMonth.trim()] || tithiMonth;
             
-            const pakshaNepali = paksha === 'Shukla' ? 'शुक्लपक्ष' : 'कृष्णपक्ष';
+            const pakshaNepali = normalizePakshaToNepali(paksha);
             const fullName = `${pakshaNepali} ${tithiMapping.nepaliName}`;
             const cacheKey = `${fullName}::${currentBsYear}`;
             let snapshotDocs = tithiQueryCache.get(cacheKey);
             if (!snapshotDocs) {
-              const q = query(collection(db, 'tithis'), where('name', '>=', fullName), where('name', '<=', fullName + '\uf8ff'));
+              const q = query(collection(db, COLLECTIONS.TITHIS), where('name', '>=', fullName), where('name', '<=', fullName + '\uf8ff'));
               const snap = await getDocs(q);
               snapshotDocs = snap.docs;
               tithiQueryCache.set(cacheKey, snapshotDocs);
@@ -1197,7 +1198,7 @@ export const addEventsFromBulkUpload = async (eventData, userId, treeMap, member
               if (currentBatchOps + 1 > MAX_BATCH_OPS) {
                 await commitBatch();
               }
-              const existingRef = doc(db, 'calendarEvents', existingId);
+              const existingRef = doc(db, COLLECTIONS.CALENDAR_EVENTS, existingId);
               batch.update(existingRef, {
                 description: descValue,
                 descriptionRaw: descriptionRaw,
@@ -1224,7 +1225,7 @@ export const addEventsFromBulkUpload = async (eventData, userId, treeMap, member
           await commitBatch();
         }
 
-        const eventRef = doc(collection(db, 'calendarEvents'));
+        const eventRef = doc(collection(db, COLLECTIONS.CALENDAR_EVENTS));
         batch.set(eventRef, eventPayload);
         currentBatchOps += OPS_PER_EVENT;
 
@@ -1285,7 +1286,7 @@ export const addEventsFromBulkUpload = async (eventData, userId, treeMap, member
  */
 export const shareTreeWithUser = async (treeId, recipientEmail, permission, ownerEmail) => {
   try {
-    const treeRef = doc(db, 'trees', treeId);
+    const treeRef = doc(db, COLLECTIONS.TREES, treeId);
 
     const normalizedEmail = (recipientEmail || '').toLowerCase().trim();
     if (!normalizedEmail) {
@@ -1321,7 +1322,7 @@ export const shareTreeWithUser = async (treeId, recipientEmail, permission, owne
  */
 export const updateSharePermission = async (treeId, recipientEmail, newPermission) => {
   try {
-    const treeRef = doc(db, 'trees', treeId);
+    const treeRef = doc(db, COLLECTIONS.TREES, treeId);
 
     const normalizedEmail = (recipientEmail || '').toLowerCase().trim();
     if (!normalizedEmail) {
@@ -1349,7 +1350,7 @@ export const updateSharePermission = async (treeId, recipientEmail, newPermissio
  */
 export const removeTreeShare = async (treeId, recipientEmail) => {
   try {
-    const treeRef = doc(db, 'trees', treeId);
+    const treeRef = doc(db, COLLECTIONS.TREES, treeId);
     const normalizedEmail = (recipientEmail || '').toLowerCase().trim();
     if (!normalizedEmail) {
       throw new Error('Recipient email is required');
@@ -1436,7 +1437,7 @@ export const getSharedTreesForUser = async (userEmail) => {
     if (!normalizedEmail) return [];
 
     const treesSnap = await getDocs(
-      query(collection(db, 'trees'), where('sharedWithEmails', 'array-contains', normalizedEmail))
+      query(collection(db, COLLECTIONS.TREES), where('sharedWithEmails', 'array-contains', normalizedEmail))
     );
 
     return treesSnap.docs.map(doc => ({

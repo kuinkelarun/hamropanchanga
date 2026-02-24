@@ -7,7 +7,9 @@ import MemberModal from './MemberModal';
 import KebabMenu from './KebabMenu';
 import { db } from '../../firebase';
 import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { COLLECTIONS } from '../../constants/firestoreCollections';
 import { formatAdDateToNepaliStringWithNumerals } from '../../utils/nepaliDateUtils';
+import { normalizePakshaToNepali } from '../../constants/calendarConstants';
 import { normalizeForCompare } from '../../utils/textNormalize';
 import { createEvent, updateEvent, deleteEvent, getEventsByTree } from '../../services/CalendarEventService';
 import { useLanguage } from '../../contexts/LanguageContext';
@@ -221,12 +223,7 @@ export default function TreeDetailPage({ user }) {
     const { month, paksha, name } = tithiInfo;
     if (!month || !paksha || !name) return '';
     // Normalize paksha to Nepali if it's in English (legacy data)
-    let pakshaDisplay = paksha;
-    if (paksha === 'Shukla' || paksha === 'शुक्ल') {
-      pakshaDisplay = 'शुक्लपक्ष';
-    } else if (paksha === 'Krishna' || paksha === 'कृष्ण') {
-      pakshaDisplay = 'कृष्णपक्ष';
-    }
+    const pakshaDisplay = normalizePakshaToNepali(paksha);
     return ` (${month} ${pakshaDisplay} ${name})`;
   };
 
@@ -301,7 +298,7 @@ export default function TreeDetailPage({ user }) {
         (row.field3 && row.field3.trim())
       );
       
-      const treeRef = doc(db, 'trees', treeId);
+      const treeRef = doc(db, COLLECTIONS.TREES, treeId);
       await updateDoc(treeRef, {
         aboutFamily: nonEmptyRows,
         aboutFamilyDescription: aboutFamilyDescription,

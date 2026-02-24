@@ -1,5 +1,6 @@
 import { collection, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '../firebase';
+import { COLLECTIONS } from '../constants/firestoreCollections';
 import { USER_ROLES, DEFAULT_ROLE_PERMISSIONS } from '../constants/roles';
 
 /**
@@ -8,7 +9,7 @@ import { USER_ROLES, DEFAULT_ROLE_PERMISSIONS } from '../constants/roles';
  */
 export async function getAllUsers() {
   try {
-    const usersCollection = collection(db, 'users');
+    const usersCollection = collection(db, COLLECTIONS.USERS);
     const snapshot = await getDocs(usersCollection);
     
     const users = snapshot.docs.map(doc => ({
@@ -30,7 +31,7 @@ export async function getAllUsers() {
  */
 export async function getUserByUid(uid) {
   try {
-    const userDocRef = doc(db, 'users', uid);
+    const userDocRef = doc(db, COLLECTIONS.USERS, uid);
     const userDoc = await getDoc(userDocRef);
     
     if (userDoc.exists()) {
@@ -59,7 +60,7 @@ export async function getUserByUid(uid) {
  */
 export async function createOrUpdateUser(uid, userData) {
   try {
-    const userDocRef = doc(db, 'users', uid);
+    const userDocRef = doc(db, COLLECTIONS.USERS, uid);
     const existingUser = await getDoc(userDocRef);
     
     const role = userData.role || USER_ROLES.USER;
@@ -79,14 +80,14 @@ export async function createOrUpdateUser(uid, userData) {
 
     // If user is being made admin, also add to adminList collection
     if (role === USER_ROLES.ADMIN) {
-      const adminDocRef = doc(db, 'adminList', uid);
+      const adminDocRef = doc(db, COLLECTIONS.ADMIN_LIST, uid);
       await setDoc(adminDocRef, {
         email: userData.email,
         addedAt: new Date().toISOString()
       });
     } else {
       // If user is no longer admin, remove from adminList
-      const adminDocRef = doc(db, 'adminList', uid);
+      const adminDocRef = doc(db, COLLECTIONS.ADMIN_LIST, uid);
       const adminDoc = await getDoc(adminDocRef);
       if (adminDoc.exists()) {
         await deleteDoc(adminDocRef);
@@ -108,7 +109,7 @@ export async function createOrUpdateUser(uid, userData) {
  */
 export async function updateUserPermissions(uid, permissions) {
   try {
-    const userDocRef = doc(db, 'users', uid);
+    const userDocRef = doc(db, COLLECTIONS.USERS, uid);
     await updateDoc(userDocRef, {
       permissions: permissions,
       updatedAt: new Date().toISOString()
@@ -127,7 +128,7 @@ export async function updateUserPermissions(uid, permissions) {
  */
 export async function updateUserRole(uid, newRole) {
   try {
-    const userDocRef = doc(db, 'users', uid);
+    const userDocRef = doc(db, COLLECTIONS.USERS, uid);
     const defaultPermissions = DEFAULT_ROLE_PERMISSIONS[newRole] || DEFAULT_ROLE_PERMISSIONS[USER_ROLES.USER];
     
     await updateDoc(userDocRef, {
@@ -137,7 +138,7 @@ export async function updateUserRole(uid, newRole) {
     });
 
     // Update adminList if necessary
-    const adminDocRef = doc(db, 'adminList', uid);
+    const adminDocRef = doc(db, COLLECTIONS.ADMIN_LIST, uid);
     if (newRole === USER_ROLES.ADMIN) {
       const userDoc = await getDoc(userDocRef);
       const userData = userDoc.data();
@@ -165,7 +166,7 @@ export async function updateUserRole(uid, newRole) {
  */
 export async function toggleUserActive(uid, active) {
   try {
-    const userDocRef = doc(db, 'users', uid);
+    const userDocRef = doc(db, COLLECTIONS.USERS, uid);
     await updateDoc(userDocRef, {
       active: active,
       updatedAt: new Date().toISOString()
@@ -183,11 +184,11 @@ export async function toggleUserActive(uid, active) {
  */
 export async function removeUser(uid) {
   try {
-    const userDocRef = doc(db, 'users', uid);
+    const userDocRef = doc(db, COLLECTIONS.USERS, uid);
     await deleteDoc(userDocRef);
 
     // Also remove from adminList if present
-    const adminDocRef = doc(db, 'adminList', uid);
+    const adminDocRef = doc(db, COLLECTIONS.ADMIN_LIST, uid);
     const adminDoc = await getDoc(adminDocRef);
     if (adminDoc.exists()) {
       await deleteDoc(adminDocRef);

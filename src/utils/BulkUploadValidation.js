@@ -2,18 +2,7 @@
 import { getTithisForMonth } from './nepaliDateUtils';
 import { normalizeForCompare } from './textNormalize';
 import { Members } from '../components/TreeBuilder/utils/firestoreTreeApi';
-// Simple pakshya canonicalization (accepts Nepali/English variants)
-const canonicalizePakshya = (raw) => {
-  if (!raw) return null;
-  const s = String(raw).trim().toLowerCase();
-  if (!s) return null;
-  if (s.includes('shuk') || s.includes('शुक') || s.includes('suk')) return 'Shukla';
-  if (s.includes('krish') || s.includes('कृष्ण') || s.includes('krishna')) return 'Krishna';
-  // Accept short forms
-  if (s === 'shukla' || s === 'shuk') return 'Shukla';
-  if (s === 'krishna' || s === 'krish' || s === 'kr') return 'Krishna';
-  return null;
-}
+import { NEPALI_MONTHS, ENGLISH_TO_NEPALI_TITHI_MAP, ENGLISH_TO_NEPALI_MONTH_MAP, normalizePakshaToNepali, normalizePakshaToEnglish } from '../constants/calendarConstants';
 
 class ValidationResult {
   constructor() {
@@ -30,9 +19,10 @@ class ValidationResult {
   }
 }
 
-const englishMonths = ['Baishakh', 'Jyeshtha', 'Ashadh', 'Shravan', 'Bhadra', 'Ashwin', 'Kartik', 'Mangsir', 'Poush', 'Magh', 'Phalgun', 'Chaitra'];
-const nepaliScriptMonths = ['वैशाख', 'ज्येष्ठ', 'आषाढ', 'श्रावण', 'भाद्र', 'आश्विन', 'कार्तिक', 'मार्ग', 'पौष', 'माघ', 'फाल्गुन', 'चैत्र'];
-const englishToNepaliTithiMap = { Pratipada: 'प्रतिपदा', Dwitiya: 'द्वितीया', Tritiya: 'तृतीया', Chaturthi: 'चतुर्थी', Panchami: 'पञ्चमी', Shashthi: 'षष्ठी', Saptami: 'सप्तमी', Ashtami: 'अष्टमी', Navami: 'नवमी', Dashami: 'दशमी', Ekadashi: 'एकादशी', Dvadashi: 'द्वादशी', Trayodashi: 'त्रयोदशी', Chaturdashi: 'चतुर्दशी', Purnima: 'पूर्णिमा', Amavasya: 'औंसी' };
+// Derive accepted English month spellings from the central month map
+const englishMonths = Object.keys(ENGLISH_TO_NEPALI_MONTH_MAP);
+const nepaliScriptMonths = NEPALI_MONTHS;
+const englishToNepaliTithiMap = ENGLISH_TO_NEPALI_TITHI_MAP;
 const tithiNames = Object.keys(englishToNepaliTithiMap);
 
 export const validateTreeData = (data = [], existingTrees = []) => {
@@ -236,7 +226,7 @@ export const validateEventData = async (data = [], existingTrees = [], existingM
         if (!nepaliMonth) result.addError('Tithi Month must be valid', r);
         
         // Canonicalize pakshya to 'Shukla' or 'Krishna'
-        const canonicalized = canonicalizePakshya(tithiPakshya);
+        const canonicalized = normalizePakshaToEnglish(tithiPakshya);
         if (!canonicalized) {
           result.addError('Tithi Pakshya must be Shukla or Krishna', r);
         } else {
@@ -255,7 +245,7 @@ export const validateEventData = async (data = [], existingTrees = [], existingM
           try {
             const monthNum = nepaliScriptMonths.indexOf(nepaliMonth) + 1;
             const tithis = getTithisForMonth(monthNum);
-            const pakshaNepali = tithiPakshya === 'Shukla' ? 'शुक्लपक्ष' : 'कृष्णपक्ष';
+            const pakshaNepali = normalizePakshaToNepali(tithiPakshya);
             const pakshaTithis = tithis.filter(t => t.pakshya === pakshaNepali);
             const match = pakshaTithis.some(t => t.name === nepaliTithiName);
             if (!match) {
