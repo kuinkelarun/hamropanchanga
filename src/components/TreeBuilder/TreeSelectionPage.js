@@ -51,6 +51,9 @@ export default function TreeSelectionPage({ user, isAdmin }) {
 
   // (Migration state removed - one-time operations completed)
 
+  // Search state for filtering trees
+  const [searchQuery, setSearchQuery] = useState('');
+
   // Cache owner email lookups for admin display in Other Users section
   const [ownerEmailByUid, setOwnerEmailByUid] = useState({});
 
@@ -443,7 +446,14 @@ export default function TreeSelectionPage({ user, isAdmin }) {
         <div className="bg-white rounded-2xl shadow-md p-6 mb-6 border border-gray-200">
           <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
             <h3 className="text-xl font-bold text-gray-800">{t('treeSelection.yourTrees')}</h3>
-            <div className="flex gap-3 flex-wrap">
+            <div className="flex gap-3 flex-wrap items-center">
+              <input
+                type="text"
+                placeholder="Search trees..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="border border-gray-300 rounded-xl px-3 py-2 text-sm w-48 focus:outline-none focus:ring-2 focus:ring-blue-300"
+              />
               <button
                 onClick={handleCreateTree}
                 disabled={creating}
@@ -470,7 +480,17 @@ export default function TreeSelectionPage({ user, isAdmin }) {
 
           {myTrees.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {myTrees.map(tree => (
+              {myTrees.filter(tree => {
+                if (!searchQuery) return true;
+                const s = searchQuery.toLowerCase();
+                return (
+                  (tree.title || '').toLowerCase().includes(s) ||
+                  (tree.id || '').toLowerCase().includes(s) ||
+                  (tree.primaryMemberName || '').toLowerCase().includes(s) ||
+                  (tree.contact || '').toLowerCase().includes(s) ||
+                  (tree.location || '').toLowerCase().includes(s)
+                );
+              }).map(tree => (
                 <div key={tree.id} className="relative bg-gradient-to-br from-white to-gray-50 p-6 rounded-xl shadow-md border border-gray-200 hover:shadow-lg transition-shadow">
                   <div className="cursor-pointer" onClick={() => handleOpenTree(tree.id)}>
                     <div className="flex items-start justify-between mb-3">
@@ -543,7 +563,16 @@ export default function TreeSelectionPage({ user, isAdmin }) {
               <span className="text-sm text-gray-500">{sharedTrees.length} tree{sharedTrees.length !== 1 ? 's' : ''}</span>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {sharedTrees.map(tree => (
+              {sharedTrees.filter(tree => {
+                if (!searchQuery) return true;
+                const s = searchQuery.toLowerCase();
+                return (
+                  (tree.title || '').toLowerCase().includes(s) ||
+                  (tree.id || '').toLowerCase().includes(s) ||
+                  (tree.contact || '').toLowerCase().includes(s) ||
+                  (tree.location || '').toLowerCase().includes(s)
+                );
+              }).map(tree => (
                 <div key={tree.id} className="relative bg-gradient-to-br from-blue-50 to-white p-6 rounded-xl shadow-md border border-blue-200 hover:shadow-lg transition-shadow">
                   <div className="cursor-pointer" onClick={() => handleOpenTree(tree.id)}>
                     <div className="flex items-start justify-between mb-3">

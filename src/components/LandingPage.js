@@ -12,7 +12,6 @@ import Footer from './Footer';
 const LandingPage = ({ user, isAdmin, trees = [], treeMembers = [], events, familyMembers, onDoubleClickEvent, onEventClick }) => {
     const { t } = useLanguage();
     const [block1Visible, setBlock1Visible] = useState(true); // Optimistically show Block1, hide if needed
-    const [searchQuery, setSearchQuery] = useState('');
     const navigate = useNavigate();
 
     // Fetch Block 1 visibility setting
@@ -57,9 +56,6 @@ const LandingPage = ({ user, isAdmin, trees = [], treeMembers = [], events, fami
         // the visual builder.
         navigate('/trees');
     };
-
-    // Filter trees to show only those owned by the current user
-    const myTrees = user ? trees.filter(tree => tree.ownerUid === user.uid) : [];
 
     // IDs of trees explicitly shared with this user (not owned).
     // Memoized to produce a stable reference — NepaliCalendar's event listener
@@ -130,68 +126,6 @@ const LandingPage = ({ user, isAdmin, trees = [], treeMembers = [], events, fami
                     </div>
                 </div>
             </div>
-
-            {/* Your Trees Section */}
-            {user && myTrees.length > 0 && (
-                <div className="edgefull">
-                    <div className="section-content-centered">
-                        <div className="section-card branches-section">
-                            <div className="space-y-4">
-                                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4">
-                                    <h2 className="section-title whitespace-nowrap">{t('home.yourTrees')}</h2>
-                                    <input
-                                        type="text"
-                                        placeholder="Search trees..."
-                                        value={searchQuery}
-                                        onChange={(e) => setSearchQuery(e.target.value)}
-                                        className="border rounded-xl px-3 py-2 text-sm w-2/5 self-end sm:w-64"
-                                    />
-                                </div>
-                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                    {myTrees.filter(tree => {
-                                        if (!searchQuery) return true;
-                                        const search = searchQuery.toLowerCase();
-                                        return (
-                                            (tree.title || '').toLowerCase().includes(search) ||
-                                            (tree.id || '').toLowerCase().includes(search) ||
-                                            (tree.primaryMemberName || '').toLowerCase().includes(search) ||
-                                            (tree.contactInfo || '').toLowerCase().includes(search) ||
-                                            (tree.location || '').toLowerCase().includes(search)
-                                        );
-                                    }).map((tree) => (
-                                        <div 
-                                            key={tree.id} 
-                                            className="relative bg-white p-6 rounded-2xl shadow-md border border-gray-200 hover:shadow-lg transition-shadow cursor-pointer"
-                                            onClick={() => {
-                                                sessionStorage.setItem('landingPageScrollPosition', window.scrollY.toString());
-                                                navigate(`/tree/${tree.id}`);
-                                            }}
-                                        >
-                                            <h3 className="text-xl font-semibold text-gray-800">{tree.title || 'Untitled Tree'}</h3>
-                                            {tree.primaryMemberName && (
-                                                <p className="text-sm text-gray-600 mt-1">👤 {tree.primaryMemberName}</p>
-                                            )}
-                                            {tree.contactInfo && (
-                                                <a 
-                                                    href={`tel:${tree.contactInfo.replace(/\D/g, '')}`}
-                                                    className="inline-flex items-center gap-1 text-sm text-gray-500 mt-1 hover:text-blue-600 transition-colors max-w-fit"
-                                                    title={tree.contactInfo}
-                                                    onClick={(e) => e.stopPropagation()}
-                                                >
-                                                    📞 <span className="truncate">{tree.contactInfo}</span>
-                                                </a>
-                                            )}
-                                            {tree.location && (
-                                                <p className="text-sm text-gray-500 mt-1">📍 {tree.location}</p>
-                                            )}
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            )}
 
             {/* Events/Updates Section */}
             {user && (
