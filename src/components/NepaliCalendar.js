@@ -42,6 +42,7 @@ import {
   compareTithisByStart,
   dateKeyFromAd,
   padDateKey,
+  getTithiEventDisplayDate,
 } from '../utils/calendarHelpers';
 import AddEventModal from './calendar/AddEventModal';
 import AddTithiModal from './calendar/AddTithiModal';
@@ -1020,7 +1021,7 @@ export default function NepaliCalendar({ user: propUser, isAdmin, treeMembers = 
 
         const key = `${pakshya}||${tithiName}||${tithiYear}||${tithiMonth}`;
         if (!map.has(key)) {
-          map.set(key, t.startDate);
+          map.set(key, { startDate: t.startDate, startTime: t.startTime || null });
         }
       });
     });
@@ -1056,7 +1057,9 @@ export default function NepaliCalendar({ user: propUser, isAdmin, treeMembers = 
 
     const key = `${pakshaNepali}||${tithiName}||${targetYear}||${expectedMonth}`;
     const found = tithiDateLookup.get(key);
-    return found !== undefined ? found : null; // null = tithi absent, hide event
+    if (found === undefined) return null; // tithi absent, hide event
+    // Apply 12:30 PM cutoff: if tithi starts after 12:30 PM, event shows next day
+    return getTithiEventDisplayDate(found.startDate, found.startTime);
   }, [currentBsYear, tithiDateLookup]);
 
   // Helper function to get events for a specific date
@@ -1088,35 +1091,31 @@ export default function NepaliCalendar({ user: propUser, isAdmin, treeMembers = 
         
         // A. Tithi-based Recurrence
         if (event.tithi) {
-          // Check if any tithi on this day matches the event's tithi
+          // Check if any tithi on this day matches the event's tithi,
+          // applying the 12:30 PM cutoff so the event shows on exactly one day.
           return targetTithis.some(t => {
             const { pakshya: tPaksha, tithi: tName } = parseTithiName(t.name);
             
             // Match Paksha and Tithi Name
-            // Note: event.tithi.paksha is 'Shukla'/'Krishna', tPaksha is 'शुक्लपक्ष'/'कृष्णपक्ष'
             const eventPakshaNepali = normalizePakshaToNepali(event.tithi.paksha);
             if (tPaksha !== eventPakshaNepali) return false;
             
-            // Match Tithi Name (e.g., 'Pratipada')
-            // event.tithi.name might be 'Pratipada', tName might be 'प्रतिपदा' or 'Pratipada' depending on data
-            // Let's use getTithiIndexByName to normalize
             const eventTithiIndex = getTithiIndexByName(event.tithi.name, { fallbackToOne: false });
             const currentTithiIndex = getTithiIndexByName(tName, { fallbackToOne: false });
 
-            // If we can't confidently parse either tithi index, do NOT match (prevents false positives
-            // that can show up as events appearing on wrong tithis/dates).
             if (!eventTithiIndex || !currentTithiIndex) return false;
-
             if (eventTithiIndex !== currentTithiIndex) return false;
             
-            // If Monthly, we are done (matches Paksha + Tithi)
+            // Apply 12:30 PM cutoff: the event should appear on the tithi's display date only
+            const displayDate = getTithiEventDisplayDate(t.startDate, t.startTime);
+            if (displayDate !== dateKey) return false;
+
+            // If Monthly, we are done (matches Paksha + Tithi + display date)
             if (event.repetition === 'monthly') return true;
             
             // If Yearly, check Tithi Month
             if (event.repetition === 'yearly') {
               const lunarMonthName = getTithiLunarMonthName(event.tithi.paksha, eventTithiIndex, dateKey);
-              // event.tithi.month is now stored as the actual tithi lunar month name (e.g., 'वैशाख')
-              // It could be either a string (month name) or a number (if legacy data)
               let eventMonthName = event.tithi.month;
               if (typeof eventMonthName === 'number') {
                 eventMonthName = nepaliMonths[eventMonthName - 1];
@@ -1204,15 +1203,15 @@ export default function NepaliCalendar({ user: propUser, isAdmin, treeMembers = 
       if (event.isPublic) {
         // Explicitly marked as public
         publicEvents.push(event);
-      } else if (event.createdBy === user?.uid) {
-        // Created by current user and not marked public = personal/private
+      } else if (event.createdBy === user?.uid || (event.treeId && sharedTreeIds.includes(event.treeId))) {
+        // Created by current user OR from a tree explicitly shared with this user
         personalEvents.push(event);
       }
-      // Events not marked public and not created by current user are hidden
+      // Events not marked public and not created by current user and not from a shared tree are hidden
     });
     
     return { publicEvents, personalEvents };
-  }, [user]);
+  }, [user, sharedTreeIds]);
 
   // Helper function to format event title with tithi information
   const formatEventWithTithi = useCallback((event) => {
@@ -1541,7 +1540,7 @@ export default function NepaliCalendar({ user: propUser, isAdmin, treeMembers = 
     return eventsOnDate.filter(event => event.isPublic === true);
   }, [activeDate, calendarEvents, getEventsForDate]);
 
-  // Get private events for the active date in modal (user's own private events)
+  // Get private events for the active date in modal (user's own private events + shared tree events)
   const modalPersonalEvents = useMemo(() => {
     if (!activeDate || !calendarEvents.length || !user) return [];
     const [y, m, d] = activeDate.split('-').map(Number);
@@ -1549,9 +1548,9 @@ export default function NepaliCalendar({ user: propUser, isAdmin, treeMembers = 
     
     return eventsOnDate.filter(event => 
       !event.isPublic && 
-      event.createdBy === user.uid
+      (event.createdBy === user.uid || (event.treeId && sharedTreeIds.includes(event.treeId)))
     );
-  }, [activeDate, calendarEvents, user, getEventsForDate]);
+  }, [activeDate, calendarEvents, user, sharedTreeIds, getEventsForDate]);
 
   // Debug helpers previously exposed on window have been removed.
   

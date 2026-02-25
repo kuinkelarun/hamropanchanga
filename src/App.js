@@ -471,13 +471,15 @@ function AppContent() {
     // Events for LandingPageEventsSection
     const allEvents = Array.from(mergedCalendarEventsById.values()).map(event => ({
         id: event.id,
+        title: event.title,
         name: event.title,
         date: event.dateKey,
         dateKey: event.dateKey,
         personId: event.memberId || event.personId || '',
         repetition: event.repetition || 'none',
         treeId: event.treeId || null,
-        tithi: event.tithi || null
+        tithi: event.tithi || null,
+        nepaliDateForRecurrence: event.nepaliDateForRecurrence || null,
     }));
     
     const getCreatedAtMillis = (createdAt) => {
@@ -559,7 +561,7 @@ function AppContent() {
                                     className="brand-link"
                                     aria-label="Go to home"
                                 >
-                                    FamilyTree
+                                    HamroPanchanga
                                 </button>
                                 {!isHomePage && headerPageName ? (
                                     <>

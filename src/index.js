@@ -413,6 +413,39 @@ if (process.env.NODE_ENV === 'development') {
   };
 }
 
+// ──── Firestore assertion-error recovery ────────────────────────────────────
+// The Firebase JS SDK can emit INTERNAL ASSERTION FAILED errors when the
+// Firestore watch-stream reconnects in an unexpected state (or during
+// React StrictMode double-mount in development).  Once this internal state
+// machine is broken, the client can no longer receive real-time updates.
+// The only recovery is a page reload.  We reload at most once per 10 s
+// (sessionStorage cooldown) to prevent infinite loops.
+;(function setupFirestoreRecovery() {
+  function isFirestoreAssertionError(err) {
+    const msg = (err && (err.message || String(err))) || '';
+    return msg.includes('INTERNAL ASSERTION FAILED');
+  }
+
+  function maybeReload(errMsg) {
+    const lastReload = Number(sessionStorage.getItem('__fs_assert_reload') || 0);
+    if (Date.now() - lastReload < 10_000) return; // within cooldown — don't loop
+    console.warn('[HamroPanchanga] Firestore assertion error — auto-reloading to recover.', errMsg);
+    sessionStorage.setItem('__fs_assert_reload', String(Date.now()));
+    window.location.reload();
+  }
+
+  window.addEventListener('unhandledrejection', (event) => {
+    if (!isFirestoreAssertionError(event.reason)) return;
+    event.preventDefault(); // suppress browser "unhandled rejection" noise
+    maybeReload(event.reason?.message);
+  });
+
+  window.addEventListener('error', (event) => {
+    if (!isFirestoreAssertionError(event.error)) return;
+    maybeReload(event.error?.message);
+  });
+})();
+
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
   <React.StrictMode>

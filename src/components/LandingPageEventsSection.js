@@ -30,8 +30,41 @@ const LandingPageEventsSection = ({ events, familyMembers, onDoubleClickEvent, o
         return repetition;
     }, []);
 
+    // Returns true for a legitimate JS Date.
+    const isValidDate = (d) => d instanceof Date && !isNaN(d.getTime());
+
+    // Estimate an approximate AD mid-month date from a Nepali lunar month name.
+    // Used when a tithi-based event has no stored dateKey (Shraddha events, etc.)
+    // so the event still shows in the upcoming section.
+    const getTithiApproxDate = (tithiMonth) => {
+        const nepaliMonthNames = [
+            'वैशाख','ज्येष्ठ','आषाढ़','श्रावण','भाद्र','आश्विन',
+            'कार्तिक','मार्गशीर्ष','पौष','माघ','फाल्गुण','चैत्र'
+        ];
+        const idx = nepaliMonthNames.indexOf(tithiMonth);
+        if (idx === -1) return null;
+        const bsMonth = idx + 1;
+        const todayAd = new Date();
+        const bsToday = convertAdToBs(todayAd.getFullYear(), todayAd.getMonth(), todayAd.getDate());
+        if (!bsToday) return null;
+        let bsYear = bsToday.year;
+        let adDateObj = convertBsToAd(bsYear, bsMonth, 15);
+        if (!adDateObj) return null;
+        let approxDate = new Date(adDateObj.year, adDateObj.month, adDateObj.day, 12, 0, 0);
+        const todayMidnight = new Date();
+        todayMidnight.setHours(0, 0, 0, 0);
+        if (approxDate < todayMidnight) {
+            const next = convertBsToAd(bsYear + 1, bsMonth, 15);
+            if (next) approxDate = new Date(next.year, next.month, next.day, 12, 0, 0);
+        }
+        return isValidDate(approxDate) ? approxDate : null;
+    };
+
     // Helper function to calculate the next occurrence of a repeating event
     const getNextOccurrence = (originalDate, repetition, event) => {
+        // Guard: originalDate must be valid before we can compute recurrence
+        if (!isValidDate(originalDate)) return null;
+
         const today = new Date();
         today.setHours(0, 0, 0, 0);
         let nextDate = new Date(originalDate);
@@ -112,9 +145,22 @@ const LandingPageEventsSection = ({ events, familyMembers, onDoubleClickEvent, o
                 originalDate = new Date(event.date || event.dateKey);
             }
 
-            const displayDate = (event.repetition && event.repetition !== 'none') ?
-                getNextOccurrence(originalDate, event.repetition, event) :
-                originalDate;
+            // If the stored dateKey is missing or invalid, estimate from tithi month.
+            // Shraddha and other tithi-based yearly events may lack a dateKey when the
+            // tithi wasn't found at save time.  Estimate from the lunar month so the
+            // event still appears in the upcoming section rather than vanishing entirely.
+            if (!isValidDate(originalDate) && event.tithi?.month) {
+                originalDate = getTithiApproxDate(event.tithi.month);
+            }
+
+            let displayDate;
+            if (event.repetition && event.repetition !== 'none') {
+                const next = getNextOccurrence(originalDate, event.repetition, event);
+                // getNextOccurrence returns null when base date is unresolvable
+                displayDate = isValidDate(next) ? next : originalDate;
+            } else {
+                displayDate = originalDate;
+            }
 
             // Find the associated person to display their name and relation
             const person = familyMembers.find(member => member.id === event.personId);
@@ -145,14 +191,20 @@ const LandingPageEventsSection = ({ events, familyMembers, onDoubleClickEvent, o
                     return event.displayDate >= today;
             }
         })
-        .sort((a, b) => a.displayDate - b.displayDate);
+        .sort((a, b) => {
+            const ta = isValidDate(a.displayDate) ? a.displayDate.getTime() : Infinity;
+            const tb = isValidDate(b.displayDate) ? b.displayDate.getTime() : Infinity;
+            return ta - tb;
+        });
 
     const shouldGroup = ['upcoming', 'all', 'next-90-days'].includes(eventFilter);
     const groupedEvents = {};
 
     if (shouldGroup) {
         sortedAndFilteredEvents.forEach(event => {
-            const monthYear = formatNepaliMonthYear(event.displayDate).nepali;
+            const monthYear = isValidDate(event.displayDate)
+                ? formatNepaliMonthYear(event.displayDate).nepali
+                : 'मिति अनिश्चित';
             if (!groupedEvents[monthYear]) {
                 groupedEvents[monthYear] = [];
             }
@@ -202,13 +254,21 @@ const LandingPageEventsSection = ({ events, familyMembers, onDoubleClickEvent, o
                                             )}
                                         </div>
                                         <div className="text-sm text-gray-600">
-                                            <div className="font-medium text-gray-700">
-                                                {formatNepaliDate(event.displayDate).withDayShortNepali}
-                                            </div>
-                                            <div className="text-xs text-gray-500 mt-0.5">
-                                                {formatEnglishDate(event.displayDate).short}
-                                                {event.tithi && getTithiDisplayString(event)}
-                                            </div>
+                                            {isValidDate(event.displayDate) ? (
+                                                <>
+                                                    <div className="font-medium text-gray-700">
+                                                        {formatNepaliDate(event.displayDate).withDayShortNepali}
+                                                    </div>
+                                                    <div className="text-xs text-gray-500 mt-0.5">
+                                                        {formatEnglishDate(event.displayDate).short}
+                                                        {event.tithi && getTithiDisplayString(event)}
+                                                    </div>
+                                                </>
+                                            ) : (
+                                                <div className="text-xs text-gray-500 mt-0.5 italic">
+                                                    {event.tithi ? getTithiDisplayString(event) : 'मिति अनिश्चित'}
+                                                </div>
+                                            )}
                                         </div>
                                         {event.personName && (
                                             <div className="font-medium text-gray-700 text-xs mt-1">For: {event.personName} ({event.personRelation})</div>
@@ -234,17 +294,25 @@ const LandingPageEventsSection = ({ events, familyMembers, onDoubleClickEvent, o
                                     )}
                                 </div>
                                 <div className="text-sm text-gray-600">
-                                    <div className="font-medium text-gray-700">
-                                        {formatNepaliDate(event.displayDate).withDayShortNepali}
-                                    </div>
-                                    <div className="text-xs text-gray-500 mt-0.5">
-                                        {formatEnglishDate(event.displayDate).short}
-                                        {event.tithi && getTithiDisplayString(event)}
-                                    </div>
-                                </div>
+                                            {isValidDate(event.displayDate) ? (
+                                                <>
+                                                    <div className="font-medium text-gray-700">
+                                                        {formatNepaliDate(event.displayDate).withDayShortNepali}
+                                                    </div>
+                                                    <div className="text-xs text-gray-500 mt-0.5">
+                                                        {formatEnglishDate(event.displayDate).short}
+                                                        {event.tithi && getTithiDisplayString(event)}
+                                                    </div>
+                                                </>
+                                            ) : (
+                                                <div className="text-xs text-gray-500 mt-0.5 italic">
+                                                    {event.tithi ? getTithiDisplayString(event) : 'मिति अनिश्चित'}
+                                                </div>
+                                            )}
+                                        </div>
                                 {event.personName && (
-                                    <div className="font-medium text-gray-700 text-xs mt-1">For: {event.personName} ({event.personRelation})</div>
-                                )}
+                                            <div className="font-medium text-gray-700 text-xs mt-1">For: {event.personName} ({event.personRelation})</div>
+                                        )}
                             </div>
                         ))}
                     </div>

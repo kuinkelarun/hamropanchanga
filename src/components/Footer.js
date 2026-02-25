@@ -8,7 +8,7 @@ const Footer = () => {
         <footer className="app-footer">
             <div className="footer-content">
                 <div className="footer-section">
-                    <h3 className="footer-title">My Family Tree</h3>
+                    <h3 className="footer-title">HamroPanchanga</h3>
                     <p className="footer-description">
                         Connect your past. Branch out your future.
                     </p>
@@ -36,7 +36,7 @@ const Footer = () => {
             
             <div className="footer-bottom">
                 <p className="footer-copyright">
-                    © {currentYear} My Family Tree. All rights reserved.
+                    © {currentYear} HamroPanchanga. All rights reserved.
                 </p>
             </div>
         </footer>

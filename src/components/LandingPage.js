@@ -1,11 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useLanguage } from '../contexts/LanguageContext';
 import LandingPageEventsSection from './LandingPageEventsSection';
 import './LandingPage.css';
-import heroAnimation from './hero-image.png';
 import NepaliCalendar from './NepaliCalendar';
 import Block1 from './Block1';
 import Footer from './Footer';
@@ -62,8 +61,16 @@ const LandingPage = ({ user, isAdmin, trees = [], treeMembers = [], events, fami
     // Filter trees to show only those owned by the current user
     const myTrees = user ? trees.filter(tree => tree.ownerUid === user.uid) : [];
 
-    // IDs of trees explicitly shared with this user (not owned)
-    const sharedTreeIds = user ? trees.filter(t => t.ownerUid !== user.uid).map(t => t.id) : [];
+    // IDs of trees explicitly shared with this user (not owned).
+    // Memoized to produce a stable reference — NepaliCalendar's event listener
+    // useEffect depends on this array; a new reference on every render (e.g. from
+    // typing in the search box) would tear down and rebuild all Firestore listeners
+    // on every keystroke, leaving shared-tree events perpetually absent from calendar day cards.
+    const sharedTreeIds = useMemo(
+        () => user ? trees.filter(t => t.ownerUid !== user.uid).map(t => t.id) : [],
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+        [user?.uid, trees]
+    );
 
         // Note: BlockTithi has its own visibility loader; we render it alongside Block1
     
@@ -74,14 +81,8 @@ const LandingPage = ({ user, isAdmin, trees = [], treeMembers = [], events, fami
                     <section 
                         className="hero-section" 
                         aria-label="Hero section"
-                        style={{ 
-                            backgroundImage: `url(${heroAnimation})`, 
-                            backgroundSize: 'cover', 
-                            backgroundPosition: 'center',
-                            backgroundRepeat: 'no-repeat'
-                        }}
                     >
-                        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 w-full h-full flex items-center">
+                        <div className="hero-inner max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
                             <div className="hero-content">
                                 <h1 className="app-name">{t('hero.title')}</h1>
                                 <p className="tagline">{t('hero.tagline')}</p>
@@ -92,6 +93,17 @@ const LandingPage = ({ user, isAdmin, trees = [], treeMembers = [], events, fami
                                 >
                                     {t('hero.buildYourTree')}
                                 </button>
+                            </div>
+                            <div className="hero-video">
+                                <div className="hero-video-wrapper">
+                                    <iframe
+                                        src="https://www.youtube.com/embed/YOUR_VIDEO_ID"
+                                        title="How to build your family tree"
+                                        frameBorder="0"
+                                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                        allowFullScreen
+                                    />
+                                </div>
                             </div>
                         </div>
                     </section>
