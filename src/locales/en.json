@@ -45,12 +45,12 @@
     "backToHome": "Back to Home"
   },
   "hero": {
-    "title": "My Family Tree",
+    "title": "HamroPanchanga",
     "tagline": "Connect your past. Branch out your future.",
     "buildYourTree": "Build Your Tree"
   },
   "login": {
-    "welcome": "Welcome to Family Tree CRM",
+    "welcome": "Welcome to HamroPanchanga",
     "pleaseSignIn": "Please sign in to continue."
   },
   "home": {

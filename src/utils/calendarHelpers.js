@@ -167,3 +167,41 @@ export function dateKeyFromAd(ad) {
 export function padDateKey(year, month, day) {
   return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
 }
+
+// ──── Tithi display-date cutoff ────
+
+/** Cutoff time: tithis starting at or after this time (24h) push events to next day. */
+const TITHI_EVENT_CUTOFF_HOUR = 12;
+const TITHI_EVENT_CUTOFF_MINUTE = 30;
+
+/**
+ * Determine the single "display date" for events linked to a tithi,
+ * using a 12:30 PM cutoff on the tithi's startTime.
+ *
+ *  - If startTime < 12:30 PM → display on startDate
+ *  - If startTime >= 12:30 PM → display on startDate + 1 day
+ *
+ * @param {string} startDate  "YYYY-MM-DD"
+ * @param {string} startTime  time string (e.g. "7:11", "14:30", "2:00 PM")
+ * @returns {string} "YYYY-MM-DD" — the single day the event should appear on
+ */
+export function getTithiEventDisplayDate(startDate, startTime) {
+  if (!startDate) return startDate;
+
+  const t24 = normalizeTimeTo24(startTime);
+  if (!t24) return startDate; // can't parse → default to startDate
+
+  const [hh, mm] = t24.split(':').map(Number);
+  const isAfterCutoff = hh > TITHI_EVENT_CUTOFF_HOUR ||
+    (hh === TITHI_EVENT_CUTOFF_HOUR && mm >= TITHI_EVENT_CUTOFF_MINUTE);
+
+  if (!isAfterCutoff) return startDate;
+
+  // Advance one day
+  const d = new Date(startDate + 'T00:00:00');
+  d.setDate(d.getDate() + 1);
+  const y = d.getFullYear();
+  const m = d.getMonth() + 1;
+  const day = d.getDate();
+  return `${y}-${String(m).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+}

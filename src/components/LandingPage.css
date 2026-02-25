@@ -14,31 +14,48 @@
   position: relative;
   display: flex;
   align-items: center;
-  /* justify-content removed to allow inner container to control layout */
-  height: 40vh;
-  min-height: 300px;
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
   color: white;
-  padding: 0;
+  padding: 2.5rem 0;
   margin-bottom: 0;
   overflow: hidden;
 }
 
-/* Hero background overlay */
-.hero-section::before {
-  content: '';
+/* Two-column inner layout */
+.hero-inner {
+  display: flex;
+  align-items: center;
+  gap: 2.5rem;
+}
+
+.hero-content {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Video column */
+.hero-video {
+  flex: 0 0 420px;
+  max-width: 420px;
+}
+
+.hero-video-wrapper {
+  position: relative;
+  width: 100%;
+  padding-bottom: 56.25%; /* 16:9 aspect ratio */
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+  background: #000;
+}
+
+.hero-video-wrapper iframe {
   position: absolute;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
-  background: var(--hero-overlay);
-  z-index: 1;
-}
-
-.hero-content {
-  position: relative;
-  z-index: 2;
-  max-width: 100%;
+  border: none;
 }
 
 /* Mobile-first typography adjustments */
@@ -55,9 +72,6 @@
   }
   .tagline {
     font-size: 1rem;
-  }
-  .hero-section {
-    padding: 0; /* Ensure no extra padding on mobile */
   }
 }
 
@@ -185,10 +199,25 @@
 /* Tablet and below */
 @media (max-width: 768px) {
   .hero-section {
+    padding: 2rem 0;
+  }
+
+  .hero-inner {
     flex-direction: column;
-    height: auto;
-    padding: var(--space-xl);
     text-align: center;
+    gap: 1.5rem;
+  }
+
+  .hero-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .hero-video {
+    flex: none;
+    max-width: 100%;
+    width: 100%;
   }
 
   .app-name {
@@ -230,7 +259,7 @@
 /* Mobile small */
 @media (max-width: 480px) {
   .hero-section {
-    padding: var(--space-md);
+    padding: 1.5rem 0;
   }
 
   .app-name {
@@ -256,7 +285,7 @@
 /* Mobile extra small */
 @media (max-width: 320px) {
   .hero-section {
-    padding: var(--space-sm);
+    padding: 1rem 0;
   }
 
   .app-name {
