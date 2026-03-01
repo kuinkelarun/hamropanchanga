@@ -16,7 +16,7 @@
 const admin = require('../functions/node_modules/firebase-admin');
 const crypto = require('crypto');
 const path = require('path');
-
+i 
 // ── Init Firebase Admin ───────────────────────────────────────────────────────
 // Uses GOOGLE_APPLICATION_CREDENTIALS env var, or falls back to functions/serviceAccountKey.json
 const serviceAccountPath = path.resolve(__dirname, '..', 'functions', 'serviceAccountKey.json');

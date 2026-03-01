@@ -9,8 +9,20 @@ const nepaliWeekdays = NEPALI_WEEKDAYS;
 const englishWeekdays = ENGLISH_WEEKDAYS;
 const nepaliNumbers = NEPALI_NUMBERS;
 
-const minBsYear = Math.min(...Object.keys(bsCalendarData).map(n=>+n));
-const maxBsYear = Math.max(...Object.keys(bsCalendarData).map(n=>+n));
+export const minBsYear = Math.min(...Object.keys(bsCalendarData).map(n=>+n));
+export const maxBsYear = Math.max(...Object.keys(bsCalendarData).map(n=>+n));
+
+let _calendarDataOverride = null;
+
+export function setCalendarDataOverride(firestoreData) {
+  _calendarDataOverride = firestoreData;
+}
+
+export function getActiveCalendarData() {
+  return _calendarDataOverride
+    ? { ...bsCalendarData, ..._calendarDataOverride }
+    : bsCalendarData;
+}
 
 export function toNepaliNumber(num) {
   return String(num).split('').map(d => nepaliNumbers[+d] ?? d).join('');
@@ -33,7 +45,7 @@ export function convertAdToBs(year, month, day, customCalendarData = null) {
   
   // Merge custom calendar data with default bsCalendarData
   // Custom data overrides defaults for years that have been customized
-  const calendarData = customCalendarData ? { ...bsCalendarData, ...customCalendarData } : bsCalendarData;
+  const calendarData = customCalendarData ? { ...getActiveCalendarData(), ...customCalendarData } : getActiveCalendarData();
 
   // Compute the UTC-milliseconds instant corresponding to NPT midnight for the given Y/M/D
   const adNptMidnightMs = Date.UTC(year, month, day) - nptOffsetMs;
@@ -121,7 +133,7 @@ export function convertAdToBs(year, month, day, customCalendarData = null) {
 
 export function convertBsToAd(year, month, day, customCalendarData = null) {
   // Merge custom calendar data with defaults
-  const calendarData = customCalendarData ? { ...bsCalendarData, ...customCalendarData } : bsCalendarData;
+  const calendarData = customCalendarData ? { ...getActiveCalendarData(), ...customCalendarData } : getActiveCalendarData();
   
   const startAdData = calendarData[year];
   if (!startAdData) return null;
@@ -245,7 +257,7 @@ export function parseNepaliDate(dateStr, customCalendarData = null) {
   if (!dateStr) return null;
   
   // Merge custom calendar data with defaults
-  const calendarData = customCalendarData ? { ...bsCalendarData, ...customCalendarData } : bsCalendarData;
+  const calendarData = customCalendarData ? { ...getActiveCalendarData(), ...customCalendarData } : getActiveCalendarData();
   
   // Convert Nepali numerals to English if present
   let normalizedStr = dateStr.trim();
@@ -623,7 +635,7 @@ export function findPurnimaInMonth(bsYear, bsMonth, tithiLookupFn = null) {
   
   try {
     // Get the number of days in this month (varies: 32 or 33 days)
-    const monthDays = bsCalendarData[bsYear]?.[bsMonth - 1] || 32;
+    const monthDays = getActiveCalendarData()[bsYear]?.daysInMonths?.[bsMonth - 1] || 32;
     
     // Scan the entire month looking for Shukla Purnima (tithi 15 in Shukla Paksha)
     for (let day = 1; day <= monthDays; day++) {
@@ -1308,6 +1320,6 @@ export function getTithisForMonth(monthNumber) {
   ];
 }
 
-export { nepaliMonths, englishMonths, nepaliWeekdays, englishWeekdays, minBsYear, maxBsYear };
+export { nepaliMonths, englishMonths, nepaliWeekdays, englishWeekdays };
 
 

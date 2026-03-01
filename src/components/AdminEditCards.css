@@ -581,3 +581,124 @@
         width: 100%;
     }
 }
+
+/* Hero Section Settings Panel */
+.admin-section-panel {
+    background: white;
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    border: 1px solid #e2e8f0;
+}
+
+.admin-section-panel-title {
+    margin: 0 0 0.5rem 0;
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #2d3748;
+}
+
+.admin-section-panel-desc {
+    margin: 0 0 1rem 0;
+    font-size: 0.875rem;
+    color: #718096;
+}
+
+.admin-hero-video-row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+
+.admin-hero-video-input {
+    flex: 1;
+    min-width: 220px;
+    padding: 0.6rem 0.9rem;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    line-height: 1.5;
+    transition: border-color 0.2s;
+    box-sizing: border-box;
+}
+
+.admin-hero-video-input:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.15);
+}
+
+.admin-hero-save-btn {
+    flex-shrink: 0;
+    padding: 0.6rem 1.25rem;
+    background: #4299e1;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.15s;
+    white-space: nowrap;
+}
+
+.admin-hero-save-btn:hover:not(:disabled) {
+    background: #3182ce;
+    transform: translateY(-1px);
+}
+
+.admin-hero-save-btn:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+
+.admin-hero-clear-btn {
+    flex-shrink: 0;
+    padding: 0.6rem 1rem;
+    background: #fff;
+    color: #718096;
+    border: 1px solid #cbd5e0;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.2s, border-color 0.2s, color 0.2s;
+    white-space: nowrap;
+}
+
+.admin-hero-clear-btn:hover:not(:disabled) {
+    background: #fff5f5;
+    border-color: #fc8181;
+    color: #e53e3e;
+}
+
+.admin-hero-clear-btn:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+
+.admin-hero-video-preview {
+    margin-top: 1.25rem;
+}
+
+.admin-hero-video-wrapper {
+    position: relative;
+    width: 100%;
+    max-width: 480px;
+    padding-bottom: 27%; /* ~16:9 for max-width:480 relative to full panel */
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    background: #000;
+}
+
+.admin-hero-video-wrapper iframe {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    border: none;
+}

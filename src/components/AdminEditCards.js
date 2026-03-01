@@ -6,6 +6,24 @@ import './AdminEditCards.css';
 import { useUserPermissions } from '../hooks/usePermissions';
 import { PERMISSIONS } from '../constants/roles';
 
+// Extract a YouTube video ID from a full URL or a bare ID
+const extractYouTubeVideoId = (input) => {
+    if (!input) return '';
+    const trimmed = input.trim();
+    // Already an embed URL
+    const embedMatch = trimmed.match(/youtube\.com\/embed\/([\w-]{11})/);
+    if (embedMatch) return embedMatch[1];
+    // Standard watch URL
+    const watchMatch = trimmed.match(/[?&]v=([\w-]{11})/);
+    if (watchMatch) return watchMatch[1];
+    // Shortened URL
+    const shortMatch = trimmed.match(/youtu\.be\/([\w-]{11})/);
+    if (shortMatch) return shortMatch[1];
+    // Bare 11-char ID
+    if (/^[\w-]{11}$/.test(trimmed)) return trimmed;
+    return '';
+};
+
 const AdminEditCards = ({ user, isAdmin }) => {
     const [cards, setCards] = useState([]);
     const [isEditing, setIsEditing] = useState(false);
@@ -14,6 +32,8 @@ const AdminEditCards = ({ user, isAdmin }) => {
     const [notification, setNotification] = useState({ show: false, message: '', type: '' });
     const [block1Visible, setBlock1Visible] = useState(true);
     const [block2Visible, setBlock2Visible] = useState(true);
+    const [heroVideoInput, setHeroVideoInput] = useState('');
+    const [heroVideoSaving, setHeroVideoSaving] = useState(false);
     
     // Check permissions
     const { hasPermission } = useUserPermissions(user);
@@ -110,6 +130,45 @@ const AdminEditCards = ({ user, isAdmin }) => {
             console.error('Error toggling Block 1 visibility:', error);
             showNotification('Error updating visibility', 'error');
         }
+    };
+
+    // Fetch hero video setting
+    useEffect(() => {
+        if (!user || !isAdmin) return;
+        const fetchHeroVideo = async () => {
+            try {
+                const settingsDoc = await getDoc(doc(db, 'siteSettings', 'heroVideo'));
+                if (settingsDoc.exists()) {
+                    setHeroVideoInput(settingsDoc.data().videoId || '');
+                }
+            } catch (error) {
+                console.error('Error fetching hero video setting:', error);
+            }
+        };
+        fetchHeroVideo();
+    }, [user, isAdmin]);
+
+    // Save hero video URL
+    const saveHeroVideoUrl = async () => {
+        const videoId = extractYouTubeVideoId(heroVideoInput);
+        if (heroVideoInput.trim() && !videoId) {
+            showNotification('Invalid YouTube URL or video ID', 'error');
+            return;
+        }
+        setHeroVideoSaving(true);
+        try {
+            await setDoc(doc(db, 'siteSettings', 'heroVideo'), {
+                videoId,
+                updatedAt: new Date().toISOString(),
+                updatedBy: user.uid
+            });
+            setHeroVideoInput(videoId);
+            showNotification(videoId ? 'Hero video saved' : 'Hero video removed', 'success');
+        } catch (error) {
+            console.error('Error saving hero video:', error);
+            showNotification('Error saving hero video', 'error');
+        }
+        setHeroVideoSaving(false);
     };
 
     // Toggle Block 2 visibility
@@ -352,6 +411,56 @@ const AdminEditCards = ({ user, isAdmin }) => {
                     </button>
                 </div>
             </div>
+
+            {/* Hero Section Settings */}
+            {isAdmin && (
+                <div className="admin-section-panel">
+                    <h2 className="admin-section-panel-title">🎬 Hero Section — YouTube Video</h2>
+                    <p className="admin-section-panel-desc">
+                        Paste a YouTube URL or video ID. Leave blank and save to remove the video from the hero section.
+                    </p>
+                    <div className="admin-hero-video-row">
+                        <input
+                            type="text"
+                            className="admin-hero-video-input"
+                            value={heroVideoInput}
+                            onChange={(e) => setHeroVideoInput(e.target.value)}
+                            placeholder="e.g. https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+                        />
+                        <button
+                            className="admin-hero-save-btn"
+                            onClick={saveHeroVideoUrl}
+                            disabled={heroVideoSaving}
+                        >
+                            {heroVideoSaving ? 'Saving…' : 'Save'}
+                        </button>
+                        {heroVideoInput && (
+                            <button
+                                className="admin-hero-clear-btn"
+                                onClick={() => setHeroVideoInput('')}
+                                disabled={heroVideoSaving}
+                                title="Clear"
+                            >
+                                Clear
+                            </button>
+                        )}
+                    </div>
+                    {extractYouTubeVideoId(heroVideoInput) && (
+                        <div className="admin-hero-video-preview">
+                            <p className="admin-section-panel-desc" style={{ marginBottom: '0.5rem' }}>Preview:</p>
+                            <div className="admin-hero-video-wrapper">
+                                <iframe
+                                    src={`https://www.youtube.com/embed/${extractYouTubeVideoId(heroVideoInput)}`}
+                                    title="Hero video preview"
+                                    frameBorder="0"
+                                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                    allowFullScreen
+                                />
+                            </div>
+                        </div>
+                    )}
+                </div>
+            )}
 
             {/* Cards Grid */}
             <div className="admin-cards-grid">
