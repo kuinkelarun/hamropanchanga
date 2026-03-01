@@ -8,14 +8,17 @@ import { PERMISSIONS } from '../constants/roles';
 import { useLanguage } from '../contexts/LanguageContext';
 import './NepaliCalendar.css';
 import ConfirmModal from './ConfirmModal';
-import bsCalendarData from '../data/bsCalendarData';
 
 import {
   getTithiLunarMonthName,
   getTithiIndexByName,
   getTithiYearFromAdDate,
   convertAdToBs,
-  convertBsToAd
+  convertBsToAd,
+  setCalendarDataOverride,
+  getActiveCalendarData,
+  minBsYear,
+  maxBsYear,
 } from '../utils/nepaliDateUtils';
 import {
   NEPALI_MONTHS as nepaliMonths,
@@ -48,16 +51,8 @@ import AddEventModal from './calendar/AddEventModal';
 import AddTithiModal from './calendar/AddTithiModal';
 import DayDetailsModal from './calendar/DayDetailsModal';
 
-// bsCalendarData moved to src/data/bsCalendarData.js
-// Note: This is a fallback; we'll load updated data from Firestore if available
-let mergedCalendarData = { ...bsCalendarData };
-const minBsYear = Math.min(...Object.keys(bsCalendarData).map(n=>+n));
-const maxBsYear = Math.max(...Object.keys(bsCalendarData).map(n=>+n));
-
-// Function to get calendar data (Firestore override + bsCalendarData fallback)
-const getCalendarData = (year) => {
-  return mergedCalendarData[year] || bsCalendarData[year];
-};
+// getCalendarData: delegates to getActiveCalendarData (Firestore once loaded, bsCalendarData as fallback)
+const getCalendarData = (year) => getActiveCalendarData()[year];
 
 // Note: AD↔BS conversions are centralized in nepaliDateUtils to ensure
 // consistent, Nepal-time-based handling across the app. We import and use
@@ -102,6 +97,7 @@ export default function NepaliCalendar({ user: propUser, isAdmin, treeMembers = 
   const [tithisByDate, setTithisByDate] = useState({}); // { "YYYY-M-D": [{name,start,end}, ...] }
   const [calendarEvents, setCalendarEvents] = useState([]); // Array of calendar events
   const [activeDate, setActiveDate] = useState(null);
+  const [firestoreCalReady, setFirestoreCalReady] = useState(false);
 
   // Permissions
   const { hasPermission, loading: permsLoading, isSuperUser } = useUserPermissions(user);
@@ -209,44 +205,50 @@ export default function NepaliCalendar({ user: propUser, isAdmin, treeMembers = 
     };
   }, [isDev]);
 
-  // Load Nepali calendar configuration from Firestore and merge with bsCalendarData
-  // This allows admin edits to be reflected in the calendar
+  // Load Nepali calendar configuration from Firestore — sets it as the active calendar data
+  // (bsCalendarData.js acts as fallback until this completes)
   useEffect(() => {
     const loadCalendarConfiguration = async () => {
       try {
         const calendarYearsSnapshot = await getDocs(collection(db, COLLECTIONS.NEPALI_CALENDAR_YEARS));
         if (calendarYearsSnapshot.empty) {
-          if (isDev) console.log('No custom calendar years found in Firestore, using defaults only');
+          if (isDev) console.log('No calendar years found in Firestore, using bsCalendarData fallback');
+          setFirestoreCalReady(true);
           return;
         }
 
-        // Merge Firestore data with bsCalendarData
+        // Build a fresh data map from Firestore documents
+        const firestoreCalData = {};
         calendarYearsSnapshot.docs.forEach((docSnap) => {
+          const year = parseInt(docSnap.id);
+          if (isNaN(year)) return;
           const data = docSnap.data();
-          const year = parseInt(data.year);
-          
+
           // Convert startAdDate string to Date without timezone offset
           let startAdDate = data.startAdDate;
           if (typeof startAdDate === 'string') {
-            // Parse "YYYY-MM-DD" format manually to avoid timezone issues
             const [dateYear, dateMonth, dateDay] = startAdDate.split('-');
             startAdDate = new Date(parseInt(dateYear), parseInt(dateMonth) - 1, parseInt(dateDay));
           }
-          
-          // Update mergedCalendarData with Firestore values
-          mergedCalendarData[year] = {
+
+          firestoreCalData[year] = {
             startAdDate,
             daysInMonths: data.daysInMonths || []
           };
-          
-          if (isDev) console.log(`Loaded custom calendar year ${year} from Firestore:`, mergedCalendarData[year]);
+
+          if (isDev) console.log(`Loaded calendar year ${year} from Firestore`);
         });
+
+        // Push the Firestore data into nepaliDateUtils as the single source of truth
+        setCalendarDataOverride(firestoreCalData);
+        setFirestoreCalReady(true);
       } catch (error) {
         if (error.message && error.message.includes('permission')) {
-          if (isDev) console.log('No permission to read nepaliCalendarYears collection');
+          if (isDev) console.log('No permission to read nepaliCalendarYears collection — using bsCalendarData fallback');
         } else {
-          if (isDev) console.log('Calendar configuration load error (using defaults):', error.message);
+          if (isDev) console.log('Calendar configuration load error (using bsCalendarData fallback):', error.message);
         }
+        setFirestoreCalReady(true); // still mark ready so UI doesn't stall
       }
     };
 
@@ -494,7 +496,8 @@ export default function NepaliCalendar({ user: propUser, isAdmin, treeMembers = 
 
   const nepaliMonthDays = useMemo(() => {
     return getCalendarData(currentBsYear)?.daysInMonths[currentBsMonth-1] ?? 30;
-  }, [currentBsYear, currentBsMonth]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentBsYear, currentBsMonth, firestoreCalReady]);
 
   const firstDayOfBsMonthAd = useMemo(() => {
     return convertBsToAd(currentBsYear, currentBsMonth, 1);

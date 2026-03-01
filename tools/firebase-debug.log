@@ -1,0 +1,39 @@
+[debug] [2026-03-01T17:59:24.146Z] ----------------------------------------------------------------------
+[debug] [2026-03-01T17:59:24.149Z] Command:       C:\Program Files\nodejs\node.exe C:\Users\User\AppData\Roaming\npm\node_modules\firebase-tools\lib\bin\firebase.js login:ci --no-localhost
+[debug] [2026-03-01T17:59:24.150Z] CLI Version:   15.5.1
+[debug] [2026-03-01T17:59:24.150Z] Platform:      win32
+[debug] [2026-03-01T17:59:24.150Z] Node Version:  v22.18.0
+[debug] [2026-03-01T17:59:24.151Z] Time:          Sun Mar 01 2026 12:59:24 GMT-0500 (Eastern Standard Time)
+[debug] [2026-03-01T17:59:24.151Z] ----------------------------------------------------------------------
+[debug] 
+[warn] !  Authenticating with a `login:ci` token is deprecated and will be removed in a future major version of `firebase-tools`. Instead, use a service account key with `GOOGLE_APPLICATION_CREDENTIALS`: https://cloud.google.com/docs/authentication/getting-started 
+[debug] [2026-03-01T17:59:24.474Z] >>> [apiv2][query] POST https://auth.firebase.tools/attest [none]
+[debug] [2026-03-01T17:59:24.474Z] >>> [apiv2][body] POST https://auth.firebase.tools/attest {"session_id":"2a1e8414-58d8-4f66-ad5d-66f197a598ee"}
+[debug] [2026-03-01T17:59:24.954Z] <<< [apiv2][status] POST https://auth.firebase.tools/attest 200
+[debug] [2026-03-01T17:59:24.954Z] <<< [apiv2][body] POST https://auth.firebase.tools/attest {"token":"GEKqxMrhbWe_Ll-FKBFH16PJ8Kg9eb0nNA4nB1-haU4"}
+[info] 
+[info] To sign in to the Firebase CLI:
+[info] 
+[info] 1. Take note of your session ID:
+[info] 
+[info]    2A1E8
+[info] 
+[info] 2. Visit the URL below on any device and follow the instructions to get your code:
+[info] 
+[info]    https://auth.firebase.tools/login?code_challenge=TKzgl--DlcxxWRFAFj1V03TVCsFqYJNOSA5ohHPvP68&session=2a1e8414-58d8-4f66-ad5d-66f197a598ee&attest=GEKqxMrhbWe_Ll-FKBFH16PJ8Kg9eb0nNA4nB1-haU4
+[info] 
+[info] 3. Paste or enter the authorization code below once you have it:
+[info] 
+[debug] [2026-03-01T17:59:40.544Z] ExitPromptError: User force closed the prompt with SIGINT
+    at Interface.sigint (C:\Users\User\AppData\Roaming\npm\node_modules\firebase-tools\node_modules\@inquirer\core\dist\commonjs\lib\create-prompt.js:101:37)
+    at Interface.emit (node:events:518:28)
+    at [_ttyWrite] [as _ttyWrite] (node:internal/readline/interface:1132:18)
+    at ReadStream.onkeypress (node:internal/readline/interface:271:20)
+    at ReadStream.emit (node:events:530:35)
+    at emitKeys (node:internal/readline/utils:370:14)
+    at emitKeys.next (<anonymous>)
+    at ReadStream.onData (node:internal/readline/emitKeypressEvents:64:36)
+    at ReadStream.emit (node:events:518:28)
+    at addChunk (node:internal/streams/readable:561:12)
+[error] 
+[error] Error: An unexpected error has occurred.

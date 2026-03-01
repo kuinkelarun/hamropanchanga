@@ -12,6 +12,7 @@ import Footer from './Footer';
 const LandingPage = ({ user, isAdmin, trees = [], treeMembers = [], events, familyMembers, onDoubleClickEvent, onEventClick }) => {
     const { t } = useLanguage();
     const [block1Visible, setBlock1Visible] = useState(true); // Optimistically show Block1, hide if needed
+    const [heroVideoId, setHeroVideoId] = useState('');
     const navigate = useNavigate();
 
     // Fetch Block 1 visibility setting
@@ -34,6 +35,21 @@ const LandingPage = ({ user, isAdmin, trees = [], treeMembers = [], events, fami
         
             fetchBlock1Visibility();
         }, []);
+
+    // Fetch hero YouTube video ID
+    useEffect(() => {
+        const fetchHeroVideo = async () => {
+            try {
+                const settingsDoc = await getDoc(doc(db, 'siteSettings', 'heroVideo'));
+                if (settingsDoc.exists()) {
+                    setHeroVideoId(settingsDoc.data().videoId || '');
+                }
+            } catch (error) {
+                console.error('Error fetching hero video setting:', error);
+            }
+        };
+        fetchHeroVideo();
+    }, []);
 
     // Restore scroll position when returning to landing page
     useEffect(() => {
@@ -90,10 +106,11 @@ const LandingPage = ({ user, isAdmin, trees = [], treeMembers = [], events, fami
                                     {t('hero.buildYourTree')}
                                 </button>
                             </div>
+                            {heroVideoId && (
                             <div className="hero-video">
                                 <div className="hero-video-wrapper">
                                     <iframe
-                                        src="https://www.youtube.com/embed/YOUR_VIDEO_ID"
+                                        src={`https://www.youtube.com/embed/${heroVideoId}`}
                                         title="How to build your family tree"
                                         frameBorder="0"
                                         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
@@ -101,6 +118,7 @@ const LandingPage = ({ user, isAdmin, trees = [], treeMembers = [], events, fami
                                     />
                                 </div>
                             </div>
+                            )}
                         </div>
                     </section>
                 </div>

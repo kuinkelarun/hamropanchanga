@@ -1,8 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { db } from '../firebase';
-import { doc, setDoc, getDoc, collection, getDocs, query, where } from 'firebase/firestore';
+import { doc, setDoc, collection, getDocs } from 'firebase/firestore';
 import { COLLECTIONS } from '../constants/firestoreCollections';
-import bsCalendarData from '../data/bsCalendarData';
 import { NEPALI_MONTHS } from '../constants/calendarConstants';
 import '../styles/NepaliCalendarManagement.css';
 
@@ -11,7 +10,8 @@ const nepaliMonthNames = NEPALI_MONTHS;
 const NepaliCalendarManagement = ({ hasPermission, PERMISSIONS }) => {
   const [mode, setMode] = useState('view'); // 'view', 'add', 'edit'
   const [selectedYear, setSelectedYear] = useState(null);
-  const [yearsList, setYearsList] = useState([]);
+  const [calendarData, setCalendarData] = useState({}); // year (int) → full doc data — single source of truth
+  const [loading, setLoading] = useState(true);
   const [formData, setFormData] = useState({
     year: '',
     startAdDate: '',
@@ -20,47 +20,57 @@ const NepaliCalendarManagement = ({ hasPermission, PERMISSIONS }) => {
   });
   const [message, setMessage] = useState('');
   const [messageType, setMessageType] = useState('');
+  const [scrollTarget, setScrollTarget] = useState(null); // year to scroll back to when returning to view
+  const yearCardRefs = useRef({}); // year → DOM element
 
-  // Initialize years list
-  useEffect(() => {
-    loadYearsList();
+  // ── Load all calendar data from Firestore (single source of truth) ──────────
+  const loadAllCalendarData = useCallback(async () => {
+    setLoading(true);
+    try {
+      const snapshot = await getDocs(collection(db, COLLECTIONS.NEPALI_CALENDAR_YEARS));
+      const data = {};
+      snapshot.docs.forEach(docSnap => {
+        const year = parseInt(docSnap.id);
+        if (isNaN(year)) return;
+        const d = docSnap.data();
+        // Normalize startAdDate to YYYY-MM-DD string regardless of how it was stored
+        let startAdDate = d.startAdDate;
+        if (startAdDate && typeof startAdDate.toDate === 'function') {
+          startAdDate = startAdDate.toDate().toISOString().split('T')[0];
+        } else if (startAdDate instanceof Date) {
+          startAdDate = startAdDate.toISOString().split('T')[0];
+        }
+        data[year] = { ...d, startAdDate };
+      });
+      setCalendarData(data);
+    } catch (error) {
+      console.error('Error loading calendar data:', error);
+      setMessage('❌ Error loading calendar data: ' + error.message);
+      setMessageType('error');
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  // Load years from Firestore and merge with bsCalendarData
-  const loadYearsList = async () => {
-    try {
-      const years = Object.keys(bsCalendarData)
-        .map(y => parseInt(y))
-        .sort((a, b) => a - b);
-      
-      // Also try to load custom years from Firestore
-      try {
-        const customYearsSnapshot = await getDocs(collection(db, COLLECTIONS.NEPALI_CALENDAR_YEARS));
-        const customYears = customYearsSnapshot.docs.map(doc => {
-          const data = doc.data();
-          const year = parseInt(data.year);
-          if (!years.includes(year)) {
-            years.push(year);
-          }
-          return year;
-        });
-        years.sort((a, b) => a - b);
-      } catch (e) {
-        // Collection may not exist yet or user lacks permissions; that's fine
-        if (e.message && e.message.includes('permission')) {
-          console.warn('Permission denied accessing nepaliCalendarYears collection');
-        } else {
-          console.log('nepaliCalendarYears collection not yet created, using only bsCalendarData');
+  useEffect(() => {
+    loadAllCalendarData();
+  }, [loadAllCalendarData]);
+
+  // ── Scroll back to the edited year card when returning to view mode ──────────
+  useEffect(() => {
+    if (mode === 'view' && scrollTarget) {
+      // Wait one animation frame so the grid has re-rendered
+      requestAnimationFrame(() => {
+        const el = yearCardRefs.current[scrollTarget];
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
-      }
-
-      setYearsList(years);
-    } catch (error) {
-      console.error('Error loading years:', error);
+        setScrollTarget(null);
+      });
     }
-  };
+  }, [mode, scrollTarget]);
 
-  // Reset form
+  // ── Reset form ───────────────────────────────────────────────────────────────
   const resetForm = () => {
     setFormData({
       year: '',
@@ -72,56 +82,30 @@ const NepaliCalendarManagement = ({ hasPermission, PERMISSIONS }) => {
     setMessage('');
   };
 
-  // Load year for editing
-  const loadYearForEdit = async (year) => {
-    try {
-      // Try to load from Firestore first (user edits)
-      let yearData = null;
-      try {
-        const docRef = doc(db, COLLECTIONS.NEPALI_CALENDAR_YEARS, year.toString());
-        const docSnap = await getDoc(docRef);
-        if (docSnap.exists()) {
-          yearData = docSnap.data();
-        }
-      } catch (e) {
-        // Fall through to bsCalendarData
-      }
+  // ── Load a year into the edit form (from local calendarData state) ───────────
+  const loadYearForEdit = (year) => {
+    const yearData = calendarData[year];
+    if (!yearData) return;
 
-      // If not in Firestore, use bsCalendarData
-      if (!yearData) {
-        yearData = bsCalendarData[year];
-      }
-
-      if (yearData) {
-        const adDate = yearData.startAdDate || yearData.startAdDateString;
-        const dateStr = typeof adDate === 'string' 
-          ? adDate 
-          : new Date(adDate).toISOString().split('T')[0];
-        
-        setFormData({
-          year: year.toString(),
-          startAdDate: dateStr,
-          isLeapYear: yearData.isLeapYear !== undefined 
-            ? yearData.isLeapYear 
-            : yearData.daysInMonths.reduce((a, b) => a + b, 0) === 366,
-          daysInMonths: [...yearData.daysInMonths]
-        });
-        setSelectedYear(year);
-        setMode('edit');
-        setMessage('');
-      }
-    } catch (error) {
-      setMessage(`❌ Error loading year: ${error.message}`);
-      setMessageType('error');
-    }
+    setFormData({
+      year: year.toString(),
+      startAdDate: yearData.startAdDate || '',
+      isLeapYear: yearData.isLeapYear !== undefined
+        ? yearData.isLeapYear
+        : (yearData.daysInMonths || []).reduce((a, b) => a + b, 0) === 366,
+      daysInMonths: [...(yearData.daysInMonths || Array(12).fill(30))]
+    });
+    setSelectedYear(year);
+    setScrollTarget(year); // remember which card to scroll back to
+    setMode('edit');
+    setMessage('');
   };
 
-  // Handle month days change
+  // ── Month days input ─────────────────────────────────────────────────────────
   const handleMonthDaysChange = (monthIndex, value) => {
     const newDays = [...formData.daysInMonths];
     const numValue = Math.min(Math.max(parseInt(value) || 29, 29), 32);
     newDays[monthIndex] = numValue;
-    
     setFormData(prev => ({
       ...prev,
       daysInMonths: newDays,
@@ -129,7 +113,7 @@ const NepaliCalendarManagement = ({ hasPermission, PERMISSIONS }) => {
     }));
   };
 
-  // Handle add new year
+  // ── Add new year ─────────────────────────────────────────────────────────────
   const handleAddYear = () => {
     setFormData({
       year: '',
@@ -142,45 +126,38 @@ const NepaliCalendarManagement = ({ hasPermission, PERMISSIONS }) => {
     setMessage('');
   };
 
-  // Validate form
+  // ── Validate form ────────────────────────────────────────────────────────────
   const validateForm = () => {
     if (!formData.year || !formData.startAdDate) {
       setMessage('Year and Start Date are required');
       setMessageType('error');
       return false;
     }
-
     const year = parseInt(formData.year);
     if (isNaN(year) || year < 1900 || year > 2500) {
       setMessage('Year must be between 1900 and 2500');
       setMessageType('error');
       return false;
     }
-
-    if (mode === 'add' && yearsList.includes(year)) {
+    if (mode === 'add' && calendarData[year]) {
       setMessage('Year already exists. Use Edit mode to update it.');
       setMessageType('error');
       return false;
     }
-
     const totalDays = formData.daysInMonths.reduce((a, b) => a + b, 0);
     if (totalDays !== 365 && totalDays !== 366) {
       setMessage(`Total days must be 365 or 366. Current: ${totalDays}`);
       setMessageType('error');
       return false;
     }
-
     return true;
   };
 
-  // Save year
+  // ── Save year to Firestore and update local state ────────────────────────────
   const handleSaveYear = async () => {
     if (!validateForm()) return;
-
     try {
       const year = parseInt(formData.year);
-      
-      // Create new calendar data
       const newYearData = {
         year,
         startAdDate: formData.startAdDate,
@@ -190,78 +167,64 @@ const NepaliCalendarManagement = ({ hasPermission, PERMISSIONS }) => {
         lastModified: new Date().toISOString()
       };
 
-      // Save to Firestore in nepaliCalendarYears collection
-      const yearDocRef = doc(db, COLLECTIONS.NEPALI_CALENDAR_YEARS, year.toString());
-      await setDoc(yearDocRef, newYearData);
+      await setDoc(doc(db, COLLECTIONS.NEPALI_CALENDAR_YEARS, year.toString()), newYearData);
+
+      // Update local state immediately — no full reload needed
+      setCalendarData(prev => ({ ...prev, [year]: newYearData }));
 
       const actionType = mode === 'add' ? 'added' : 'updated';
-      
-      // Show detailed success message
-      setMessage(
-        `✅ Year ${year} ${actionType} successfully!\n` +
-        `📁 Saved to database (nepaliCalendarYears collection).\n` +
-        `This will be reflected across the app after reload.`
-      );
+      setMessage(`✅ Year ${year} ${actionType} successfully!`);
       setMessageType('success');
 
-      // Keep success message visible for 3.5 seconds, then switch to view mode
+      setScrollTarget(year); // scroll back to this year's card
       setTimeout(() => {
         setMode('view');
         resetForm();
         setMessage('');
-        // Reload years list
-        loadYearsList();
-      }, 3500);
+      }, 2000);
     } catch (error) {
       console.error('Firestore save error:', error);
-      const errorMsg = error.message.includes('permission') 
+      const errorMsg = error.message.includes('permission')
         ? '❌ Permission denied. You may not have permission to save calendar data.'
-        : error.message.includes('not found')
-        ? '❌ Database collection not found. An admin may need to create the nepaliCalendarYears collection.'
         : `❌ Error saving: ${error.message}`;
       setMessage(errorMsg);
       setMessageType('error');
     }
   };
 
-  // Calculate total days in year
   const totalDays = formData.daysInMonths.reduce((a, b) => a + b, 0);
+  const sortedYears = Object.keys(calendarData).map(Number).sort((a, b) => a - b);
 
   return (
     <div className="nepali-calendar-management">
       <div className="calendar-header">
         <h2>📅 Nepali Calendar Management</h2>
-        <p>Add, edit, or view Nepali calendar years and month configurations</p>
+        <p>Manage Nepali calendar years and month configurations. All data is stored in and read from the database.</p>
       </div>
 
       {message && (
         <div className={`alert alert-${messageType}`}>
           {message}
-          <button 
-            className="alert-close" 
-            onClick={() => setMessage('')}
-          >
-            ×
-          </button>
+          <button className="alert-close" onClick={() => setMessage('')}>×</button>
         </div>
       )}
 
       {/* Mode Selection */}
       <div className="mode-selector">
-        <button 
+        <button
           className={`mode-btn ${mode === 'view' ? 'active' : ''}`}
           onClick={() => { setMode('view'); resetForm(); }}
         >
           👁️ View Years
         </button>
-        <button 
+        <button
           className={`mode-btn ${mode === 'add' ? 'active' : ''}`}
           onClick={handleAddYear}
           disabled={!hasPermission(PERMISSIONS.MANAGE_CALENDAR)}
         >
           Add Year
         </button>
-        <button 
+        <button
           className={`mode-btn ${mode === 'edit' ? 'active' : ''}`}
           onClick={() => setMode('edit')}
           disabled={!selectedYear || !hasPermission(PERMISSIONS.MANAGE_CALENDAR)}
@@ -273,58 +236,65 @@ const NepaliCalendarManagement = ({ hasPermission, PERMISSIONS }) => {
       {/* View Mode */}
       {mode === 'view' && (
         <div className="view-section">
-          <div className="years-grid">
-            {yearsList.map(year => {
-              const yearData = bsCalendarData[year];
-              const totalDaysInYear = yearData.daysInMonths.reduce((a, b) => a + b, 0);
-              const isLeap = totalDaysInYear === 366;
-              const startDate = new Date(yearData.startAdDate);
-              const startDateStr = startDate.toLocaleDateString('en-US', { 
-                year: 'numeric', 
-                month: 'short', 
-                day: 'numeric' 
-              });
+          {loading ? (
+            <div className="loading-state">Loading calendar data from database…</div>
+          ) : sortedYears.length === 0 ? (
+            <div className="empty-state">
+              <p>No calendar years found in the database.</p>
+              <p>Use the "Add Year" button to add calendar data.</p>
+            </div>
+          ) : (
+            <div className="years-grid">
+              {sortedYears.map(year => {
+                const yearData = calendarData[year];
+                const daysInMonths = yearData.daysInMonths || [];
+                const totalDaysInYear = daysInMonths.reduce((a, b) => a + b, 0);
+                const isLeap = yearData.isLeapYear ?? (totalDaysInYear === 366);
+                const startDateStr = yearData.startAdDate
+                  ? (() => {
+                      const [y, m, d] = yearData.startAdDate.split('-');
+                      return new Date(y, parseInt(m) - 1, parseInt(d)).toLocaleDateString('en-US', {
+                        year: 'numeric', month: 'short', day: 'numeric'
+                      });
+                    })()
+                  : '—';
 
-              return (
-                <div 
-                  key={year} 
-                  className={`year-card ${selectedYear === year ? 'selected' : ''}`}
-                  onClick={() => {
-                    setSelectedYear(year);
-                    loadYearForEdit(year);
-                  }}
-                >
-                  <div className="year-number">{year}</div>
-                  <div className="year-badge">
-                    <span className={`leap-badge ${isLeap ? 'leap' : ''}`}>
-                      {isLeap ? '🔄 Leap' : 'Regular'}
-                    </span>
-                  </div>
-                  <div className="year-info">
-                    <div className="info-row">
-                      <span className="label">Starts:</span>
-                      <span className="value">{startDateStr}</span>
+                return (
+                  <div
+                    key={year}
+                    ref={el => { yearCardRefs.current[year] = el; }}
+                    className={`year-card ${selectedYear === year ? 'selected' : ''}`}
+                    onClick={() => loadYearForEdit(year)}
+                  >
+                    <div className="year-number">{year}</div>
+                    <div className="year-badge">
+                      <span className={`leap-badge ${isLeap ? 'leap' : ''}`}>
+                        {isLeap ? '🔄 Leap' : 'Regular'}
+                      </span>
                     </div>
-                    <div className="info-row">
-                      <span className="label">Total Days:</span>
-                      <span className="value">{totalDaysInYear}</span>
+                    <div className="year-info">
+                      <div className="info-row">
+                        <span className="label">Starts:</span>
+                        <span className="value">{startDateStr}</span>
+                      </div>
+                      <div className="info-row">
+                        <span className="label">Total Days:</span>
+                        <span className="value">{totalDaysInYear}</span>
+                      </div>
                     </div>
+                    {hasPermission(PERMISSIONS.MANAGE_CALENDAR) && (
+                      <button
+                        className="edit-btn"
+                        onClick={(e) => { e.stopPropagation(); loadYearForEdit(year); }}
+                      >
+                        Edit
+                      </button>
+                    )}
                   </div>
-                  {hasPermission(PERMISSIONS.MANAGE_CALENDAR) && (
-                    <button 
-                      className="edit-btn"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        loadYearForEdit(year);
-                      }}
-                    >
-                      Edit
-                    </button>
-                  )}
-                </div>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
 
@@ -363,7 +333,7 @@ const NepaliCalendarManagement = ({ hasPermission, PERMISSIONS }) => {
             <div className="months-editor">
               <h4>Days in Each Month</h4>
               <p className="editor-info">
-                Each month must have 29-32 days. Total days: <strong>{totalDays}</strong> 
+                Each month must have 29–32 days. Total days: <strong>{totalDays}</strong>
                 <span className={`total-status ${totalDays === 365 ? 'valid' : totalDays === 366 ? 'leap' : 'invalid'}`}>
                   {totalDays === 365 ? ' ✅ Regular Year' : totalDays === 366 ? ' 🔄 Leap Year' : ' ❌ Invalid'}
                 </span>
@@ -394,13 +364,12 @@ const NepaliCalendarManagement = ({ hasPermission, PERMISSIONS }) => {
                 id="leapYear"
                 checked={formData.isLeapYear}
                 onChange={(e) => setFormData(prev => ({ ...prev, isLeapYear: e.target.checked }))}
-                title="Leap year checkbox is now editable. Manual edits here will be saved."
               />
               <label htmlFor="leapYear">
                 {formData.isLeapYear ? '🔄 This is a Leap Year (366 days)' : 'Regular Year (365 days)'}
               </label>
               <small style={{ display: 'block', marginTop: '5px', color: '#666' }}>
-                The leap year status is auto-calculated from total days, but you can override it if needed.
+                Auto-calculated from total days, but can be overridden if needed.
               </small>
             </div>
 
@@ -414,15 +383,11 @@ const NepaliCalendarManagement = ({ hasPermission, PERMISSIONS }) => {
               <div className="summary-row">
                 <span>Start Date:</span>
                 <strong>
-                  {formData.startAdDate 
+                  {formData.startAdDate
                     ? (() => {
-                        // Parse date without timezone offset to avoid off-by-one day issues
-                        const [year, month, day] = formData.startAdDate.split('-');
-                        const date = new Date(year, parseInt(month) - 1, parseInt(day));
-                        return date.toLocaleDateString('en-US', { 
-                          year: 'numeric', 
-                          month: 'short', 
-                          day: 'numeric' 
+                        const [y, m, d] = formData.startAdDate.split('-');
+                        return new Date(y, parseInt(m) - 1, parseInt(d)).toLocaleDateString('en-US', {
+                          year: 'numeric', month: 'short', day: 'numeric'
                         });
                       })()
                     : '-'}
@@ -440,19 +405,13 @@ const NepaliCalendarManagement = ({ hasPermission, PERMISSIONS }) => {
 
             {/* Action Buttons */}
             <div className="form-actions">
-              <button 
-                className="btn-cancel" 
-                onClick={() => {
-                  setMode('view');
-                  resetForm();
-                }}
+              <button
+                className="btn-cancel"
+                onClick={() => { setMode('view'); resetForm(); }}
               >
                 Cancel
               </button>
-              <button 
-                className="btn-save" 
-                onClick={handleSaveYear}
-              >
+              <button className="btn-save" onClick={handleSaveYear}>
                 {mode === 'add' ? 'Add Year' : '💾 Save Changes'}
               </button>
             </div>
@@ -465,11 +424,11 @@ const NepaliCalendarManagement = ({ hasPermission, PERMISSIONS }) => {
         <h4>ℹ️ Information</h4>
         <ul>
           <li>Nepali year has 12 months</li>
-          <li>Each month must have between 29-32 days</li>
+          <li>Each month must have between 29–32 days</li>
           <li>A regular year has 365 days, leap year has 366 days</li>
-          <li>The "Start AD Date" is when the Nepali year begins in Gregorian calendar</li>
+          <li>The "Start AD Date" is when the Nepali year begins in the Gregorian calendar</li>
           <li>Only administrators can add or edit calendar data</li>
-          <li>Changes are saved to the calendar database after confirmation</li>
+          <li>Changes are saved directly to the database and reflected immediately</li>
         </ul>
       </div>
     </div>
