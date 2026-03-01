@@ -517,6 +517,7 @@ function AppContent() {
         name: member.name,
         relation: treePrimaryMemberNameById.get(member.treeId) || 'Tree Member',
         treeId: member.treeId,
+        location: member.location,
     }));
 
     return (

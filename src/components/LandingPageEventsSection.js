@@ -171,7 +171,8 @@ const LandingPageEventsSection = ({ events, familyMembers, onDoubleClickEvent, o
                 originalDate, 
                 displayDate, 
                 personName: person?.name, 
-                personRelation: person?.relation 
+                personRelation: person?.relation,
+                personLocation: person?.location,
             };
         })
         .filter(event => {
@@ -244,14 +245,10 @@ const LandingPageEventsSection = ({ events, familyMembers, onDoubleClickEvent, o
                                     <div 
                                         key={index} 
                                         className="event-card cursor-pointer hover:shadow-lg transition-shadow"
-                                        onClick={() => onEventClick && onEventClick(event)}
                                         onDoubleClick={() => onDoubleClickEvent(event)}
                                     >
                                         <div className="event-name">
-                                            {event.name}
-                                            {event.repetition && event.repetition !== 'none' && (
-                                                <span className="text-xs text-gray-400 ml-2">({getRepetitionDisplay(event.repetition)})</span>
-                                            )}
+                                            {event.name}{event.personName && ` (${event.personName})`}
                                         </div>
                                         <div className="text-sm text-gray-600">
                                             {isValidDate(event.displayDate) ? (
@@ -270,8 +267,8 @@ const LandingPageEventsSection = ({ events, familyMembers, onDoubleClickEvent, o
                                                 </div>
                                             )}
                                         </div>
-                                        {event.personName && (
-                                            <div className="font-medium text-gray-700 text-xs mt-1">For: {event.personName} ({event.personRelation})</div>
+                                        {event.personRelation && (
+                                            <div className="font-medium text-gray-700 text-xs mt-1">For: {event.personRelation}{event.personLocation && ` - ${event.personLocation}`}</div>
                                         )}
                                     </div>
                                 ))}
@@ -284,14 +281,10 @@ const LandingPageEventsSection = ({ events, familyMembers, onDoubleClickEvent, o
                             <div 
                                 key={index} 
                                 className="event-card cursor-pointer hover:shadow-lg transition-shadow"
-                                onClick={() => onEventClick && onEventClick(event)}
                                 onDoubleClick={() => onDoubleClickEvent(event)}
                             >
                                 <div className="event-name">
-                                    {event.name}
-                                    {event.repetition && event.repetition !== 'none' && (
-                                        <span className="text-xs text-gray-400 ml-2">({getRepetitionDisplay(event.repetition)})</span>
-                                    )}
+                                    {event.name}{event.personName && ` (${event.personName})`}
                                 </div>
                                 <div className="text-sm text-gray-600">
                                             {isValidDate(event.displayDate) ? (
@@ -310,8 +303,8 @@ const LandingPageEventsSection = ({ events, familyMembers, onDoubleClickEvent, o
                                                 </div>
                                             )}
                                         </div>
-                                {event.personName && (
-                                            <div className="font-medium text-gray-700 text-xs mt-1">For: {event.personName} ({event.personRelation})</div>
+                                {event.personRelation && (
+                                            <div className="font-medium text-gray-700 text-xs mt-1">For: {event.personRelation}{event.personLocation && ` - ${event.personLocation}`}</div>
                                         )}
                             </div>
                         ))}
