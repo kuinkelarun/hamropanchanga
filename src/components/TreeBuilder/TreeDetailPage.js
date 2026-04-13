@@ -649,8 +649,8 @@ export default function TreeDetailPage({ user }) {
 
       {/* Add/Edit Event Modal */}
       {isAddingEvent && (
-        <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-lg">
+        <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50" onClick={() => { setIsAddingEvent(false); setEditingEvent(null); }}>
+          <div className="w-full max-w-lg mx-4" onClick={(e) => e.stopPropagation()}>
             <AddEventForm
               familyMembers={familyMembersForForm}
               onAdd={editingEvent ? handleUpdateEvent : handleAddEvent}

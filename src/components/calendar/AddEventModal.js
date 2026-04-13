@@ -29,17 +29,6 @@ import {
 import { createEvent } from '../../services/CalendarEventService';
 import { getEnglishPakshyaName, getEnglishTithiName } from '../../utils/calendarHelpers';
 
-/**
- * @param {Object}   props
- * @param {boolean}  props.isOpen              - Whether the modal is visible
- * @param {Function} props.onClose             - Called to close the modal
- * @param {string}   props.activeDate          - "YYYY-MM-DD" of the calendar tile
- * @param {Object}   props.user                - Firebase user object
- * @param {boolean}  props.authLoading         - True while auth is initialising
- * @param {boolean}  props.isAdmin             - Current user is admin
- * @param {boolean}  props.isSuperUser         - Current user is super-user
- * @param {Function} props.findTithisForAdDate - (year, monthZero, day) => tithi[]
- */
 export default function AddEventModal({
   isOpen,
   onClose,
@@ -50,7 +39,7 @@ export default function AddEventModal({
   isSuperUser,
   findTithisForAdDate,
 }) {
-  const { t, isNepali } = useLanguage();
+  const { t, tn, isNepali } = useLanguage();
   const isDev = process.env.NODE_ENV !== 'production';
 
   // ── Form state ──────────────────────────────────────────────
@@ -65,15 +54,12 @@ export default function AddEventModal({
   const [selectedTreeMemberId, setSelectedTreeMemberId] = useState('');
   const [eventValidation, setEventValidation] = useState('');
   const [isAddingEvent, setIsAddingEvent] = useState(false);
-
-  // Tree / member lists loaded for the "For Family Member" tab
   const [availableTrees, setAvailableTrees] = useState([]);
   const [availableTreeMembers, setAvailableTreeMembers] = useState([]);
 
   // ── Reset form when modal opens / closes ────────────────────
   useEffect(() => {
     if (isOpen && activeDate) {
-      // Pre-fill the date field from the calendar tile
       setEventDate(activeDate);
       setEventTitle('');
       setEventDescription('');
@@ -87,7 +73,6 @@ export default function AddEventModal({
       setIsAddingEvent(false);
     }
     if (!isOpen) {
-      // Clean up when closing
       setEventTitle('');
       setEventDescription('');
       setEventDate('');
@@ -104,15 +89,11 @@ export default function AddEventModal({
 
   // ── Load available trees (real-time) ────────────────────────
   useEffect(() => {
-    if (!user) {
-      setAvailableTrees([]);
-      return;
-    }
+    if (!user) { setAvailableTrees([]); return; }
     const treesCol = collection(db, COLLECTIONS.TREES);
     const q = isAdmin
       ? query(treesCol)
       : query(treesCol, where('ownerUid', '==', user.uid));
-
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const treesList = snapshot.docs
         .map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }))
@@ -125,14 +106,8 @@ export default function AddEventModal({
 
   // ── Load tree members when "For Family Member" is active ────
   useEffect(() => {
-    if (!isOpen || eventType !== 'customer') {
-      setAvailableTreeMembers([]);
-      return;
-    }
-    if (!selectedTreeId) {
-      setAvailableTreeMembers([]);
-      return;
-    }
+    if (!isOpen || eventType !== 'customer') { setAvailableTreeMembers([]); return; }
+    if (!selectedTreeId) { setAvailableTreeMembers([]); return; }
     const membersCol = collection(db, COLLECTIONS.TREES, selectedTreeId, COLLECTIONS.MEMBERS);
     const unsubscribe = onSnapshot(membersCol, (snapshot) => {
       const membersList = snapshot.docs
@@ -147,16 +122,10 @@ export default function AddEventModal({
   // ── Keep selected tithi in sync with event date ─────────────
   useEffect(() => {
     if (eventAssociateMode !== 'tithi') return;
-    if (!eventDate) {
-      setSelectedEventTithiId('');
-      return;
-    }
+    if (!eventDate) { setSelectedEventTithiId(''); return; }
     const [y, m, d] = eventDate.split('-').map(Number);
     const tithisForEventDate = findTithisForAdDate(y, m - 1, d) || [];
-    if (tithisForEventDate.length === 0) {
-      setSelectedEventTithiId('');
-      return;
-    }
+    if (tithisForEventDate.length === 0) { setSelectedEventTithiId(''); return; }
     if (!selectedEventTithiId || !tithisForEventDate.some((t) => t.id === selectedEventTithiId)) {
       setSelectedEventTithiId(tithisForEventDate[0].id);
     }
@@ -166,10 +135,7 @@ export default function AddEventModal({
   const getTithiDisplayName = (tithi) => {
     const { tithiMonth: parsedMonth, pakshya, tithi: tithiName } = parseTithiName(tithi.name);
     if (!tithi.startDate) return tithi.name;
-
-    // Prefer stored tithiMonth, then parsed from name, then compute
     let lunarMonth = tithi.tithiMonth || parsedMonth || '';
-
     if (!lunarMonth) {
       const pakshaNormalized = normalizePakshaToEnglish(pakshya);
       const tithiIndex = getTithiIndexByName(tithiName);
@@ -177,7 +143,6 @@ export default function AddEventModal({
         lunarMonth = getTithiLunarMonthName(pakshaNormalized, tithiIndex, tithi.startDate);
       }
     }
-
     if (lunarMonth) {
       const monthIndex = nepaliMonths.indexOf(lunarMonth);
       const monthDisplay =
@@ -191,60 +156,28 @@ export default function AddEventModal({
 
   // ── Submit handler ──────────────────────────────────────────
   async function submitAddEvent() {
-    if (!user) {
-      setEventValidation('Please log in to add events.');
-      return;
-    }
-    if (!eventTitle.trim()) {
-      setEventValidation('Please enter an event title.');
-      return;
-    }
-    if (!eventDate) {
-      setEventValidation('Please select a date.');
-      return;
-    }
+    if (!user) { setEventValidation('Please log in to add events.'); return; }
+    if (!eventTitle.trim()) { setEventValidation('Please enter an event title.'); return; }
+    if (!eventDate) { setEventValidation('Please select a date.'); return; }
 
-    // Optional tithi association
     let tithiPayload = null;
     if (eventAssociateMode === 'tithi') {
       const [y, m, d] = eventDate.split('-').map(Number);
       const tithisForEventDate = findTithisForAdDate(y, m - 1, d) || [];
-      if (tithisForEventDate.length === 0) {
-        setEventValidation('No tithi is available for the selected date.');
-        return;
-      }
+      if (tithisForEventDate.length === 0) { setEventValidation('No tithi is available for the selected date.'); return; }
       const selectedTithi = tithisForEventDate.find((t) => t.id === selectedEventTithiId) || tithisForEventDate[0];
-      if (!selectedTithi) {
-        setEventValidation('Please select a tithi.');
-        return;
-      }
+      if (!selectedTithi) { setEventValidation('Please select a tithi.'); return; }
       const { pakshya, tithi: tithiName } = parseTithiName(selectedTithi.name);
       const pakshaNormalized = normalizePakshaToEnglish(pakshya);
       const tithiIndex = getTithiIndexByName(tithiName, { fallbackToOne: false });
-      if (!tithiIndex) {
-        setEventValidation('Could not determine the selected tithi. Please try selecting the tithi again.');
-        return;
-      }
-      const lunarMonthName =
-        tithiIndex != null ? getTithiLunarMonthName(pakshaNormalized, tithiIndex, eventDate) : null;
-      tithiPayload = {
-        id: selectedTithi.id,
-        name: tithiName,
-        paksha: pakshaNormalized,
-        month: lunarMonthName || null,
-      };
+      if (!tithiIndex) { setEventValidation('Could not determine the selected tithi. Please try selecting the tithi again.'); return; }
+      const lunarMonthName = tithiIndex != null ? getTithiLunarMonthName(pakshaNormalized, tithiIndex, eventDate) : null;
+      tithiPayload = { id: selectedTithi.id, name: tithiName, paksha: pakshaNormalized, month: lunarMonthName || null };
     }
 
-    // Validate for family-member events
     if (eventType === 'customer') {
-      if (!selectedTreeId) {
-        setEventValidation('Please select a tree.');
-        return;
-      }
-      if (!selectedTreeMemberId) {
-        setEventValidation('Please select a family member.');
-        return;
-      }
+      if (!selectedTreeId) { setEventValidation('Please select a tree.'); return; }
+      if (!selectedTreeMemberId) { setEventValidation('Please select a family member.'); return; }
     }
 
     setIsAddingEvent(true);
@@ -253,7 +186,6 @@ export default function AddEventModal({
     try {
       const isPublic = eventType === 'public';
       const createdByAdmin = isAdmin || isSuperUser;
-
       await createEvent({
         name: eventTitle,
         description: eventDescription,
@@ -266,12 +198,7 @@ export default function AddEventModal({
         isPublic,
         isAdmin: createdByAdmin,
       });
-
-      if (isDev) {
-        if (eventType === 'customer') console.log('Family member (tree) event added successfully');
-        else console.log(`${isPublic ? 'Public' : 'Private'} event added successfully`);
-      }
-
+      if (isDev) console.log(`${isPublic ? 'Public' : eventType === 'customer' ? 'Family member' : 'Private'} event added`);
       onClose();
     } catch (error) {
       console.error('Error adding event:', error);
@@ -284,253 +211,220 @@ export default function AddEventModal({
   // ── Render ──────────────────────────────────────────────────
   if (!isOpen) return null;
 
-  // Compute BS date header from activeDate
-  const headerLabel = (() => {
-    if (!activeDate) return '';
-    const parts = activeDate.split('-').map((p) => +p);
-    const adYear = parts[0];
-    const adMonthZeroBased = parts[1] - 1;
-    const adDay = parts[2];
-    const bs = convertAdToBs(adYear, adMonthZeroBased, adDay);
-    const monthIndex = bs.month - 1;
-    const monthName = isNepali ? nepaliMonths[monthIndex] : englishNepaliMonths[monthIndex];
-    return isNepali
-      ? `${toNepaliNumber(bs.day)} ${monthName}, ${toNepaliNumber(bs.year)}`
-      : `${bs.day} ${monthName}, ${bs.year}`;
-  })();
+  // Parse date for header
+  const [adYear, adMonth1, adDay] = activeDate ? activeDate.split('-').map(Number) : [0, 0, 0];
+  const bs = activeDate ? convertAdToBs(adYear, adMonth1 - 1, adDay) : null;
+  const headerDateNepali = bs
+    ? (isNepali
+        ? `${tn(bs.day)} ${nepaliMonths[bs.month - 1]} ${tn(bs.year)}`
+        : `${bs.day} ${englishNepaliMonths[bs.month - 1]} ${bs.year}`)
+    : '';
+
+  // Event type tab config
+  const eventTypeTabs = [
+    { key: 'private', label: t('calendar.forSelf'), icon: (
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+    )},
+    { key: 'customer', label: t('calendar.forFamilyMember'), icon: (
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
+    )},
+  ];
+  if (isAdmin || isSuperUser) {
+    eventTypeTabs.push({ key: 'public', label: t('calendar.public'), icon: (
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg>
+    )});
+  }
 
   return (
     <div className="nc-modal-backdrop" onClick={onClose}>
-      <div className="nc-modal" onClick={(e) => e.stopPropagation()}>
-        <div className="nc-modal-header">
-          <h3 className="nc-modal-title">{headerLabel}</h3>
-          <button onClick={onClose} aria-label="Close">✕</button>
+      <div className="nc-modal ddm-modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '560px' }}>
+        {/* Header */}
+        <div className="ddm-header">
+          <div className="ddm-header-date">
+            <span className="ddm-header-nepali" style={{ fontSize: '1.1rem' }}>
+              {isNepali ? 'कार्यक्रम थप्नुहोस्' : 'Add Event'}
+            </span>
+            <span className="ddm-header-english">{headerDateNepali}</span>
+          </div>
+          <button className="ddm-close-btn" onClick={onClose} aria-label="Close">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M18 6L6 18M6 6l12 12" />
+            </svg>
+          </button>
         </div>
 
-        <div className="nc-modal-body">
-          <div className="nc-modal-section">
-            {/* Event Type Selection */}
-            <div className="nc-form-row" style={{ marginBottom: '1rem' }}>
-              <label className="nc-label">{t('calendar.addEvent')}</label>
-              <div className="nc-event-type-tabs" role="tablist" aria-label="Event type">
+        <div className="nc-modal-body" style={{ padding: '16px 20px 0' }}>
+          {/* Event Type Tabs */}
+          <div className="ddm-form-group">
+            <label className="ddm-label">{t('calendar.addEvent')}</label>
+            <div className="ddm-tabs" role="tablist">
+              {eventTypeTabs.map((tab) => (
                 <button
+                  key={tab.key}
                   type="button"
-                  className={`nc-event-type-tab ${eventType === 'private' ? 'active' : ''}`}
+                  className={`ddm-tab ${eventType === tab.key ? 'ddm-tab-active' : ''}`}
                   onClick={() => {
-                    setEventType('private');
-                    setSelectedTreeId('');
-                    setSelectedTreeMemberId('');
+                    setEventType(tab.key);
+                    if (tab.key !== 'customer') { setSelectedTreeId(''); setSelectedTreeMemberId(''); }
                   }}
-                  aria-selected={eventType === 'private'}
                   role="tab"
+                  aria-selected={eventType === tab.key}
                 >
-                  {t('calendar.forSelf')}
+                  {tab.icon}
+                  {tab.label}
                 </button>
-                <button
-                  type="button"
-                  className={`nc-event-type-tab ${eventType === 'customer' ? 'active' : ''}`}
-                  onClick={() => setEventType('customer')}
-                  aria-selected={eventType === 'customer'}
-                  role="tab"
+              ))}
+            </div>
+          </div>
+
+          {/* Tree + Member Selection */}
+          {eventType === 'customer' && (
+            <div className="ddm-form-row-2col">
+              <div className="ddm-form-group">
+                <label className="ddm-label">{t('calendar.selectTree')}</label>
+                <select
+                  value={selectedTreeId}
+                  onChange={(e) => { setSelectedTreeId(e.target.value); setSelectedTreeMemberId(''); }}
+                  className="ddm-select"
                 >
-                  {t('calendar.forFamilyMember')}
-                </button>
-                {(isAdmin || isSuperUser) && (
-                  <button
-                    type="button"
-                    className={`nc-event-type-tab ${eventType === 'public' ? 'active' : ''}`}
-                    onClick={() => {
-                      setEventType('public');
-                      setSelectedTreeId('');
-                      setSelectedTreeMemberId('');
-                    }}
-                    aria-selected={eventType === 'public'}
-                    role="tab"
-                  >
-                    {t('calendar.public')}
-                  </button>
-                )}
+                  <option value="">{t('calendar.selectTreePlaceholder')}</option>
+                  {availableTrees.map((tree) => (
+                    <option key={tree.id} value={tree.id}>{tree.title || 'Untitled Tree'}</option>
+                  ))}
+                </select>
               </div>
-            </div>
-
-            {/* Tree + Family Member Selection */}
-            {eventType === 'customer' && (
-              <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1rem' }}>
-                <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-                  <label className="nc-label">{t('calendar.selectTree')}</label>
-                  <select
-                    value={selectedTreeId}
-                    onChange={(e) => {
-                      setSelectedTreeId(e.target.value);
-                      setSelectedTreeMemberId('');
-                    }}
-                    className="nc-select"
-                  >
-                    <option value="">{t('calendar.selectTreePlaceholder')}</option>
-                    {availableTrees.map((tree) => (
-                      <option key={tree.id} value={tree.id}>
-                        {tree.title || 'Untitled Tree'}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-                  <label className="nc-label">{t('calendar.selectMember')}</label>
-                  <select
-                    value={selectedTreeMemberId}
-                    onChange={(e) => setSelectedTreeMemberId(e.target.value)}
-                    className="nc-select"
-                    disabled={!selectedTreeId}
-                  >
-                    <option value="">{t('calendar.selectMemberPlaceholder')}</option>
-                    {availableTreeMembers.map((m) => (
-                      <option key={m.id} value={m.id}>
-                        {m.name || 'Unknown'}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-            )}
-
-            {/* Event Title */}
-            <div className="nc-form-row" style={{ marginBottom: '1rem' }}>
-              <label className="nc-label">{t('calendar.eventTitle')}</label>
-              <input
-                type="text"
-                value={eventTitle}
-                onChange={(e) => setEventTitle(e.target.value)}
-                placeholder={t('calendar.eventTitlePlaceholder')}
-                className="nc-input"
-              />
-            </div>
-
-            {/* Event Description */}
-            <div className="nc-form-row" style={{ marginBottom: '1rem' }}>
-              <label className="nc-label">{t('calendar.description')}</label>
-              <textarea
-                value={eventDescription}
-                onChange={(e) => setEventDescription(e.target.value)}
-                placeholder={t('calendar.descriptionPlaceholder')}
-                className="nc-input"
-                rows={3}
-                style={{ resize: 'vertical' }}
-              />
-            </div>
-
-            {/* Associate with date or tithi */}
-            <div className="nc-form-row" style={{ marginBottom: '1rem' }}>
-              <label className="nc-label">{t('calendar.associateWith')}</label>
-              <div className="nc-event-type-tabs" role="tablist" aria-label="Associate event with">
-                <button
-                  type="button"
-                  className={`nc-event-type-tab ${eventAssociateMode === 'date' ? 'active' : ''}`}
-                  onClick={() => setEventAssociateMode('date')}
-                  aria-selected={eventAssociateMode === 'date'}
-                  role="tab"
+              <div className="ddm-form-group">
+                <label className="ddm-label">{t('calendar.selectMember')}</label>
+                <select
+                  value={selectedTreeMemberId}
+                  onChange={(e) => setSelectedTreeMemberId(e.target.value)}
+                  className="ddm-select"
+                  disabled={!selectedTreeId}
                 >
-                  {t('calendar.date')}
-                </button>
-                <button
-                  type="button"
-                  className={`nc-event-type-tab ${eventAssociateMode === 'tithi' ? 'active' : ''}`}
-                  onClick={() => setEventAssociateMode('tithi')}
-                  aria-selected={eventAssociateMode === 'tithi'}
-                  role="tab"
-                >
-                  {t('calendar.tithi')}
-                </button>
+                  <option value="">{t('calendar.selectMemberPlaceholder')}</option>
+                  {availableTreeMembers.map((m) => (
+                    <option key={m.id} value={m.id}>{m.name || 'Unknown'}</option>
+                  ))}
+                </select>
               </div>
             </div>
+          )}
 
-            {eventAssociateMode === 'tithi' && (
-              <div className="nc-form-row" style={{ marginBottom: '1rem' }}>
-                <label className="nc-label">{t('calendar.selectTithi')}</label>
-                {(() => {
-                  if (!eventDate) {
-                    return <div className="muted">No day selected. Close and reopen from a calendar day.</div>;
-                  }
-                  const [y, m, d] = eventDate.split('-').map(Number);
-                  const tithisForEventDate = (findTithisForAdDate(y, m - 1, d) || []).slice().sort(compareTithisByStart);
-                  if (tithisForEventDate.length === 0) {
-                    return <div className="muted">No tithi found for the selected date.</div>;
-                  }
-                  return (
-                    <select
-                      value={selectedEventTithiId}
-                      onChange={(e) => setSelectedEventTithiId(e.target.value)}
-                      className="nc-select"
-                    >
-                      {tithisForEventDate.map((ti) => (
-                        <option key={ti.id} value={ti.id}>
-                          {getTithiDisplayName(ti)}
-                        </option>
-                      ))}
-                    </select>
-                  );
-                })()}
-              </div>
-            )}
+          {/* Event Title */}
+          <div className="ddm-form-group">
+            <label className="ddm-label">{t('calendar.eventTitle')}</label>
+            <input
+              type="text"
+              value={eventTitle}
+              onChange={(e) => setEventTitle(e.target.value)}
+              placeholder={t('calendar.eventTitlePlaceholder')}
+              className="ddm-input"
+            />
+          </div>
 
-            {eventAssociateMode === 'date' && (
-              <div className="nc-form-row" style={{ marginBottom: '1rem' }}>
-                <NepaliDatePicker
-                  value={eventDate}
-                  onChange={setEventDate}
-                  label={t('calendar.eventDate')}
-                  required
-                />
-              </div>
-            )}
+          {/* Description */}
+          <div className="ddm-form-group">
+            <label className="ddm-label">{t('calendar.description')}</label>
+            <textarea
+              value={eventDescription}
+              onChange={(e) => setEventDescription(e.target.value)}
+              placeholder={t('calendar.descriptionPlaceholder')}
+              className="ddm-input"
+              rows={2}
+              style={{ resize: 'vertical' }}
+            />
+          </div>
 
-            {/* Event Repetition */}
-            <div className="nc-form-row" style={{ marginBottom: '1rem' }}>
-              <label className="nc-label">{t('calendar.repeats')}</label>
-              <select
-                value={eventRepetition}
-                onChange={(e) => setEventRepetition(e.target.value)}
-                className="nc-select"
-              >
-                <option value="none">{t('calendar.doesNotRepeat')}</option>
-                <option value="monthly">{t('calendar.monthly')}</option>
-                <option value="yearly">{t('calendar.yearly')}</option>
-              </select>
-            </div>
-
-            {eventValidation && <div className="nc-validation">{eventValidation}</div>}
-            {!user && !authLoading && <div className="nc-validation">Please log in to add events</div>}
-
-            <div className="nc-modal-actions">
+          {/* Associate Mode: Date or Tithi */}
+          <div className="ddm-form-group">
+            <label className="ddm-label">{t('calendar.associateWith')}</label>
+            <div className="ddm-tabs ddm-tabs-sm" role="tablist">
               <button
                 type="button"
-                className="app-cancel-btn"
-                onClick={() => {
-                  onClose();
-                  setEventValidation('');
-                }}
-                style={{ flex: '1 1 auto' }}
+                className={`ddm-tab ${eventAssociateMode === 'date' ? 'ddm-tab-active' : ''}`}
+                onClick={() => setEventAssociateMode('date')}
+                role="tab"
               >
-                {t('calendar.cancel')}
+                {t('calendar.date')}
               </button>
               <button
-                onClick={submitAddEvent}
-                className="app-save-btn"
-                disabled={
-                  isAddingEvent ||
-                  !user ||
-                  authLoading ||
-                  !eventTitle ||
-                  (eventAssociateMode === 'date' && !eventDate) ||
-                  (eventAssociateMode === 'tithi' && !selectedEventTithiId) ||
-                  (eventType === 'customer' && !selectedTreeMemberId)
-                }
-                style={{ flex: '1 1 auto' }}
+                type="button"
+                className={`ddm-tab ${eventAssociateMode === 'tithi' ? 'ddm-tab-active' : ''}`}
+                onClick={() => setEventAssociateMode('tithi')}
+                role="tab"
               >
-                {isAddingEvent ? 'Adding...' : !user ? 'Log in to Add' : t('calendar.addEventButton')}
+                {t('calendar.tithi')}
               </button>
             </div>
           </div>
+
+          {/* Tithi picker */}
+          {eventAssociateMode === 'tithi' && (
+            <div className="ddm-form-group">
+              <label className="ddm-label">{t('calendar.selectTithi')}</label>
+              {(() => {
+                if (!eventDate) return <div className="ddm-empty" style={{ padding: '8px 0' }}>No day selected.</div>;
+                const [y, m, d] = eventDate.split('-').map(Number);
+                const tithisForEventDate = (findTithisForAdDate(y, m - 1, d) || []).slice().sort(compareTithisByStart);
+                if (tithisForEventDate.length === 0) return <div className="ddm-empty" style={{ padding: '8px 0' }}>No tithi found for the selected date.</div>;
+                return (
+                  <select
+                    value={selectedEventTithiId}
+                    onChange={(e) => setSelectedEventTithiId(e.target.value)}
+                    className="ddm-select"
+                  >
+                    {tithisForEventDate.map((ti) => (
+                      <option key={ti.id} value={ti.id}>{getTithiDisplayName(ti)}</option>
+                    ))}
+                  </select>
+                );
+              })()}
+            </div>
+          )}
+
+          {/* Date picker */}
+          {eventAssociateMode === 'date' && (
+            <div className="ddm-form-group">
+              <NepaliDatePicker value={eventDate} onChange={setEventDate} label={t('calendar.eventDate')} required />
+            </div>
+          )}
+
+          {/* Repetition */}
+          <div className="ddm-form-group">
+            <label className="ddm-label">{t('calendar.repeats')}</label>
+            <select value={eventRepetition} onChange={(e) => setEventRepetition(e.target.value)} className="ddm-select">
+              <option value="none">{t('calendar.doesNotRepeat')}</option>
+              <option value="monthly">{t('calendar.monthly')}</option>
+              <option value="yearly">{t('calendar.yearly')}</option>
+            </select>
+          </div>
+
+          {/* Validation */}
+          {eventValidation && <div className="ddm-validation">{eventValidation}</div>}
+          {!user && !authLoading && <div className="ddm-validation">{isNepali ? 'कार्यक्रम थप्न साइन इन गर्नुहोस्' : 'Please log in to add events'}</div>}
+        </div>
+
+        {/* Footer */}
+        <div className="ddm-footer">
+          <button type="button" className="ddm-btn ddm-btn-ghost" onClick={() => { onClose(); setEventValidation(''); }}>
+            {t('calendar.cancel')}
+          </button>
+          <button
+            onClick={submitAddEvent}
+            className="ddm-btn ddm-btn-primary"
+            disabled={
+              isAddingEvent || !user || authLoading || !eventTitle ||
+              (eventAssociateMode === 'date' && !eventDate) ||
+              (eventAssociateMode === 'tithi' && !selectedEventTithiId) ||
+              (eventType === 'customer' && !selectedTreeMemberId)
+            }
+          >
+            {isAddingEvent
+              ? (isNepali ? 'थप्दै...' : 'Adding...')
+              : !user
+                ? (isNepali ? 'साइन इन गर्नुहोस्' : 'Log in to Add')
+                : t('calendar.addEventButton')}
+          </button>
         </div>
       </div>
     </div>

@@ -6,30 +6,25 @@ import NepaliDatePicker from './NepaliDatePicker';
 import { useLanguage } from '../contexts/LanguageContext';
 import { nepaliMonths, getTithisForMonth, convertAdToBs, getTithiIndexByName, getTithiLunarMonthName, getTithiYearFromAdDate } from '../utils/nepaliDateUtils';
 import { normalizePakshaToEnglish, normalizePakshaToNepali } from '../constants/calendarConstants';
+import './NepaliCalendar.css';
 
-// Component to add/edit an event
 const AddEventForm = ({ onAdd, familyMembers, onCancel, editingEvent }) => {
-    const { t } = useLanguage();
-    // Initialize date with today's date in YYYY-MM-DD format
+    const { t, isNepali } = useLanguage();
     const getTodayDate = () => {
         const today = new Date();
-        const year = today.getFullYear();
-        const month = String(today.getMonth() + 1).padStart(2, '0');
-        const day = String(today.getDate()).padStart(2, '0');
-        return `${year}-${month}-${day}`;
+        return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
     };
-    
+
     const [name, setName] = useState('');
     const [description, setDescription] = useState('');
     const [date, setDate] = useState(getTodayDate());
     const [selectedPersonId, setSelectedPersonId] = useState('');
     const [repetition, setRepetition] = useState('none');
-    const [entryMode, setEntryMode] = useState('date'); // 'date' or 'tithi'
+    const [entryMode, setEntryMode] = useState('date');
     const [tithiMonth, setTithiMonth] = useState('');
     const [tithiId, setTithiId] = useState('');
     const [resolvingTithi, setResolvingTithi] = useState(false);
 
-    // Populate form when editing
     useEffect(() => {
         if (editingEvent) {
             console.log('[AddEventForm] Editing event:', editingEvent);
@@ -41,22 +36,16 @@ const AddEventForm = ({ onAdd, familyMembers, onCancel, editingEvent }) => {
             if (editingEvent.tithi) {
                 console.log('[AddEventForm] Event has tithi:', editingEvent.tithi);
                 setEntryMode('tithi');
-                // If stored month is a name (string), convert to 1-based index
-                // If it's already a number (legacy), use as is
                 let monthVal = editingEvent.tithi.month;
                 if (typeof monthVal === 'string') {
                     const idx = nepaliMonths.indexOf(monthVal);
                     if (idx !== -1) monthVal = idx + 1;
                 }
-                // Always store as string to match select onChange behavior
                 const monthString = String(monthVal);
                 console.log('[AddEventForm] Setting tithiMonth:', monthString, 'tithiId:', editingEvent.tithi.id);
                 setTithiMonth(monthString);
-                // Store the tithi info temporarily so we can restore it after month loads
-                // We'll restore it in a separate effect
                 sessionStorage.setItem('pendingTithiId', editingEvent.tithi.id || '');
             } else {
-                console.log('[AddEventForm] Event has no tithi, setting date mode');
                 setEntryMode('date');
                 setTithiMonth('');
                 setTithiId('');
@@ -65,11 +54,9 @@ const AddEventForm = ({ onAdd, familyMembers, onCancel, editingEvent }) => {
         }
     }, [editingEvent, nepaliMonths]);
 
-    // Restore tithiId after tithiMonth has been set
     useEffect(() => {
         const pendingId = sessionStorage.getItem('pendingTithiId');
         if (pendingId && tithiMonth) {
-            console.log('[AddEventForm] Restoring tithiId:', pendingId);
             setTithiId(pendingId);
             sessionStorage.removeItem('pendingTithiId');
         }
@@ -84,55 +71,49 @@ const AddEventForm = ({ onAdd, familyMembers, onCancel, editingEvent }) => {
 
         if (entryMode === 'tithi') {
             if (!tithiMonth || !tithiId) return;
-            
+
             setResolvingTithi(true);
             try {
-                // Resolve date from Tithi
                 const [pakshaKey, tithiName] = tithiId.split('-');
                 const paksha = normalizePakshaToEnglish(pakshaKey);
                 const pakshaNepali = normalizePakshaToNepali(pakshaKey);
-                
-                // Determine current BS Year
+
                 const today = new Date();
                 const bsToday = convertAdToBs(today.getFullYear(), today.getMonth(), today.getDate());
                 const currentBsYear = bsToday.year;
                 const selectedMonthName = nepaliMonths[parseInt(tithiMonth) - 1];
-                
-                // Query using both new fields and legacy name prefix — merge results
+
                 const qNew = query(collection(db, COLLECTIONS.TITHIS), where('pakshya', '==', pakshaNepali), where('tithiName', '==', tithiName));
                 const old2PartName = `${pakshaNepali} ${tithiName}`;
                 const qOld = query(collection(db, COLLECTIONS.TITHIS), where('name', '>=', old2PartName), where('name', '<=', old2PartName + '\uf8ff'));
                 const [snapNew, snapOld] = await Promise.all([getDocs(qNew), getDocs(qOld)]);
-                
-                // Merge by doc ID
+
                 const allDocs = new Map();
                 snapNew.docs.forEach(d => allDocs.set(d.id, d));
                 snapOld.docs.forEach(d => { if (!allDocs.has(d.id)) allDocs.set(d.id, d); });
-                
+
                 let matchingTithi = null;
                 let actualTithiLunarMonth = null;
                 allDocs.forEach((docSnap) => {
                     const t = docSnap.data();
                     if (!t.name.includes(tithiName) || !t.name.includes(pakshaNepali)) return;
-                    
                     const tithiIndex = getTithiIndexByName(tithiName, { fallbackToOne: false });
                     if (!tithiIndex) return;
                     const lunarMonthName = getTithiLunarMonthName(paksha, tithiIndex, t.startDate);
                     const tithiYearInfo = getTithiYearFromAdDate(t.startDate, null, paksha, tithiIndex);
-                    
                     if (lunarMonthName === selectedMonthName && tithiYearInfo.tithiYear === currentBsYear) {
                         matchingTithi = t;
                         actualTithiLunarMonth = lunarMonthName;
                     }
                 });
-                
+
                 if (matchingTithi && actualTithiLunarMonth) {
                     finalDate = matchingTithi.startDate;
                     tithiInfo = {
-                        month: actualTithiLunarMonth,  // Save the actual tithi lunar month name, NOT calendar month
+                        month: actualTithiLunarMonth,
                         id: tithiId,
                         name: tithiName,
-                        paksha: paksha  // Use English paksha name ('Shukla'/'Krishna') for consistent matching
+                        paksha: paksha,
                     };
                 } else {
                     alert(`Could not find date for ${selectedMonthName} ${pakshaNepali} ${tithiName} in year ${currentBsYear}. Please ensure Tithis are generated.`);
@@ -150,15 +131,15 @@ const AddEventForm = ({ onAdd, familyMembers, onCancel, editingEvent }) => {
             if (!date) return;
         }
 
-        onAdd({ 
-            name, 
+        onAdd({
+            name,
             description: description.trim(),
-            date: finalDate, 
-            personId: selectedPersonId, 
+            date: finalDate,
+            personId: selectedPersonId,
             repetition,
-            tithi: tithiInfo 
+            tithi: tithiInfo,
         });
-        
+
         setName('');
         setDescription('');
         setDate(getTodayDate());
@@ -169,22 +150,37 @@ const AddEventForm = ({ onAdd, familyMembers, onCancel, editingEvent }) => {
         setTithiId('');
     };
 
+    const submitDisabled = resolvingTithi
+        || !name.trim()
+        || !selectedPersonId
+        || (entryMode === 'date' && !date)
+        || (entryMode === 'tithi' && (!tithiMonth || !tithiId));
+
     return (
-        <>
-            <div className="bg-white p-4 rounded-xl shadow-inner mb-4 space-y-3">
-                <h4 className="text-lg font-bold text-gray-800">
-                    {editingEvent ? t('addEventForm.editEvent') : t('addEventForm.addNewEvent')}
-                </h4>
-                <form onSubmit={handleSubmit} className="space-y-3">
-                    <div>
-                        <label htmlFor="event-person" className="block text-gray-700 font-semibold mb-1 text-sm">
-                            {t('addEventForm.associatedPerson')}
-                        </label>
+        <div className="ddm-form-container">
+            {/* Header */}
+            <div className="ddm-form-header">
+                <div className="ddm-form-header-content">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <rect x="3" y="4" width="18" height="18" rx="2" />
+                        <path d="M16 2v4M8 2v4M3 10h18" />
+                        <path d="M12 14v4M10 16h4" />
+                    </svg>
+                    <h4 className="ddm-form-header-title">
+                        {editingEvent ? t('addEventForm.editEvent') : t('addEventForm.addNewEvent')}
+                    </h4>
+                </div>
+            </div>
+
+            <form onSubmit={handleSubmit}>
+                <div className="ddm-form-body">
+                    {/* Associated Person */}
+                    <div className="ddm-form-group">
+                        <label className="ddm-label">{t('addEventForm.associatedPerson')}</label>
                         <select
-                            id="event-person"
                             value={selectedPersonId}
                             onChange={(e) => setSelectedPersonId(e.target.value)}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-green-500"
+                            className="ddm-select"
                             required
                         >
                             <option value="" disabled>{t('addEventForm.selectPerson')}</option>
@@ -198,159 +194,129 @@ const AddEventForm = ({ onAdd, familyMembers, onCancel, editingEvent }) => {
                             })}
                         </select>
                     </div>
-                    <div>
-                        <label htmlFor="event-name" className="block text-gray-700 font-semibold mb-1 text-sm">
-                            {t('addEventForm.eventName')}
-                        </label>
+
+                    {/* Event Name */}
+                    <div className="ddm-form-group">
+                        <label className="ddm-label">{t('addEventForm.eventName')}</label>
                         <input
-                            id="event-name"
                             type="text"
                             placeholder={t('addEventForm.eventNamePlaceholder')}
                             value={name}
                             onChange={(e) => setName(e.target.value)}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-green-500"
+                            className="ddm-input"
                             required
                         />
                     </div>
 
-                    <div>
-                        <label htmlFor="event-description" className="block text-gray-700 font-semibold mb-1 text-sm">
-                            {t('addEventForm.description')}
-                        </label>
+                    {/* Description */}
+                    <div className="ddm-form-group">
+                        <label className="ddm-label">{t('addEventForm.description')}</label>
                         <textarea
-                            id="event-description"
                             placeholder={t('addEventForm.descriptionPlaceholder')}
                             value={description}
                             onChange={(e) => setDescription(e.target.value)}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-green-500"
-                            rows={3}
+                            className="ddm-input"
+                            rows={2}
+                            style={{ resize: 'vertical' }}
                         />
                     </div>
-                    
-                    <div>
-                        <label className="block text-gray-700 font-semibold mb-1 text-sm">
-                            {t('addEventForm.entryMode')}
-                        </label>
-                        <div className="flex space-x-4 mb-2">
-                            <label className="inline-flex items-center">
-                                <input 
-                                    type="radio" 
-                                    className="form-radio text-green-600" 
-                                    name="entryMode" 
-                                    value="date" 
-                                    checked={entryMode === 'date'} 
-                                    onChange={() => {
-                                        setEntryMode('date');
-                                        // Keep current repetition value
-                                    }} 
-                                />
-                                <span className="ml-2 text-sm">{t('addEventForm.byDate')}</span>
-                            </label>
-                            <label className="inline-flex items-center">
-                                <input 
-                                    type="radio" 
-                                    className="form-radio text-green-600" 
-                                    name="entryMode" 
-                                    value="tithi" 
-                                    checked={entryMode === 'tithi'} 
-                                    onChange={() => {
-                                        setEntryMode('tithi');
-                                        // Keep current repetition value
-                                    }} 
-                                />
-                                <span className="ml-2 text-sm">{t('addEventForm.byTithi')}</span>
-                            </label>
-                        </div>
 
-                        {entryMode === 'date' ? (
-                            <>
-                                <label htmlFor="event-date" className="block text-gray-700 font-semibold mb-1 text-sm">
-                                    {t('addEventForm.dateNepaliCalendar')}
-                                </label>
-                                <NepaliDatePicker
-                                    value={date}
-                                    onChange={(adDate) => setDate(adDate)}
-                                    required
-                                />
-                            </>
-                        ) : (
-                            <div className="grid grid-cols-2 gap-2">
-                                <div>
-                                    <label className="block text-gray-700 font-semibold mb-1 text-sm">{t('addEventForm.tithiMonthLunar')}</label>
-                                    <select 
-                                        value={tithiMonth} 
-                                        onChange={(e) => setTithiMonth(e.target.value)}
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-green-500"
-                                        required
-                                    >
-                                        <option value="">{t('addEventForm.selectTithiMonth')}</option>
-                                        {nepaliMonths.map((month, idx) => (
-                                            <option key={idx} value={String(idx + 1)}>{month}</option>
-                                        ))}
-                                    </select>
-                                </div>
-                                <div>
-                                    <label className="block text-gray-700 font-semibold mb-1 text-sm">{t('addEventForm.tithi')}</label>
-                                    <select 
-                                        value={tithiId} 
-                                        onChange={(e) => setTithiId(e.target.value)}
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-green-500"
-                                        disabled={!tithiMonth}
-                                        required
-                                    >
-                                        <option value="">{t('addEventForm.selectTithi')}</option>
-                                        {tithiMonth && getTithisForMonth(parseInt(tithiMonth)).map(tithi => (
-                                            <option key={tithi.tithiId} value={tithi.tithiId}>
-                                                {tithi.name} ({tithi.pakshya})
-                                            </option>
-                                        ))}
-                                    </select>
-                                </div>
-                            </div>
-                        )}
+                    {/* Entry Mode */}
+                    <div className="ddm-form-group">
+                        <label className="ddm-label">{t('addEventForm.entryMode')}</label>
+                        <div className="ddm-tabs ddm-tabs-sm" role="tablist">
+                            <button
+                                type="button"
+                                className={`ddm-tab ${entryMode === 'date' ? 'ddm-tab-active' : ''}`}
+                                onClick={() => setEntryMode('date')}
+                                role="tab"
+                            >
+                                {t('addEventForm.byDate')}
+                            </button>
+                            <button
+                                type="button"
+                                className={`ddm-tab ${entryMode === 'tithi' ? 'ddm-tab-active' : ''}`}
+                                onClick={() => setEntryMode('tithi')}
+                                role="tab"
+                            >
+                                {t('addEventForm.byTithi')}
+                            </button>
+                        </div>
                     </div>
-                    <div>
-                        <label htmlFor="event-repetition" className="block text-gray-700 font-semibold mb-1 text-sm">
-                            {t('addEventForm.repeats')}
-                        </label>
+
+                    {entryMode === 'date' ? (
+                        <div className="ddm-form-group">
+                            <NepaliDatePicker
+                                value={date}
+                                onChange={(adDate) => setDate(adDate)}
+                                label={t('addEventForm.dateNepaliCalendar')}
+                                required
+                            />
+                        </div>
+                    ) : (
+                        <div className="ddm-form-row-2col">
+                            <div className="ddm-form-group">
+                                <label className="ddm-label">{t('addEventForm.tithiMonthLunar')}</label>
+                                <select
+                                    value={tithiMonth}
+                                    onChange={(e) => setTithiMonth(e.target.value)}
+                                    className="ddm-select"
+                                    required
+                                >
+                                    <option value="">{t('addEventForm.selectTithiMonth')}</option>
+                                    {nepaliMonths.map((month, idx) => (
+                                        <option key={idx} value={String(idx + 1)}>{month}</option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div className="ddm-form-group">
+                                <label className="ddm-label">{t('addEventForm.tithi')}</label>
+                                <select
+                                    value={tithiId}
+                                    onChange={(e) => setTithiId(e.target.value)}
+                                    className="ddm-select"
+                                    disabled={!tithiMonth}
+                                    required
+                                >
+                                    <option value="">{t('addEventForm.selectTithi')}</option>
+                                    {tithiMonth && getTithisForMonth(parseInt(tithiMonth)).map(tithi => (
+                                        <option key={tithi.tithiId} value={tithi.tithiId}>
+                                            {tithi.name} ({tithi.pakshya})
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Repetition */}
+                    <div className="ddm-form-group">
+                        <label className="ddm-label">{t('addEventForm.repeats')}</label>
                         <select
-                            id="event-repetition"
                             value={repetition}
                             onChange={(e) => setRepetition(e.target.value)}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-green-500"
+                            className="ddm-select"
                         >
                             <option value="none">{t('addEventForm.doesNotRepeat')}</option>
                             <option value="monthly">{t('addEventForm.monthly')}</option>
                             <option value="yearly">{t('addEventForm.yearly')}</option>
                         </select>
                     </div>
-                    <div className="flex justify-end space-x-2">
-                        <button type="button" onClick={onCancel} className="app-cancel-btn text-sm">
-                            {t('addEventForm.cancel')}
-                        </button>
-                        {
-                            (() => {
-                                const submitDisabled = resolvingTithi
-                                    || !name.trim()
-                                    || !selectedPersonId
-                                    || (entryMode === 'date' && !date)
-                                    || (entryMode === 'tithi' && (!tithiMonth || !tithiId));
+                </div>
 
-                                return (
-                                    <button
-                                        type="submit"
-                                        disabled={submitDisabled}
-                                        className={`app-save-btn text-sm`}
-                                    >
-                                        {resolvingTithi ? t('addEventForm.resolving') : (editingEvent ? t('addEventForm.updateEvent') : t('addEventForm.addEvent'))}
-                                    </button>
-                                );
-                            })()
-                        }
-                    </div>
-                </form>
-            </div>
-        </>
+                {/* Footer */}
+                <div className="ddm-form-footer">
+                    <button type="button" className="ddm-btn ddm-btn-ghost" onClick={onCancel}>
+                        {t('addEventForm.cancel')}
+                    </button>
+                    <button type="submit" className="ddm-btn ddm-btn-primary" disabled={submitDisabled}>
+                        {resolvingTithi
+                            ? t('addEventForm.resolving')
+                            : (editingEvent ? t('addEventForm.updateEvent') : t('addEventForm.addEvent'))}
+                    </button>
+                </div>
+            </form>
+        </div>
     );
 };
 
