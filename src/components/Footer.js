@@ -1,42 +1,45 @@
 import React from 'react';
+import { useLanguage } from '../contexts/LanguageContext';
 import './Footer.css';
 
 const Footer = () => {
+    const { t } = useLanguage();
     const currentYear = new Date().getFullYear();
-    
+
     return (
         <footer className="app-footer">
             <div className="footer-content">
                 <div className="footer-section">
                     <h3 className="footer-title">HamroPanchanga</h3>
                     <p className="footer-description">
-                        Connect your past. Branch out your future.
+                        {t('footer.tagline')}
                     </p>
                 </div>
-                
+
                 <div className="footer-section">
-                    <h4 className="footer-heading">Quick Links</h4>
+                    <h4 className="footer-heading">{t('footer.quickLinks')}</h4>
                     <ul className="footer-links">
-                        <li><a href="#home">Home</a></li>
-                        <li><a href="#branches">Branches</a></li>
-                        <li><a href="#events">Events</a></li>
+                        <li><a href="#home">{t('footer.home')}</a></li>
+                        <li><a href="#nepali-calendar-section">{t('footer.calendar')}</a></li>
+                        <li><a href="/trees">{t('footer.treeBuilder')}</a></li>
+                        <li><a href="/tithi-calculator">{t('footer.tithiCalculator')}</a></li>
                     </ul>
                 </div>
-                
+
                 <div className="footer-section">
-                    <h4 className="footer-heading">Contact</h4>
+                    <h4 className="footer-heading">{t('footer.contact')}</h4>
                     <p className="footer-text">
-                        For support and inquiries
+                        {t('footer.contactText')}
                     </p>
                     <p className="footer-text">
                         familytree@example.com
                     </p>
                 </div>
             </div>
-            
+
             <div className="footer-bottom">
                 <p className="footer-copyright">
-                    © {currentYear} HamroPanchanga. All rights reserved.
+                    &copy; {currentYear} {t('footer.copyright')}
                 </p>
             </div>
         </footer>
