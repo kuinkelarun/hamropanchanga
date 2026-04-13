@@ -11,9 +11,11 @@ import { createEvent } from '../../services/CalendarEventService';
 import { useLanguage } from '../../contexts/LanguageContext';
 import BulkUploadModal from '../BulkUploadModal';
 import BulkTreeShareModal from '../BulkTreeShareModal';
+import { useUserPermissions } from '../../hooks/usePermissions';
 
 export default function TreeSelectionPage({ user, isAdmin }) {
   const navigate = useNavigate();
+  const { isSuperUser } = useUserPermissions(user);
   const { t } = useLanguage();
   const currentUserEmailLower = (user?.email || '').toLowerCase().trim();
   const [trees, setTrees] = useState([]);
@@ -461,20 +463,24 @@ export default function TreeSelectionPage({ user, isAdmin }) {
               >
                 {creating ? t('treeSelection.creating') : t('treeSelection.buildNewTree')}
               </button>
-              <button
-                onClick={handleOpenBulkUploadConfirmation}
-                className="px-6 py-2.5 bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white rounded-lg font-semibold shadow-md transition-all transform hover:scale-105"
-              >
-                📁 Build From File Upload
-              </button>
-              <button
-                onClick={() => setShowShareModal(true)}
-                disabled={!user}
-                className="px-6 py-2.5 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 disabled:opacity-60 disabled:cursor-not-allowed text-white rounded-lg font-semibold shadow-md transition-all transform hover:scale-105"
-                title={isAdmin ? 'Share any trees with other users' : 'Share your trees with other users'}
-              >
-                📤 Share Trees
-              </button>
+              {(isAdmin || isSuperUser) && (
+                <button
+                  onClick={handleOpenBulkUploadConfirmation}
+                  className="px-6 py-2.5 bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white rounded-lg font-semibold shadow-md transition-all transform hover:scale-105"
+                >
+                  📁 Build From File Upload
+                </button>
+              )}
+              {(isAdmin || isSuperUser) && (
+                <button
+                  onClick={() => setShowShareModal(true)}
+                  disabled={!user}
+                  className="px-6 py-2.5 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 disabled:opacity-60 disabled:cursor-not-allowed text-white rounded-lg font-semibold shadow-md transition-all transform hover:scale-105"
+                  title={isAdmin ? 'Share any trees with other users' : 'Share your trees with other users'}
+                >
+                  📤 Share Trees
+                </button>
+              )}
             </div>
           </div>
 
