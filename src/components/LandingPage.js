@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useLanguage } from '../contexts/LanguageContext';
+import { useTithiDateResolver } from '../hooks/useTithiDateResolver';
 
 import HeroSection from './landing/HeroSection';
 import FeatureShowcase from './landing/FeatureShowcase';
@@ -77,6 +78,22 @@ const LandingPage = ({ user, isAdmin, trees = [], treeMembers = [], events, fami
         [user?.uid, trees]
     );
 
+    // Resolve tithi-based event dates from the live tithi DB so the Events
+    // section shows events on their actual tithi dates, not the stored dateKey.
+    const resolveEventDate = useTithiDateResolver();
+    const enrichedEvents = useMemo(() => {
+        if (!events) return [];
+        return events.map(event => {
+            if (event.tithi && event.repetition !== 'monthly') {
+                const resolvedDate = resolveEventDate(event);
+                if (resolvedDate) {
+                    return { ...event, resolvedTithiDate: resolvedDate };
+                }
+            }
+            return event;
+        });
+    }, [events, resolveEventDate]);
+
     return (
         <div className="landing-container">
             {/* 1. Hero */}
@@ -134,7 +151,7 @@ const LandingPage = ({ user, isAdmin, trees = [], treeMembers = [], events, fami
                     {user ? (
                         <div className="section-card events-section">
                             <LandingPageEventsSection
-                                events={events}
+                                events={enrichedEvents}
                                 familyMembers={familyMembers}
                                 onDoubleClickEvent={onDoubleClickEvent}
                                 onEventClick={onEventClick}

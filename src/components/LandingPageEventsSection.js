@@ -75,18 +75,20 @@ const LandingPageEventsSection = ({ events, familyMembers, onDoubleClickEvent, o
                 nextDate.setMonth(nextDate.getMonth() + 1);
             }
         } else if (repetition === 'yearly') {
-            // For Nepali date-based yearly events, use BS conversion to find next occurrence
+            // Use BS solar date recurrence: find the next BS year where the
+            // same BS month + day falls on or after today.
+            // This works for BOTH tithi and non-tithi yearly events because
+            // the stored dateKey reflects the actual AD date the event fell on,
+            // and the corresponding BS date stays stable across years.
             const dateStr = event?.dateKey || event?.date;
             if (dateStr && typeof dateStr === 'string' && dateStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
                 const [y, m, d] = dateStr.split('-').map(Number);
-                
+
                 try {
-                    // Convert AD date to BS
                     const bsDate = convertAdToBs(y, m - 1, d);
                     if (bsDate) {
-                        // Find next occurrence in the same BS month/day but future BS year
                         let currentBsYear = bsDate.year;
-                        
+
                         while (true) {
                             // Try to convert BS date to AD
                             const adDateObj = convertBsToAd(currentBsYear, bsDate.month, bsDate.day);
@@ -97,7 +99,6 @@ const LandingPageEventsSection = ({ events, familyMembers, onDoubleClickEvent, o
                                 }
                             }
                             currentBsYear++;
-                            // Safety check
                             if (currentBsYear > bsDate.year + 5) {
                                 break;
                             }
@@ -107,8 +108,18 @@ const LandingPageEventsSection = ({ events, familyMembers, onDoubleClickEvent, o
                     console.error('Error calculating next occurrence for yearly event:', err);
                 }
             }
-            
-            // Fallback: simple year increment
+
+            // Fallback for tithi events without a valid dateKey: estimate from
+            // the lunar month name. This is approximate (uses the 15th of the month)
+            // but ensures the event still appears rather than vanishing entirely.
+            if (event?.tithi?.month) {
+                const approx = getTithiApproxDate(event.tithi.month);
+                if (approx && isValidDate(approx)) {
+                    return approx;
+                }
+            }
+
+            // Last resort: simple year increment
             while (nextDate < today) {
                 nextDate.setFullYear(nextDate.getFullYear() + 1);
             }
@@ -132,13 +143,50 @@ const LandingPageEventsSection = ({ events, familyMembers, onDoubleClickEvent, o
     // Filter and sort events based on the selected filter
     const sortedAndFilteredEvents = events
         .map(event => {
-            // Use dateKey if available (standard), fallback to date (legacy)
+            // For tithi-based events (yearly/none), use the pre-resolved date from
+            // the tithi DB if available. This gives the EXACT date the tithi falls on,
+            // instead of the approximate solar-date recurrence.
+            if (event.resolvedTithiDate) {
+                const [y, m, d] = event.resolvedTithiDate.split('-').map(Number);
+                const resolvedDate = new Date(y, m - 1, d, 12, 0, 0);
+                if (isValidDate(resolvedDate)) {
+                    let displayDate = resolvedDate;
+
+                    // For yearly tithi events: if this year's occurrence already
+                    // passed, we need the NEXT year's occurrence. The tithi DB may
+                    // not have next year's data yet, so fall through to the BS solar
+                    // recurrence as a reasonable approximation.
+                    if (event.repetition === 'yearly') {
+                        const todayCheck = new Date();
+                        todayCheck.setHours(0, 0, 0, 0);
+                        if (resolvedDate < todayCheck) {
+                            // This year's tithi already passed — fall through to
+                            // getNextOccurrence for next-year approximation.
+                            // Don't return here; let the fallback path handle it.
+                            displayDate = null;
+                        }
+                    }
+
+                    if (displayDate) {
+                        const person = familyMembers.find(member => member.id === event.personId);
+                        return {
+                            ...event,
+                            name: (event.title || event.name),
+                            originalDate: resolvedDate,
+                            displayDate,
+                            personName: person?.name,
+                            personRelation: person?.relation,
+                        };
+                    }
+                    // displayDate is null → this year's tithi passed, fall through
+                }
+            }
+
+            // Fallback: use dateKey for non-tithi events or when resolved date unavailable
             const dateStr = event.dateKey || event.date;
             let originalDate;
-            
+
             if (dateStr && typeof dateStr === 'string' && dateStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
-                // Parse YYYY-MM-DD as local date, set to NOON (12:00) to avoid timezone edge cases
-                // where local midnight might fall into the previous day in NPT or UTC
                 const [y, m, d] = dateStr.split('-').map(Number);
                 originalDate = new Date(y, m - 1, d, 12, 0, 0);
             } else {
@@ -146,9 +194,6 @@ const LandingPageEventsSection = ({ events, familyMembers, onDoubleClickEvent, o
             }
 
             // If the stored dateKey is missing or invalid, estimate from tithi month.
-            // Shraddha and other tithi-based yearly events may lack a dateKey when the
-            // tithi wasn't found at save time.  Estimate from the lunar month so the
-            // event still appears in the upcoming section rather than vanishing entirely.
             if (!isValidDate(originalDate) && event.tithi?.month) {
                 originalDate = getTithiApproxDate(event.tithi.month);
             }
@@ -156,7 +201,6 @@ const LandingPageEventsSection = ({ events, familyMembers, onDoubleClickEvent, o
             let displayDate;
             if (event.repetition && event.repetition !== 'none') {
                 const next = getNextOccurrence(originalDate, event.repetition, event);
-                // getNextOccurrence returns null when base date is unresolvable
                 displayDate = isValidDate(next) ? next : originalDate;
             } else {
                 displayDate = originalDate;

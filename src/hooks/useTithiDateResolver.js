@@ -5,6 +5,7 @@ import { COLLECTIONS } from '../constants/firestoreCollections';
 import {
   getTithiIndexByName,
   getTithiYearFromAdDate,
+  getTithiLunarMonthName,
   convertAdToBs,
 } from '../utils/nepaliDateUtils';
 import { NEPALI_MONTHS as nepaliMonths, normalizePakshaToNepali } from '../constants/calendarConstants';
@@ -92,17 +93,22 @@ export function useTithiDateResolver() {
         if (seen.has(dedupeKey)) return;
         seen.add(dedupeKey);
 
-        const { tithiMonth, pakshya, tithi: tithiName } = parseTithiName(t.name);
-        if (!pakshya || !tithiName || !tithiMonth) return;
+        const { tithiMonth: parsedMonth, pakshya, tithi: tithiName } = parseTithiName(t.name);
+        if (!pakshya || !tithiName) return;
 
         const pakshaEn = pakshya === 'शुक्लपक्ष' ? 'Shukla' : 'Krishna';
         const tithiIndex = getTithiIndexByName(tithiName, { fallbackToOne: false });
         if (!tithiIndex) return;
 
+        // For legacy 2-part tithi names (no month prefix), compute the lunar
+        // month from the tithi's startDate using astronomical calculation.
+        const lunarMonth = parsedMonth || getTithiLunarMonthName(pakshaEn, tithiIndex, t.startDate);
+        if (!lunarMonth) return;
+
         const { tithiYear } = getTithiYearFromAdDate(t.startDate, null, pakshaEn, tithiIndex);
         if (!tithiYear) return;
 
-        const key = `${pakshya}||${tithiName}||${tithiYear}||${tithiMonth}`;
+        const key = `${pakshya}||${tithiName}||${tithiYear}||${lunarMonth}`;
         if (!map.has(key)) {
           map.set(key, t.startDate);
         }
@@ -136,9 +142,11 @@ export function useTithiDateResolver() {
         expectedMonth = nepaliMonths[expectedMonth - 1];
       }
 
-      // For yearly events use the current viewing year.
       // For one-time (none) events derive the target year from stored dateKey if present;
-      // otherwise fall back to currentBsYear (covers tithi-only events with no dateKey).
+      // otherwise fall back to currentBsYear.
+      // For yearly events, try currentBsYear, currentBsYear+1, and currentBsYear-1 to
+      // handle the Chaitra/Vaishakh year boundary — Vaishakh (month 1) tithis belong to
+      // the NEXT BS year when today is near the end of the current BS year.
       let targetYear = currentBsYear;
       if (event.repetition === 'none' && event.dateKey) {
         try {
@@ -152,7 +160,42 @@ export function useTithiDateResolver() {
 
       const key = `${pakshaNepali}||${tithiName}||${targetYear}||${expectedMonth}`;
       const found = tithiDateLookup.get(key);
-      return found !== undefined ? found : null;
+      if (found !== undefined) return found;
+
+      // For yearly events: try adjacent years to handle year boundary
+      if (event.repetition === 'yearly') {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        // Try next year — picks up Vaishakh tithis when we're still in Chaitra
+        const keyNext = `${pakshaNepali}||${tithiName}||${targetYear + 1}||${expectedMonth}`;
+        const foundNext = tithiDateLookup.get(keyNext);
+
+        // Try previous year — fallback
+        const keyPrev = `${pakshaNepali}||${tithiName}||${targetYear - 1}||${expectedMonth}`;
+        const foundPrev = tithiDateLookup.get(keyPrev);
+
+        // Prefer the nearest future date
+        const candidates = [];
+        if (foundNext) candidates.push(foundNext);
+        if (foundPrev) candidates.push(foundPrev);
+
+        if (candidates.length > 0) {
+          // Pick the one closest to (and preferably >= ) today
+          const sorted = candidates
+            .map(d => ({ date: d, obj: new Date(d + 'T12:00:00') }))
+            .sort((a, b) => {
+              const aFuture = a.obj >= today;
+              const bFuture = b.obj >= today;
+              if (aFuture && !bFuture) return -1;
+              if (!aFuture && bFuture) return 1;
+              return a.obj - b.obj;
+            });
+          return sorted[0].date;
+        }
+      }
+
+      return null;
     },
     [currentBsYear, tithiDateLookup]
   );
