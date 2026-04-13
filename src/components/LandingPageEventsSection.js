@@ -2,7 +2,7 @@ import React, { useState, useCallback } from 'react';
 import './LandingPageEventsSection.css';
 import { useLanguage } from '../contexts/LanguageContext';
 import { formatNepaliDate, formatEnglishDate, formatNepaliMonthYear, convertAdToBs, convertBsToAd } from '../utils/nepaliDateUtils';
-import { normalizePakshaToNepali } from '../constants/calendarConstants';
+import { NEPALI_MONTHS, normalizePakshaToNepali } from '../constants/calendarConstants';
 // Use Unicode `event.title` when present
 
 const LandingPageEventsSection = ({ events, familyMembers, onDoubleClickEvent, onEventClick }) => {
@@ -12,13 +12,13 @@ const LandingPageEventsSection = ({ events, familyMembers, onDoubleClickEvent, o
     // Helper function to get tithi display string with normalized paksha
     const getTithiDisplayString = useCallback((event) => {
         if (!event.tithi) return '';
-        
+
         const { month, paksha, name } = event.tithi;
         if (!month || !name) return '';
-        
+
         // Normalize paksha to Nepali
         const pakshaDisplay = normalizePakshaToNepali(paksha);
-        
+
         return ` (${month} ${pakshaDisplay} ${name})`;
     }, []);
 
@@ -33,28 +33,27 @@ const LandingPageEventsSection = ({ events, familyMembers, onDoubleClickEvent, o
     // Returns true for a legitimate JS Date.
     const isValidDate = (d) => d instanceof Date && !isNaN(d.getTime());
 
-    // Estimate an approximate AD mid-month date from a Nepali lunar month name.
-    // Used when a tithi-based event has no stored dateKey (Shraddha events, etc.)
-    // so the event still shows in the upcoming section.
+    // Estimate an approximate AD date from a Nepali lunar month name.
+    // Used when a tithi-based event has no stored dateKey or the resolver
+    // couldn't find the tithi in the DB. Uses the 1st of the BS month for
+    // a conservative estimate so events appear early in time-bound filters.
     const getTithiApproxDate = (tithiMonth) => {
-        const nepaliMonthNames = [
-            'वैशाख','ज्येष्ठ','आषाढ़','श्रावण','भाद्र','आश्विन',
-            'कार्तिक','मार्गशीर्ष','पौष','माघ','फाल्गुण','चैत्र'
-        ];
-        const idx = nepaliMonthNames.indexOf(tithiMonth);
+        // Use canonical NEPALI_MONTHS array to ensure name matching
+        const idx = NEPALI_MONTHS.indexOf(tithiMonth);
         if (idx === -1) return null;
         const bsMonth = idx + 1;
         const todayAd = new Date();
         const bsToday = convertAdToBs(todayAd.getFullYear(), todayAd.getMonth(), todayAd.getDate());
         if (!bsToday) return null;
         let bsYear = bsToday.year;
-        let adDateObj = convertBsToAd(bsYear, bsMonth, 15);
+        // Use day 1 instead of day 15 for a conservative early estimate
+        let adDateObj = convertBsToAd(bsYear, bsMonth, 1);
         if (!adDateObj) return null;
         let approxDate = new Date(adDateObj.year, adDateObj.month, adDateObj.day, 12, 0, 0);
         const todayMidnight = new Date();
         todayMidnight.setHours(0, 0, 0, 0);
         if (approxDate < todayMidnight) {
-            const next = convertBsToAd(bsYear + 1, bsMonth, 15);
+            const next = convertBsToAd(bsYear + 1, bsMonth, 1);
             if (next) approxDate = new Date(next.year, next.month, next.day, 12, 0, 0);
         }
         return isValidDate(approxDate) ? approxDate : null;
@@ -77,9 +76,6 @@ const LandingPageEventsSection = ({ events, familyMembers, onDoubleClickEvent, o
         } else if (repetition === 'yearly') {
             // Use BS solar date recurrence: find the next BS year where the
             // same BS month + day falls on or after today.
-            // This works for BOTH tithi and non-tithi yearly events because
-            // the stored dateKey reflects the actual AD date the event fell on,
-            // and the corresponding BS date stays stable across years.
             const dateStr = event?.dateKey || event?.date;
             if (dateStr && typeof dateStr === 'string' && dateStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
                 const [y, m, d] = dateStr.split('-').map(Number);
@@ -90,7 +86,6 @@ const LandingPageEventsSection = ({ events, familyMembers, onDoubleClickEvent, o
                         let currentBsYear = bsDate.year;
 
                         while (true) {
-                            // Try to convert BS date to AD
                             const adDateObj = convertBsToAd(currentBsYear, bsDate.month, bsDate.day);
                             if (adDateObj) {
                                 nextDate = new Date(adDateObj.year, adDateObj.month, adDateObj.day, 12, 0, 0);
@@ -110,8 +105,7 @@ const LandingPageEventsSection = ({ events, familyMembers, onDoubleClickEvent, o
             }
 
             // Fallback for tithi events without a valid dateKey: estimate from
-            // the lunar month name. This is approximate (uses the 15th of the month)
-            // but ensures the event still appears rather than vanishing entirely.
+            // the lunar month name.
             if (event?.tithi?.month) {
                 const approx = getTithiApproxDate(event.tithi.month);
                 if (approx && isValidDate(approx)) {
@@ -136,7 +130,7 @@ const LandingPageEventsSection = ({ events, familyMembers, onDoubleClickEvent, o
 
     const nextMonth = new Date(today);
     nextMonth.setMonth(today.getMonth() + 1);
-    
+
     const next90Days = new Date(today);
     next90Days.setDate(today.getDate() + 90);
 
@@ -144,8 +138,8 @@ const LandingPageEventsSection = ({ events, familyMembers, onDoubleClickEvent, o
     const sortedAndFilteredEvents = events
         .map(event => {
             // For tithi-based events (yearly/none), use the pre-resolved date from
-            // the tithi DB if available. This gives the EXACT date the tithi falls on,
-            // instead of the approximate solar-date recurrence.
+            // the tithi DB if available. This gives the EXACT date the tithi falls on
+            // this year, instead of the approximate solar-date recurrence.
             if (event.resolvedTithiDate) {
                 const [y, m, d] = event.resolvedTithiDate.split('-').map(Number);
                 const resolvedDate = new Date(y, m - 1, d, 12, 0, 0);
@@ -153,32 +147,22 @@ const LandingPageEventsSection = ({ events, familyMembers, onDoubleClickEvent, o
                     let displayDate = resolvedDate;
 
                     // For yearly tithi events: if this year's occurrence already
-                    // passed, we need the NEXT year's occurrence. The tithi DB may
-                    // not have next year's data yet, so fall through to the BS solar
-                    // recurrence as a reasonable approximation.
-                    if (event.repetition === 'yearly') {
-                        const todayCheck = new Date();
-                        todayCheck.setHours(0, 0, 0, 0);
-                        if (resolvedDate < todayCheck) {
-                            // This year's tithi already passed — fall through to
-                            // getNextOccurrence for next-year approximation.
-                            // Don't return here; let the fallback path handle it.
-                            displayDate = null;
-                        }
+                    // passed, use getNextOccurrence to estimate next year's date.
+                    // (Next year's tithis may not be generated yet.)
+                    if (event.repetition === 'yearly' && resolvedDate < today) {
+                        const next = getNextOccurrence(resolvedDate, 'yearly', event);
+                        displayDate = isValidDate(next) ? next : resolvedDate;
                     }
 
-                    if (displayDate) {
-                        const person = familyMembers.find(member => member.id === event.personId);
-                        return {
-                            ...event,
-                            name: (event.title || event.name),
-                            originalDate: resolvedDate,
-                            displayDate,
-                            personName: person?.name,
-                            personRelation: person?.relation,
-                        };
-                    }
-                    // displayDate is null → this year's tithi passed, fall through
+                    const person = familyMembers.find(member => member.id === event.personId);
+                    return {
+                        ...event,
+                        name: (event.title || event.name),
+                        originalDate: resolvedDate,
+                        displayDate,
+                        personName: person?.name,
+                        personRelation: person?.relation,
+                    };
                 }
             }
 
@@ -209,13 +193,13 @@ const LandingPageEventsSection = ({ events, familyMembers, onDoubleClickEvent, o
             // Find the associated person to display their name and relation
             const person = familyMembers.find(member => member.id === event.personId);
 
-            return { 
-                ...event, 
-                name: (event.title || event.name), // Ensure title is used if name is missing
-                originalDate, 
-                displayDate, 
-                personName: person?.name, 
-                personRelation: person?.relation 
+            return {
+                ...event,
+                name: (event.title || event.name),
+                originalDate,
+                displayDate,
+                personName: person?.name,
+                personRelation: person?.relation
             };
         })
         .filter(event => {
@@ -273,7 +257,7 @@ const LandingPageEventsSection = ({ events, familyMembers, onDoubleClickEvent, o
                     <option value="next-90-days">{t('home.filterNext90Days')}</option>
                 </select>
             </div>
-            
+
             {sortedAndFilteredEvents.length === 0 ? (
                 <div className="text-center py-4 text-gray-400 text-sm">
                     No events found for this filter.
@@ -285,8 +269,8 @@ const LandingPageEventsSection = ({ events, familyMembers, onDoubleClickEvent, o
                             <h5 className="text-lg font-bold text-gray-700 mb-2 mt-4">{monthYear}</h5>
                             <div className="event-cards-grid">
                                 {groupedEvents[monthYear].map((event, index) => (
-                                    <div 
-                                        key={index} 
+                                    <div
+                                        key={index}
                                         className="event-card cursor-pointer hover:shadow-lg transition-shadow"
                                         onClick={() => onEventClick && onEventClick(event)}
                                         onDoubleClick={() => onDoubleClickEvent(event)}
@@ -325,8 +309,8 @@ const LandingPageEventsSection = ({ events, familyMembers, onDoubleClickEvent, o
                 ) : (
                     <div className="event-cards-grid">
                         {sortedAndFilteredEvents.map((event, index) => (
-                            <div 
-                                key={index} 
+                            <div
+                                key={index}
                                 className="event-card cursor-pointer hover:shadow-lg transition-shadow"
                                 onClick={() => onEventClick && onEventClick(event)}
                                 onDoubleClick={() => onDoubleClickEvent(event)}
@@ -338,25 +322,25 @@ const LandingPageEventsSection = ({ events, familyMembers, onDoubleClickEvent, o
                                     )}
                                 </div>
                                 <div className="text-sm text-gray-600">
-                                            {isValidDate(event.displayDate) ? (
-                                                <>
-                                                    <div className="font-medium text-gray-700">
-                                                        {formatNepaliDate(event.displayDate).withDayShortNepali}
-                                                    </div>
-                                                    <div className="text-xs text-gray-500 mt-0.5">
-                                                        {formatEnglishDate(event.displayDate).short}
-                                                        {event.tithi && getTithiDisplayString(event)}
-                                                    </div>
-                                                </>
-                                            ) : (
-                                                <div className="text-xs text-gray-500 mt-0.5 italic">
-                                                    {event.tithi ? getTithiDisplayString(event) : 'मिति अनिश्चित'}
-                                                </div>
-                                            )}
+                                    {isValidDate(event.displayDate) ? (
+                                        <>
+                                            <div className="font-medium text-gray-700">
+                                                {formatNepaliDate(event.displayDate).withDayShortNepali}
+                                            </div>
+                                            <div className="text-xs text-gray-500 mt-0.5">
+                                                {formatEnglishDate(event.displayDate).short}
+                                                {event.tithi && getTithiDisplayString(event)}
+                                            </div>
+                                        </>
+                                    ) : (
+                                        <div className="text-xs text-gray-500 mt-0.5 italic">
+                                            {event.tithi ? getTithiDisplayString(event) : 'मिति अनिश्चित'}
                                         </div>
+                                    )}
+                                </div>
                                 {event.personName && (
-                                            <div className="font-medium text-gray-700 text-xs mt-1">For: {event.personName} ({event.personRelation})</div>
-                                        )}
+                                    <div className="font-medium text-gray-700 text-xs mt-1">For: {event.personName} ({event.personRelation})</div>
+                                )}
                             </div>
                         ))}
                     </div>
