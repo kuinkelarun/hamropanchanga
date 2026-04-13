@@ -45,13 +45,60 @@
     "backToHome": "Back to Home"
   },
   "hero": {
-    "title": "Family Tree",
+    "title": "HamroPanchanga",
+    "subtitle": "Build, visualize, and share your family tree with an integrated Nepali calendar and tithi tracker.",
     "tagline": "Connect your past. Branch out your future.",
-    "buildYourTree": "Build Your Tree"
+    "buildYourTree": "Build Your Tree",
+    "watchDemo": "Watch Demo"
   },
   "login": {
     "welcome": "Welcome to HamroPanchanga",
     "pleaseSignIn": "Please sign in to continue."
+  },
+  "landing": {
+    "featuresHeading": "What HamroPanchanga Offers",
+    "featuresSubheading": "Everything you need to document and celebrate your family heritage.",
+    "featureTreeTitle": "Family Tree Builder",
+    "featureTreeDesc": "Visually build and map your family connections with our drag-and-drop tree editor. Add unlimited members and relationships.",
+    "featureCalendarTitle": "Nepali Calendar",
+    "featureCalendarDesc": "Interactive Nepali Panchanga calendar with tithi tracking, events, and both Bikram Sambat and Gregorian dates.",
+    "featureEventsTitle": "Events & Tithi",
+    "featureEventsDesc": "Track birthdays, anniversaries, shraddha, and other family events tied to both calendar dates and lunar tithis.",
+    "spotlightHeading": "Visualize Your Family Heritage",
+    "spotlightBullet1": "Drag-and-drop visual tree editor",
+    "spotlightBullet2": "Unlimited family members & relationships",
+    "spotlightBullet3": "Share trees with family members",
+    "spotlightBullet4": "Export your tree as an image",
+    "spotlightCta": "Start Building",
+    "calendarHeading": "Nepali Panchanga Calendar",
+    "calendarSubheading": "View tithis, track events, and navigate both Bikram Sambat and Gregorian calendars side by side.",
+    "howItWorksHeading": "How It Works",
+    "howItWorksSubheading": "Get started in three simple steps.",
+    "step1Title": "Sign In",
+    "step1Desc": "One-click sign in with your Google account. Free and instant.",
+    "step2Title": "Build Your Tree",
+    "step2Desc": "Add family members, map relationships, and watch your heritage come alive.",
+    "step3Title": "Track Important Dates",
+    "step3Desc": "Use the Nepali calendar and tithi calculator to never miss a family milestone.",
+    "eventsHeading": "Your Family Events",
+    "eventsSignInPrompt": "Sign in to view your family events and reminders.",
+    "ctaLoggedOutHeading": "Preserve Your Family's Heritage",
+    "ctaLoggedOutDesc": "Join families across the world in documenting their history and traditions.",
+    "ctaLoggedOutButton": "Get Started Free",
+    "ctaLoggedInHeading": "Ready to Build?",
+    "ctaLoggedInDesc": "Your family tree is waiting.",
+    "ctaLoggedInButton": "Go to My Trees"
+  },
+  "footer": {
+    "tagline": "Connect your past. Branch out your future.",
+    "quickLinks": "Quick Links",
+    "home": "Home",
+    "calendar": "Calendar",
+    "treeBuilder": "Tree Builder",
+    "tithiCalculator": "Tithi Calculator",
+    "contact": "Contact",
+    "contactText": "For support and inquiries",
+    "copyright": "HamroPanchanga. All rights reserved."
   },
   "home": {
     "announcements": "Announcements",

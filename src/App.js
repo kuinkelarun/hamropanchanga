@@ -681,6 +681,7 @@ function AppContent() {
                             familyMembers={allFamilyMembers}
                             onDoubleClickEvent={handleDoubleClickEvent}
                             onEventClick={handleEventClick}
+                            onSignIn={signInWithGoogle}
                         />
                     } />
 

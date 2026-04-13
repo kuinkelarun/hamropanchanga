@@ -3,15 +3,22 @@ import { useNavigate } from 'react-router-dom';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useLanguage } from '../contexts/LanguageContext';
+
+import HeroSection from './landing/HeroSection';
+import FeatureShowcase from './landing/FeatureShowcase';
+import TreeBuilderSpotlight from './landing/TreeBuilderSpotlight';
+import HowItWorks from './landing/HowItWorks';
+import CtaBanner from './landing/CtaBanner';
 import LandingPageEventsSection from './LandingPageEventsSection';
-import './LandingPage.css';
 import NepaliCalendar from './NepaliCalendar';
 import Block1 from './Block1';
 import Footer from './Footer';
 
-const LandingPage = ({ user, isAdmin, trees = [], treeMembers = [], events, familyMembers, onDoubleClickEvent, onEventClick }) => {
+import './LandingPage.css';
+
+const LandingPage = ({ user, isAdmin, trees = [], treeMembers = [], events, familyMembers, onDoubleClickEvent, onEventClick, onSignIn }) => {
     const { t } = useLanguage();
-    const [block1Visible, setBlock1Visible] = useState(true); // Optimistically show Block1, hide if needed
+    const [block1Visible, setBlock1Visible] = useState(true);
     const [heroVideoId, setHeroVideoId] = useState('');
     const navigate = useNavigate();
 
@@ -23,18 +30,15 @@ const LandingPage = ({ user, isAdmin, trees = [], treeMembers = [], events, fami
                 if (settingsDoc.exists()) {
                     setBlock1Visible(settingsDoc.data().visible !== false);
                 } else {
-                    // Default to visible if setting doesn't exist
                     setBlock1Visible(true);
                 }
             } catch (error) {
                 console.error('Error fetching Block 1 visibility:', error);
-                // Default to visible on error
                 setBlock1Visible(true);
             }
         };
-        
-            fetchBlock1Visibility();
-        }, []);
+        fetchBlock1Visibility();
+    }, []);
 
     // Fetch hero YouTube video ID
     useEffect(() => {
@@ -55,88 +59,59 @@ const LandingPage = ({ user, isAdmin, trees = [], treeMembers = [], events, fami
     useEffect(() => {
         const savedScrollPosition = sessionStorage.getItem('landingPageScrollPosition');
         if (savedScrollPosition) {
-            // Use setTimeout to ensure DOM is fully rendered before scrolling
             setTimeout(() => {
                 window.scrollTo(0, parseInt(savedScrollPosition, 10));
-                // Clear the saved position after restoring
                 sessionStorage.removeItem('landingPageScrollPosition');
             }, 0);
         }
     }, []);
 
     const handleStartTree = () => {
-        // Save scroll position before navigating
         sessionStorage.setItem('landingPageScrollPosition', window.scrollY.toString());
-        // Route to the tree selection page; from there the user can
-        // pick an existing tree or create a new one before entering
-        // the visual builder.
         navigate('/trees');
     };
 
-    // IDs of trees explicitly shared with this user (not owned).
-    // Memoized to produce a stable reference — NepaliCalendar's event listener
-    // useEffect depends on this array; a new reference on every render (e.g. from
-    // typing in the search box) would tear down and rebuild all Firestore listeners
-    // on every keystroke, leaving shared-tree events perpetually absent from calendar day cards.
     const sharedTreeIds = useMemo(
         () => user ? trees.filter(t => t.ownerUid !== user.uid).map(t => t.id) : [],
         // eslint-disable-next-line react-hooks/exhaustive-deps
         [user?.uid, trees]
     );
 
-        // Note: BlockTithi has its own visibility loader; we render it alongside Block1
-    
-        return (
-            <div className="landing-container">
-                {/* HERO: full-width container - visible to all users */}
-                <div className="hero-full edgefull">
-                    <section 
-                        className="hero-section" 
-                        aria-label="Hero section"
-                    >
-                        <div className="hero-inner max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
-                            <div className="hero-content">
-                                <h1 className="app-name">{t('hero.title')}</h1>
-                                <p className="tagline">{t('hero.tagline')}</p>
-                                <button 
-                                    className="cta-button" 
-                                    onClick={handleStartTree}
-                                    aria-label="Start building your family tree"
-                                >
-                                    {t('hero.buildYourTree')}
-                                </button>
-                            </div>
-                            {heroVideoId && (
-                            <div className="hero-video">
-                                <div className="hero-video-wrapper">
-                                    <iframe
-                                        src={`https://www.youtube.com/embed/${heroVideoId}`}
-                                        title="How to build your family tree"
-                                        frameBorder="0"
-                                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                                        allowFullScreen
-                                    />
-                                </div>
-                            </div>
-                            )}
-                        </div>
-                    </section>
-                </div>
+    return (
+        <div className="landing-container">
+            {/* 1. Hero */}
+            <div className="edgefull">
+                <HeroSection onStartTree={handleStartTree} heroVideoId={heroVideoId} />
+            </div>
 
-                {/* Block 1: Horizontal Scrolling Cards - Conditionally visible */}
+            {/* 2. Announcements (conditional) */}
             {block1Visible === true && (
                 <div className="edgefull block1-wrapper">
                     <Block1 />
                 </div>
             )}
 
-            {/* Nepali Calendar */}
+            {/* 3. Feature Showcase */}
+            <div className="edgefull">
+                <FeatureShowcase />
+            </div>
+
+            {/* 4. Tree Builder Spotlight */}
+            <div className="edgefull">
+                <TreeBuilderSpotlight onNavigateToTrees={handleStartTree} />
+            </div>
+
+            {/* 5. Nepali Calendar */}
             <div id="nepali-calendar-section" className="edgefull">
                 <div className="section-content-centered">
+                    <h2 className="section-heading" style={{ marginTop: 'var(--space-3xl)' }}>
+                        {t('landing.calendarHeading')}
+                    </h2>
+                    <p className="section-subheading">{t('landing.calendarSubheading')}</p>
                     <div className="section-card calendar-wrapper">
-                        <NepaliCalendar 
-                            user={user} 
-                            isAdmin={isAdmin} 
+                        <NepaliCalendar
+                            user={user}
+                            isAdmin={isAdmin}
                             treeMembers={treeMembers}
                             sharedTreeIds={sharedTreeIds}
                             onTreeEventClick={onDoubleClickEvent}
@@ -145,28 +120,53 @@ const LandingPage = ({ user, isAdmin, trees = [], treeMembers = [], events, fami
                 </div>
             </div>
 
-            {/* Events/Updates Section */}
-            {user && (
-                <div className="edgefull">
-                    <div className="section-content-centered">
+            {/* 6. How It Works */}
+            <div className="edgefull">
+                <HowItWorks />
+            </div>
+
+            {/* 7. Events Feed (auth-gated) */}
+            <div className="edgefull">
+                <div className="section-content-centered">
+                    <h2 className="section-heading" style={{ marginTop: 'var(--space-3xl)' }}>
+                        {t('landing.eventsHeading')}
+                    </h2>
+                    {user ? (
                         <div className="section-card events-section">
-                            <LandingPageEventsSection 
-                                events={events} 
-                                familyMembers={familyMembers} 
+                            <LandingPageEventsSection
+                                events={events}
+                                familyMembers={familyMembers}
                                 onDoubleClickEvent={onDoubleClickEvent}
                                 onEventClick={onEventClick}
                             />
                         </div>
-                    </div>
+                    ) : (
+                        <div className="section-card" style={{ textAlign: 'center', padding: '3rem 1.5rem' }}>
+                            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ margin: '0 auto 1rem' }}>
+                                <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                                <path d="M7 11V7a5 5 0 0110 0v4" />
+                            </svg>
+                            <p className="text-gray-500 mb-4">{t('landing.eventsSignInPrompt')}</p>
+                            <button
+                                onClick={onSignIn}
+                                className="btn btn-primary"
+                            >
+                                {t('auth.signIn')}
+                            </button>
+                        </div>
+                    )}
                 </div>
-            )}
-            
-            {/* Footer: full-width container */}
+            </div>
+
+            {/* 8. CTA Banner */}
+            <div className="edgefull" style={{ marginTop: 'var(--space-3xl)' }}>
+                <CtaBanner user={user} onStartTree={handleStartTree} onSignIn={onSignIn} />
+            </div>
+
+            {/* 9. Footer */}
             <div className="footer-full edgefull">
                 <Footer />
             </div>
-
-            {/* Tree Selection Modal (legacy) no longer used; builder opens directly */}
         </div>
     );
 };
