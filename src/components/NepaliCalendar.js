@@ -164,9 +164,13 @@ export default function NepaliCalendar({ user: propUser, isAdmin, treeMembers = 
               startDate: tithi.startDate,
               startTime: tithi.startTime,
               endDate: tithi.endDate,
-              endTime: tithi.endTime
+              endTime: tithi.endTime,
+              tithiMonth: tithi.tithiMonth || null,
+              tithiYear: tithi.tithiYear || null,
+              pakshya: tithi.pakshya || null,
+              tithiName: tithi.tithiName || null,
             });
-            
+
             // Move to next day
             currentDate.setDate(currentDate.getDate() + 1);
           }
@@ -180,8 +184,13 @@ export default function NepaliCalendar({ user: propUser, isAdmin, treeMembers = 
             tithisData[dateKey].push({
               id: tithi.id,
               name: tithi.name,
+              startDate: tithi.startDate || dateKey,
               startTime: tithi.startTime,
-              endTime: tithi.endTime
+              endTime: tithi.endTime,
+              tithiMonth: tithi.tithiMonth || null,
+              tithiYear: tithi.tithiYear || null,
+              pakshya: tithi.pakshya || null,
+              tithiName: tithi.tithiName || null,
             });
           }
         }
@@ -587,9 +596,13 @@ export default function NepaliCalendar({ user: propUser, isAdmin, treeMembers = 
               startDate: tithi.startDate,
               startTime: tithi.startTime,
               endDate: tithi.endDate,
-              endTime: tithi.endTime
+              endTime: tithi.endTime,
+              tithiMonth: tithi.tithiMonth || null,
+              tithiYear: tithi.tithiYear || null,
+              pakshya: tithi.pakshya || null,
+              tithiName: tithi.tithiName || null,
             });
-            
+
             // Move to next day
             currentDate.setDate(currentDate.getDate() + 1);
           }
@@ -603,8 +616,13 @@ export default function NepaliCalendar({ user: propUser, isAdmin, treeMembers = 
             tithisData[dateKey].push({
               id: tithi.id,
               name: tithi.name,
+              startDate: tithi.startDate || dateKey,
               startTime: tithi.startTime,
-              endTime: tithi.endTime
+              endTime: tithi.endTime,
+              tithiMonth: tithi.tithiMonth || null,
+              tithiYear: tithi.tithiYear || null,
+              pakshya: tithi.pakshya || null,
+              tithiName: tithi.tithiName || null,
             });
           }
         }
@@ -1012,19 +1030,28 @@ export default function NepaliCalendar({ user: propUser, isAdmin, treeMembers = 
         if (seen.has(dedupeKey)) return;
         seen.add(dedupeKey);
 
-        const { tithiMonth: parsedMonth, pakshya, tithi: tithiName } = parseTithiName(t.name);
+        // Parse the name for fallback values
+        const { tithiMonth: parsedMonth, pakshya: parsedPakshya, tithi: parsedTithiName } = parseTithiName(t.name);
+
+        // Use stored fields first, then parsed, then computed
+        const pakshya = t.pakshya || parsedPakshya;
+        const tithiName = t.tithiName || parsedTithiName;
         if (!pakshya || !tithiName) return;
 
         const pakshaEn = (pakshya === 'शुक्लपक्ष') ? 'Shukla' : 'Krishna';
         const tithiIndex = getTithiIndexByName(tithiName, { fallbackToOne: false });
         if (!tithiIndex) return;
 
-        // For legacy 2-part tithi names (no month prefix), compute the lunar
-        // month from the tithi's startDate using astronomical calculation.
-        const lunarMonth = parsedMonth || getTithiLunarMonthName(pakshaEn, tithiIndex, t.startDate);
+        // Lunar month: prefer stored > parsed from name > computed astronomically
+        const lunarMonth = t.tithiMonth || parsedMonth || getTithiLunarMonthName(pakshaEn, tithiIndex, t.startDate);
         if (!lunarMonth) return;
 
-        const { tithiYear } = getTithiYearFromAdDate(t.startDate, null, pakshaEn, tithiIndex);
+        // Tithi year: prefer stored > computed from date
+        let tithiYear = t.tithiYear;
+        if (!tithiYear) {
+          const computed = getTithiYearFromAdDate(t.startDate, null, pakshaEn, tithiIndex);
+          tithiYear = computed?.tithiYear;
+        }
         if (!tithiYear) return;
 
         const key = `${pakshya}||${tithiName}||${tithiYear}||${lunarMonth}`;

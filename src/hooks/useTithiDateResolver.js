@@ -9,7 +9,7 @@ import {
   convertAdToBs,
 } from '../utils/nepaliDateUtils';
 import { NEPALI_MONTHS as nepaliMonths, normalizePakshaToNepali } from '../constants/calendarConstants';
-import { parseTithiName, padDateKey } from '../utils/calendarHelpers';
+import { parseTithiName, padDateKey, getTithiEventDisplayDate } from '../utils/calendarHelpers';
 
 /**
  * Custom hook that listens to the TITHIS Firestore collection and provides
@@ -20,15 +20,15 @@ import { parseTithiName, padDateKey } from '../utils/calendarHelpers';
  *   const adDate = resolveEventDate(event); // "2026-03-22" or null
  *
  * The returned resolver handles:
- *   - Tithi events (repetition: 'none' or 'yearly') → resolves via tithiDateLookup
- *   - Non-tithi events → returns event.dateKey as-is
- *   - Monthly tithi events → returns event.dateKey (monthly display handled separately)
- *   - Missing tithi data → returns null (tithi not yet in DB)
+ *   - Tithi events (repetition: 'none' or 'yearly') -> resolves via tithiDateLookup
+ *   - Non-tithi events -> returns event.dateKey as-is
+ *   - Monthly tithi events -> returns event.dateKey (monthly display handled separately)
+ *   - Missing tithi data -> returns event.dateKey as fallback (never vanishes)
  */
 export function useTithiDateResolver() {
   const [tithisByDate, setTithisByDate] = useState({});
 
-  // Real-time listener for tithis collection (same as NepaliCalendar.js)
+  // Real-time listener for tithis collection
   useEffect(() => {
     const tithisCollection = collection(db, COLLECTIONS.TITHIS);
     const q = query(tithisCollection, orderBy('startDate'));
@@ -57,6 +57,11 @@ export function useTithiDateResolver() {
               startTime: tithi.startTime,
               endDate: tithi.endDate,
               endTime: tithi.endTime,
+              // Forward pre-computed fields from bulk generation
+              tithiMonth: tithi.tithiMonth || null,
+              tithiYear: tithi.tithiYear || null,
+              pakshya: tithi.pakshya || null,
+              tithiName: tithi.tithiName || null,
             });
             currentDate.setDate(currentDate.getDate() + 1);
           }
@@ -67,8 +72,13 @@ export function useTithiDateResolver() {
             tithisData[dateKey].push({
               id: tithi.id,
               name: tithi.name,
+              startDate: tithi.startDate || dateKey,
               startTime: tithi.startTime,
               endTime: tithi.endTime,
+              tithiMonth: tithi.tithiMonth || null,
+              tithiYear: tithi.tithiYear || null,
+              pakshya: tithi.pakshya || null,
+              tithiName: tithi.tithiName || null,
             });
           }
         }
@@ -81,7 +91,9 @@ export function useTithiDateResolver() {
     return () => unsubscribe();
   }, []);
 
-  // Build the lookup map: "pakshya||tithiName||year||month" → AD start date string
+  // Build the lookup map: "pakshya||tithiName||year||month" -> {startDate, startTime}
+  // Uses pre-computed fields from bulk generation as the PRIMARY source,
+  // falling back to parsing/astronomical computation for legacy data.
   const tithiDateLookup = useMemo(() => {
     const map = new Map();
     const seen = new Set();
@@ -93,41 +105,51 @@ export function useTithiDateResolver() {
         if (seen.has(dedupeKey)) return;
         seen.add(dedupeKey);
 
-        const { tithiMonth: parsedMonth, pakshya, tithi: tithiName } = parseTithiName(t.name);
+        // Parse the name for fallback values
+        const { tithiMonth: parsedMonth, pakshya: parsedPakshya, tithi: parsedTithiName } = parseTithiName(t.name);
+
+        // Use stored fields first, then parsed, then computed
+        const pakshya = t.pakshya || parsedPakshya;
+        const tithiName = t.tithiName || parsedTithiName;
         if (!pakshya || !tithiName) return;
 
         const pakshaEn = pakshya === 'शुक्लपक्ष' ? 'Shukla' : 'Krishna';
         const tithiIndex = getTithiIndexByName(tithiName, { fallbackToOne: false });
         if (!tithiIndex) return;
 
-        // For legacy 2-part tithi names (no month prefix), compute the lunar
-        // month from the tithi's startDate using astronomical calculation.
-        const lunarMonth = parsedMonth || getTithiLunarMonthName(pakshaEn, tithiIndex, t.startDate);
+        // Lunar month: prefer stored > parsed from name > computed astronomically
+        const lunarMonth = t.tithiMonth || parsedMonth || getTithiLunarMonthName(pakshaEn, tithiIndex, t.startDate);
         if (!lunarMonth) return;
 
-        const { tithiYear } = getTithiYearFromAdDate(t.startDate, null, pakshaEn, tithiIndex);
+        // Tithi year: prefer stored > computed from date
+        let tithiYear = t.tithiYear;
+        if (!tithiYear) {
+          const computed = getTithiYearFromAdDate(t.startDate, null, pakshaEn, tithiIndex);
+          tithiYear = computed?.tithiYear;
+        }
         if (!tithiYear) return;
 
         const key = `${pakshya}||${tithiName}||${tithiYear}||${lunarMonth}`;
         if (!map.has(key)) {
-          map.set(key, t.startDate);
+          map.set(key, { startDate: t.startDate, startTime: t.startTime || null });
         }
       });
     });
+    // Debug: uncomment to trace lookup map contents
+    // console.log(`[tithiDateLookup] Built map with ${map.size} entries`);
     return map;
   }, [tithisByDate]);
 
-  // Derive current BS year from today's date
-  const currentBsYear = useMemo(() => {
-    const now = new Date();
-    const bs = convertAdToBs(now.getFullYear(), now.getMonth(), now.getDate());
-    return bs?.year || 2082;
-  }, []);
+  // Derive current BS year from today's date.
+  // No dependency array caching — always use the actual current year.
+  const now = new Date();
+  const bsNow = convertAdToBs(now.getFullYear(), now.getMonth(), now.getDate());
+  const currentBsYear = bsNow?.year || 2083;
 
   // Resolve the live AD dateKey for a tithi-based calendar event.
-  //   Returns a date string → tithi present, show event on that day
-  //   Returns null          → tithi absent/deleted, hide event
-  //   Returns event.dateKey → non-tithi or monthly events
+  //   Returns a date string -> tithi present, show event on that day
+  //   Returns event.dateKey -> fallback when tithi not found (event still shows)
+  //   Returns event.dateKey -> non-tithi or monthly events
   const resolveEventDate = useCallback(
     (event) => {
       if (!event) return null;
@@ -142,11 +164,8 @@ export function useTithiDateResolver() {
         expectedMonth = nepaliMonths[expectedMonth - 1];
       }
 
-      // For one-time (none) events derive the target year from stored dateKey if present;
-      // otherwise fall back to currentBsYear.
-      // For yearly events, try currentBsYear, currentBsYear+1, and currentBsYear-1 to
-      // handle the Chaitra/Vaishakh year boundary — Vaishakh (month 1) tithis belong to
-      // the NEXT BS year when today is near the end of the current BS year.
+      // For one-time (none) events derive the target year from stored dateKey.
+      // For yearly events use currentBsYear as the starting point.
       let targetYear = currentBsYear;
       if (event.repetition === 'none' && event.dateKey) {
         try {
@@ -158,30 +177,27 @@ export function useTithiDateResolver() {
         }
       }
 
-      const key = `${pakshaNepali}||${tithiName}||${targetYear}||${expectedMonth}`;
-      const found = tithiDateLookup.get(key);
-      if (found !== undefined) return found;
-
-      // For yearly events: try adjacent years to handle year boundary
+      // For yearly events: collect ALL matches from multiple years and pick
+      // the nearest future date. This is critical because currentBsYear might be
+      // stale (cached from first render) or the tithi year assignment might differ.
       if (event.repetition === 'yearly') {
         const today = new Date();
         today.setHours(0, 0, 0, 0);
 
-        // Try next year — picks up Vaishakh tithis when we're still in Chaitra
-        const keyNext = `${pakshaNepali}||${tithiName}||${targetYear + 1}||${expectedMonth}`;
-        const foundNext = tithiDateLookup.get(keyNext);
-
-        // Try previous year — fallback
-        const keyPrev = `${pakshaNepali}||${tithiName}||${targetYear - 1}||${expectedMonth}`;
-        const foundPrev = tithiDateLookup.get(keyPrev);
-
-        // Prefer the nearest future date
         const candidates = [];
-        if (foundNext) candidates.push(foundNext);
-        if (foundPrev) candidates.push(foundPrev);
+        // Try primary year and ±1, ±2 for robustness
+        for (const offset of [0, 1, -1, 2, -2]) {
+          const yr = targetYear + offset;
+          const yrKey = `${pakshaNepali}||${tithiName}||${yr}||${expectedMonth}`;
+          const yrFound = tithiDateLookup.get(yrKey);
+          if (yrFound) {
+            const resolved = getTithiEventDisplayDate(yrFound.startDate, yrFound.startTime);
+            if (resolved) candidates.push(resolved);
+          }
+        }
 
         if (candidates.length > 0) {
-          // Pick the one closest to (and preferably >= ) today
+          // Prefer the nearest future date, then nearest past date
           const sorted = candidates
             .map(d => ({ date: d, obj: new Date(d + 'T12:00:00') }))
             .sort((a, b) => {
@@ -195,7 +211,15 @@ export function useTithiDateResolver() {
         }
       }
 
-      return null;
+      // For non-yearly events (repetition: 'none'), try the primary year only
+      const key = `${pakshaNepali}||${tithiName}||${targetYear}||${expectedMonth}`;
+      const found = tithiDateLookup.get(key);
+      if (found !== undefined) {
+        return getTithiEventDisplayDate(found.startDate, found.startTime);
+      }
+
+      // Defensive fallback: return the stored dateKey so the event still appears
+      return event.dateKey || null;
     },
     [currentBsYear, tithiDateLookup]
   );
