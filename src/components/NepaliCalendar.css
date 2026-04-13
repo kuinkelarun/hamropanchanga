@@ -1693,7 +1693,692 @@
 }
 
 /* Accessibility */
-.nc-modal :focus { 
-    outline: 2px solid rgba(37,99,235,0.18); 
-    outline-offset:2px; 
+.nc-modal :focus {
+    outline: 2px solid rgba(37,99,235,0.18);
+    outline-offset:2px;
+}
+
+/* =============================================
+   Day Details Modal — Reimagined
+   ============================================= */
+
+.ddm-modal {
+    max-width: 560px !important;
+    padding: 0 !important;
+    border-radius: 16px !important;
+    overflow: hidden;
+}
+
+/* ---- Header ---- */
+.ddm-header {
+    background: linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #4c1d95 100%);
+    padding: 20px 20px 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+}
+
+.ddm-header-date {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.ddm-header-nepali {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #ffffff;
+    letter-spacing: 0.01em;
+}
+
+.ddm-header-english {
+    font-size: 0.8rem;
+    color: rgba(255, 255, 255, 0.65);
+    font-weight: 400;
+}
+
+.ddm-close-btn {
+    background: rgba(255, 255, 255, 0.12);
+    border: none;
+    color: rgba(255, 255, 255, 0.8);
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s ease;
+    flex-shrink: 0;
+}
+
+.ddm-close-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+    color: #ffffff;
+}
+
+/* ---- Body (override parent) ---- */
+.ddm-modal .nc-modal-body {
+    padding: 4px 20px 0;
+}
+
+/* ---- Sections ---- */
+.ddm-section {
+    padding: 14px 0;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.ddm-section:last-of-type {
+    border-bottom: none;
+}
+
+.ddm-section-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 10px;
+    color: #475569;
+}
+
+.ddm-section-header h4 {
+    margin: 0;
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: #334155;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    flex: 1;
+}
+
+.ddm-section-header svg {
+    flex-shrink: 0;
+    opacity: 0.6;
+}
+
+.ddm-badge {
+    background: #f1f5f9;
+    color: #64748b;
+    font-size: 0.7rem;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 10px;
+    min-width: 22px;
+    text-align: center;
+}
+
+/* ---- Items ---- */
+.ddm-items {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.ddm-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    background: #fafbfc;
+    border: 1px solid #f1f5f9;
+    transition: background 0.15s ease, box-shadow 0.15s ease;
+}
+
+.ddm-item:hover {
+    background: #f8fafc;
+}
+
+/* Dot indicator */
+.ddm-item-icon-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    margin-top: 6px;
+}
+
+.ddm-dot-amber { background: #f59e0b; }
+.ddm-dot-blue { background: #3b82f6; }
+.ddm-dot-emerald { background: #10b981; }
+.ddm-dot-purple { background: #8b5cf6; }
+
+/* Item content */
+.ddm-item-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.ddm-item-title {
+    font-weight: 600;
+    font-size: 0.875rem;
+    color: #0f172a;
+    margin-bottom: 2px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.ddm-item-meta {
+    font-size: 0.8rem;
+    color: #64748b;
+    line-height: 1.5;
+    margin-top: 2px;
+}
+
+.ddm-item-member {
+    font-size: 0.8rem;
+    color: #7c3aed;
+    font-weight: 600;
+    margin-top: 2px;
+}
+
+.ddm-item-dates {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    align-items: center;
+    margin-top: 4px;
+    font-size: 0.78rem;
+    color: #64748b;
+}
+
+.ddm-nepali-date {
+    color: #7c3aed;
+    font-weight: 500;
+}
+
+.ddm-tithi-tag {
+    background: #f5f3ff;
+    color: #6d28d9;
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-size: 0.72rem;
+    font-weight: 600;
+}
+
+.ddm-admin-tag {
+    font-size: 0.68rem;
+    padding: 1px 6px;
+    background: #fef3c7;
+    color: #92400e;
+    border-radius: 4px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+}
+
+/* Tree event item */
+.ddm-item-tree {
+    border-color: transparent;
+    background-image: linear-gradient(#fafbfc, #fafbfc), linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background-origin: border-box;
+    background-clip: padding-box, border-box;
+    border-width: 1.5px;
+}
+
+.ddm-item-tree:hover {
+    background-image: linear-gradient(#f0edff, #f0edff), linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.12);
+}
+
+/* Delete button */
+.ddm-delete-btn {
+    background: none;
+    border: none;
+    color: #94a3b8;
+    cursor: pointer;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    flex-shrink: 0;
+    margin-top: 2px;
+    transition: all 0.15s ease;
+}
+
+.ddm-delete-btn:hover {
+    background: #fef2f2;
+    color: #ef4444;
+}
+
+/* Empty state */
+.ddm-empty {
+    text-align: center;
+    color: #94a3b8;
+    font-size: 0.82rem;
+    padding: 12px 8px;
+    font-style: italic;
+}
+
+/* ---- Footer Actions ---- */
+.ddm-footer {
+    display: flex;
+    gap: 8px;
+    padding: 14px 20px 18px;
+    border-top: 1px solid #f1f5f9;
+    flex-wrap: wrap;
+}
+
+.ddm-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 10px 16px;
+    border-radius: 10px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    border: none;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    flex: 1 1 auto;
+    min-height: 40px;
+}
+
+.ddm-btn-primary {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: #ffffff;
+    box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+}
+
+.ddm-btn-primary:hover {
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    transform: translateY(-1px);
+}
+
+.ddm-btn-secondary {
+    background: #f5f3ff;
+    color: #6d28d9;
+    border: 1px solid #ede9fe;
+}
+
+.ddm-btn-secondary:hover {
+    background: #ede9fe;
+}
+
+.ddm-btn-ghost {
+    background: #f1f5f9;
+    color: #475569;
+}
+
+.ddm-btn-ghost:hover {
+    background: #e2e8f0;
+}
+
+/* ---- Responsive ---- */
+@media (max-width: 768px) {
+    .ddm-modal {
+        width: 96% !important;
+        max-height: 80vh !important;
+    }
+
+    .ddm-header {
+        padding: 16px 16px 12px;
+    }
+
+    .ddm-header-nepali {
+        font-size: 1.1rem;
+    }
+
+    .ddm-modal .nc-modal-body {
+        padding: 4px 16px 0;
+    }
+
+    .ddm-footer {
+        padding: 12px 16px 16px;
+    }
+}
+
+@media (max-width: 480px) {
+    .ddm-modal {
+        width: 98% !important;
+        max-height: 78vh !important;
+        border-radius: 14px !important;
+    }
+
+    .ddm-header {
+        padding: 14px 14px 10px;
+    }
+
+    .ddm-header-nepali {
+        font-size: 1rem;
+    }
+
+    .ddm-header-english {
+        font-size: 0.75rem;
+    }
+
+    .ddm-modal .nc-modal-body {
+        padding: 2px 14px 0;
+    }
+
+    .ddm-footer {
+        padding: 10px 14px 14px;
+        gap: 6px;
+    }
+
+    .ddm-btn {
+        padding: 9px 12px;
+        font-size: 0.82rem;
+    }
+}
+
+/* =============================================
+   DDM Form Elements — Shared across
+   AddEventModal, AddTithiModal, AddEventForm
+   ============================================= */
+
+/* Form groups */
+.ddm-form-group {
+    margin-bottom: 14px;
+}
+
+.ddm-label {
+    display: block;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #334155;
+    margin-bottom: 6px;
+    letter-spacing: 0.01em;
+}
+
+/* Inputs */
+.ddm-input {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    font-size: 0.875rem;
+    color: #0f172a;
+    background: #ffffff;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    box-sizing: border-box;
+    font-family: inherit;
+}
+
+.ddm-input:focus {
+    border-color: #818cf8;
+    box-shadow: 0 0 0 3px rgba(129, 140, 248, 0.12);
+    outline: none;
+}
+
+.ddm-input::placeholder {
+    color: #94a3b8;
+}
+
+.ddm-input:disabled {
+    background: #f8fafc;
+    color: #94a3b8;
+    cursor: not-allowed;
+}
+
+/* Selects */
+.ddm-select {
+    width: 100%;
+    padding: 10px 32px 10px 12px;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    font-size: 0.875rem;
+    color: #0f172a;
+    background: #ffffff;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    cursor: pointer;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    box-sizing: border-box;
+    font-family: inherit;
+}
+
+.ddm-select:focus {
+    border-color: #818cf8;
+    box-shadow: 0 0 0 3px rgba(129, 140, 248, 0.12);
+    outline: none;
+}
+
+.ddm-select:disabled {
+    background-color: #f8fafc;
+    color: #94a3b8;
+    cursor: not-allowed;
+}
+
+/* Two-column row */
+.ddm-form-row-2col {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 0;
+}
+
+.ddm-form-row-2col > .ddm-form-group {
+    flex: 1;
+    min-width: 0;
+}
+
+/* Tabs (pill style) */
+.ddm-tabs {
+    display: inline-flex;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.ddm-tabs-sm {
+    gap: 4px;
+}
+
+.ddm-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 7px 14px;
+    border-radius: 999px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #475569;
+    background: #f1f5f9;
+    border: 1px solid #e2e8f0;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    white-space: nowrap;
+    font-family: inherit;
+}
+
+.ddm-tab:hover {
+    background: #e2e8f0;
+}
+
+.ddm-tab-active {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: #ffffff;
+    border-color: transparent;
+    box-shadow: 0 2px 6px rgba(102, 126, 234, 0.25);
+}
+
+.ddm-tab-active:hover {
+    background: linear-gradient(135deg, #5a72d5, #6a4393);
+}
+
+.ddm-tabs-sm .ddm-tab {
+    padding: 6px 12px;
+    font-size: 0.78rem;
+}
+
+/* Validation message */
+.ddm-validation {
+    color: #dc2626;
+    font-size: 0.82rem;
+    font-weight: 500;
+    padding: 8px 12px;
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    border-radius: 8px;
+    margin-bottom: 12px;
+}
+
+/* Info banner */
+.ddm-info-banner {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 12px;
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+    border-radius: 8px;
+    font-size: 0.82rem;
+    color: #1e40af;
+    margin-bottom: 14px;
+    line-height: 1.4;
+}
+
+.ddm-info-banner svg {
+    flex-shrink: 0;
+}
+
+/* Time hint */
+.ddm-time-hint {
+    font-size: 0.75rem;
+    color: #64748b;
+    margin-top: 4px;
+    display: block;
+}
+
+/* Custom dropdown (tithi selector) */
+.ddm-dropdown-menu {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    max-height: 220px;
+    overflow-y: auto;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+    z-index: 1000;
+    margin-top: 4px;
+}
+
+.ddm-dropdown-menu::-webkit-scrollbar {
+    width: 6px;
+}
+
+.ddm-dropdown-menu::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 3px;
+}
+
+.ddm-dropdown-option {
+    padding: 10px 12px;
+    font-size: 0.85rem;
+    cursor: pointer;
+    border-bottom: 1px solid #f8fafc;
+    transition: background 0.1s ease;
+    color: #334155;
+}
+
+.ddm-dropdown-option:last-child {
+    border-bottom: none;
+}
+
+.ddm-dropdown-option:hover {
+    background: #f1f5f9;
+}
+
+.ddm-dropdown-option-active {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: #ffffff;
+}
+
+.ddm-dropdown-option-active:hover {
+    background: linear-gradient(135deg, #5a72d5, #6a4393);
+}
+
+/* Disabled button state */
+.ddm-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none !important;
+    box-shadow: none !important;
+}
+
+/* =============================================
+   AddEventForm (Tree Detail Page) — standalone
+   Uses ddm-* classes for consistency, wrapped
+   in its own container since it's not a modal
+   ============================================= */
+
+.ddm-form-container {
+    background: #ffffff;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 20px 50px rgba(2, 6, 23, 0.2);
+}
+
+.ddm-form-header {
+    background: linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #4c1d95 100%);
+    padding: 16px 20px;
+}
+
+.ddm-form-header-content {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: #ffffff;
+}
+
+.ddm-form-header-title {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: #ffffff;
+    margin: 0;
+}
+
+.ddm-form-body {
+    padding: 16px 20px 4px;
+}
+
+.ddm-form-footer {
+    display: flex;
+    gap: 8px;
+    padding: 12px 20px 18px;
+    border-top: 1px solid #f1f5f9;
+}
+
+.ddm-form-footer .ddm-btn {
+    flex: 1 1 auto;
+}
+
+/* ---- Responsive for forms ---- */
+@media (max-width: 480px) {
+    .ddm-form-row-2col {
+        flex-direction: column;
+        gap: 0;
+    }
+
+    .ddm-tabs {
+        gap: 4px;
+    }
+
+    .ddm-tab {
+        padding: 6px 10px;
+        font-size: 0.76rem;
+    }
+
+    .ddm-form-container {
+        border-radius: 14px;
+    }
+
+    .ddm-form-header {
+        padding: 14px 16px;
+    }
+
+    .ddm-form-body {
+        padding: 14px 16px 4px;
+    }
+
+    .ddm-form-footer {
+        padding: 10px 16px 14px;
+    }
 }

@@ -7,32 +7,6 @@ import { NEPALI_MONTHS, ENGLISH_NEPALI_MONTHS, normalizePakshaToNepali } from '.
 import { signInWithGoogle } from '../../firebase';
 import { PERMISSIONS } from '../../constants/roles';
 
-/**
- * DayDetailsModal — shows existing tithis, public events, and private events
- * for a selected day on the calendar.
- *
- * Props:
- *   isOpen               — boolean, whether the modal is visible
- *   onClose              — () => void
- *   activeDate           — 'YYYY-MM-DD' string or null
- *   tithis               — sorted array of tithis for the day
- *   publicEvents         — array of public calendar events
- *   personalEvents       — array of the current user's private events
- *   user                 — Firebase auth user object or null
- *   isAdmin              — boolean
- *   isSuperUser          — boolean
-
- *   permsLoading         — boolean
- *   hasPermission        — (permKey) => boolean
- *   onOpenAddEvent       — (adYear, adMonth0, adDay) => void
- *   onOpenAddTithi       — (adYear, adMonth0, adDay, focusHint) => void
- *   onDeleteEvent        — async (eventId) => void
- *   onTreeEventClick     — (eventData) => void | undefined
- *   getTithiDisplayName  — (tithi) => string
- *   formatTithiDateTime  — (tithi) => string
- *   getTreeMemberName    — (treeId, memberId) => string|null
- *   getResolvedTithiEventDate — (event) => string
- */
 const DayDetailsModal = ({
   isOpen,
   onClose,
@@ -58,251 +32,266 @@ const DayDetailsModal = ({
 
   if (!isOpen) return null;
 
-  // Compute header date string
-  const headerText = (() => {
-    if (!activeDate) return '';
-    const [year, month, day] = activeDate.split('-').map(Number);
-    const bs = convertAdToBs(year, month - 1, day);
-    const monthIndex = bs.month - 1;
-    const monthName = isNepali ? NEPALI_MONTHS[monthIndex] : ENGLISH_NEPALI_MONTHS[monthIndex];
-    return isNepali
-      ? `${tn(bs.day)} ${monthName} ${tn(bs.year)}`
-      : `${bs.day} ${monthName} ${bs.year}`;
-  })();
+  // Parse date parts
+  const [adYear, adMonth1, adDay] = activeDate ? activeDate.split('-').map(Number) : [0, 0, 0];
+  const bs = activeDate ? convertAdToBs(adYear, adMonth1 - 1, adDay) : null;
+
+  const headerDateNepali = bs
+    ? (isNepali
+        ? `${tn(bs.day)} ${NEPALI_MONTHS[bs.month - 1]} ${tn(bs.year)}`
+        : `${bs.day} ${ENGLISH_NEPALI_MONTHS[bs.month - 1]} ${bs.year}`)
+    : '';
+
+  // English date for subtitle
+  const adDateObj = activeDate ? new Date(adYear, adMonth1 - 1, adDay) : null;
+  const headerDateEnglish = adDateObj
+    ? adDateObj.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
+    : '';
+
+  const sortedTithis = [...tithis].sort(compareTithisByStart);
+  const totalItems = tithis.length + publicEvents.length + personalEvents.length;
 
   return (
     <div className="nc-modal-backdrop" onClick={onClose}>
-      <div className="nc-modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '600px' }}>
-        <div className="nc-modal-header">
-          <h3 className="nc-modal-title" style={{ fontSize: '0.95rem', color: '#666' }}>
-            {headerText}
-          </h3>
-          <button onClick={onClose} aria-label="Close">✕</button>
+      <div
+        className="nc-modal ddm-modal"
+        onClick={(e) => e.stopPropagation()}
+        style={{ maxWidth: '560px' }}
+      >
+        {/* ---- Header ---- */}
+        <div className="ddm-header">
+          <div className="ddm-header-date">
+            <span className="ddm-header-nepali">{headerDateNepali}</span>
+            <span className="ddm-header-english">{headerDateEnglish}</span>
+          </div>
+          <button className="ddm-close-btn" onClick={onClose} aria-label="Close">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M18 6L6 18M6 6l12 12" />
+            </svg>
+          </button>
         </div>
 
+        {/* ---- Body ---- */}
         <div className="nc-modal-body">
-          {/* Tithis Section */}
-          <div className="nc-modal-section">
-            <h4>{t('calendar.tithis')}</h4>
-            {tithis.length === 0 && (
-              <div className="muted">✨ Tithis will be added soon for this date</div>
-            )}
-            {[...tithis].sort(compareTithisByStart).map((ti) => (
-              <div key={ti.id} className="nc-item">
-                <div>
-                  <div className="nc-item-title">{getTithiDisplayName(ti)}</div>
-                  <div className="muted">{formatTithiDateTime(ti)}</div>
-                </div>
+
+          {/* ---- Tithis Section ---- */}
+          <div className="ddm-section">
+            <div className="ddm-section-header">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" />
+              </svg>
+              <h4>{t('calendar.tithis')}</h4>
+              <span className="ddm-badge">{tithis.length}</span>
+            </div>
+            {sortedTithis.length === 0 ? (
+              <div className="ddm-empty">
+                {isNepali ? 'यस मितिको तिथि चाँडै थपिनेछ' : 'Tithis will be added soon for this date'}
               </div>
-            ))}
+            ) : (
+              <div className="ddm-items">
+                {sortedTithis.map((ti) => (
+                  <div key={ti.id} className="ddm-item ddm-item-tithi">
+                    <div className="ddm-item-icon-dot ddm-dot-amber" />
+                    <div className="ddm-item-content">
+                      <div className="ddm-item-title">{getTithiDisplayName(ti)}</div>
+                      <div className="ddm-item-meta">{formatTithiDateTime(ti)}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
-          {/* Public Events Section */}
-          <div className="nc-modal-section" style={{ borderTop: '1px solid #eee', paddingTop: '1rem' }}>
-            <h4>{t('calendar.publicEvents')}</h4>
-            {publicEvents.length === 0 && (
-              <div className="muted">No public events for this date</div>
-            )}
-            {publicEvents.map((event) => (
-              <div
-                key={event.id}
-                className="nc-item"
-                style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '0.5rem' }}
-              >
-                <div style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
-                  <div style={{ flex: 1 }}>
-                    <div className="nc-item-title">
-                      {event.title}
-                      {event.createdByAdmin && (
-                        <span
-                          style={{
-                            marginLeft: '0.5rem',
-                            fontSize: '0.75rem',
-                            padding: '0.125rem 0.375rem',
-                            background: '#fbbf24',
-                            color: '#78350f',
-                            borderRadius: '0.25rem',
-                            fontWeight: '600',
-                          }}
-                        >
-                          Admin
-                        </span>
-                      )}
-                    </div>
-                    {event.description && (
-                      <div className="muted" style={{ marginTop: '0.25rem' }}>
-                        {event.description}
+          {/* ---- Public Events Section ---- */}
+          <div className="ddm-section">
+            <div className="ddm-section-header">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="4" width="18" height="18" rx="2" />
+                <path d="M16 2v4M8 2v4M3 10h18" />
+              </svg>
+              <h4>{t('calendar.publicEvents')}</h4>
+              <span className="ddm-badge">{publicEvents.length}</span>
+            </div>
+            {publicEvents.length === 0 ? (
+              <div className="ddm-empty">
+                {isNepali ? 'यस मितिमा सार्वजनिक कार्यक्रम छैन' : 'No public events for this date'}
+              </div>
+            ) : (
+              <div className="ddm-items">
+                {publicEvents.map((event) => (
+                  <div key={event.id} className="ddm-item ddm-item-public">
+                    <div className="ddm-item-icon-dot ddm-dot-blue" />
+                    <div className="ddm-item-content">
+                      <div className="ddm-item-title">
+                        {event.title}
+                        {event.createdByAdmin && (
+                          <span className="ddm-admin-tag">Admin</span>
+                        )}
                       </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {/* Private Events Section */}
-          <div className="nc-modal-section" style={{ borderTop: '1px solid #eee', paddingTop: '1rem' }}>
-            <h4 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              {t('calendar.privateEvents')}
-            </h4>
-            {personalEvents.length === 0 && (
-              <div className="muted">No private events for this date</div>
-            )}
-            {personalEvents.map((event) => {
-              const memberName = getTreeMemberName(event.treeId, event.memberId);
-              const isTreeEvent = !!event.treeId;
-
-              let displayDateKey = event.dateKey;
-              if (event.tithi) {
-                displayDateKey = activeDate;
-              } else if (event.repetition === 'yearly') {
-                displayDateKey = getResolvedTithiEventDate(event);
-              }
-
-              const eventNepaliDate = displayDateKey
-                ? formatAdDateToNepaliStringWithNumerals(displayDateKey)
-                : '';
-
-              let tithiDisplay = '';
-              if (event.tithi) {
-                const pakshaDisplay = normalizePakshaToNepali(event.tithi.paksha);
-                tithiDisplay = ` (${event.tithi.month} ${pakshaDisplay} ${event.tithi.name})`;
-              }
-
-              return (
-                <div
-                  key={event.id}
-                  className="nc-item"
-                  style={{
-                    flexDirection: 'column',
-                    alignItems: 'flex-start',
-                    gap: '0.5rem',
-                    cursor: isTreeEvent && onTreeEventClick ? 'pointer' : 'default',
-                  }}
-                  onDoubleClick={() => {
-                    if (isTreeEvent && onTreeEventClick) {
-                      onTreeEventClick({
-                        ...event,
-                        name: event.title,
-                        date: event.dateKey,
-                        personId: event.memberId,
-                      });
-                      onClose();
-                    }
-                  }}
-                >
-                  <div style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
-                    <div style={{ flex: 1 }}>
-                      <div className="nc-item-title">{event.title}</div>
-                      {memberName && (
-                        <div style={{ marginTop: '0.25rem', fontSize: '0.875rem', color: '#7c3aed', fontWeight: '500' }}>
-                          For: {memberName}
-                        </div>
-                      )}
-                      {displayDateKey && (
-                        <div style={{ marginTop: '0.5rem', fontSize: '0.875rem', color: '#666' }}>
-                          📅 {displayDateKey}
-                          {eventNepaliDate && (
-                            <div style={{ color: '#7c3aed', marginTop: '0.25rem', fontWeight: '500' }}>
-                              🗓️ {eventNepaliDate}
-                              {tithiDisplay}
-                            </div>
-                          )}
-                        </div>
-                      )}
                       {event.description && (
-                        <div className="muted" style={{ marginTop: '0.25rem' }}>
-                          {event.description}
-                        </div>
+                        <div className="ddm-item-meta">{event.description}</div>
                       )}
                     </div>
-                    {!isTreeEvent && (
-                      <button
-                        onClick={async (e) => {
-                          e.stopPropagation();
-                          if (window.confirm('Are you sure you want to delete this event?')) {
-                            await onDeleteEvent(event.id);
-                          }
-                        }}
-                        style={{
-                          background: 'none',
-                          border: 'none',
-                          cursor: 'pointer',
-                          fontSize: '1.1rem',
-                          padding: '0 0 0 8px',
-                          opacity: 0.7,
-                        }}
-                        title="Delete Event"
-                        onMouseOver={(e) => (e.target.style.opacity = 1)}
-                        onMouseOut={(e) => (e.target.style.opacity = 0.7)}
-                      >
-                        🗑️
-                      </button>
-                    )}
                   </div>
-                </div>
-              );
-            })}
+                ))}
+              </div>
+            )}
           </div>
 
-          {/* Modal Actions */}
-          <div className="nc-modal-actions" style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-            <button
-              type="button"
-              className="app-cancel-btn"
-              onClick={onClose}
-              style={{ flex: '1 1 auto' }}
-            >
-              {t('calendar.cancel') || 'Cancel'}
-            </button>
+          {/* ---- Private Events Section ---- */}
+          <div className="ddm-section">
+            <div className="ddm-section-header">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" />
+                <circle cx="12" cy="7" r="4" />
+              </svg>
+              <h4>{t('calendar.privateEvents')}</h4>
+              <span className="ddm-badge">{personalEvents.length}</span>
+            </div>
+            {personalEvents.length === 0 ? (
+              <div className="ddm-empty">
+                {user
+                  ? (isNepali ? 'यस मितिमा निजी कार्यक्रम छैन' : 'No private events for this date')
+                  : (isNepali ? 'निजी कार्यक्रम हेर्न साइन इन गर्नुहोस्' : 'Sign in to view private events')
+                }
+              </div>
+            ) : (
+              <div className="ddm-items">
+                {personalEvents.map((event) => {
+                  const memberName = getTreeMemberName(event.treeId, event.memberId);
+                  const isTreeEvent = !!event.treeId;
 
-            {/* For Guests: Show "Login to Add Events" button */}
-            {!user && (
-              <button
-                onClick={async () => {
-                  try {
-                    await signInWithGoogle();
-                  } catch (err) {
-                    console.error('Login error:', err);
+                  let displayDateKey = event.dateKey;
+                  if (event.tithi) {
+                    displayDateKey = activeDate;
+                  } else if (event.repetition === 'yearly') {
+                    displayDateKey = getResolvedTithiEventDate(event);
                   }
-                }}
-                className="app-save-btn"
-                style={{ flex: '1 1 auto' }}
-              >
-                Login to Add Events
-              </button>
-            )}
 
-            {/* For Logged-in Users: Show "Add Event" button */}
-            {user && (
-              <button
-                onClick={() => {
-                  if (!activeDate) return;
-                  const parts = activeDate.split('-').map(Number);
-                  onOpenAddEvent(parts[0], parts[1] - 1, parts[2]);
-                }}
-                className="app-save-btn"
-                style={{ flex: '1 1 auto' }}
-              >
-                Add Event
-              </button>
-            )}
+                  const eventNepaliDate = displayDateKey
+                    ? formatAdDateToNepaliStringWithNumerals(displayDateKey)
+                    : '';
 
-            {/* For Admins and Super Users with tithi permission: Show "Add Tithi" */}
-            {(isAdmin || (isSuperUser && !permsLoading && hasPermission(PERMISSIONS.MANAGE_TITHIS))) && (
-                <button
-                  onClick={() => {
-                    if (!activeDate) return;
-                    const parts = activeDate.split('-').map(Number);
-                    onOpenAddTithi(parts[0], parts[1] - 1, parts[2], 'tithi');
-                  }}
-                  className="app-save-btn"
-                  style={{ flex: '1 1 auto' }}
-                >
-                  Add Tithi
-                </button>
-              )}
+                  let tithiDisplay = '';
+                  if (event.tithi) {
+                    const pakshaDisplay = normalizePakshaToNepali(event.tithi.paksha);
+                    tithiDisplay = `${event.tithi.month} ${pakshaDisplay} ${event.tithi.name}`;
+                  }
+
+                  return (
+                    <div
+                      key={event.id}
+                      className={`ddm-item ddm-item-private ${isTreeEvent ? 'ddm-item-tree' : ''}`}
+                      onDoubleClick={() => {
+                        if (isTreeEvent && onTreeEventClick) {
+                          onTreeEventClick({
+                            ...event,
+                            name: event.title,
+                            date: event.dateKey,
+                            personId: event.memberId,
+                          });
+                          onClose();
+                        }
+                      }}
+                      style={{ cursor: isTreeEvent && onTreeEventClick ? 'pointer' : 'default' }}
+                    >
+                      <div className={`ddm-item-icon-dot ${isTreeEvent ? 'ddm-dot-purple' : 'ddm-dot-emerald'}`} />
+                      <div className="ddm-item-content">
+                        <div className="ddm-item-title">{event.title}</div>
+                        {memberName && (
+                          <div className="ddm-item-member">{memberName}</div>
+                        )}
+                        {displayDateKey && (
+                          <div className="ddm-item-dates">
+                            <span>{displayDateKey}</span>
+                            {eventNepaliDate && (
+                              <span className="ddm-nepali-date">{eventNepaliDate}</span>
+                            )}
+                            {tithiDisplay && (
+                              <span className="ddm-tithi-tag">{tithiDisplay}</span>
+                            )}
+                          </div>
+                        )}
+                        {event.description && (
+                          <div className="ddm-item-meta">{event.description}</div>
+                        )}
+                      </div>
+                      {!isTreeEvent && (
+                        <button
+                          className="ddm-delete-btn"
+                          onClick={async (e) => {
+                            e.stopPropagation();
+                            if (window.confirm(isNepali ? 'के तपाईं यो कार्यक्रम मेटाउन निश्चित हुनुहुन्छ?' : 'Are you sure you want to delete this event?')) {
+                              await onDeleteEvent(event.id);
+                            }
+                          }}
+                          title={isNepali ? 'मेटाउनुहोस्' : 'Delete Event'}
+                        >
+                          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <polyline points="3 6 5 6 21 6" />
+                            <path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6" />
+                            <path d="M10 11v6M14 11v6" />
+                          </svg>
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
+        </div>
+
+        {/* ---- Footer Actions ---- */}
+        <div className="ddm-footer">
+          {!user && (
+            <button
+              className="ddm-btn ddm-btn-primary"
+              onClick={async () => {
+                try { await signInWithGoogle(); } catch (err) { console.error('Login error:', err); }
+              }}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M15 3h4a2 2 0 012 2v14a2 2 0 01-2 2h-4M10 17l5-5-5-5M15 12H3" />
+              </svg>
+              {isNepali ? 'साइन इन गर्नुहोस्' : 'Sign In to Add Events'}
+            </button>
+          )}
+
+          {user && (
+            <button
+              className="ddm-btn ddm-btn-primary"
+              onClick={() => {
+                if (!activeDate) return;
+                onOpenAddEvent(adYear, adMonth1 - 1, adDay);
+              }}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10" />
+                <path d="M12 8v8M8 12h8" />
+              </svg>
+              {isNepali ? 'कार्यक्रम थप्नुहोस्' : 'Add Event'}
+            </button>
+          )}
+
+          {(isAdmin || (isSuperUser && !permsLoading && hasPermission(PERMISSIONS.MANAGE_TITHIS))) && (
+            <button
+              className="ddm-btn ddm-btn-secondary"
+              onClick={() => {
+                if (!activeDate) return;
+                onOpenAddTithi(adYear, adMonth1 - 1, adDay, 'tithi');
+              }}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" />
+              </svg>
+              {isNepali ? 'तिथि थप्नुहोस्' : 'Add Tithi'}
+            </button>
+          )}
+
+          <button className="ddm-btn ddm-btn-ghost" onClick={onClose}>
+            {t('calendar.cancel') || 'Cancel'}
+          </button>
         </div>
       </div>
     </div>
