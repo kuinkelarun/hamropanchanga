@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState, useCallback } from 'react';
-import { collection, addDoc, deleteDoc, doc, onSnapshot, query, orderBy, getDocs, where } from 'firebase/firestore';
+import { collection, addDoc, deleteDoc, doc, onSnapshot, query, orderBy, getDocs } from 'firebase/firestore';
 import { onAuthStateChanged } from 'firebase/auth';
 import { db, auth } from '../firebase';
 import { COLLECTIONS } from '../constants/firestoreCollections';
@@ -47,6 +47,8 @@ import {
   padDateKey,
   getTithiEventDisplayDate,
 } from '../utils/calendarHelpers';
+import { useTithisData } from '../hooks/useTithisData';
+import { useCalendarEvents } from '../hooks/useCalendarEvents';
 import AddEventModal from './calendar/AddEventModal';
 import AddTithiModal from './calendar/AddTithiModal';
 import DayDetailsModal from './calendar/DayDetailsModal';
@@ -94,8 +96,10 @@ export default function NepaliCalendar({ user: propUser, isAdmin, treeMembers = 
 
   const [currentBsYear, setCurrentBsYear] = useState(() => todayBs.year);
   const [currentBsMonth, setCurrentBsMonth] = useState(() => todayBs.month);
-  const [tithisByDate, setTithisByDate] = useState({}); // { "YYYY-M-D": [{name,start,end}, ...] }
-  const [calendarEvents, setCalendarEvents] = useState([]); // Array of calendar events
+  // Shared tithis data — single Firestore listener used by both calendar and event resolver
+  const { tithisByDate, refreshTithis } = useTithisData();
+  // Calendar events loaded via shared hook — handles all auth modes and event merging
+  const { calendarEvents, setCalendarEvents } = useCalendarEvents({ user, authLoading, isAdmin, sharedTreeIds });
   const [activeDate, setActiveDate] = useState(null);
   const [firestoreCalReady, setFirestoreCalReady] = useState(false);
 
@@ -118,101 +122,8 @@ export default function NepaliCalendar({ user: propUser, isAdmin, treeMembers = 
   const [addTithiModalOpen, setAddTithiModalOpen] = useState(false);
   const [modalFocusHint, setModalFocusHint] = useState(null);
 
-  // Load tithis from Firebase on component mount.
-  // Note: `tithis` is public-read in Firestore rules, so this should not wait for auth.
-  useEffect(() => {
-    if (isDev) console.log('Setting up Firebase listener for tithis...');
-    const tithisCollection = collection(db, COLLECTIONS.TITHIS);
-    // Order by startDate only — composite startDate+startTime index may not exist yet.
-    // startTime sorting is handled in JS below.
-    const q = query(tithisCollection, orderBy('startDate'));
-    
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      if (isDev) {
-        console.log('Firebase snapshot received:', {
-          docsCount: snapshot.docs.length,
-          hasPendingWrites: snapshot.metadata.hasPendingWrites,
-          fromCache: snapshot.metadata.fromCache,
-          timestamp: new Date().toLocaleTimeString()
-        });
-      }
-      
-      const tithisData = {};
-      snapshot.docs.forEach((doc, index) => {
-        const tithi = { id: doc.id, ...doc.data() };
-        if (isDev) console.log(`Processing tithi ${index + 1}:`, tithi);
-        
-        // Calculate all dates this tithi spans (inclusive)
-        if (tithi.startDate && tithi.endDate) {
-          const startDateObj = new Date(tithi.startDate + 'T00:00:00');
-          const endDateObj = new Date(tithi.endDate + 'T00:00:00');
-          
-          // Add this tithi to all dates it spans
-          const currentDate = new Date(startDateObj);
-          while (currentDate <= endDateObj) {
-            const year = currentDate.getFullYear();
-            const month = currentDate.getMonth() + 1; // 1-12
-            const day = currentDate.getDate();
-            const dateKey = padDateKey(year, month, day);
-            
-            if (!tithisData[dateKey]) {
-              tithisData[dateKey] = [];
-            }
-            tithisData[dateKey].push({
-              id: tithi.id,
-              name: tithi.name,
-              startDate: tithi.startDate,
-              startTime: tithi.startTime,
-              endDate: tithi.endDate,
-              endTime: tithi.endTime,
-              tithiMonth: tithi.tithiMonth || null,
-              tithiYear: tithi.tithiYear || null,
-              pakshya: tithi.pakshya || null,
-              tithiName: tithi.tithiName || null,
-            });
-
-            // Move to next day
-            currentDate.setDate(currentDate.getDate() + 1);
-          }
-        } else {
-          // Legacy support: if no date range, use old dateKey field
-          const dateKey = tithi.dateKey;
-          if (dateKey) {
-            if (!tithisData[dateKey]) {
-              tithisData[dateKey] = [];
-            }
-            tithisData[dateKey].push({
-              id: tithi.id,
-              name: tithi.name,
-              startDate: tithi.startDate || dateKey,
-              startTime: tithi.startTime,
-              endTime: tithi.endTime,
-              tithiMonth: tithi.tithiMonth || null,
-              tithiYear: tithi.tithiYear || null,
-              pakshya: tithi.pakshya || null,
-              tithiName: tithi.tithiName || null,
-            });
-          }
-        }
-      });
-      
-      if (isDev) {
-        console.log('Final tithisData being set:', tithisData);
-        console.log('Total dates with tithis:', Object.keys(tithisData).length);
-      }
-      setTithisByDate(tithisData);
-    }, (error) => {
-      console.error('Firebase onSnapshot error:', error);
-      if (isDev) {
-        console.error('This could be a permissions issue. Check Firestore rules and authentication.');
-      }
-    });
-
-    return () => {
-      if (isDev) console.log('Cleaning up Firebase listener');
-      unsubscribe();
-    };
-  }, [isDev]);
+  // Tithis data is now loaded via the shared useTithisData hook above.
+  // This eliminates the duplicate Firestore listener that was previously here.
 
   // Load Nepali calendar configuration from Firestore — sets it as the active calendar data
   // (bsCalendarData.js acts as fallback until this completes)
@@ -303,200 +214,7 @@ export default function NepaliCalendar({ user: propUser, isAdmin, treeMembers = 
     }
   }, [propUser]);
 
-  // Load calendar events from Firebase - fetch public events + user's own private events
-  useEffect(() => {
-    if (authLoading) {
-      if (isDev) console.log('Auth still loading for events, waiting...');
-      return;
-    }
-
-    if (isDev) console.log('Setting up Firebase listener for calendar events...', { user: !!user, isAdmin });
-    const eventsCollection = collection(db, COLLECTIONS.CALENDAR_EVENTS);
-    
-    if (!user) {
-      // Guests: public events AND tree member events
-      const publicQuery = query(
-        eventsCollection, 
-        where('isPublic', '==', true)
-      );
-      
-      // Simplified treeQuery: fetch all events; filter treeId client-side to avoid composite index
-      // NOTE: No orderBy('dateKey') — that silently excludes tithi-only docs without a dateKey field.
-      const treeQuery = query(
-        eventsCollection
-      );
-      
-      let publicEventsById = new Map();
-      let treeEventsById = new Map();
-
-      const emitMergedEvents = () => {
-        const merged = new Map();
-        [publicEventsById, treeEventsById].forEach((m) => {
-          m.forEach((value, key) => merged.set(key, value));
-        });
-        setCalendarEvents(Array.from(merged.values()));
-      };
-      
-      const unsubscribe1 = onSnapshot(publicQuery, (snapshot) => {
-        if (isDev) console.log('Public events snapshot (guest):', snapshot.docs.length);
-        publicEventsById = new Map(
-          snapshot.docs.map((docSnap) => [docSnap.id, { id: docSnap.id, ...docSnap.data() }])
-        );
-        emitMergedEvents();
-      }, (error) => {
-        console.error('Public events error:', error);
-      });
-
-      const unsubscribe2 = onSnapshot(treeQuery, (snapshot) => {
-        if (isDev) console.log('Tree events snapshot (guest):', snapshot.docs.length);
-        const nextTreeEventsById = new Map();
-        snapshot.docs.forEach(docSnap => {
-          const data = docSnap.data();
-          if (data.treeId) { // Only include if treeId exists
-            nextTreeEventsById.set(docSnap.id, { id: docSnap.id, ...data });
-          }
-        });
-        treeEventsById = nextTreeEventsById;
-        emitMergedEvents();
-      }, (error) => {
-        console.error('Tree events error:', error);
-      });
-
-      return () => {
-        if (isDev) console.log('Cleaning up calendar events listener');
-        unsubscribe1();
-        unsubscribe2();
-      };
-    } else {
-      // Logged-in users: fetch public events AND their own private events AND tree member events
-      // Admins also fetch ALL admin-created private events
-      // Use queries and merge the results
-      const publicQuery = query(
-        eventsCollection,
-        where('isPublic', '==', true)
-      );
-      
-      const userQuery = query(
-        eventsCollection,
-        where('createdBy', '==', user.uid)
-      );
-
-      // Simplified treeQuery: fetch all events; filter treeId client-side to avoid composite index.
-      // NOTE: No orderBy('dateKey') — that silently excludes tithi-only docs without a dateKey field.
-      // FIX: Regular users cannot query ALL events because some might be private to other users.
-      // We must restrict the query to what the user is allowed to see.
-      let treeQuery;
-      if (isAdmin) {
-        treeQuery = query(
-          eventsCollection
-        );
-      } else {
-        // For regular users the broad treeQuery stays null; shared-tree events
-        // are handled below via per-chunk sharedTreeIds queries.
-        treeQuery = null;
-      }
-
-      // Build per-chunk queries for trees explicitly shared with this user
-      const sharedChunks = (!isAdmin && sharedTreeIds && sharedTreeIds.length > 0)
-        ? Array.from({ length: Math.ceil(sharedTreeIds.length / 30) }, (_, i) =>
-            sharedTreeIds.slice(i * 30, i * 30 + 30))
-        : [];
-      
-      let publicEventsById = new Map();
-      let userEventsById = new Map();
-      let treeEventsById = new Map();
-      let adminPrivateEventsById = new Map();
-
-      const emitMergedEvents = () => {
-        const merged = new Map();
-        [publicEventsById, userEventsById, treeEventsById, adminPrivateEventsById].forEach((m) => {
-          m.forEach((value, key) => merged.set(key, value));
-        });
-        setCalendarEvents(Array.from(merged.values()));
-      };
-      
-      const unsubscribe1 = onSnapshot(publicQuery, (snapshot) => {
-        if (isDev) console.log('Public events snapshot:', snapshot.docs.length);
-        publicEventsById = new Map(
-          snapshot.docs.map((docSnap) => [docSnap.id, { id: docSnap.id, ...docSnap.data() }])
-        );
-        emitMergedEvents();
-      }, (error) => {
-        console.error('Public events error:', error);
-      });
-      
-      const unsubscribe2 = onSnapshot(userQuery, (snapshot) => {
-        if (isDev) console.log('User events snapshot:', snapshot.docs.length);
-        userEventsById = new Map(
-          snapshot.docs.map((docSnap) => [docSnap.id, { id: docSnap.id, ...docSnap.data() }])
-        );
-        emitMergedEvents();
-      }, (error) => {
-        console.error('User events error:', error);
-      });
-
-      const unsubscribe3 = treeQuery ? onSnapshot(treeQuery, (snapshot) => {
-        if (isDev) console.log('Tree events snapshot:', snapshot.docs.length);
-        const nextTreeEventsById = new Map();
-        snapshot.docs.forEach(docSnap => {
-          const data = docSnap.data();
-          if (data.treeId) { // Only include if treeId exists
-            nextTreeEventsById.set(docSnap.id, { id: docSnap.id, ...data });
-          }
-        });
-        treeEventsById = nextTreeEventsById;
-        emitMergedEvents();
-      }, (error) => {
-        console.error('Tree events error:', error);
-      }) : () => {}; // No-op unsubscribe if treeQuery is null
-
-      // Listeners for events from trees explicitly shared with (but not owned by) this user
-      const sharedUnsubscribers = sharedChunks.map(chunk => {
-        const sharedQ = query(eventsCollection, where('treeId', 'in', chunk));
-        return onSnapshot(sharedQ, (snapshot) => {
-          if (isDev) console.log('Shared tree events snapshot:', snapshot.docs.length);
-          snapshot.docs.forEach(docSnap => {
-            const data = docSnap.data();
-            if (data.treeId) {
-              treeEventsById.set(docSnap.id, { id: docSnap.id, ...data });
-            }
-          });
-          emitMergedEvents();
-        }, (error) => {
-          console.error('Shared tree events error:', error);
-        });
-      });
-
-      // If admin, also fetch all admin-created private events
-      let unsubscribe4 = null;
-      if (isAdmin) {
-        const adminPrivateQuery = query(
-          eventsCollection,
-          where('createdByAdmin', '==', true),
-          where('isPublic', '==', false)
-        );
-        
-        unsubscribe4 = onSnapshot(adminPrivateQuery, (snapshot) => {
-          if (isDev) console.log('Admin private events snapshot:', snapshot.docs.length);
-          adminPrivateEventsById = new Map(
-            snapshot.docs.map((docSnap) => [docSnap.id, { id: docSnap.id, ...docSnap.data() }])
-          );
-          emitMergedEvents();
-        }, (error) => {
-          console.error('Admin private events error:', error);
-        });
-      }
-
-      return () => {
-        if (isDev) console.log('Cleaning up calendar events listeners');
-        unsubscribe1();
-        unsubscribe2();
-        unsubscribe3();
-        if (unsubscribe4) unsubscribe4();
-        sharedUnsubscribers.forEach(u => u());
-      };
-    }
-  }, [authLoading, user, isAdmin, isDev, sharedTreeIds]);
+  // Calendar events are now loaded via the shared useCalendarEvents hook above.
 
   useEffect(()=>{
     if (currentBsYear < minBsYear) setCurrentBsYear(minBsYear);
@@ -562,78 +280,7 @@ export default function NepaliCalendar({ user: propUser, isAdmin, treeMembers = 
     return tithisByDate[`${y}-${m}-${d}`] || [];
   }, [tithisByDate]);
 
-  // Manual refresh function to force reload tithis data
-  const refreshTithis = useCallback(async () => {
-    if (isDev) console.log('Manual refresh triggered...');
-    try {
-      const tithisCollection = collection(db, COLLECTIONS.TITHIS);
-      const q = query(tithisCollection, orderBy('startDate'), orderBy('startTime'));
-      const snapshot = await getDocs(q);
-      
-      const tithisData = {};
-      snapshot.docs.forEach((doc) => {
-        const tithi = { id: doc.id, ...doc.data() };
-        
-        // Calculate all dates this tithi spans (inclusive)
-        if (tithi.startDate && tithi.endDate) {
-          const startDateObj = new Date(tithi.startDate + 'T00:00:00');
-          const endDateObj = new Date(tithi.endDate + 'T00:00:00');
-          
-          // Add this tithi to all dates it spans
-          const currentDate = new Date(startDateObj);
-          while (currentDate <= endDateObj) {
-            const year = currentDate.getFullYear();
-            const month = currentDate.getMonth() + 1;
-            const day = currentDate.getDate();
-            const dateKey = padDateKey(year, month, day);
-            
-            if (!tithisData[dateKey]) {
-              tithisData[dateKey] = [];
-            }
-            tithisData[dateKey].push({
-              id: tithi.id,
-              name: tithi.name,
-              startDate: tithi.startDate,
-              startTime: tithi.startTime,
-              endDate: tithi.endDate,
-              endTime: tithi.endTime,
-              tithiMonth: tithi.tithiMonth || null,
-              tithiYear: tithi.tithiYear || null,
-              pakshya: tithi.pakshya || null,
-              tithiName: tithi.tithiName || null,
-            });
-
-            // Move to next day
-            currentDate.setDate(currentDate.getDate() + 1);
-          }
-        } else {
-          // Legacy support
-          const dateKey = tithi.dateKey;
-          if (dateKey) {
-            if (!tithisData[dateKey]) {
-              tithisData[dateKey] = [];
-            }
-            tithisData[dateKey].push({
-              id: tithi.id,
-              name: tithi.name,
-              startDate: tithi.startDate || dateKey,
-              startTime: tithi.startTime,
-              endTime: tithi.endTime,
-              tithiMonth: tithi.tithiMonth || null,
-              tithiYear: tithi.tithiYear || null,
-              pakshya: tithi.pakshya || null,
-              tithiName: tithi.tithiName || null,
-            });
-          }
-        }
-      });
-      
-      if (isDev) console.log('Manual refresh completed, updating state with:', tithisData);
-      setTithisByDate(tithisData);
-    } catch (error) {
-      console.error('Error in manual refresh:', error);
-    }
-  }, [setTithisByDate, isDev]);
+  // refreshTithis is now provided by the shared useTithisData hook.
 
   const [confirmOpen, setConfirmOpen] = useState(false);
 
@@ -801,32 +448,7 @@ export default function NepaliCalendar({ user: propUser, isAdmin, treeMembers = 
         console.log('Tithi spans dates:', affectedDates);
       }
 
-      // Update local state immediately - add to all affected dates
-      if (process.env.NODE_ENV !== 'production') {
-        console.log('Updating local state immediately...');
-      }
-      setTithisByDate(prevTithis => {
-        const updatedTithis = { ...prevTithis };
-        
-        affectedDates.forEach(affectedDateKey => {
-          if (!updatedTithis[affectedDateKey]) {
-            updatedTithis[affectedDateKey] = [];
-          }
-          updatedTithis[affectedDateKey] = [...updatedTithis[affectedDateKey], {
-            id: newTithi.id,
-            name: newTithi.name,
-            startDate: newTithi.startDate,
-            startTime: newTithi.startTime,
-            endDate: newTithi.endDate,
-            endTime: newTithi.endTime
-          }];
-        });
-        
-        if (process.env.NODE_ENV !== 'production') {
-          console.log('Local state updated with new tithi across dates:', affectedDates);
-        }
-        return updatedTithis;
-      });
+      // tithisByDate auto-refreshes via the shared useTithisData onSnapshot listener.
 
       // Then sync to Firebase
       if (process.env.NODE_ENV !== 'production') {
@@ -858,22 +480,7 @@ export default function NepaliCalendar({ user: propUser, isAdmin, treeMembers = 
         console.log('Successfully added tithi to Firestore at', new Date().toLocaleTimeString(), 'with ID:', docRef.id);
       }
       
-      // Update the local state with the real Firebase ID across all affected dates
-      setTithisByDate(prevTithis => {
-        const updatedTithis = { ...prevTithis };
-        affectedDates.forEach(affectedDateKey => {
-          if (updatedTithis[affectedDateKey]) {
-            const tithiIndex = updatedTithis[affectedDateKey].findIndex(t => t.id === newTithi.id);
-            if (tithiIndex >= 0) {
-              updatedTithis[affectedDateKey][tithiIndex].id = docRef.id;
-            }
-          }
-        });
-        if (process.env.NODE_ENV !== 'production') {
-          console.log('Updated local state with real Firebase ID:', docRef.id);
-        }
-        return updatedTithis;
-      });
+      // tithisByDate auto-refreshes via onSnapshot after the Firestore write.
 
     } catch (error) {
       console.error('Error adding tithi:', error);
@@ -899,15 +506,7 @@ export default function NepaliCalendar({ user: propUser, isAdmin, treeMembers = 
         currentDate.setDate(currentDate.getDate() + 1);
       }
       
-      setTithisByDate(prevTithis => {
-        const updatedTithis = { ...prevTithis };
-        affectedDates.forEach(affectedDateKey => {
-          if (updatedTithis[affectedDateKey]) {
-            updatedTithis[affectedDateKey] = updatedTithis[affectedDateKey].filter(t => t.id !== tempId);
-          }
-        });
-        return updatedTithis;
-      });
+      // tithisByDate auto-refreshes via onSnapshot — error state is naturally handled.
       throw error; // Re-throw so child component can display the error
     }
   }
@@ -961,44 +560,12 @@ export default function NepaliCalendar({ user: propUser, isAdmin, treeMembers = 
       }
 
       if (isDev) console.log('Deleting tithi from dates:', affectedDates);
-      
-      // Update local state immediately - remove from all affected dates
-      setTithisByDate(prevTithis => {
-        const updatedTithis = { ...prevTithis };
-        affectedDates.forEach(affectedDateKey => {
-          if (updatedTithis[affectedDateKey]) {
-            if (!deletedTithi) {
-              deletedTithi = updatedTithis[affectedDateKey].find(t => t.id === id);
-            }
-            updatedTithis[affectedDateKey] = updatedTithis[affectedDateKey].filter(t => t.id !== id);
-            if (updatedTithis[affectedDateKey].length === 0) {
-              delete updatedTithis[affectedDateKey];
-            }
-          }
-        });
-        if (isDev) console.log('Local state updated after delete');
-        return updatedTithis;
-      });
 
-      // Then sync to Firebase
+      // Delete from Firebase — tithisByDate auto-refreshes via onSnapshot
       await deleteDoc(doc(db, COLLECTIONS.TITHIS, id));
       if (isDev) console.log('Successfully deleted tithi from Firestore');
     } catch (error) {
       console.error('Error deleting tithi:', error);
-      
-      // Rollback local state on error - restore to all affected dates
-      if (deletedTithi && affectedDates.length > 0) {
-        setTithisByDate(prevTithis => {
-          const updatedTithis = { ...prevTithis };
-          affectedDates.forEach(affectedDateKey => {
-            if (!updatedTithis[affectedDateKey]) {
-              updatedTithis[affectedDateKey] = [];
-            }
-            updatedTithis[affectedDateKey].push(deletedTithi);
-          });
-          return updatedTithis;
-        });
-      }
     }
   }
 

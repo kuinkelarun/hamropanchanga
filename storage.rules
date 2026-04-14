@@ -1,12 +1,12 @@
 rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
-    
+
     // Helper function to check if user is authenticated
     function isAuthenticated() {
       return request.auth != null;
     }
-    
+
     // Helper function to check if user is admin
     function isAdmin() {
       return isAuthenticated() && (
@@ -14,16 +14,19 @@ service firebase.storage {
         firestore.exists(/databases/(default)/documents/adminList/$(request.auth.uid))
       );
     }
-    
+
     // Home cards images - only admins can upload/delete
     match /homeCards/{imageId} {
-      allow read: if true; // Anyone can read images
-      allow write: if isAdmin(); // Only admins can upload/delete
+      allow read: if true;
+      allow write: if isAdmin();
     }
-    
-    // Default rule for all other storage paths
+
+    // Default: deny all other paths.
+    // Only /homeCards/ is used by the app. If new storage paths are needed,
+    // add explicit rules above this block.
     match /{allPaths=**} {
-      allow read, write: if isAuthenticated();
+      allow read: if isAuthenticated();
+      allow write: if false;
     }
   }
 }

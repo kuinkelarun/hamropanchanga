@@ -1,4 +1,17 @@
-// Nepali Calendar utilities
+/**
+ * Nepali Calendar Utilities
+ *
+ * Core library for AD↔BS date conversion, formatting, and tithi calculations.
+ * See ./nepaliDate/index.js for a documented index of all exports grouped by concern.
+ *
+ * Sections:
+ *   CORE         — Calendar data, number conversion, timezone (lines ~12-38)
+ *   CONVERSION   — convertAdToBs, convertBsToAd (lines ~40-179)
+ *   FORMATTING   — Date display formatting (lines ~181-410)
+ *   MONTHS       — Month name/number utilities (lines ~412-1100)
+ *   TITHI        — Tithi calculations, year/month resolution (lines ~435-975)
+ *   EXPORTS      — Re-exports for backward compat (line ~1323)
+ */
 import bsCalendarData from '../data/bsCalendarData';
 import { NEPALI_MONTHS, ENGLISH_MONTHS, NEPALI_WEEKDAYS, ENGLISH_WEEKDAYS, NEPALI_NUMBERS, SHUKLA_TITHI_NAMES, KRISHNA_TITHI_NAMES, TITHI_NAME_INDEX_MAP } from '../constants/calendarConstants';
 
