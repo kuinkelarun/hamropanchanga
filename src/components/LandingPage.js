@@ -143,7 +143,7 @@ const LandingPage = ({ user, isAdmin, trees = [], treeMembers = [], events, fami
             </div>
 
             {/* 7. Events Feed (auth-gated) */}
-            <div className="edgefull">
+            <div id="events-reminders-section" className="edgefull">
                 <div className="section-content-centered">
                     <h2 className="section-heading" style={{ marginTop: 'var(--space-3xl)' }}>
                         {t('landing.eventsHeading')}
