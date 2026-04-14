@@ -101,22 +101,9 @@ function normalizeRepetition(raw) {
 const englishToNepaliTithiMap = ENGLISH_TO_NEPALI_TITHI_MAP;
 
 /**
- * English to Nepali script month mapping — imported from centralized constants
- * Extended with additional aliases specific to bulk upload
+ * English to Nepali script month mapping — all aliases centralized in calendarConstants.js
  */
-const englishToNepaliMonthMap = {
-  ...ENGLISH_TO_NEPALI_MONTH_MAP,
-  // Bulk-upload-specific aliases not in the shared constants
-  'Shravana': 'श्रावण',
-  'Sravana': 'श्रावण',
-  'Bhado': 'भाद्र',
-  'Aswini': 'आश्विन',
-  'Kartick': 'कार्तिक',
-  'Kartikk': 'कार्तिक',
-  'Phalguna': 'फाल्गुन',
-  'Margshirsha': 'मार्ग',
-  'Margshir': 'मार्ग',
-};
+const englishToNepaliMonthMap = ENGLISH_TO_NEPALI_MONTH_MAP;
 
 /**
  * Map English tithi name to the app's tithiId format

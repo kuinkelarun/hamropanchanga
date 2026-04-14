@@ -1,20 +1,10 @@
 /**
  * Utility helpers for Admin Management.
  * Pure functions with no component-state dependency.
+ *
+ * Note: formatTime12Hour was consolidated into calendarHelpers.js
+ * which has a superset version with Nepali numeral support.
  */
-
-/**
- * Convert 24-hour time (HH:MM) to 12-hour format with AM/PM.
- * @param {string} time24
- * @returns {string}
- */
-export function formatTime12Hour(time24) {
-  if (!time24) return '';
-  const [hours, minutes] = time24.split(':').map(Number);
-  const period = hours >= 12 ? 'PM' : 'AM';
-  const hours12 = hours % 12 || 12;
-  return `${hours12}:${String(minutes).padStart(2, '0')} ${period}`;
-}
 
 /**
  * Compute start milliseconds for a tithi entry (used for sorting).

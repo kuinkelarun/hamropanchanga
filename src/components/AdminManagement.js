@@ -13,13 +13,15 @@ import { normalizeForCompare } from '../utils/textNormalize';
 import { useUserPermissions } from '../hooks/usePermissions';
 import { PERMISSIONS } from '../constants/roles';
 import { ALL_TITHI_NAMES, normalizePakshaToNepali, normalizePakshaToEnglish } from '../constants/calendarConstants';
-import { formatTime12Hour, getTithiStartMillis, getTithiEndMillis } from '../utils/adminUtils';
-import { parseTithiName } from '../utils/calendarHelpers';
+import { getTithiStartMillis, getTithiEndMillis } from '../utils/adminUtils';
+import { formatTime12Hour, parseTithiName } from '../utils/calendarHelpers';
 import { validateTithisData as validateTithisDataExternal, validateEventsData as validateEventsDataExternal } from '../utils/adminValidation';
 import { downloadTemplate as downloadTemplateExcel, exportData as exportDataExcel, exportProblematicRows as exportProblematicRowsExcel, downloadTreesExcel as downloadTreesExcelService, generateTithiExcel as generateTithiExcelService } from '../services/adminExcelService';
 import AdminTreesTab from './Admin/AdminTreesTab';
 import AdminDataManagementTab from './Admin/AdminDataManagementTab';
 import AdminApiKeyRequestsTab from './Admin/AdminApiKeyRequestsTab';
+import AdminBulkUploadSection from './Admin/AdminBulkUploadSection';
+import AdminTithiGeneratorSection from './Admin/AdminTithiGeneratorSection';
 import DeleteConfirmationModal from './Admin/DeleteConfirmationModal';
 
 // Tithi lists from single source of truth
@@ -104,6 +106,7 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
   const [autoStatus, setAutoStatus] = useState(null);
   
   // Event Entry Mode state (for events tab)
+  const [eventTypeFilter, setEventTypeFilter] = useState('all'); // 'all', 'public', 'private'
   const [eventEntryMode, setEventEntryMode] = useState('date'); // 'date' or 'tithi'
   const [newRecordTithiMonth, setNewRecordTithiMonth] = useState('');
   const [newRecordTithiName, setNewRecordTithiName] = useState('');
@@ -286,6 +289,7 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
     setSearchTerm('');
     setYearFilter('all');
     setMonthFilter('all');
+    setEventTypeFilter('all');
   }, [activeTab]);
 
   // Compute recent (last 30 days) item counts for UI enable/disable
@@ -1467,21 +1471,25 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
   });
 
   const filteredEvents = events.filter(e => {
+    // Event type filter (public/private)
+    if (eventTypeFilter === 'public' && !e.isPublic) return false;
+    if (eventTypeFilter === 'private' && e.isPublic) return false;
+
     const matchesSearch = e.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       e.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       e.dateKey?.includes(searchTerm);
-    
+
     if (yearFilter === 'all' && monthFilter === 'all') return matchesSearch;
-    
+
     // Extract year-month-day from dateKey and convert to BS
     const [year, month, day] = e.dateKey?.split('-').map(Number) || [];
     if (!year || !month || !day) return matchesSearch && yearFilter === 'all' && monthFilter === 'all';
-    
+
     const bs = convertAdToBs(year, month - 1, day); // month is 0-indexed
-    
+
     let matchesYear = yearFilter === 'all' || (bs && bs.year.toString() === yearFilter);
     let matchesMonth = monthFilter === 'all' || (bs && bs.month.toString() === monthFilter);
-    
+
     return matchesSearch && matchesYear && matchesMonth;
   });
 
@@ -1625,196 +1633,28 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
 
       {/* Bulk Upload Section - Only show for tithis/events tabs */}
       {(activeTab === 'tithis' || activeTab === 'events') && (
-      <div className="admin-section">
-        <h2>📤 Bulk Upload</h2>
-        
-        <div className="template-actions">
-          <button onClick={downloadTemplate} className="btn-primary">
-            ⬇️ Download Template
-          </button>
-          <button onClick={exportData} className="btn-secondary">
-            📥 Export Existing Data
-          </button>
-        </div>
-
-        <div 
-          className="file-upload-area"
-          onDrop={handleFileDrop}
-          onDragOver={(e) => e.preventDefault()}
-          onClick={() => fileInputRef.current?.click()}
-        >
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept=".xlsx,.xls"
-            onChange={handleFileSelect}
-            style={{ display: 'none' }}
-          />
-          <div className="upload-icon">📂</div>
-          <p>{uploadFile ? uploadFile.name : 'Click or drag Excel file here'}</p>
-          <small>Supported formats: .xlsx, .xls</small>
-        </div>
-
-        {uploadFile && (
-          <div className="upload-actions">
-            <button 
-              onClick={validateAndParseFile} 
-              disabled={loading}
-              className="btn-primary"
-            >
-              {loading ? '⏳ Validating...' : '✓ Validate File'}
-            </button>
-            <button 
-              onClick={() => {
-                setUploadFile(null);
-                setValidationResults(null);
-                setPreviewData([]);
-                setUploadStatus('');
-              }}
-              className="btn-secondary"
-            >
-              ✕ Clear
-            </button>
-          </div>
-        )}
-
-        {uploadStatus && (
-          <div className={`upload-status ${uploadStatus.includes('❌') ? 'error' : 'success'}`}>
-            <pre>{uploadStatus}</pre>
-          </div>
-        )}
-
-        {/* Validation Errors */}
-        {validationResults && validationResults.invalid.length > 0 && (
-          <div className="validation-errors">
-            <h3>❌ Invalid Records ({validationResults.invalid.length})</h3>
-            <div className="error-list">
-              {validationResults.invalid.map((item, idx) => (
-                <div key={idx} className="error-item">
-                  <strong>Row {item.row}:</strong>
-                  <ul>
-                    {item.errors.map((err, i) => <li key={i}>{err}</li>)}
-                  </ul>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Problematic Records (end < start on same date) */}
-        {validationResults && validationResults.problematic && validationResults.problematic.length > 0 && (
-          <div className="problematic-records">
-            <h3>⚠️ Problematic Records ({validationResults.problematic.length})</h3>
-            <p>
-              These rows have an end time earlier than the start time on the same AD date.
-              They are not auto-published — please review and fix or export for audit.
-            </p>
-            <div className="problematic-list">
-              <table className="problematic-table">
-                <thead>
-                  <tr>
-                    <th>Row</th>
-                    <th>Tithi</th>
-                    <th>Pakshya</th>
-                    <th>Start Date</th>
-                    <th>Start Time</th>
-                    <th>End Date</th>
-                    <th>End Time</th>
-                    <th>Reason</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {validationResults.problematic.slice(0, 50).map((item, idx) => (
-                    <tr key={idx}>
-                      <td>{item.row}</td>
-                      <td>{item.data?.['Tithi*'] || item.data?.['Tithi'] || ''}</td>
-                      <td>{item.data?.['Pakshya*'] || item.data?.['Pakshya'] || ''}</td>
-                      <td>{item.data?.['Start Date* (MM-DD-YYYY Nepali)'] || item.data?.['Start Date'] || ''}</td>
-                      <td>{item.data?.['Start Time* (HH:MM)'] || item.data?.['Start Time'] || ''}</td>
-                      <td>{item.data?.['End Date* (MM-DD-YYYY Nepali)'] || item.data?.['End Date'] || ''}</td>
-                      <td>{item.data?.['End Time* (HH:MM)'] || item.data?.['End Time'] || ''}</td>
-                      <td>{item.reason}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              {validationResults.problematic.length > 50 && (
-                <p className="preview-note">Showing first 50 of {validationResults.problematic.length} problematic rows</p>
-              )}
-            </div>
-            <div style={{ marginTop: '0.5rem' }}>
-              <button onClick={exportProblematicRows} className="btn-secondary">⬇️ Export Problematic Rows</button>
-            </div>
-          </div>
-        )}
-
-        {/* Preview Data */}
-        {previewData.length > 0 && (
-          <div className="preview-section">
-            <h3>📋 Preview ({previewData.length} records)</h3>
-            <div className="preview-table-container">
-              <table className="preview-table">
-                <thead>
-                  <tr>
-                    {activeTab === 'tithis' ? (
-                      <>
-                        <th>Name</th>
-                        <th>Start Date</th>
-                        <th>Start Time</th>
-                        <th>End Date</th>
-                        <th>End Time</th>
-                        <th>Status</th>
-                      </>
-                    ) : (
-                      <>
-                        <th>Title</th>
-                        <th>Description</th>
-                        <th>Date</th>
-                        <th>Public</th>
-                        <th>Status</th>
-                      </>
-                    )}
-                  </tr>
-                </thead>
-                <tbody>
-                  {previewData.slice(0, 10).map((item, idx) => (
-                    <tr key={idx}>
-                      {activeTab === 'tithis' ? (
-                        <>
-                          <td>{item.name}</td>
-                          <td>{item.startDate}</td>
-                          <td>{formatTime12Hour(item.startTime)}</td>
-                          <td>{item.endDate}</td>
-                          <td>{formatTime12Hour(item.endTime)}</td>
-                          <td>{item.addOrReplace === 'REPLACE' ? '🔄 Replace' : '✨ Add'}</td>
-                        </>
-                      ) : (
-                        <>
-                          <td>{item.title}</td>
-                          <td>{item.description}</td>
-                          <td>{item.dateKey}</td>
-                          <td>{item.isPublic ? '✅' : '❌'}</td>
-                          <td>{item.addOrReplace === 'REPLACE' ? '🔄 Replace' : '✨ Add'}</td>
-                        </>
-                      )}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              {previewData.length > 10 && (
-                <p className="preview-note">Showing first 10 of {previewData.length} records</p>
-              )}
-            </div>
-            <button 
-              onClick={publishChanges}
-              disabled={loading}
-              className="btn-publish"
-            >
-              {loading ? '⏳ Publishing...' : '🚀 Publish Changes'}
-            </button>
-          </div>
-        )}
-      </div>
+        <AdminBulkUploadSection
+          activeTab={activeTab}
+          uploadFile={uploadFile}
+          uploadStatus={uploadStatus}
+          validationResults={validationResults}
+          previewData={previewData}
+          loading={loading}
+          fileInputRef={fileInputRef}
+          onDownloadTemplate={downloadTemplate}
+          onExportData={exportData}
+          onExportProblematicRows={exportProblematicRows}
+          onFileSelect={handleFileSelect}
+          onFileDrop={handleFileDrop}
+          onValidateFile={validateAndParseFile}
+          onPublish={publishChanges}
+          onClearUpload={() => {
+            setUploadFile(null);
+            setValidationResults(null);
+            setPreviewData([]);
+            setUploadStatus('');
+          }}
+        />
       )}
 
       
@@ -1825,7 +1665,38 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
         <div className="manual-mgmt-header">
           <h2 className="manual-mgmt-title">📝 Manual Management</h2>
         </div>
-        
+
+        {/* Event type sub-tabs (public/private/all) - only for events tab */}
+        {activeTab === 'events' && (
+          <div style={{ display: 'flex', gap: '4px', marginBottom: '12px', borderBottom: '2px solid #e2e8f0', paddingBottom: '8px' }}>
+            {[
+              { key: 'all', label: 'All Events', count: events.length },
+              { key: 'public', label: '🌐 Public', count: events.filter(e => e.isPublic).length },
+              { key: 'private', label: '🔒 Private', count: events.filter(e => !e.isPublic).length },
+            ].map(tab => (
+              <button
+                key={tab.key}
+                onClick={() => setEventTypeFilter(tab.key)}
+                style={{
+                  padding: '6px 14px',
+                  borderRadius: '6px 6px 0 0',
+                  border: 'none',
+                  cursor: 'pointer',
+                  fontSize: '0.82rem',
+                  fontWeight: eventTypeFilter === tab.key ? 700 : 500,
+                  color: eventTypeFilter === tab.key ? '#4c1d95' : '#64748b',
+                  background: eventTypeFilter === tab.key ? '#f5f3ff' : 'transparent',
+                  borderBottom: eventTypeFilter === tab.key ? '2px solid #7c3aed' : '2px solid transparent',
+                  marginBottom: '-10px',
+                  transition: 'all 0.15s ease',
+                }}
+              >
+                {tab.label} <span style={{ fontSize: '0.72rem', color: '#94a3b8', marginLeft: '4px' }}>({tab.count})</span>
+              </button>
+            ))}
+          </div>
+        )}
+
         <div className="manual-mgmt-search-filters-container">
           <input
             type="text"
@@ -1939,8 +1810,10 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
                 ) : (
                   <>
                     <th>Title</th>
+                    <th>Date (AD / BS)</th>
+                    <th>Tithi</th>
+                    <th>Repeat</th>
                     <th>Description</th>
-                    <th>Date</th>
                     <th>Public</th>
                     <th>Admin</th>
                     <th>Actions</th>
@@ -2145,17 +2018,7 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
                         />
                       </td>
                       <td>
-                        <textarea
-                          value={newRecordData.description || ''}
-                          onChange={(e) => updateNewRecordField('description', e.target.value)}
-                          className="edit-input"
-                          placeholder="Description (optional)"
-                          rows="2"
-                        />
-                      </td>
-                      <td>
                         {eventEntryMode === 'date' ? (
-                          // Calendar date mode
                           <>
                             {newRecordData.dateKey ? (
                               <NepaliDatePicker
@@ -2163,7 +2026,7 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
                                 onChange={(adDate) => updateNewRecordField('dateKey', adDate)}
                               />
                             ) : (
-                              <div 
+                              <div
                                 className="date-placeholder"
                                 onClick={() => {
                                   const today = new Date();
@@ -2176,40 +2039,45 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
                             )}
                           </>
                         ) : (
-                          // Tithi + Month mode
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-                            <select 
-                              value={newRecordTithiMonth} 
+                            <select
+                              value={newRecordTithiMonth}
                               onChange={(e) => setNewRecordTithiMonth(e.target.value)}
                               className="edit-input"
                               style={{ fontSize: '0.85rem', padding: '0.4rem' }}
                             >
-                              <option value="">Select Month</option>
+                              <option value="">Month</option>
                               {nepaliMonths.map((month, idx) => (
                                 <option key={idx} value={idx + 1}>{month}</option>
                               ))}
                             </select>
-                            <select 
-                              value={newRecordTithiName} 
+                            <select
+                              value={newRecordTithiName}
                               onChange={(e) => setNewRecordTithiName(e.target.value)}
                               className="edit-input"
                               style={{ fontSize: '0.85rem', padding: '0.4rem' }}
                               disabled={!newRecordTithiMonth}
                             >
-                              <option value="">Select Tithi</option>
+                              <option value="">Tithi</option>
                               {newRecordTithiMonth && getTithisForMonth(newRecordTithiMonth).map(tithi => (
                                 <option key={tithi.tithiId} value={tithi.tithiId}>
                                   {tithi.name} ({tithi.pakshya})
                                 </option>
                               ))}
                             </select>
-                            {newRecordTithiMonth && newRecordTithiName && (
-                              <small style={{ color: '#666', fontSize: '0.75rem' }}>
-                                Note: Date will be looked up from calendar
-                              </small>
-                            )}
                           </div>
                         )}
+                      </td>
+                      <td><span style={{ color: '#94a3b8', fontSize: '0.8rem' }}>—</span></td>
+                      <td><span style={{ color: '#94a3b8', fontSize: '0.8rem' }}>—</span></td>
+                      <td>
+                        <textarea
+                          value={newRecordData.description || ''}
+                          onChange={(e) => updateNewRecordField('description', e.target.value)}
+                          className="edit-input"
+                          placeholder="Description"
+                          rows="1"
+                        />
                       </td>
                       <td>
                         <input
@@ -2243,17 +2111,19 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
                             />
                           </td>
                           <td>
+                            <NepaliDatePicker
+                              value={editingData.dateKey || ''}
+                              onChange={(adDate) => updateEditField('dateKey', adDate)}
+                            />
+                          </td>
+                          <td><span style={{ color: '#94a3b8', fontSize: '0.8rem' }}>—</span></td>
+                          <td><span style={{ color: '#94a3b8', fontSize: '0.8rem' }}>—</span></td>
+                          <td>
                             <textarea
                               value={editingData.description || ''}
                               onChange={(e) => updateEditField('description', e.target.value)}
                               className="edit-input"
                               rows="2"
-                            />
-                          </td>
-                          <td>
-                            <NepaliDatePicker
-                              value={editingData.dateKey || ''}
-                              onChange={(adDate) => updateEditField('dateKey', adDate)}
                             />
                           </td>
                           <td>
@@ -2275,8 +2145,50 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
                         // View mode
                         <>
                           <td>{event.title}</td>
-                          <td>{event.description}</td>
-                          <td>{formatDateToNepali(event.dateKey)}</td>
+                          <td>
+                            <div style={{ fontSize: '0.85rem' }}>
+                              {event.dateKey || '—'}
+                              {event.dateKey && (
+                                <div style={{ color: '#7c3aed', fontSize: '0.78rem' }}>
+                                  {formatDateToNepali(event.dateKey)}
+                                </div>
+                              )}
+                            </div>
+                          </td>
+                          <td>
+                            {event.tithi ? (
+                              <div style={{ fontSize: '0.8rem', lineHeight: 1.3 }}>
+                                <div>{event.tithi.month || ''}</div>
+                                <div style={{ color: '#6b7280' }}>
+                                  {normalizePakshaToNepali(event.tithi.paksha)} {event.tithi.name}
+                                </div>
+                              </div>
+                            ) : (
+                              <span style={{ color: '#cbd5e1' }}>—</span>
+                            )}
+                          </td>
+                          <td>
+                            {event.repetition && event.repetition !== 'none' ? (
+                              <span style={{
+                                display: 'inline-block',
+                                fontSize: '0.72rem',
+                                fontWeight: 600,
+                                padding: '2px 8px',
+                                borderRadius: '999px',
+                                background: event.repetition === 'yearly' ? '#f5f3ff' : '#eff6ff',
+                                color: event.repetition === 'yearly' ? '#6d28d9' : '#2563eb',
+                              }}>
+                                {event.repetition === 'yearly' ? 'Yearly' : 'Monthly'}
+                              </span>
+                            ) : (
+                              <span style={{ color: '#cbd5e1' }}>—</span>
+                            )}
+                          </td>
+                          <td>
+                            <div style={{ maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: '0.85rem', color: '#6b7280' }}>
+                              {event.description || <span style={{ color: '#cbd5e1' }}>—</span>}
+                            </div>
+                          </td>
                           <td>{event.isPublic ? '✅' : '❌'}</td>
                           <td>{event.createdByAdmin ? '✅' : '❌'}</td>
                           <td>
@@ -2290,7 +2202,7 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
                     </tr>
                   ))
                 ) : (
-                  <tr><td colSpan="6" className="empty-state">No events found</td></tr>
+                  <tr><td colSpan="8" className="empty-state">No events found</td></tr>
                 )}
               </>
               )}
@@ -2301,7 +2213,7 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
         <div className="table-footer">
           <p>
             Total: {activeTab === 'tithis' ? filteredTithis.length : filteredEvents.length} records
-            {(searchTerm || yearFilter !== 'all' || monthFilter !== 'all') && ` (filtered from ${activeTab === 'tithis' ? tithis.length : events.length})`}
+            {(searchTerm || yearFilter !== 'all' || monthFilter !== 'all' || (activeTab === 'events' && eventTypeFilter !== 'all')) && ` (filtered from ${activeTab === 'tithis' ? tithis.length : events.length})`}
           </p>
         </div>
       </div>
@@ -2347,102 +2259,23 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
 
       {/* Tithi Auto Generator Section - Only show for tithis tab */}
       {activeTab === 'tithis' && (
-      <div className="admin-section">
-        <h2>⚡ Tithi Auto Generator</h2>
-        <p>Automatically calculate Tithis for a date range and generate Excel file for bulk upload.</p>
-        <p className="text-sm text-gray-600 mt-1">
-          <strong>Note:</strong> Calculations use <strong>Kathmandu, Nepal</strong> coordinates (27.7172° N, 85.3240° E) for astronomical accuracy.
-        </p>
-        
-        <div className="auto-management-form">
-          <div className="form-row">
-            <div className="form-field">
-              <label className="form-label">Start Date</label>
-              <div style={{ position: 'relative' }}>
-                <input
-                  type="date"
-                  className="form-input"
-                  value={autoStartDate}
-                  onChange={e => {
-                    setAutoStartDate(e.target.value);
-                    if (autoProgress === 100) {
-                      setAutoProgress(0);
-                      setAutoStatus('');
-                    }
-                  }}
-                />
-                {autoStartDate && (
-                  <div style={{
-                    fontSize: '0.85rem',
-                    color: '#6b7280',
-                    marginTop: '0.25rem'
-                  }}>
-                    {getNepaliDateDisplay(autoStartDate)}
-                  </div>
-                )}
-              </div>
-            </div>
-            <div className="form-field">
-              <label className="form-label">End Date</label>
-              <div style={{ position: 'relative' }}>
-                <input
-                  type="date"
-                  className="form-input"
-                  value={autoEndDate}
-                  onChange={e => {
-                    setAutoEndDate(e.target.value);
-                    if (autoProgress === 100) {
-                      setAutoProgress(0);
-                      setAutoStatus('');
-                    }
-                  }}
-                />
-                {autoEndDate && (
-                  <div style={{
-                    fontSize: '0.85rem',
-                    color: '#6b7280',
-                    marginTop: '0.25rem'
-                  }}>
-                    {getNepaliDateDisplay(autoEndDate)}
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-          
-          <div className="form-actions">
-            <button 
-              onClick={generateTithiExcel_handler}
-              className="btn-primary"
-              disabled={loading || !autoStartDate || !autoEndDate || (autoProgress > 0 && autoProgress < 100)}
-            >
-              {autoProgress === 100 ? '✅ Complete' : autoProgress > 0 ? '🔄 Generating...' : '📊 Generate Tithi Excel'}
-            </button>
-            {autoProgress > 0 && autoProgress < 100 && (
-              <div className="progress-indicator">
-                <div className="progress-bar">
-                  <div 
-                    className="progress-fill" 
-                    style={{ width: `${autoProgress}%` }}
-                  ></div>
-                </div>
-                <span className="progress-text">{autoProgress}% Complete</span>
-              </div>
-            )}
-            {autoProgress === 100 && (
-              <div className="progress-indicator complete">
-                <span className="progress-text">🎉 Generation Complete!</span>
-              </div>
-            )}
-          </div>
-          
-          {autoStatus && (
-            <div className={`status-message ${autoStatus.startsWith('❌') ? 'error' : autoStatus.startsWith('✅') ? 'success' : 'info'}`}>
-              {autoStatus}
-            </div>
-          )}
-        </div>
-      </div>
+        <AdminTithiGeneratorSection
+          autoStartDate={autoStartDate}
+          autoEndDate={autoEndDate}
+          autoProgress={autoProgress}
+          autoStatus={autoStatus}
+          loading={loading}
+          onStartDateChange={e => {
+            setAutoStartDate(e.target.value);
+            if (autoProgress === 100) { setAutoProgress(0); setAutoStatus(''); }
+          }}
+          onEndDateChange={e => {
+            setAutoEndDate(e.target.value);
+            if (autoProgress === 100) { setAutoProgress(0); setAutoStatus(''); }
+          }}
+          onGenerate={generateTithiExcel_handler}
+          getNepaliDateDisplay={getNepaliDateDisplay}
+        />
       )}
     </div>
   );

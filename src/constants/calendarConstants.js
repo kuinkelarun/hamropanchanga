@@ -111,6 +111,16 @@ export const ENGLISH_TO_NEPALI_MONTH_MAP = {
   'Phagun': 'फाल्गुन',
   'Falgun': 'फाल्गुन',
   'Chait': 'चैत्र',
+  // Additional aliases from bulk upload
+  'Shravana': 'श्रावण',
+  'Sravana': 'श्रावण',
+  'Bhado': 'भाद्र',
+  'Aswini': 'आश्विन',
+  'Kartick': 'कार्तिक',
+  'Kartikk': 'कार्तिक',
+  'Phalguna': 'फाल्गुन',
+  'Margshirsha': 'मार्ग',
+  'Margshir': 'मार्ग',
 };
 // ──── Gregorian month names in Nepali (Devanagari script) ────
 export const ENGLISH_MONTHS_NEPALI = [

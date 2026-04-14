@@ -174,7 +174,7 @@ export function validateEventsData(jsonData, results, { existingEvents = [], cal
 
     const title = row['Title*']?.toString().trim();
     const description = row['Description']?.toString().trim() || '';
-    const dateRaw = row['Date* (MM-DD-YYYY Nepali)']?.toString().trim();
+    const dateRaw = (row['Date* (YYYY-MM-DD Nepali)'] || row['Date* (MM-DD-YYYY Nepali)'])?.toString().trim();
     const isPublicStr = row['Is Public* (TRUE/FALSE)']?.toString().trim().toUpperCase();
     const addOrReplace = row['AddOrReplace*']?.toString().trim().toUpperCase();
 

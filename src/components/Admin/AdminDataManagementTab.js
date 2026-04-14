@@ -1,5 +1,5 @@
 import React from 'react';
-import { formatTime12Hour } from '../../utils/adminUtils';
+import { formatTime12Hour } from '../../utils/calendarHelpers';
 
 /**
  * Data Management & Cleanup tab for Admin Management.

@@ -1,9 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { BrowserRouter as Router, Routes, Route, useNavigate, useLocation } from 'react-router-dom';
-import { collection, query, where, onSnapshot, doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc } from 'firebase/firestore';
 import { signInWithGoogle, db } from './firebase';
-import { COLLECTIONS } from './constants/firestoreCollections';
-import { SettingsProvider } from './contexts/SettingsContext';
+import { useAppData } from './hooks/useAppData';
 import { LanguageProvider, useLanguage } from './contexts/LanguageContext';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import SettingsMenu from './components/SettingsMenu';
@@ -11,10 +10,7 @@ import LanguageSelector from './components/LanguageSelector';
 import LandingPage from './components/LandingPage';
 import AdminEditCards from './components/AdminEditCards';
 import AdminManagement from './components/AdminManagement';
-import AdminTithisPage from './components/Admin/AdminTithisPage';
-import AdminEventsPage from './components/Admin/AdminEventsPage';
 import AdminCalendarPage from './components/Admin/AdminCalendarPage';
-import AdminDataManagementPage from './components/Admin/AdminDataManagementPage';
 import UserManagement from './components/UserManagement';
 import TithiCalculatorPage from './components/TithiCalculatorPage';
 import EmbeddedBuilderPage from './components/TreeBuilder/EmbeddedBuilderPage';
@@ -60,11 +56,9 @@ export default function App() {
     return (
         <AuthProvider>
             <LanguageProvider>
-                <SettingsProvider>
-                    <Router>
-                        <AppContent />
-                    </Router>
-                </SettingsProvider>
+                <Router>
+                    <AppContent />
+                </Router>
             </LanguageProvider>
         </AuthProvider>
     );
@@ -77,11 +71,8 @@ function AppContent() {
     
     // AUTH STATE (from AuthContext)
     const { user, isAdmin, isLoading, logout } = useAuth();
-    const [trees, setTrees] = useState([]);
-    const [treeCalendarEvents, setTreeCalendarEvents] = useState([]);
-    const [personalCalendarEvents, setPersonalCalendarEvents] = useState([]);
-    const [sharedTreeCalendarEvents, setSharedTreeCalendarEvents] = useState([]);
-    const [treeMembers, setTreeMembers] = useState([]);
+    // All Firestore data subscriptions managed by useAppData hook
+    const { trees, treeCalendarEvents, personalCalendarEvents, sharedTreeCalendarEvents, treeMembers } = useAppData(user, isAdmin);
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
     const hamburgerButtonRef = useRef(null);
@@ -161,191 +152,7 @@ function AppContent() {
         return () => document.removeEventListener('pointerdown', onPointerDown);
     }, [mobileMenuOpen]);
 
-    // Load trees for current user — includes both owned trees and trees shared with this user
-    useEffect(() => {
-        if (!user) { setTrees([]); return; }
-
-        const colRef = collection(db, COLLECTIONS.TREES);
-
-        if (isAdmin) {
-            // Admins see all trees
-            const unsubscribe = onSnapshot(query(colRef), (snapshot) => {
-                setTrees(snapshot.docs.map(d => ({ id: d.id, ...d.data() })).filter(t => !t.deleted));
-            }, (error) => console.error('Error listening to trees:', error));
-            return () => unsubscribe();
-        }
-
-        // Non-admin: merge owned trees + trees explicitly shared with this user
-        const ownedById = new Map();
-        const sharedById = new Map();
-        const mergeAndSet = () => {
-            const merged = new Map([...ownedById, ...sharedById]);
-            setTrees([...merged.values()].filter(t => !t.deleted));
-        };
-
-        const unsubOwned = onSnapshot(
-            query(colRef, where('ownerUid', '==', user.uid)),
-            (snapshot) => {
-                ownedById.clear();
-                snapshot.docs.forEach(d => ownedById.set(d.id, { id: d.id, ...d.data() }));
-                mergeAndSet();
-            },
-            (error) => console.error('Error listening to owned trees:', error)
-        );
-
-        const userEmailLower = (user.email || '').toLowerCase();
-        const unsubShared = onSnapshot(
-            query(colRef, where('sharedWithEmails', 'array-contains', userEmailLower)),
-            (snapshot) => {
-                sharedById.clear();
-                snapshot.docs.forEach(d => sharedById.set(d.id, { id: d.id, ...d.data() }));
-                mergeAndSet();
-            },
-            (error) => console.error('Error listening to shared trees:', error)
-        );
-
-        return () => { unsubOwned(); unsubShared(); };
-    }, [user, isAdmin]);
-
-    // Load calendar events for the landing-page feed:
-    // - tree-linked events (treeId != null)
-    // - user's own private calendar events (treeId == null)
-    useEffect(() => {
-        if (!user) {
-            setTreeCalendarEvents([]);
-            setPersonalCalendarEvents([]);
-            return;
-        }
-
-        const eventsCollection = collection(db, COLLECTIONS.CALENDAR_EVENTS);
-        
-        // FIX: Regular users cannot query ALL tree events because some might be private to other users.
-        // We must restrict the query to what the user is allowed to see.
-        // Since we can't easily do "OR" queries (public OR mine) in a single listener without composite indexes,
-        // we'll fetch based on the user's role.
-        
-        let treeEventsQuery;
-        if (isAdmin) {
-            // Admins can see all tree-linked events
-            treeEventsQuery = query(eventsCollection, where('treeId', '!=', null));
-        } else {
-            // Avoid `treeId != null` + `createdBy == uid` which requires a composite index.
-            // Fetch the user's events and keep only tree-linked ones client-side.
-            treeEventsQuery = query(eventsCollection, where('createdBy', '==', user.uid));
-        }
-
-        // User's own private events (includes calendar day-card private events).
-        // Avoid relying on `treeId == null` since the field can be missing.
-        const personalEventsQuery = query(
-            eventsCollection,
-            where('createdBy', '==', user.uid),
-            where('isPublic', '==', false)
-        );
-
-        const unsubscribeTree = onSnapshot(treeEventsQuery, (snapshot) => {
-            const events = snapshot.docs
-                .map(doc => ({
-                    id: doc.id,
-                    ...doc.data()
-                }))
-                .filter((e) => !!e.treeId);
-
-            setTreeCalendarEvents(events);
-        }, (error) => {
-            console.error("Error fetching tree calendar events: ", error);
-        });
-
-        const unsubscribePersonal = onSnapshot(personalEventsQuery, (snapshot) => {
-            const events = snapshot.docs.map(doc => ({
-                id: doc.id,
-                ...doc.data()
-            }));
-            setPersonalCalendarEvents(events);
-        }, (error) => {
-            console.error("Error fetching personal calendar events: ", error);
-        });
-
-        return () => {
-            unsubscribeTree();
-            unsubscribePersonal();
-        };
-    }, [user, isAdmin]);
-
-    // Load calendar events from trees shared with (but not owned by) this user
-    useEffect(() => {
-        if (!user || isAdmin) { setSharedTreeCalendarEvents([]); return; }
-
-        const sharedTreeIds = (trees || [])
-            .filter(t => t.ownerUid !== user.uid)
-            .map(t => t.id);
-
-        if (sharedTreeIds.length === 0) { setSharedTreeCalendarEvents([]); return; }
-
-        const eventsCollection = collection(db, COLLECTIONS.CALENDAR_EVENTS);
-        const byId = new Map();
-        const unsubs = [];
-
-        // Chunk into groups of 30 (Firestore `in` operator limit)
-        for (let i = 0; i < sharedTreeIds.length; i += 30) {
-            const chunk = sharedTreeIds.slice(i, i + 30);
-            const sharedQ = query(eventsCollection, where('treeId', 'in', chunk));
-            unsubs.push(onSnapshot(sharedQ, (snap) => {
-                snap.docs.forEach(d => byId.set(d.id, { id: d.id, ...d.data() }));
-                setSharedTreeCalendarEvents(Array.from(byId.values()));
-            }, (err) => console.error('Error fetching shared tree events:', err)));
-        }
-
-        return () => unsubs.forEach(u => { try { u(); } catch (e) { /* ignore */ } });
-    }, [user, isAdmin, trees]);
-
-    // Load tree members for all user's trees (realtime)
-    useEffect(() => {
-        if (!user || !trees || trees.length === 0) {
-            setTreeMembers([]);
-            return;
-        }
-
-        const unsubs = [];
-        const byTreeId = new Map();
-
-        const publish = () => {
-            const merged = [];
-            byTreeId.forEach((members) => {
-                merged.push(...members);
-            });
-            setTreeMembers(merged);
-        };
-
-        trees.forEach((tree) => {
-            const membersRef = collection(db, COLLECTIONS.TREES, tree.id, COLLECTIONS.MEMBERS);
-            const unsub = onSnapshot(
-                membersRef,
-                (snap) => {
-                    const members = snap.docs.map((docSnap) => ({
-                        id: docSnap.id,
-                        treeId: tree.id,
-                        ...docSnap.data(),
-                    }));
-                    byTreeId.set(tree.id, members);
-                    publish();
-                },
-                (err) => {
-                    console.error('Error loading tree members:', err);
-                }
-            );
-            unsubs.push(unsub);
-        });
-
-        return () => {
-            unsubs.forEach((u) => {
-                try {
-                    u();
-                } catch (e) {
-                    // ignore
-                }
-            });
-        };
-    }, [user, trees]);
+    // Trees, calendar events, and tree members are loaded via the useAppData hook above.
 
     // Track scroll position when navigating away from home page
     useEffect(() => {
@@ -709,32 +516,8 @@ function AppContent() {
                         />
                     } />
 
-                    <Route path="/admin/tithis" element={
-                        <AdminTithisPage
-                            user={user}
-                            isAdmin={isAdmin}
-                            onBack={handleBackToList}
-                        />
-                    } />
-
-                    <Route path="/admin/events" element={
-                        <AdminEventsPage
-                            user={user}
-                            isAdmin={isAdmin}
-                            onBack={handleBackToList}
-                        />
-                    } />
-
                     <Route path="/admin/calendar" element={
                         <AdminCalendarPage
-                            user={user}
-                            isAdmin={isAdmin}
-                            onBack={handleBackToList}
-                        />
-                    } />
-
-                    <Route path="/admin/data-management" element={
-                        <AdminDataManagementPage
                             user={user}
                             isAdmin={isAdmin}
                             onBack={handleBackToList}
