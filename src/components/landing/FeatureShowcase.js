@@ -40,6 +40,19 @@ const features = [
                 <path d="M13.73 21a2 2 0 01-3.46 0" />
             </svg>
         ),
+        action: 'scroll',
+        to: '#events-reminders-section',
+    },
+    {
+        titleKey: 'landing.featureTithiTitle',
+        descKey: 'landing.featureTithiDesc',
+        icon: (
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="9" />
+                <path d="M12 3a9 9 0 010 18" fill="currentColor" fillOpacity="0.15" />
+                <path d="M12 7v5l3 3" />
+            </svg>
+        ),
         action: 'navigate',
         to: '/tithi-calculator',
     },
@@ -69,7 +82,7 @@ const FeatureShowcase = () => {
                 <h2 className="section-heading">{t('landing.featuresHeading')}</h2>
                 <p className="section-subheading">{t('landing.featuresSubheading')}</p>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                     {features.map((feature, i) => (
                         <div
                             key={i}
