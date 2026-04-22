@@ -242,7 +242,9 @@
     "endTime": "End Time",
     "complete": "Complete",
     "tithiOf": "Tithi",
-    "failedEphemeris": "Failed to calculate ephemeris data."
+    "failedEphemeris": "Failed to calculate ephemeris data.",
+    "nepaliDate": "Nepali Date",
+    "gregorianDate": "Gregorian"
   },
   "treeSelection": {
     "buildYourFamilyLegacy": "Build Your Family Legacy",

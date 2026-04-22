@@ -242,7 +242,9 @@
     "endTime": "समाप्ति",
     "complete": "पूर्ण",
     "tithiOf": "तिथि",
-    "failedEphemeris": "पंचांग डाटा गणना गर्न असफल भयो।"
+    "failedEphemeris": "पंचांग डाटा गणना गर्न असफल भयो।",
+    "nepaliDate": "नेपाली मिति",
+    "gregorianDate": "ग्रेगोरियन"
   },
   "treeSelection": {
     "buildYourFamilyLegacy": "आफ्नो पारिवारको वंशवृक्ष निर्माण गर्नुहोस्",

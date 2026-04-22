@@ -3,7 +3,7 @@ import './TithiCalculator.css';
 import { computeTithiFromLongitudes, getEphemerisData } from '../utils/ephemeris';
 import {
   toNepaliNumber, nepaliMonths, convertAdToBs,
-  getTithiYearFromAdDate, getTithiLunarMonthName, getNepalDate
+  getTithiYearFromAdDate, getTithiLunarMonthName, getNepalDate, formatNepaliDateTime
 } from '../utils/nepaliDateUtils';
 import { useLanguage } from '../contexts/LanguageContext';
 import { SHUKLA_TITHI_NAMES, KRISHNA_TITHI_NAMES, normalizePakshaToNepali, NEPALI_MONTHS, ENGLISH_NEPALI_MONTHS } from '../constants/calendarConstants';
@@ -113,16 +113,32 @@ export default function TithiCalculator() {
     return `${pad(selectedBs.day)}/${pad(selectedBs.month)}/${selectedBs.year}`;
   }, [selectedBs, isNepali, t]);
 
-  // Format a UTC ISO timestamp for display in the selected timezone
-  function formatTime(isoString) {
-    if (!isoString) return 'N/A';
-    const options = {
-      month: 'short', day: 'numeric',
+  // Format a UTC ISO timestamp into structured Nepali + AD display fields
+  function formatTithiTime(isoString) {
+    if (!isoString) return null;
+
+    // BS date + NPT time — always NPT-anchored (BS calendar is defined in Nepal Time)
+    const npt = formatNepaliDateTime(isoString);
+    if (!npt) return null;
+
+    const { bsDate, time12 } = npt;
+
+    // BS date label — language-aware month names
+    const monthNames = isNepali ? NEPALI_MONTHS : ENGLISH_NEPALI_MONTHS;
+    const bsDay   = isNepali ? toNepaliNumber(bsDate.day)  : bsDate.day;
+    const bsMonth = monthNames[bsDate.month - 1];
+    const bsYear  = isNepali ? toNepaliNumber(bsDate.year) : bsDate.year;
+    const bsLabel = `${bsDay} ${bsMonth}, ${bsYear}`;
+
+    // AD date + time — Kathmandu: NPT, Current Location: browser local
+    const adLabel = new Date(isoString).toLocaleString('en-US', {
+      month: 'short', day: 'numeric', year: 'numeric',
       hour: '2-digit', minute: '2-digit',
+      ...(locationMode === 'kathmandu' ? { timeZone: 'Asia/Kathmandu' } : {}),
       timeZoneName: 'short'
-    };
-    if (locationMode === 'kathmandu') options.timeZone = 'Asia/Kathmandu';
-    return new Date(isoString).toLocaleString('en-US', options);
+    });
+
+    return { bsLabel, bsTime: time12, adLabel };
   }
 
   async function onCompute(e) {
@@ -139,9 +155,11 @@ export default function TithiCalculator() {
     let eph = null;
 
     try {
-      // Always treat input as browser local time — tithis are geocentric so
-      // location mode has no effect on the UTC evaluation moment.
-      const dt = new Date(`${dateStr}T${timeStr}:00`);
+      // Parse input with the correct timezone offset so the UTC moment is accurate.
+      // Kathmandu mode: input is NPT (UTC+05:45), local mode: input is browser local time.
+      const dt = locationMode === 'kathmandu'
+        ? new Date(`${dateStr}T${timeStr}:00+05:45`)
+        : new Date(`${dateStr}T${timeStr}:00`);
 
       const lat = (locationMode === 'current' && locationStatus === 'detected') ? userLat : 27.7172;
       const lon = (locationMode === 'current' && locationStatus === 'detected') ? userLon : 85.3240;
@@ -327,20 +345,26 @@ export default function TithiCalculator() {
           <div className="tc-result-card tc-timing-card">
             <h4>{t('tithiCalculator.tithiDuration')}</h4>
             <div className="tc-info-grid">
-              <div className="tc-info-item">
-                <strong>{t('tithiCalculator.startTime')}</strong>
-                <span style={{ fontWeight: '500' }}>{formatTime(result.startTime)}</span>
-                <span style={{ fontSize: '0.75rem', color: '#666', marginTop: '2px' }}>
-                  ({t(locationMode === 'kathmandu' ? 'tithiCalculator.nepalTime' : 'tithiCalculator.localTime')})
-                </span>
-              </div>
-              <div className="tc-info-item">
-                <strong>{t('tithiCalculator.endTime')}</strong>
-                <span style={{ fontWeight: '500' }}>{formatTime(result.endTime)}</span>
-                <span style={{ fontSize: '0.75rem', color: '#666', marginTop: '2px' }}>
-                  ({t(locationMode === 'kathmandu' ? 'tithiCalculator.nepalTime' : 'tithiCalculator.localTime')})
-                </span>
-              </div>
+              {['startTime', 'endTime'].map(key => {
+                const fmt = formatTithiTime(result[key]);
+                return (
+                  <div key={key} className="tc-info-item">
+                    <strong>{t(`tithiCalculator.${key}`)}</strong>
+                    {fmt ? (
+                      <>
+                        <span style={{ fontWeight: '500' }}>{fmt.bsLabel}</span>
+                        <span style={{ fontSize: '0.85rem', color: '#374151' }}>{fmt.bsTime}</span>
+                        <span style={{ fontSize: '0.7rem', color: '#9ca3af' }}>
+                          ({t('tithiCalculator.nepalTime')})
+                        </span>
+                        <span style={{ fontSize: '0.75rem', color: '#9ca3af', marginTop: '6px', borderTop: '1px solid #f3f4f6', paddingTop: '4px' }}>
+                          {fmt.adLabel}
+                        </span>
+                      </>
+                    ) : 'N/A'}
+                  </div>
+                );
+              })}
             </div>
           </div>
 
