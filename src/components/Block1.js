@@ -88,7 +88,7 @@ const Block1 = () => {
                 <div className="block1-content-wrapper">
                     <div className="block1-header-wrapper">
                         <div className="block1-header">
-                            <div className="block1-header-inner" style={{ width: '100%' }}>
+                            <div className="block1-header-inner">
                                 <h2 className="block1-title">
                                     <img src={announcementIcon} alt="Announcement" className="block1-title-icon" />
                                     {t('home.announcements')}
@@ -97,7 +97,7 @@ const Block1 = () => {
                         </div>
                     </div>
                     <div className="block1-scroll-wrapper">
-                        <div className="block1-scroll-wrapper-inner">
+                        <div className="block1-scroll-wrapper-inner" ref={cardsRowRef}>
                             <div className="block1-cards">
                                 {[1, 2, 3].map(i => (
                                     <div key={i} className="block1-card" style={{ opacity: 0.6, background: 'linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%)', backgroundSize: '200% 100%', animation: 'shimmer 1.5s infinite' }}>

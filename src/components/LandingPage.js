@@ -19,7 +19,10 @@ import './LandingPage.css';
 
 const LandingPage = ({ user, isAdmin, trees = [], treeMembers = [], events, familyMembers, onDoubleClickEvent, onEventClick, onSignIn }) => {
     const { t } = useLanguage();
-    const [block1Visible, setBlock1Visible] = useState(true);
+    const [block1Visible, setBlock1Visible] = useState(() => {
+        const cached = localStorage.getItem('block1Visible');
+        return cached === null ? null : cached === 'true';
+    });
     const [heroVideoId, setHeroVideoId] = useState('');
     const navigate = useNavigate();
 
@@ -28,14 +31,11 @@ const LandingPage = ({ user, isAdmin, trees = [], treeMembers = [], events, fami
         const fetchBlock1Visibility = async () => {
             try {
                 const settingsDoc = await getDoc(doc(db, 'siteSettings', 'block1'));
-                if (settingsDoc.exists()) {
-                    setBlock1Visible(settingsDoc.data().visible !== false);
-                } else {
-                    setBlock1Visible(true);
-                }
+                const visible = settingsDoc.exists() ? settingsDoc.data().visible !== false : true;
+                setBlock1Visible(visible);
+                localStorage.setItem('block1Visible', String(visible));
             } catch (error) {
                 console.error('Error fetching Block 1 visibility:', error);
-                setBlock1Visible(true);
             }
         };
         fetchBlock1Visibility();

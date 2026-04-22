@@ -30,7 +30,10 @@ const AdminEditCards = ({ user, isAdmin }) => {
     const [currentCard, setCurrentCard] = useState(null);
     const [loading, setLoading] = useState(false);
     const [notification, setNotification] = useState({ show: false, message: '', type: '' });
-    const [block1Visible, setBlock1Visible] = useState(true);
+    const [block1Visible, setBlock1Visible] = useState(() => {
+        const cached = localStorage.getItem('block1Visible');
+        return cached === null ? true : cached === 'true';
+    });
     const [block2Visible, setBlock2Visible] = useState(true);
     const [heroVideoInput, setHeroVideoInput] = useState('');
     const [heroVideoSaving, setHeroVideoSaving] = useState(false);
@@ -122,6 +125,7 @@ const AdminEditCards = ({ user, isAdmin }) => {
                 updatedBy: user.uid
             });
             setBlock1Visible(newVisibility);
+            localStorage.setItem('block1Visible', String(newVisibility));
             showNotification(
                 `Block 1 is now ${newVisibility ? 'visible' : 'hidden'}`,
                 'success'

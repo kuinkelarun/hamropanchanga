@@ -6,7 +6,7 @@ import {
   getTithiYearFromAdDate, getTithiLunarMonthName, getNepalDate, formatNepaliDateTime
 } from '../utils/nepaliDateUtils';
 import { useLanguage } from '../contexts/LanguageContext';
-import { SHUKLA_TITHI_NAMES, KRISHNA_TITHI_NAMES, normalizePakshaToNepali, NEPALI_MONTHS, ENGLISH_NEPALI_MONTHS } from '../constants/calendarConstants';
+import { SHUKLA_TITHI_NAMES, KRISHNA_TITHI_NAMES, normalizePakshaToNepali, NEPALI_MONTHS, ENGLISH_NEPALI_MONTHS, normalizePakshaToEnglish, NEPALI_TO_ENGLISH_TITHI_MAP } from '../constants/calendarConstants';
 import NepaliMiniCalendar from './NepaliMiniCalendar';
 
 // Returns { date: 'YYYY-MM-DD', time: 'HH:MM' } in the correct timezone for the given mode
@@ -320,19 +320,30 @@ export default function TithiCalculator() {
         <div className="tc-output">
           {result.tithiYear && (
             <div className="tc-month-banner" style={{ background: '#e8f4f8', borderColor: '#0891b2' }}>
-              <div className="tc-month-name" style={{ color: '#0891b2' }}>{t('tithiCalculator.tithiYear')} {result.tithiYear}</div>
-              <div className="tc-month-number" style={{ color: '#0891b2' }}>({result.tithiLunarMonthName || ''})</div>
+              <div className="tc-month-name" style={{ color: '#0891b2' }}>
+                {t('tithiCalculator.tithiYear')} {isNepali ? toNepaliNumber(result.tithiYear) : result.tithiYear}
+              </div>
             </div>
           )}
 
           <div className="tc-main-tithi">
-            <div className="tithi-number">{toNepaliNumber(result.tithi)}</div>
-            <div className="tithi-name">
-              {(result.paksha === 'Shukla' ? SHUKLA_TITHI_NAMES : KRISHNA_TITHI_NAMES)[result.pakshaIndex - 1]}
-            </div>
+            {(() => {
+              const nepaliTithiName = (result.paksha === 'Shukla' ? SHUKLA_TITHI_NAMES : KRISHNA_TITHI_NAMES)[result.pakshaIndex - 1];
+              let combinedName;
+              if (isNepali) {
+                combinedName = [result.tithiLunarMonthName || '', normalizePakshaToNepali(result.paksha), nepaliTithiName].filter(Boolean).join(' ');
+              } else {
+                const monthIndex = NEPALI_MONTHS.indexOf(result.tithiLunarMonthName);
+                const engMonth = monthIndex >= 0 ? ENGLISH_NEPALI_MONTHS[monthIndex] : '';
+                const engTithi = NEPALI_TO_ENGLISH_TITHI_MAP[nepaliTithiName] || nepaliTithiName;
+                const engPaksha = normalizePakshaToEnglish(result.paksha);
+                const engPakshaLabel = engPaksha === 'Shukla' ? 'Suklapakshya' : engPaksha === 'Krishna' ? 'Krishnapakshya' : (engPaksha || '');
+                combinedName = [engMonth, engPakshaLabel, engTithi].filter(Boolean).join(' ');
+              }
+              return <div className="tithi-name">{combinedName}</div>;
+            })()}
             <div className="tithi-paksha">
-              {normalizePakshaToNepali(result.paksha)}
-              {' '} | {t('tithiCalculator.tithiOf')} {result.tithi}/30
+              {t('tithiCalculator.tithiOf')} {isNepali ? toNepaliNumber(result.tithi) : result.tithi}/{isNepali ? '३०' : '30'}
             </div>
             <div className="tc-progress-bar-container">
               <div className="tc-progress-bar" style={{ width: `${result.progress * 100}%` }}></div>
