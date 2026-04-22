@@ -19,6 +19,7 @@ const LandingPageEventsSection = ({ events, familyMembers, onDoubleClickEvent, o
     const handleFilterChange = (e) => {
         const val = e.target.value;
         if (NAVIGATE_FILTERS.includes(val)) {
+            sessionStorage.setItem('landingPageScrollPosition', window.scrollY.toString());
             navigate(`/events?filter=${val}`);
         } else {
             setEventFilter(val);
@@ -105,7 +106,7 @@ const LandingPageEventsSection = ({ events, familyMembers, onDoubleClickEvent, o
             ) : null}
             {(event.host || event.hostLocation) && (
                 <div className="event-detail-line">
-                    Host: {[event.host, event.hostLocation].filter(Boolean).join(', ')}
+                    {[event.host, event.hostLocation].filter(Boolean).join(' | ')}
                 </div>
             )}
         </div>

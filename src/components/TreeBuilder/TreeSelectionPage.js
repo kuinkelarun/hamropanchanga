@@ -414,7 +414,7 @@ export default function TreeSelectionPage({ user, isAdmin }) {
             {t('auth.signInWithGoogle')}
           </button>
           <button
-            onClick={() => navigate('/')}
+            onClick={() => navigate('/', { replace: true })}
             className="mt-3 px-3 py-1 text-sm text-gray-600 hover:text-gray-800"
           >
             {t('auth.backToHome')}

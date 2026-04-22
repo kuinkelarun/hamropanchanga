@@ -117,12 +117,11 @@ function AppContent() {
     const headerPageName = getHeaderPageName(location.pathname);
 
     const handleBrandClick = () => {
-        // User requested a hard refresh when returning home.
         if (location.pathname === '/') {
             window.location.reload();
             return;
         }
-        window.location.href = '/';
+        navigate('/', { replace: true });
     };
 
     const handleBreadcrumbClick = () => {
@@ -178,8 +177,9 @@ function AppContent() {
             // Already on home page: scroll to top
             window.scrollTo({ top: 0, behavior: 'smooth' });
         } else {
-            // Not on home page: navigate to home and restore scroll position
-            navigate('/');
+            // Not on home page: replace current entry so the previous page (e.g. tree detail)
+            // doesn't reappear when the user clicks back from home.
+            navigate('/', { replace: true });
             setTimeout(() => {
                 window.scrollTo({ top: savedScrollPosition, behavior: 'smooth' });
             }, 0);
@@ -192,12 +192,12 @@ function AppContent() {
     };
 
     const handleBackToList = () => {
-        navigate('/');
+        navigate('/', { replace: true });
     };
 
     const handleSignOut = async () => {
         await logout();
-        navigate('/');
+        navigate('/', { replace: true });
     };
 
     const handleAdminEditCards = () => {
@@ -256,20 +256,14 @@ function AppContent() {
     // The Login UI is available via header button or the explicit /login route (Login component still exists).
 
     const handleDoubleClickEvent = (event) => {
-        // Save scroll position before navigating
         sessionStorage.setItem('landingPageScrollPosition', window.scrollY.toString());
-        
-        // Navigate to tree detail page with event ID to highlight
         if (event.treeId) {
             navigate(`/tree/${event.treeId}`, { state: { highlightEventId: event.id } });
         }
     };
 
     const handleEventClick = (event) => {
-        // Save scroll position before navigating
         sessionStorage.setItem('landingPageScrollPosition', window.scrollY.toString());
-        
-        // Navigate to tree detail page with event ID to highlight
         if (event.treeId) {
             navigate(`/tree/${event.treeId}`, { state: { highlightEventId: event.id } });
         }

@@ -72,8 +72,8 @@ export default function EventsPage({ user, events, familyMembers }) {
     const yearParam = searchParams.get('year');
     const selectedYear = yearParam ? parseInt(yearParam) : currentBsYear;
 
-    const setFilter = (val) => setSearchParams(prev => { prev.set('filter', val); return prev; });
-    const setYear = (val) => setSearchParams(prev => { prev.set('year', String(val)); return prev; });
+    const setFilter = (val) => setSearchParams(prev => { prev.set('filter', val); return prev; }, { replace: true });
+    const setYear = (val) => setSearchParams(prev => { prev.set('year', String(val)); return prev; }, { replace: true });
 
     useEffect(() => {
         window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -257,7 +257,7 @@ export default function EventsPage({ user, events, familyMembers }) {
                                                     )}
                                                     {(ev.host || ev.hostLocation) && (
                                                         <div className="ep-event-line2">
-                                                            Host: {[ev.host, ev.hostLocation].filter(Boolean).join(', ')}
+                                                            {[ev.host, ev.hostLocation].filter(Boolean).join(' | ')}
                                                         </div>
                                                     )}
                                                     {getRepLabel(ev.repetition) && (
