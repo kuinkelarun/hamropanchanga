@@ -1898,15 +1898,6 @@
     font-weight: 600;
 }
 
-.ddm-admin-tag {
-    font-size: 0.68rem;
-    padding: 1px 6px;
-    background: #fef3c7;
-    color: #92400e;
-    border-radius: 4px;
-    font-weight: 700;
-    letter-spacing: 0.02em;
-}
 
 /* Tree event item */
 .ddm-item-tree {

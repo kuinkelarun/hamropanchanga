@@ -1,0 +1,280 @@
+.ep-root {
+    min-height: 100vh;
+    background: #f8fafc;
+}
+
+.ep-header {
+    background: #fff;
+    border-bottom: 1px solid #e2e8f0;
+    padding: 1.25rem 1.5rem 1rem;
+}
+
+.ep-header-inner {
+    max-width: 860px;
+    margin: 0 auto;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.ep-header-controls {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.ep-header-text h1 {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: #1a202c;
+    margin: 0 0 0.2rem 0;
+}
+
+.ep-header-text p {
+    font-size: 0.85rem;
+    color: #718096;
+    margin: 0;
+}
+
+.ep-filter-select {
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 0.45rem 0.75rem;
+    font-size: 0.875rem;
+    color: #2d3748;
+    background: #fff;
+    cursor: pointer;
+    outline: none;
+}
+.ep-filter-select:focus {
+    border-color: #667eea;
+    box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.2);
+}
+
+/* Body */
+.ep-body {
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 1.5rem 1.5rem 3rem;
+}
+
+/* Empty / sign-in states */
+.ep-empty {
+    text-align: center;
+    padding: 4rem 1.5rem;
+    color: #a0aec0;
+}
+.ep-empty p {
+    margin: 0.5rem 0 0;
+    font-size: 0.95rem;
+}
+.ep-signin-prompt {
+    text-align: center;
+    padding: 4rem 1.5rem;
+}
+.ep-signin-prompt p {
+    color: #718096;
+    margin-bottom: 1rem;
+    font-size: 0.95rem;
+}
+.ep-signin-btn {
+    background: #1a202c;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: 0.6rem 1.4rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+}
+.ep-signin-btn:hover { background: #2d3748; }
+
+/* Month section */
+.ep-month-section {
+    margin-bottom: 2rem;
+}
+
+.ep-month-header {
+    display: flex;
+    align-items: baseline;
+    gap: 0.75rem;
+    padding: 0.6rem 0 0.6rem 0.9rem;
+    border-left: 4px solid #667eea;
+    margin-bottom: 1rem;
+}
+
+.ep-month-name {
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: #2d3748;
+}
+
+.ep-month-name-en {
+    font-size: 0.85rem;
+    color: #a0aec0;
+    font-weight: 400;
+}
+
+.ep-month-count {
+    margin-left: auto;
+    font-size: 0.75rem;
+    background: #ebf4ff;
+    color: #3182ce;
+    border-radius: 10px;
+    padding: 0.15rem 0.55rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+/* Day group */
+.ep-day-group {
+    margin-bottom: 1rem;
+}
+
+.ep-day-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.3rem 0;
+    margin-bottom: 0.4rem;
+    border-bottom: 1px solid #edf2f7;
+}
+
+.ep-day-nepali {
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: #4a5568;
+}
+
+.ep-day-english {
+    font-size: 0.78rem;
+    color: #a0aec0;
+}
+
+.ep-day-badge {
+    font-size: 0.7rem;
+    font-weight: 600;
+    border-radius: 6px;
+    padding: 0.1rem 0.45rem;
+}
+.ep-day-badge.today {
+    background: #fef3c7;
+    color: #d97706;
+}
+.ep-day-badge.tomorrow {
+    background: #d1fae5;
+    color: #059669;
+}
+
+/* Event rows */
+.ep-event-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    padding: 0.65rem 0.85rem;
+    border-radius: 8px;
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    margin-bottom: 0.4rem;
+    cursor: pointer;
+    transition: box-shadow 0.15s, transform 0.15s;
+}
+
+.ep-event-row:hover {
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    transform: translateY(-1px);
+}
+
+.ep-event-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #667eea;
+    flex-shrink: 0;
+    margin-top: 5px;
+}
+
+.ep-event-main {
+    flex: 1;
+    min-width: 0;
+}
+
+.ep-event-title {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #2d3748;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.ep-event-person-inline {
+    font-weight: 600;
+    color: #667eea;
+    margin-left: 0.2rem;
+    font-size: 0.9rem;
+}
+
+.ep-event-line2 {
+    font-size: 0.8rem;
+    color: #4a5568;
+    margin-top: 0.12rem;
+    font-style: normal;
+}
+
+.ep-event-date-en {
+    color: #a0aec0;
+    font-size: 0.8rem;
+}
+
+.ep-event-sub {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 0.2rem;
+    align-items: center;
+}
+
+.ep-event-nepali-date {
+    font-size: 0.78rem;
+    color: #4a5568;
+}
+
+.ep-event-en-date {
+    font-size: 0.75rem;
+    color: #a0aec0;
+}
+
+.ep-event-person {
+    font-size: 0.75rem;
+    color: #667eea;
+}
+
+.ep-event-rep {
+    font-size: 0.7rem;
+    background: #f3f0ff;
+    color: #7c3aed;
+    border-radius: 6px;
+    padding: 0.1rem 0.4rem;
+    font-weight: 500;
+    display: inline-block;
+    margin-top: 0.1rem;
+}
+
+.ep-tithi-info {
+    font-size: 0.72rem;
+    color: #9ca3af;
+    font-style: italic;
+}
+
+/* Responsive */
+@media (max-width: 600px) {
+    .ep-header-inner { flex-direction: column; align-items: stretch; }
+    .ep-header-controls { width: 100%; }
+    .ep-filter-select { flex: 1; }
+    .ep-body { padding: 1rem 0.75rem 2rem; }
+    .ep-event-row { flex-wrap: wrap; }
+}

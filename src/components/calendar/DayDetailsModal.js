@@ -124,9 +124,6 @@ const DayDetailsModal = ({
                     <div className="ddm-item-content">
                       <div className="ddm-item-title">
                         {event.title}
-                        {event.createdByAdmin && (
-                          <span className="ddm-admin-tag">Admin</span>
-                        )}
                       </div>
                       {event.description && (
                         <div className="ddm-item-meta">{event.description}</div>

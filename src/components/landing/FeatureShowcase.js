@@ -40,8 +40,8 @@ const features = [
                 <path d="M13.73 21a2 2 0 01-3.46 0" />
             </svg>
         ),
-        action: 'scroll',
-        to: '#events-reminders-section',
+        action: 'navigate',
+        to: '/events',
     },
     {
         titleKey: 'landing.featureTithiTitle',

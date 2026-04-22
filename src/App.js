@@ -17,7 +17,9 @@ import EmbeddedBuilderPage from './components/TreeBuilder/EmbeddedBuilderPage';
 import TreeSelectionPage from './components/TreeBuilder/TreeSelectionPage';
 import TreeDetailPage from './components/TreeBuilder/TreeDetailPage';
 import DeveloperPage from './components/DeveloperPage';
+import EventsPage from './components/EventsPage';
 import { useUserPermissions } from './hooks/usePermissions';
+import { useTithiDateResolver } from './hooks/useTithiDateResolver';
 
 // Tithi Calculator Button Component with visibility control
 function TithiCalculatorButton({ onClick }) {
@@ -73,6 +75,7 @@ function AppContent() {
     const { user, isAdmin, isLoading, logout } = useAuth();
     // All Firestore data subscriptions managed by useAppData hook
     const { trees, treeCalendarEvents, personalCalendarEvents, sharedTreeCalendarEvents, treeMembers } = useAppData(user, isAdmin);
+    const resolveEventDate = useTithiDateResolver();
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
     const hamburgerButtonRef = useRef(null);
@@ -99,6 +102,7 @@ function AppContent() {
         if (pathname.startsWith('/admin/data-management')) return 'Admin';
         if (pathname.startsWith('/user-management')) return 'User Management';
         if (pathname.startsWith('/developer')) return 'Developer API';
+        if (pathname.startsWith('/events')) return 'Events & Reminders';
         if (pathname.startsWith('/builder')) return 'Builder';
 
         const clean = pathname.replace(/^\//, '').split('/')[0] || '';
@@ -276,19 +280,34 @@ function AppContent() {
         if (event?.id) mergedCalendarEventsById.set(event.id, event);
     });
 
-    // Events for LandingPageEventsSection
-    const allEvents = Array.from(mergedCalendarEventsById.values()).map(event => ({
-        id: event.id,
-        title: event.title,
-        name: event.title,
-        date: event.dateKey,
-        dateKey: event.dateKey,
-        personId: event.memberId || event.personId || '',
-        repetition: event.repetition || 'none',
-        treeId: event.treeId || null,
-        tithi: event.tithi || null,
-        nepaliDateForRecurrence: event.nepaliDateForRecurrence || null,
-    }));
+    const treesById = new Map((trees || []).map(t => [t.id, t]));
+
+    // Events for LandingPageEventsSection and EventsPage
+    const allEvents = Array.from(mergedCalendarEventsById.values()).map(event => {
+        const tree = event.treeId ? treesById.get(event.treeId) : null;
+        return {
+            id: event.id,
+            title: event.title,
+            name: event.title,
+            date: event.dateKey,
+            dateKey: event.dateKey,
+            personId: event.memberId || event.personId || '',
+            repetition: event.repetition || 'none',
+            treeId: event.treeId || null,
+            tithi: event.tithi || null,
+            nepaliDateForRecurrence: event.nepaliDateForRecurrence || null,
+            host: tree?.primaryMemberName || null,
+            hostLocation: tree?.location || null,
+        };
+    });
+
+    const allEnrichedEvents = allEvents.map(event => {
+        if (event.tithi && event.repetition !== 'monthly') {
+            const resolvedDate = resolveEventDate(event);
+            if (resolvedDate) return { ...event, resolvedTithiDate: resolvedDate };
+        }
+        return event;
+    });
     
     const getCreatedAtMillis = (createdAt) => {
         if (!createdAt) return Number.POSITIVE_INFINITY;
@@ -581,6 +600,14 @@ function AppContent() {
                         <DeveloperPage
                             user={user}
                             isAdmin={isAdmin}
+                        />
+                    } />
+
+                    <Route path="/events" element={
+                        <EventsPage
+                            user={user}
+                            events={allEnrichedEvents}
+                            familyMembers={allFamilyMembers}
                         />
                     } />
                 </Routes>

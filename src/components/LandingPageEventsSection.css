@@ -26,17 +26,32 @@
 
 .event-name {
     font-weight: bold;
+    font-size: 0.875rem;
     color: #684c4c;
-    margin-bottom: 0.5rem;
-    /* Truncate the text if it's too long */
+    margin-bottom: 0.25rem;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
 }
 
+.event-detail-line {
+    font-size: 0.875rem;
+    color: #4a5568;
+    font-weight: 400;
+    margin-top: 0.1rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.event-detail-muted {
+    color: #a0aec0;
+    font-size: 0.875rem;
+}
+
 .event-date {
     color: #231818;
-    font-size: 0.9rem;
+    font-size: 0.875rem;
 }
 
 /* Mobile Responsive Optimizations */
@@ -95,6 +110,42 @@
         transform: none;
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
     }
+}
+
+/* Scrollable container for 30/90-day filters */
+.events-scroll-container {
+    max-height: 480px;
+    overflow-y: auto;
+    padding-right: 4px;
+    scrollbar-width: thin;
+    scrollbar-color: #cbd5e0 transparent;
+}
+.events-scroll-container::-webkit-scrollbar { width: 5px; }
+.events-scroll-container::-webkit-scrollbar-thumb { background: #cbd5e0; border-radius: 4px; }
+
+/* Day grouping for 7/30-day filters */
+.event-day-group {
+    margin-bottom: 1rem;
+}
+
+.event-day-header {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.25rem 0;
+    margin-bottom: 0.5rem;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.event-day-nepali {
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: #4a5568;
+}
+
+.event-day-english {
+    font-size: 0.78rem;
+    color: #a0aec0;
 }
 
 @media (max-width: 320px) {
