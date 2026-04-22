@@ -1,0 +1,213 @@
+.nmc-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 999;
+}
+
+.nmc-popup {
+  position: absolute;
+  z-index: 1000;
+  background: #fff;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+  padding: 12px;
+  min-width: 280px;
+  user-select: none;
+}
+
+/* ── Header ──────────────────────────────────────────────────────────────── */
+.nmc-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+  gap: 4px;
+}
+
+.nmc-nav-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 1rem;
+  font-weight: 600;
+  padding: 4px 8px;
+  border-radius: 4px;
+  color: #374151;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.nmc-nav-btn:hover:not(:disabled) {
+  background: #f3f4f6;
+}
+
+.nmc-nav-btn:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+/* Clickable month / year labels in the header */
+.nmc-header-label {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: #111827;
+  padding: 3px 6px;
+  border-radius: 4px;
+  line-height: 1.3;
+}
+
+.nmc-header-label:hover {
+  background: #f3f4f6;
+  color: #b45309;
+}
+
+
+.nmc-month-label {
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: #111827;
+}
+
+/* ── Day grid ────────────────────────────────────────────────────────────── */
+.nmc-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+}
+
+.nmc-weekday {
+  text-align: center;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: #6b7280;
+  padding: 4px 0;
+}
+
+.nmc-weekday:first-child {
+  color: #dc2626;
+}
+
+.nmc-day {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border-radius: 5px;
+  padding: 3px 1px;
+  cursor: pointer;
+  min-height: 36px;
+  transition: background 0.1s;
+}
+
+.nmc-day:hover {
+  background: #f3f4f6;
+}
+
+.nmc-day.today {
+  background: #fef3c7;
+}
+
+.nmc-day.selected {
+  background: #b45309;
+  color: #fff;
+}
+
+.nmc-day.selected .nmc-ad-day {
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.nmc-day.today.selected {
+  background: #92400e;
+}
+
+.nmc-bs-day {
+  font-size: 0.85rem;
+  font-weight: 500;
+  line-height: 1.2;
+}
+
+.nmc-ad-day {
+  font-size: 0.62rem;
+  color: #9ca3af;
+  line-height: 1.1;
+}
+
+.nmc-day.empty {
+  cursor: default;
+}
+
+/* ── Month grid ──────────────────────────────────────────────────────────── */
+.nmc-month-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4px;
+}
+
+.nmc-month-cell {
+  text-align: center;
+  padding: 8px 4px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: #374151;
+  transition: background 0.1s;
+}
+
+.nmc-month-cell:hover {
+  background: #f3f4f6;
+}
+
+.nmc-month-cell.today {
+  background: #fef3c7;
+}
+
+.nmc-month-cell.selected {
+  background: #b45309;
+  color: #fff;
+}
+
+/* ── Year grid ───────────────────────────────────────────────────────────── */
+.nmc-year-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4px;
+}
+
+.nmc-year-cell {
+  text-align: center;
+  padding: 8px 4px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: #374151;
+  transition: background 0.1s;
+}
+
+.nmc-year-cell:hover {
+  background: #f3f4f6;
+}
+
+.nmc-year-cell.today {
+  background: #fef3c7;
+}
+
+.nmc-year-cell.selected {
+  background: #b45309;
+  color: #fff;
+}
+
+/* ── Footer ──────────────────────────────────────────────────────────────── */
+.nmc-footer {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid #f3f4f6;
+  font-size: 0.78rem;
+  color: #6b7280;
+  text-align: center;
+}

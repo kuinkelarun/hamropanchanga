@@ -234,7 +234,15 @@
     "noteText": "Calculations use the \"astronomy-engine\" library for high-precision ephemeris data (Apparent Geocentric Ecliptic of Date).",
     "modernAstronomy": "Modern Astronomy:",
     "modernAstronomyText": "Uses the actual physical positions of the Sun and Moon (taking into account thousands of gravitational perturbations using NASA-based calculations (Drik Ganita).",
-    "selectValidDateTime": "Please select a valid date and time."
+    "selectValidDateTime": "Please select a valid date and time.",
+    "displayTimeIn": "Display Time In:",
+    "nepalTime": "Nepal Time",
+    "localTime": "Local Time",
+    "startTime": "Start Time",
+    "endTime": "End Time",
+    "complete": "Complete",
+    "tithiOf": "Tithi",
+    "failedEphemeris": "Failed to calculate ephemeris data."
   },
   "treeSelection": {
     "buildYourFamilyLegacy": "Build Your Family Legacy",
