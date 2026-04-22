@@ -382,11 +382,21 @@ const AdminEditCards = ({ user, isAdmin }) => {
                     <h1>Manage Home Cards</h1>
                 </div>
                 <div className="admin-header-right">
-                        {isAdmin && (
-                        <>
-                        <div className="block1-visibility-toggle">
-                            <label className="toggle-label">
-                                <span>Show Block 1 on Homepage:</span>
+                    <button onClick={handleAddNew} className="admin-add-btn">
+                        + Add New Card
+                    </button>
+                </div>
+            </div>
+
+            {/* Site Settings */}
+            {isAdmin && (
+                <div className="admin-section-panel">
+                    <h2 className="admin-section-panel-title">⚙️ Site Settings</h2>
+                    <p className="admin-section-panel-desc">Control visibility of homepage sections.</p>
+                    <div className="admin-settings-list">
+                        <div className="admin-settings-row">
+                            <span className="admin-settings-label">Show Block 1 on Homepage</span>
+                            <div className="admin-settings-control">
                                 <button
                                     onClick={toggleBlock1Visibility}
                                     className={`toggle-switch ${block1Visible ? 'active' : ''}`}
@@ -394,11 +404,11 @@ const AdminEditCards = ({ user, isAdmin }) => {
                                     <span className="toggle-slider"></span>
                                 </button>
                                 <span className="toggle-status">{block1Visible ? 'Visible' : 'Hidden'}</span>
-                            </label>
+                            </div>
                         </div>
-                        <div className="block1-visibility-toggle">
-                            <label className="toggle-label">
-                                <span>Show Tithi Calculator Menu:</span>
+                        <div className="admin-settings-row">
+                            <span className="admin-settings-label">Show Tithi Calculator Menu</span>
+                            <div className="admin-settings-control">
                                 <button
                                     onClick={toggleBlock2Visibility}
                                     className={`toggle-switch ${block2Visible ? 'active' : ''}`}
@@ -406,15 +416,11 @@ const AdminEditCards = ({ user, isAdmin }) => {
                                     <span className="toggle-slider"></span>
                                 </button>
                                 <span className="toggle-status">{block2Visible ? 'Visible' : 'Hidden'}</span>
-                            </label>
+                            </div>
                         </div>
-                        </>
-                        )}
-                    <button onClick={handleAddNew} className="admin-add-btn">
-                        Add New Card
-                    </button>
+                    </div>
                 </div>
-            </div>
+            )}
 
             {/* Hero Section Settings */}
             {isAdmin && (
@@ -466,48 +472,59 @@ const AdminEditCards = ({ user, isAdmin }) => {
                 </div>
             )}
 
-            {/* Cards Grid */}
-            <div className="admin-cards-grid">
-                {cards.map(card => (
-                    <div key={card.id} className={`admin-card-item ${!card.published ? 'draft' : ''}`}>
-                        <div className="admin-card-preview">
-                            {card.imageUrl ? (
-                                <img src={card.imageUrl} alt={card.title} className="admin-card-image" />
-                            ) : (
-                                <div className="admin-card-icon">{card.icon}</div>
-                            )}
-                            <div className={`admin-card-content text-${card.textPosition}`}>
-                                <h3>{card.title}</h3>
-                                <p>{card.description}</p>
+            {/* Home Cards */}
+            <div className="admin-section-panel admin-cards-section">
+                <div className="admin-cards-section-header">
+                    <div>
+                        <h2 className="admin-section-panel-title">🃏 Home Cards</h2>
+                        <p className="admin-section-panel-desc">Cards displayed in the announcement block on the homepage.</p>
+                    </div>
+                    {cards.length > 0 && (
+                        <span className="admin-cards-count">{cards.length} card{cards.length !== 1 ? 's' : ''}</span>
+                    )}
+                </div>
+                <div className="admin-cards-grid">
+                    {cards.map(card => (
+                        <div key={card.id} className={`admin-card-item ${!card.published ? 'draft' : ''}`}>
+                            <div className="admin-card-preview">
+                                {card.imageUrl ? (
+                                    <img src={card.imageUrl} alt={card.title} className="admin-card-image" />
+                                ) : (
+                                    <div className="admin-card-icon">{card.icon}</div>
+                                )}
+                                <div className={`admin-card-content text-${card.textPosition}`}>
+                                    <h3>{card.title}</h3>
+                                    <p>{card.description}</p>
+                                </div>
+                            </div>
+                            <div className="admin-card-actions">
+                                <span className={`admin-card-status ${card.published ? 'published' : 'draft'}`}>
+                                    {card.published ? '✓ Published' : '○ Draft'}
+                                </span>
+                                <div className="admin-card-buttons">
+                                    <button onClick={() => handleEdit(card)} className="admin-btn-edit">
+                                        Edit
+                                    </button>
+                                    <button
+                                        onClick={() => handleTogglePublish(card)}
+                                        className="admin-btn-toggle"
+                                    >
+                                        {card.published ? 'Unpublish' : 'Publish'}
+                                    </button>
+                                    <button onClick={() => handleDelete(card)} className="admin-btn-delete">
+                                        Delete
+                                    </button>
+                                </div>
                             </div>
                         </div>
-                        <div className="admin-card-actions">
-                            <span className={`admin-card-status ${card.published ? 'published' : 'draft'}`}>
-                                {card.published ? '✓ Published' : '○ Draft'}
-                            </span>
-                            <div className="admin-card-buttons">
-                                <button onClick={() => handleEdit(card)} className="admin-btn-edit">
-                                    Edit
-                                </button>
-                                <button 
-                                    onClick={() => handleTogglePublish(card)} 
-                                    className="admin-btn-toggle"
-                                >
-                                    {card.published ? 'Unpublish' : 'Publish'}
-                                </button>
-                                <button onClick={() => handleDelete(card)} className="admin-btn-delete">
-                                    Delete
-                                </button>
-                            </div>
+                    ))}
+
+                    {cards.length === 0 && (
+                        <div className="admin-empty-state">
+                            <p>No cards yet. Click "+ Add New Card" to create one.</p>
                         </div>
-                    </div>
-                ))}
-                
-                {cards.length === 0 && (
-                    <div className="admin-empty-state">
-                        <p>No cards yet. Click "Add New Card" to create one.</p>
-                    </div>
-                )}
+                    )}
+                </div>
             </div>
 
             {/* Edit Modal */}

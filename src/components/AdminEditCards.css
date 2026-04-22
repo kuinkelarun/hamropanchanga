@@ -702,3 +702,61 @@
     height: 100%;
     border: none;
 }
+
+/* Site Settings rows */
+.admin-settings-list {
+    display: flex;
+    flex-direction: column;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    overflow: hidden;
+    margin-top: 1rem;
+}
+
+.admin-settings-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.85rem 1rem;
+    background: #fff;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.admin-settings-row:last-child {
+    border-bottom: none;
+}
+
+.admin-settings-label {
+    font-size: 0.9rem;
+    color: #2d3748;
+    font-weight: 500;
+}
+
+.admin-settings-control {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+}
+
+/* Home Cards section */
+.admin-cards-section-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    margin-bottom: 1.25rem;
+}
+
+.admin-cards-count {
+    font-size: 0.8rem;
+    background: #ebf4ff;
+    color: #3182ce;
+    border-radius: 12px;
+    padding: 0.2rem 0.65rem;
+    font-weight: 600;
+    white-space: nowrap;
+    margin-top: 0.25rem;
+}
+
+.admin-cards-section .admin-cards-grid {
+    margin-top: 0;
+}

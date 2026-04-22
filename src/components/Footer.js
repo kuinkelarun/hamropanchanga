@@ -32,7 +32,7 @@ const Footer = () => {
                         {t('footer.contactText')}
                     </p>
                     <p className="footer-text">
-                        familytree@example.com
+                        <a href="mailto:hamropanchanga@gmail.com">hamropanchanga@gmail.com</a>
                     </p>
                 </div>
             </div>

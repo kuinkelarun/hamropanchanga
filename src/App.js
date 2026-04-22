@@ -98,6 +98,7 @@ function AppContent() {
         if (pathname.startsWith('/admin/calendar')) return 'Admin';
         if (pathname.startsWith('/admin/data-management')) return 'Admin';
         if (pathname.startsWith('/user-management')) return 'User Management';
+        if (pathname.startsWith('/developer')) return 'Developer API';
         if (pathname.startsWith('/builder')) return 'Builder';
 
         const clean = pathname.replace(/^\//, '').split('/')[0] || '';
@@ -406,6 +407,12 @@ function AppContent() {
                                     >
                                         <span className="nav-menu-text">Tree View</span>
                                     </button>
+                                    <button
+                                        onClick={handleDeveloperPage}
+                                        className="nav-menu-item"
+                                    >
+                                        <span className="nav-menu-text">Developer API</span>
+                                    </button>
                                 </nav>
                             )}
                         </div>
@@ -470,6 +477,12 @@ function AppContent() {
                                 className="mobile-nav-item"
                             >
                                 Tree View
+                            </button>
+                            <button
+                                onClick={() => { handleDeveloperPage(); setMobileMenuOpen(false); }}
+                                className="mobile-nav-item"
+                            >
+                                Developer API
                             </button>
                         </nav>
                     </div>

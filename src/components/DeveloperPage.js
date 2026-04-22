@@ -10,6 +10,7 @@ const ENDPOINTS = [
     path: '/v1/health',
     auth: false,
     description: 'Check API availability. No key required.',
+    curl: `curl "${API_BASE}/v1/health"`,
     response: `{ "status": "ok", "version": "v1", "timestamp": "2026-02-23T..." }`,
   },
   {
@@ -17,6 +18,7 @@ const ENDPOINTS = [
     path: '/v1/tithi/today',
     auth: true,
     description: 'Get the current tithi (from server clock, UTC).',
+    curl: `curl "${API_BASE}/v1/tithi/today" \\\n  -H "X-API-Key: npcal_your_key_here"`,
     response: `{
   "date": "2026-02-23",
   "sunLon": 310.4,
@@ -32,12 +34,13 @@ const ENDPOINTS = [
     method: 'GET',
     path: '/v1/calendar/:bsYear/:bsMonth',
     auth: true,
-    description: 'Full Nepali calendar month data. bsYear: 2080–2085, bsMonth: 1–12.',
+    description: 'Full Nepali calendar month data. bsYear: 2078–2090, bsMonth: 1–12.',
+    curl: `curl "${API_BASE}/v1/calendar/2082/1" \\\n  -H "X-API-Key: npcal_your_key_here"`,
     response: `{
   "bsYear": 2082,
-  "bsMonth": 11,
-  "days": [ { "bsDay": 1, "adDate": "2026-02-13", ... }, ... ],
-  "metadata": { "monthName": "Falgun", ... }
+  "bsMonth": 1,
+  "days": [ { "bsDay": 1, "adDate": "2025-04-14", "tithi": 2, ... }, ... ],
+  "metadata": { "monthName": "Baisakh", "totalDays": 31 }
 }`,
   },
   {
@@ -45,19 +48,21 @@ const ENDPOINTS = [
     path: '/v1/tithis?startDate=YYYY-MM-DD&endDate=YYYY-MM-DD',
     auth: true,
     description: 'List all tithis in an AD date range (max 366 days).',
+    curl: `curl "${API_BASE}/v1/tithis?startDate=2025-04-01&endDate=2025-04-30" \\\n  -H "X-API-Key: npcal_your_key_here"`,
     response: `{
   "count": 30,
-  "tithis": [ { "id": "...", "bsDate": "2082-11-01", "tithi": 10, ... }, ... ]
+  "tithis": [ { "id": "...", "bsDate": "2082-01-01", "tithi": 2, "paksha": "Shukla", ... }, ... ]
 }`,
   },
   {
     method: 'GET',
     path: '/v1/events?startDate=YYYY-MM-DD&endDate=YYYY-MM-DD',
     auth: true,
-    description: 'List public calendar events in a date range (max 366 days).',
+    description: 'List public calendar events in an AD date range (max 366 days).',
+    curl: `curl "${API_BASE}/v1/events?startDate=2025-04-01&endDate=2025-04-30" \\\n  -H "X-API-Key: npcal_your_key_here"`,
     response: `{
   "count": 5,
-  "events": [ { "id": "...", "title": "Dashain", "dateKey": "2082-06-01", ... }, ... ]
+  "events": [ { "id": "...", "title": "Nepali New Year", "dateKey": "2082-01-01", ... }, ... ]
 }`,
   },
 ];
@@ -265,7 +270,7 @@ function KeyPanel({
         </div>
         <p className="text-xs text-gray-500">Rate limit: <strong>1,000 requests / day</strong>. The key is masked for security; you cannot retrieve the original value.</p>
         <div className="mt-4 pt-4 border-t border-gray-100">
-          <p className="text-xs text-gray-400">Need a higher limit? Contact us at <a href="mailto:admin@hamropanchanga.com" className="text-indigo-600 hover:underline">admin@hamropanchanga.com</a></p>
+          <p className="text-xs text-gray-400">Need a higher limit? Contact us at <a href="mailto:hamropanchanga@gmail.com" className="text-indigo-600 hover:underline">hamropanchanga@gmail.com</a></p>
         </div>
       </div>
     );
@@ -366,21 +371,10 @@ export default function DeveloperPage({ user, isAdmin }) {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
       <div className="bg-white border-b border-gray-200">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
-          <div className="flex items-center gap-3 mb-3">
-            <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center">
-              <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
-              </svg>
-            </div>
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">HamroPanchanga API</h1>
-              <p className="text-sm text-gray-500">Nepali Calendar &amp; Tithi data for your applications</p>
-            </div>
-          </div>
-          <div className="flex flex-wrap gap-2 mt-4">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-4">
+          <p className="text-sm text-gray-500">Nepali Calendar &amp; Tithi data for your applications</p>
+          <div className="flex flex-wrap gap-2 mt-3">
             {['REST', 'JSON', 'Free Plan', 'API Key Auth'].map(tag => (
               <span key={tag} className="text-xs bg-gray-100 text-gray-600 px-2.5 py-1 rounded-full">{tag}</span>
             ))}
@@ -420,9 +414,10 @@ export default function DeveloperPage({ user, isAdmin }) {
                   <p className="text-sm text-gray-600 mb-2">{ep.description}</p>
                   <details className="group">
                     <summary className="text-xs text-indigo-600 cursor-pointer hover:text-indigo-800 select-none">
-                      Show example response
+                      Show example
                     </summary>
-                    <div className="mt-2">
+                    <div className="mt-2 space-y-2">
+                      {ep.curl && <CodeBlock code={ep.curl} />}
                       <CodeBlock code={ep.response} />
                     </div>
                   </details>
@@ -497,8 +492,8 @@ export default function DeveloperPage({ user, isAdmin }) {
             <h4 className="text-sm font-semibold text-gray-700 mb-2">Support</h4>
             <p className="text-xs text-gray-500">
               Questions or issues? Email{' '}
-              <a href="mailto:admin@hamropanchanga.com" className="text-indigo-600 hover:underline">
-                admin@hamropanchanga.com
+              <a href="mailto:hamropanchanga@gmail.com" className="text-indigo-600 hover:underline">
+                hamropanchanga@gmail.com
               </a>
             </p>
           </div>
