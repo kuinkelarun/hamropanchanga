@@ -446,6 +446,12 @@ if (process.env.NODE_ENV === 'development') {
   });
 })();
 
+// Let React Router handle scroll restoration; prevent the browser from
+// snapping back to a mid-page scroll position during back/forward navigation.
+if ('scrollRestoration' in window.history) {
+  window.history.scrollRestoration = 'manual';
+}
+
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
   <React.StrictMode>
