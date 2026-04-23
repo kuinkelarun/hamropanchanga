@@ -1,9 +1,10 @@
-import React, { useMemo, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import React, { useMemo, useEffect, useState } from 'react';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { signInWithGoogle } from '../firebase';
 import { formatNepaliDate, formatEnglishDate, convertAdToBs, convertBsToAd, getNepalDate } from '../utils/nepaliDateUtils';
 import { NEPALI_MONTHS, ENGLISH_NEPALI_MONTHS, normalizePakshaToNepali } from '../constants/calendarConstants';
 import { useEventDisplay, isValidDate } from '../hooks/useEventDisplay';
+import { useLanguage } from '../contexts/LanguageContext';
 import './EventsPage.css';
 
 function getNptMidnight() {
@@ -24,10 +25,6 @@ function toDateKey(d) {
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
-function getRepLabel(rep) {
-    if (!rep || rep === 'none') return '';
-    return rep === 'yearly' ? 'वार्षिक' : 'मासिक';
-}
 
 function getTithiDisplay(event) {
     if (!event.tithi) return '';
@@ -41,10 +38,35 @@ function getCurrentBsYear() {
     return bs ? bs.year : 2083;
 }
 
+function searchMatches(ev, q) {
+    const s = q.toLowerCase().trim();
+    if (!s) return true;
+    const fields = [
+        ev.name,
+        ev.personName,
+        ev.personRelation,
+        ev.host,
+        ev.hostLocation,
+        ev.hostContact,
+        ev.tithi?.month,
+        ev.tithi?.name,
+    ];
+    return fields.some(f => f && String(f).toLowerCase().includes(s));
+}
+
 // For a yearly event, compute the AD display date within a specific BS year.
 // Returns a Date or null.
 function getYearlyDateInBsYear(ev, bsYear) {
-    // Try via BS date of the original dateKey
+    // Tithi-based events: projecting by BS month/day is wrong because dateKey is
+    // just the creation date, not the tithi date. The resolved displayDate is the
+    // correct date — return it only if it actually falls in the requested BS year.
+    if (ev.tithi?.month) {
+        if (!isValidDate(ev.displayDate)) return null;
+        const bs = convertAdToBs(ev.displayDate.getFullYear(), ev.displayDate.getMonth(), ev.displayDate.getDate());
+        return bs && bs.year === bsYear ? ev.displayDate : null;
+    }
+
+    // Date-based yearly events: map the original BS month+day to the target year.
     const dateStr = ev.dateKey || ev.date;
     if (dateStr && typeof dateStr === 'string' && dateStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
         const [y, m, d] = dateStr.split('-').map(Number);
@@ -66,6 +88,8 @@ function getYearlyDateInBsYear(ev, bsYear) {
 }
 
 export default function EventsPage({ user, events, familyMembers }) {
+    const navigate = useNavigate();
+    const { t } = useLanguage();
     const [searchParams, setSearchParams] = useSearchParams();
     const filter = searchParams.get('filter') || 'upcoming';
     const currentBsYear = getCurrentBsYear();
@@ -74,6 +98,8 @@ export default function EventsPage({ user, events, familyMembers }) {
 
     const setFilter = (val) => setSearchParams(prev => { prev.set('filter', val); return prev; }, { replace: true });
     const setYear = (val) => setSearchParams(prev => { prev.set('year', String(val)); return prev; }, { replace: true });
+
+    const [searchQuery, setSearchQuery] = useState('');
 
     useEffect(() => {
         window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -123,10 +149,15 @@ export default function EventsPage({ user, events, familyMembers }) {
         });
     }, [mapped, filter, selectedYear]);
 
+    const searchFiltered = useMemo(
+        () => searchQuery.trim() ? filtered.filter(ev => searchMatches(ev, searchQuery)) : filtered,
+        [filtered, searchQuery]
+    );
+
     // Group by BS month → by AD day
     const grouped = useMemo(() => {
         const monthMap = new Map();
-        filtered.forEach(ev => {
+        searchFiltered.forEach(ev => {
             const d = isValidDate(ev.displayDate) ? ev.displayDate : null;
             let monthKey = 'unknown';
             let monthLabel = { nepali: 'मिति अनिश्चित', english: 'Unknown' };
@@ -156,7 +187,7 @@ export default function EventsPage({ user, events, familyMembers }) {
                     return a.date - b.date;
                 }),
             }));
-    }, [filtered]);
+    }, [searchFiltered]);
 
     // Year options: currentBsYear ± 3
     const yearOptions = [];
@@ -170,9 +201,9 @@ export default function EventsPage({ user, events, familyMembers }) {
                         <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
                         <path d="M7 11V7a5 5 0 0110 0v4" />
                     </svg>
-                    <p>Sign in to view your Events &amp; Reminders.</p>
+                    <p>{t('events.signInPrompt')}</p>
                     <button className="ep-signin-btn" onClick={async () => { try { await signInWithGoogle(); } catch (_) {} }}>
-                        Sign in with Google
+                        {t('events.signInButton')}
                     </button>
                 </div>
             </div>
@@ -184,14 +215,14 @@ export default function EventsPage({ user, events, familyMembers }) {
             <div className="ep-header">
                 <div className="ep-header-inner">
                     <div className="ep-header-text">
-                        <h1>Events &amp; Reminders</h1>
-                        <p>Your family events, organised by Nepali month</p>
+                        <h1>{t('events.title')}</h1>
+                        <p>{t('events.subtitle')}</p>
                     </div>
                     <div className="ep-header-controls">
                         <select className="ep-filter-select" value={filter} onChange={e => setFilter(e.target.value)}>
-                            <option value="upcoming">Upcoming</option>
-                            <option value="all">All Events</option>
-                            <option value="past">Past Events</option>
+                            <option value="upcoming">{t('events.filterUpcoming')}</option>
+                            <option value="all">{t('events.filterAll')}</option>
+                            <option value="past">{t('events.filterPast')}</option>
                         </select>
                         {filter === 'all' && (
                             <select className="ep-filter-select" value={selectedYear} onChange={e => setYear(e.target.value)}>
@@ -201,16 +232,41 @@ export default function EventsPage({ user, events, familyMembers }) {
                             </select>
                         )}
                     </div>
+                    <div className="ep-search-wrap">
+                        <svg className="ep-search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
+                        </svg>
+                        <input
+                            className="ep-search-input"
+                            type="text"
+                            placeholder={t('events.searchPlaceholder')}
+                            value={searchQuery}
+                            onChange={e => setSearchQuery(e.target.value)}
+                        />
+                        {searchQuery && (
+                            <button className="ep-search-clear" onClick={() => setSearchQuery('')} aria-label="Clear search">×</button>
+                        )}
+                    </div>
                 </div>
             </div>
 
             <div className="ep-body">
-                {filtered.length === 0 ? (
+                {searchQuery.trim() && (
+                    <div className="ep-search-hint">
+                        {searchFiltered.length === 0
+                            ? t('events.noResultsSearch').replace('{query}', searchQuery)
+                            : (searchFiltered.length === 1
+                                ? t('events.resultCount').replace('{count}', searchFiltered.length).replace('{query}', searchQuery)
+                                : t('events.resultCountPlural').replace('{count}', searchFiltered.length).replace('{query}', searchQuery))
+                        }
+                    </div>
+                )}
+                {searchFiltered.length === 0 ? (
                     <div className="ep-empty">
                         <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#cbd5e0" strokeWidth="1.5" style={{ margin: '0 auto 0.75rem', display: 'block' }}>
                             <rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" />
                         </svg>
-                        <p>No events found.</p>
+                        <p>{searchQuery.trim() ? t('events.noResultsSearch').replace('{query}', searchQuery) : t('events.noResults')}</p>
                     </div>
                 ) : (
                     grouped.map((month, mi) => (
@@ -219,7 +275,10 @@ export default function EventsPage({ user, events, familyMembers }) {
                                 <span className="ep-month-name">{month.label.nepali}</span>
                                 <span className="ep-month-name-en">({month.label.english})</span>
                                 <span className="ep-month-count">
-                                    {month.days.reduce((s, d) => s + d.events.length, 0)} event{month.days.reduce((s, d) => s + d.events.length, 0) !== 1 ? 's' : ''}
+                                    {(() => {
+                                        const cnt = month.days.reduce((s, d) => s + d.events.length, 0);
+                                        return (cnt === 1 ? t('events.eventCount') : t('events.eventCountPlural')).replace('{count}', cnt);
+                                    })()}
                                 </span>
                             </div>
 
@@ -234,12 +293,19 @@ export default function EventsPage({ user, events, familyMembers }) {
                                             <div className="ep-day-header">
                                                 <span className="ep-day-nepali">{formatNepaliDate(d).withDayShortNepali}</span>
                                                 <span className="ep-day-english">· {formatEnglishDate(d).short}</span>
-                                                {isToday && <span className="ep-day-badge today">Today</span>}
-                                                {isTomorrow && <span className="ep-day-badge tomorrow">Tomorrow</span>}
+                                                {isToday && <span className="ep-day-badge today">{t('events.today')}</span>}
+                                                {isTomorrow && <span className="ep-day-badge tomorrow">{t('events.tomorrow')}</span>}
                                             </div>
                                         )}
                                         {dayGroup.events.map((ev, ei) => (
-                                            <div key={ei} className="ep-event-row">
+                                            <div
+                                                key={ei}
+                                                className="ep-event-row"
+                                                style={{ cursor: ev.treeId ? 'pointer' : 'default' }}
+                                                onDoubleClick={() => {
+                                                    if (ev.treeId) navigate(`/tree/${ev.treeId}`, { state: { highlightEventId: ev.id } });
+                                                }}
+                                            >
                                                 <div className="ep-event-dot" />
                                                 <div className="ep-event-main">
                                                     <div className="ep-event-title">
@@ -250,18 +316,15 @@ export default function EventsPage({ user, events, familyMembers }) {
                                                         <div className="ep-event-line2">
                                                             {formatNepaliDate(d).withDayShortNepali}
                                                             <span className="ep-event-date-en"> ({formatEnglishDate(d).short})</span>
+                                                            {getTithiDisplay(ev) && (
+                                                                <span className="ep-event-tithi-inline"> | {getTithiDisplay(ev)}</span>
+                                                            )}
                                                         </div>
-                                                    )}
-                                                    {getTithiDisplay(ev) && (
-                                                        <div className="ep-event-line2">{getTithiDisplay(ev)}</div>
                                                     )}
                                                     {(ev.host || ev.hostLocation) && (
-                                                        <div className="ep-event-line2">
+                                                        <div className="ep-event-line2 ep-event-host">
                                                             {[ev.host, ev.hostLocation].filter(Boolean).join(' | ')}
                                                         </div>
-                                                    )}
-                                                    {getRepLabel(ev.repetition) && (
-                                                        <span className="ep-event-rep">{getRepLabel(ev.repetition)}</span>
                                                     )}
                                                 </div>
                                             </div>

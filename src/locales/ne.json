@@ -334,6 +334,24 @@
       "december": "डिसेम्बर"
     }
   },
+  "events": {
+    "title": "कार्यक्रम र सम्झना",
+    "subtitle": "नेपाली महिना अनुसार तपाईंका पारिवारिक कार्यक्रमहरू",
+    "signInPrompt": "कार्यक्रम र सम्झनाहरू हेर्न साइन इन गर्नुहोस्।",
+    "signInButton": "Google मार्फत साइन इन गर्नुहोस्",
+    "filterUpcoming": "आगामी",
+    "filterAll": "सबै कार्यक्रम",
+    "filterPast": "विगतका कार्यक्रम",
+    "searchPlaceholder": "कार्यक्रम, व्यक्ति, वंशवृक्ष वा स्थान खोज्नुहोस्…",
+    "noResults": "कुनै कार्यक्रम भेटिएन।",
+    "noResultsSearch": "\"{query}\" सँग मेल खाने कुनै कार्यक्रम छैन",
+    "resultCount": "\"{query}\" का लागि {count} नतिजा",
+    "resultCountPlural": "\"{query}\" का लागि {count} नतिजाहरू",
+    "today": "आज",
+    "tomorrow": "भोलि",
+    "eventCount": "{count} कार्यक्रम",
+    "eventCountPlural": "{count} कार्यक्रमहरू"
+  },
   "developer": {
     "navLabel": "डेभलपर API",
     "pageTitle": "HamroPanchanga API",

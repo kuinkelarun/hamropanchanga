@@ -83,8 +83,8 @@ const LandingPageEventsSection = ({ events, familyMembers, onDoubleClickEvent, o
     const renderEventCard = (event, index) => (
         <div
             key={index}
-            className="event-card cursor-pointer hover:shadow-lg transition-shadow"
-            onClick={() => onEventClick && onEventClick(event)}
+            className="event-card hover:shadow-lg transition-shadow"
+            style={{ cursor: event.treeId ? 'pointer' : 'default' }}
             onDoubleClick={() => onDoubleClickEvent && onDoubleClickEvent(event)}
         >
             <div className="event-name">
@@ -105,7 +105,7 @@ const LandingPageEventsSection = ({ events, familyMembers, onDoubleClickEvent, o
                 </div>
             ) : null}
             {(event.host || event.hostLocation) && (
-                <div className="event-detail-line">
+                <div className="event-detail-line event-host-line">
                     {[event.host, event.hostLocation].filter(Boolean).join(' | ')}
                 </div>
             )}
@@ -158,7 +158,8 @@ const LandingPageEventsSection = ({ events, familyMembers, onDoubleClickEvent, o
                 <select
                     value={eventFilter}
                     onChange={handleFilterChange}
-                    className="w-2/5 self-end border rounded-xl p-1 text-sm sm:w-auto"
+                    className="w-2/5 self-end border rounded-xl p-1 text-sm sm:w-auto bg-white"
+                    style={{ colorScheme: 'light' }}
                 >
                     <option value="upcoming">{t('home.filterUpcoming')} ↗</option>
                     <option value="all">{t('home.filterAllEvents')} ↗</option>

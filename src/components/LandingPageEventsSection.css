@@ -44,6 +44,12 @@
     text-overflow: ellipsis;
 }
 
+.event-host-line {
+    font-weight: 600;
+    color: #2d3748;
+    font-size: 0.8rem;
+}
+
 .event-detail-muted {
     color: #a0aec0;
     font-size: 0.875rem;

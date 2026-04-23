@@ -334,6 +334,24 @@
       "december": "December"
     }
   },
+  "events": {
+    "title": "Events & Reminders",
+    "subtitle": "Your family events, organised by Nepali month",
+    "signInPrompt": "Sign in to view your Events & Reminders.",
+    "signInButton": "Sign in with Google",
+    "filterUpcoming": "Upcoming",
+    "filterAll": "All Events",
+    "filterPast": "Past Events",
+    "searchPlaceholder": "Search by event, person, tree or location…",
+    "noResults": "No events found.",
+    "noResultsSearch": "No events match \"{query}\"",
+    "resultCount": "{count} result for \"{query}\"",
+    "resultCountPlural": "{count} results for \"{query}\"",
+    "today": "Today",
+    "tomorrow": "Tomorrow",
+    "eventCount": "{count} event",
+    "eventCountPlural": "{count} events"
+  },
   "developer": {
     "navLabel": "Developer API",
     "pageTitle": "HamroPanchanga Developer API",

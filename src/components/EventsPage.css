@@ -46,6 +46,7 @@
     font-size: 0.875rem;
     color: #2d3748;
     background: #fff;
+    color-scheme: light;
     cursor: pointer;
     outline: none;
 }
@@ -230,6 +231,17 @@
     font-size: 0.8rem;
 }
 
+.ep-event-tithi-inline {
+    color: #718096;
+    font-size: 0.8rem;
+}
+
+.ep-event-host {
+    font-weight: 600;
+    color: #2d3748;
+    font-size: 0.78rem;
+}
+
 .ep-event-sub {
     display: flex;
     flex-wrap: wrap;
@@ -270,6 +282,65 @@
     font-style: italic;
 }
 
+/* Search bar */
+.ep-search-wrap {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    width: 100%;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    background: #fff;
+    padding: 0.4rem 0.75rem;
+    box-sizing: border-box;
+    transition: border-color 0.15s, box-shadow 0.15s;
+}
+.ep-search-wrap:focus-within {
+    border-color: #667eea;
+    box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.2);
+}
+
+.ep-search-icon {
+    flex-shrink: 0;
+    color: #a0aec0;
+}
+
+.ep-search-input {
+    flex: 1;
+    border: none;
+    outline: none;
+    font-size: 0.875rem;
+    color: #2d3748;
+    background: transparent;
+    min-width: 0;
+}
+.ep-search-input::placeholder {
+    color: #cbd5e0;
+}
+
+.ep-search-clear {
+    flex-shrink: 0;
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: #a0aec0;
+    font-size: 1rem;
+    line-height: 1;
+    padding: 0 0.15rem;
+    border-radius: 4px;
+}
+.ep-search-clear:hover {
+    color: #4a5568;
+    background: #f7fafc;
+}
+
+.ep-search-hint {
+    font-size: 0.8rem;
+    color: #718096;
+    margin-bottom: 0.75rem;
+    padding: 0.2rem 0;
+}
+
 /* Responsive */
 @media (max-width: 600px) {
     .ep-header-inner { flex-direction: column; align-items: stretch; }
@@ -277,4 +348,5 @@
     .ep-filter-select { flex: 1; }
     .ep-body { padding: 1rem 0.75rem 2rem; }
     .ep-event-row { flex-wrap: wrap; }
+    .ep-search-wrap { width: 100%; }
 }

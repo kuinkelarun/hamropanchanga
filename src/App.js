@@ -292,6 +292,7 @@ function AppContent() {
             nepaliDateForRecurrence: event.nepaliDateForRecurrence || null,
             host: tree?.primaryMemberName || null,
             hostLocation: tree?.location || null,
+            hostContact: tree?.contact || null,
         };
     });
 
