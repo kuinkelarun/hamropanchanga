@@ -1,0 +1,22 @@
+# gitleaks configuration
+# https://github.com/gitleaks/gitleaks
+
+title = "Hamropanchanga Gitleaks Config"
+
+[extend]
+# Use the default gitleaks ruleset as the base
+useDefault = true
+
+[[rules]]
+id = "firebase-service-account"
+description = "Firebase service account JSON file"
+regex = '''\"private_key\"\s*:\s*\"-----BEGIN RSA PRIVATE KEY-----'''
+tags = ["firebase", "secret", "private-key"]
+
+[[rules]]
+id = "firebase-api-key"
+description = "Firebase Web API Key hardcoded as fallback"
+regex = '''AIzaSy[0-9A-Za-z_-]{33}'''
+tags = ["firebase", "api-key"]
+[rules.allowlist]
+  paths = ['''.env.example''', '''\.md$''']
