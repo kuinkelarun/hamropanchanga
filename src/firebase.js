@@ -6,15 +6,15 @@ import { getStorage } from "firebase/storage";
 import { getFunctions, connectFunctionsEmulator } from "firebase/functions";
 
 // Your web app's Firebase configuration
-// Uses environment variables to support multiple projects (old: family-tree-crm, new: hamropanchanga)
+// All values must be set via environment variables — see .env.example
 const firebaseConfig = {
-    apiKey: process.env.REACT_APP_FIREBASE_API_KEY || "AIzaSyCXGSkSwyKJa8bcPsHO0ZqcjkeiwnaJaXE",
-    authDomain: process.env.REACT_APP_FIREBASE_AUTH_DOMAIN || "hamropanchanga.firebaseapp.com",
-    projectId: process.env.REACT_APP_FIREBASE_PROJECT_ID || "hamropanchanga",
-    storageBucket: process.env.REACT_APP_FIREBASE_STORAGE_BUCKET || "hamropanchanga.firebasestorage.app",
-    messagingSenderId: process.env.REACT_APP_FIREBASE_MESSAGING_SENDER_ID || "731963474318",
-    appId: process.env.REACT_APP_FIREBASE_APP_ID || "1:731963474318:web:aca4b6176a901ad1d9e4df",
-    measurementId: process.env.REACT_APP_FIREBASE_MEASUREMENT_ID || "G-PBXQT4DW3R"
+    apiKey: process.env.REACT_APP_FIREBASE_API_KEY,
+    authDomain: process.env.REACT_APP_FIREBASE_AUTH_DOMAIN,
+    projectId: process.env.REACT_APP_FIREBASE_PROJECT_ID,
+    storageBucket: process.env.REACT_APP_FIREBASE_STORAGE_BUCKET,
+    messagingSenderId: process.env.REACT_APP_FIREBASE_MESSAGING_SENDER_ID,
+    appId: process.env.REACT_APP_FIREBASE_APP_ID,
+    measurementId: process.env.REACT_APP_FIREBASE_MEASUREMENT_ID
 };
 
 // Initialize Firebase
@@ -23,7 +23,7 @@ const app = initializeApp(firebaseConfig);
 // Export Firebase services
 export const auth = getAuth(app);
 // Use custom database ID if specified in environment, otherwise use default
-const databaseId = process.env.REACT_APP_FIRESTORE_DATABASE_ID || 'hamropanchanga-db';
+const databaseId = process.env.REACT_APP_FIRESTORE_DATABASE_ID;
 export const db = getFirestore(app, databaseId);
 export const storage = getStorage(app);
 export const functions = getFunctions(app);
