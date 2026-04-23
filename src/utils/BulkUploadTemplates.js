@@ -453,9 +453,11 @@ export const downloadAllTemplates = () => {
   console.log('Downloading individual templates - user will be prompted to download each');
 };
 
-export default {
+const BulkUploadTemplates = {
   generateTreeTemplate,
   generateMemberTemplate,
   generateEventTemplate,
   downloadAllTemplates
 };
+
+export default BulkUploadTemplates;

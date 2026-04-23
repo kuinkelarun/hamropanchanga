@@ -9,7 +9,7 @@ import { normalizePakshaToEnglish, normalizePakshaToNepali } from '../constants/
 import './NepaliCalendar.css';
 
 const AddEventForm = ({ onAdd, familyMembers, onCancel, editingEvent }) => {
-    const { t, isNepali } = useLanguage();
+    const { t } = useLanguage();
     const getTodayDate = () => {
         const today = new Date();
         return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
@@ -52,7 +52,7 @@ const AddEventForm = ({ onAdd, familyMembers, onCancel, editingEvent }) => {
                 sessionStorage.removeItem('pendingTithiId');
             }
         }
-    }, [editingEvent, nepaliMonths]);
+    }, [editingEvent]);
 
     useEffect(() => {
         const pendingId = sessionStorage.getItem('pendingTithiId');

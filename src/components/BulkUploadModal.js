@@ -78,7 +78,7 @@ const BulkUploadModal = ({ isOpen, onClose, onComplete, userId, userEmail, isAdm
     };
 
     loadTrees();
-  }, [isOpen, userId]);
+  }, [isOpen, userId, isAdmin]);
 
   if (!isOpen) return null;
 
@@ -152,7 +152,7 @@ const BulkUploadModal = ({ isOpen, onClose, onComplete, userId, userEmail, isAdm
                   // include full raw name
                   collected.push(raw.trim());
                   // split on common separators to catch multiple names in one record
-                  const parts = raw.split(/[,\/\\|;]+/).map(p => p.trim()).filter(Boolean);
+                  const parts = raw.split(/[,/\\|;]+/).map(p => p.trim()).filter(Boolean);
                   parts.forEach(p => collected.push(p));
                 });
                 // dedupe
@@ -187,7 +187,7 @@ const BulkUploadModal = ({ isOpen, onClose, onComplete, userId, userEmail, isAdm
             if (t.nameNormalized) treeNameToId[t.nameNormalized] = t.id;
             // Also include a cleaned variant removing punctuation to help match CSV labels
             try {
-              const cleaned = (k || '').replace(/[.,\/\\|]+/g, ' ').trim();
+              const cleaned = (k || '').replace(/[.,/\\|]+/g, ' ').trim();
               if (cleaned && cleaned !== k) treeNameToId[cleaned] = t.id;
               const cleanedNorm = normalizeForCompare(cleaned || '');
               if (cleanedNorm) treeNameToId[cleanedNorm] = t.id;

@@ -16,10 +16,6 @@ export default function AdminTithiGeneratorSection({
   onGenerate,
   getNepaliDateDisplay,
 }) {
-  const resetProgress = () => {
-    // Parent handles reset via onChange callbacks
-  };
-
   return (
     <div className="admin-section">
       <h2>⚡ Tithi Auto Generator</h2>

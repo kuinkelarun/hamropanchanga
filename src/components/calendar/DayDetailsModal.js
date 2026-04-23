@@ -1,8 +1,7 @@
 import React from 'react';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { convertAdToBs } from '../../utils/nepaliDateUtils';
-import { formatAdDateToNepaliStringWithNumerals } from '../../utils/nepaliDateUtils';
-import { compareTithisByStart, toNepaliNumber } from '../../utils/calendarHelpers';
+import { compareTithisByStart } from '../../utils/calendarHelpers';
 import { NEPALI_MONTHS, ENGLISH_NEPALI_MONTHS, normalizePakshaToNepali } from '../../constants/calendarConstants';
 import { signInWithGoogle } from '../../firebase';
 import { PERMISSIONS } from '../../constants/roles';
@@ -23,6 +22,7 @@ const DayDetailsModal = ({
   onOpenAddTithi,
   onDeleteEvent,
   onTreeEventClick,
+    trees = [],
   getTithiDisplayName,
   formatTithiDateTime,
   getTreeMemberName,
@@ -49,7 +49,6 @@ const DayDetailsModal = ({
     : '';
 
   const sortedTithis = [...tithis].sort(compareTithisByStart);
-  const totalItems = tithis.length + publicEvents.length + personalEvents.length;
 
   return (
     <div className="nc-modal-backdrop" onClick={onClose}>
@@ -157,19 +156,11 @@ const DayDetailsModal = ({
                 {personalEvents.map((event) => {
                   const memberName = getTreeMemberName(event.treeId, event.memberId);
                   const isTreeEvent = !!event.treeId;
+                    const treeInfo = isTreeEvent ? trees.find(t => t.id === event.treeId) : null;
+                    const treeName = treeInfo ? (treeInfo.name || treeInfo.title || '') : '';
+                    const treeLocation = treeInfo ? (treeInfo.location || '') : '';
 
-                  let displayDateKey = event.dateKey;
-                  if (event.tithi) {
-                    displayDateKey = activeDate;
-                  } else if (event.repetition === 'yearly') {
-                    displayDateKey = getResolvedTithiEventDate(event);
-                  }
-
-                  const eventNepaliDate = displayDateKey
-                    ? formatAdDateToNepaliStringWithNumerals(displayDateKey)
-                    : '';
-
-                  let tithiDisplay = '';
+                    let tithiDisplay = '';
                   if (event.tithi) {
                     const pakshaDisplay = normalizePakshaToNepali(event.tithi.paksha);
                     tithiDisplay = `${event.tithi.month} ${pakshaDisplay} ${event.tithi.name}`;
@@ -194,21 +185,17 @@ const DayDetailsModal = ({
                     >
                       <div className={`ddm-item-icon-dot ${isTreeEvent ? 'ddm-dot-purple' : 'ddm-dot-emerald'}`} />
                       <div className="ddm-item-content">
-                        <div className="ddm-item-title">{event.title}</div>
-                        {memberName && (
-                          <div className="ddm-item-member">{memberName}</div>
-                        )}
-                        {displayDateKey && (
-                          <div className="ddm-item-dates">
-                            <span>{displayDateKey}</span>
-                            {eventNepaliDate && (
-                              <span className="ddm-nepali-date">{eventNepaliDate}</span>
-                            )}
-                            {tithiDisplay && (
-                              <span className="ddm-tithi-tag">{tithiDisplay}</span>
-                            )}
+                          <div className="ddm-item-title">
+                            {event.title}{memberName ? ` (${memberName})` : ''}
                           </div>
-                        )}
+                          {tithiDisplay && (
+                            <div className="ddm-tithi-tag">{tithiDisplay}</div>
+                          )}
+                          {(treeName || treeLocation) && (
+                            <div className="ddm-item-tree-info">
+                              {treeName}{treeLocation ? ` | ${treeLocation}` : ''}
+                            </div>
+                          )}
                         {event.description && (
                           <div className="ddm-item-meta">{event.description}</div>
                         )}

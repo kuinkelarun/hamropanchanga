@@ -14,7 +14,6 @@ import {
   KRISHNA_TITHI_NAMES as krishnaPackshyaTithis,
 } from '../../constants/calendarConstants';
 import {
-  toNepaliNumber,
   formatTime12Hour,
 } from '../../utils/calendarHelpers';
 import { convertAdToBs } from '../../utils/nepaliDateUtils';

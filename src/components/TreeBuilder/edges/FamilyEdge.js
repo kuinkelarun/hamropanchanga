@@ -128,6 +128,7 @@ function getOrthogonalPath(sx, sy, tx, ty) {
 }
 
 // Straight line path (used for spouse connections)
+// eslint-disable-next-line no-unused-vars
 function getStraightPath(sx, sy, tx, ty) {
   const path = `M ${sx},${sy} L ${tx},${ty}`;
   const labelX = (sx + tx) / 2;

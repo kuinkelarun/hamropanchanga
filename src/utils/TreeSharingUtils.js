@@ -182,7 +182,7 @@ export const sortTreesByAccess = (trees, currentUserId, currentUserEmail) => {
   });
 };
 
-export default {
+const TreeSharingUtils = {
   SHARE_PERMISSIONS,
   getPermissionDescription,
   hasPermission,
@@ -194,3 +194,5 @@ export default {
   filterTreesByAccess,
   sortTreesByAccess
 };
+
+export default TreeSharingUtils;

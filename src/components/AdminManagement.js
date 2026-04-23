@@ -425,9 +425,11 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
       let deletedCount = 0;
       for (const tree of filteredTrees) {
         try {
+          // eslint-disable-next-line no-loop-func
           setDeletionProgress(prev => ({ ...prev, currentTree: tree.title || tree.name || tree.id }));
           await deleteTreeAndAssociations(tree.id);
           deletedCount++;
+          // eslint-disable-next-line no-loop-func
           setDeletionProgress(prev => ({ ...prev, deleted: deletedCount }));
           setUploadStatus(`🗑️ Deleted ${deletedCount} of ${filteredTrees.length} trees...`);
         } catch (err) {
@@ -961,7 +963,6 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
           : `${updateData.pakshya} ${updateData.tithi}`;
         updateData.tithiMonth = editTithiMonth;
         updateData.tithiYear = editTithiYear;
-        updateData.pakshya = updateData.pakshya;
         updateData.tithiName = updateData.tithi;
         delete updateData.tithi;
       }

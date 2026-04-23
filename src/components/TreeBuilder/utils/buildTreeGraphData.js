@@ -51,6 +51,7 @@ function getEdgeColor(type) {
 /**
  * Find children that are connected to both parents
  */
+// eslint-disable-next-line no-unused-vars
 function getChildrenOfBothParents(p1, p2, relationships) {
   if (!p1 || !p2 || !Array.isArray(relationships)) return new Set();
   

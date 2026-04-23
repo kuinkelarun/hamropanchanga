@@ -241,7 +241,7 @@ export const formatDate = (date) => {
   return `${year}-${month}-${day}`;
 };
 
-export default {
+const ExcelParser = {
   parseExcelFile,
   parseCSVFile,
   parseFile,
@@ -251,3 +251,5 @@ export default {
   parseDate,
   formatDate
 };
+
+export default ExcelParser;

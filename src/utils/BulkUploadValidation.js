@@ -241,7 +241,8 @@ export const validateEventData = async (data = [], existingTrees = [], existingM
           row['Tithi Pakshya'] = canonicalized;
         }
 
-        const isAscii = /^[\x00-\x7F]*$/.test(tithiNameRaw);
+        // eslint-disable-next-line no-control-regex
+        const isAscii = /^[\u0000-\u007F]*$/.test(tithiNameRaw);
         const nepaliTithiName = isAscii ? (englishToNepaliTithiMap[tithiNameRaw] || tithiNameRaw) : tithiNameRaw;
         if (isAscii && !englishToNepaliTithiMap[tithiNameRaw] && !tithiNames.includes(tithiNameRaw)) {
           result.addError('Tithi Name must be valid', r);
@@ -321,7 +322,7 @@ export const isValidEmail = (email) => {
 };
 
 export const isValidPhone = (phone) => {
-  const cleaned = String(phone || '').replace(/[\s\-\+\(\)]/g, '');
+  const cleaned = String(phone || '').replace(/[\s\-+()]/g, '');
   return /^\d{7,15}$/.test(cleaned);
 };
 
@@ -341,4 +342,6 @@ export const isValidDateParts = (year, month, day) => {
   return !isNaN(date.getTime());
 };
 
-export default { validateTreeData, validateMemberData, validateEventData, isValidDate, isValidDateParts, isValidEmail, isValidPhone, ValidationResult };
+const BulkUploadValidation = { validateTreeData, validateMemberData, validateEventData, isValidDate, isValidDateParts, isValidEmail, isValidPhone, ValidationResult };
+
+export default BulkUploadValidation;

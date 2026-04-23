@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState, useCallback } from 'react';
-import { collection, addDoc, deleteDoc, doc, onSnapshot, query, orderBy, getDocs } from 'firebase/firestore';
+import { collection, addDoc, deleteDoc, doc, query, orderBy, getDocs } from 'firebase/firestore';
 import { onAuthStateChanged } from 'firebase/auth';
 import { db, auth } from '../firebase';
 import { COLLECTIONS } from '../constants/firestoreCollections';
@@ -27,8 +27,6 @@ import {
   ENGLISH_NEPALI_MONTHS as englishNepaliMonths,
   NEPALI_WEEKDAYS as nepaliWeekdays,
   ENGLISH_WEEKDAYS as englishWeekdays,
-  SHUKLA_TITHI_NAMES as shuklaPackshyaTithis,
-  KRISHNA_TITHI_NAMES as krishnaPackshyaTithis,
   TIME_PERIODS as timePeriods,
   normalizePakshaToNepali,
   normalizePakshaToEnglish,
@@ -40,11 +38,8 @@ import {
   parseTithiName,
   getEnglishTithiName,
   getEnglishPakshyaName,
-  getTithiStartMillis,
-  getTithiEndMillis,
   compareTithisByStart,
   dateKeyFromAd,
-  padDateKey,
   getTithiEventDisplayDate,
 } from '../utils/calendarHelpers';
 import { useTithisData } from '../hooks/useTithisData';
@@ -61,7 +56,7 @@ const getCalendarData = (year) => getActiveCalendarData()[year];
 // convertAdToBs / convertBsToAd from there instead of maintaining a
 // separate implementation here.
 
-export default function NepaliCalendar({ user: propUser, isAdmin, treeMembers = [], onTreeEventClick, sharedTreeIds = [] }) {
+export default function NepaliCalendar({ user: propUser, isAdmin, trees = [], treeMembers = [], onTreeEventClick, sharedTreeIds = [] }) {
   const { t, tn, isNepali } = useLanguage();
   const isDev = process.env.NODE_ENV !== 'production';
   const [user, setUser] = useState(propUser || null);
@@ -310,6 +305,7 @@ export default function NepaliCalendar({ user: propUser, isAdmin, treeMembers = 
   }, [addTithiModalOpen, detailsModalOpen, proceedGoToToday]);
 
   // Debug function to check what's actually in Firestore
+  // eslint-disable-next-line no-unused-vars
   const debugFirestore = useCallback(async () => {
     if (!isDev) return;
     try {
@@ -519,7 +515,6 @@ export default function NepaliCalendar({ user: propUser, isAdmin, treeMembers = 
     }
 
     // Store reference to the deleted tithi for potential rollback
-    let deletedTithi = null;
     let affectedDates = [];
     
     try {
@@ -815,6 +810,7 @@ export default function NepaliCalendar({ user: propUser, isAdmin, treeMembers = 
       
       return false;
     });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [calendarEvents, findTithisForAdDate]);
 
   // Helper function to get tree member name
@@ -1150,6 +1146,7 @@ export default function NepaliCalendar({ user: propUser, isAdmin, treeMembers = 
       console.error('Error deleting event:', err);
       alert('Failed to delete event');
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const modalTithis = useMemo(() => {
@@ -1348,6 +1345,7 @@ export default function NepaliCalendar({ user: propUser, isAdmin, treeMembers = 
         onOpenAddTithi={openAddTithiModalForDate}
         onDeleteEvent={handleDeleteEvent}
         onTreeEventClick={onTreeEventClick}
+          trees={trees}
         getTithiDisplayName={getTithiDisplayName}
         formatTithiDateTime={formatTithiDateTime}
         getTreeMemberName={getTreeMemberName}

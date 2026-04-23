@@ -129,6 +129,7 @@ const LandingPage = ({ user, isAdmin, trees = [], treeMembers = [], events, fami
                         <NepaliCalendar
                             user={user}
                             isAdmin={isAdmin}
+                                trees={trees}
                             treeMembers={treeMembers}
                             sharedTreeIds={sharedTreeIds}
                             onTreeEventClick={onDoubleClickEvent}

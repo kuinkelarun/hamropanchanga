@@ -9,7 +9,7 @@ import {
   updateSharePermission,
   removeTreeShare
 } from '../services/BulkUploadService';
-import { SHARE_PERMISSIONS, getPermissionDescription, isValidEmail, formatShareInfo } from '../utils/TreeSharingUtils';
+import { SHARE_PERMISSIONS, isValidEmail } from '../utils/TreeSharingUtils';
 import './TreeShareModal.css';
 
 const TreeShareModal = ({ isOpen, onClose, tree, onComplete, userEmail, userId }) => {

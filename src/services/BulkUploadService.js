@@ -80,7 +80,6 @@ function normalizeRepetition(raw) {
     'वार्षिक': 'yearly',
     'वार्षिकता': 'yearly',
     'बार्षिक': 'yearly',
-    'बार्षिक': 'yearly',
     'बार्सिक': 'yearly'
   };
 
@@ -708,7 +707,7 @@ export const addEventsFromBulkUpload = async (eventData, userId, treeMap, member
     for (const [k, v] of memberMap.entries()) {
       try {
         // Try to parse as JSON structured key (new format)
-        const parsed = JSON.parse(k);
+        JSON.parse(k);
         // Keys are already normalized, so just use as-is
         normalizedMemberIdByKey.set(k, v);
       } catch (e) {
@@ -1230,8 +1229,6 @@ export const addEventsFromBulkUpload = async (eventData, userId, treeMap, member
     console.error('Error in addEventsFromBulkUpload:', {
       errorMessage: error.message,
       errorCode: error.code,
-      errorMessage: error.message,
-      errorCode: error.code,
       fullError: error
     });
     throw new Error(`Bulk event addition failed: ${error.message}`);
@@ -1412,7 +1409,7 @@ export const getSharedTreesForUser = async (userEmail) => {
   }
 };
 
-export default {
+const BulkUploadService = {
   createTreesFromBulkUpload,
   addFamilyMembersFromBulkUpload,
   addEventsFromBulkUpload,
@@ -1422,3 +1419,5 @@ export default {
   shareBulkTreesWithUser,
   getSharedTreesForUser
 };
+
+export default BulkUploadService;

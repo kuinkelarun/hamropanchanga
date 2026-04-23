@@ -17,7 +17,6 @@ import {
   normalizePakshaToEnglish,
 } from '../../constants/calendarConstants';
 import {
-  toNepaliNumber,
   parseTithiName,
   compareTithisByStart,
 } from '../../utils/calendarHelpers';

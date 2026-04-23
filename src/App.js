@@ -22,6 +22,7 @@ import { useUserPermissions } from './hooks/usePermissions';
 import { useTithiDateResolver } from './hooks/useTithiDateResolver';
 
 // Tithi Calculator Button Component with visibility control
+// eslint-disable-next-line no-unused-vars
 function TithiCalculatorButton({ onClick }) {
     const [visible, setVisible] = useState(true);
 
@@ -82,6 +83,7 @@ function AppContent() {
     const mobileMenuPanelRef = useRef(null);
     
     // Smart home button state
+    // eslint-disable-next-line no-unused-vars
     const [savedScrollPosition, setSavedScrollPosition] = useState(0);
 
     // Use the new permissions hook
@@ -169,28 +171,7 @@ function AppContent() {
         return () => window.removeEventListener('scroll', handleScroll);
     }, []);
 
-    // Smart home button handler
-    const handleLogoClick = () => {
-        const isOnHomePage = location.pathname === '/';
-
-        if (isOnHomePage) {
-            // Already on home page: scroll to top
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-        } else {
-            // Not on home page: replace current entry so the previous page (e.g. tree detail)
-            // doesn't reappear when the user clicks back from home.
-            navigate('/', { replace: true });
-            setTimeout(() => {
-                window.scrollTo({ top: savedScrollPosition, behavior: 'smooth' });
-            }, 0);
-        }
-    };
-
     // --- HANDLERS ---
-    const handleLogout = async () => {
-        await logout();
-    };
-
     const handleBackToList = () => {
         navigate('/', { replace: true });
     };

@@ -22,6 +22,20 @@ const BulkTreeShareModal = ({ isOpen, onClose, onComplete, userEmail, userId, is
 
   // Load trees when modal opens
   useEffect(() => {
+    const loadTrees = async () => {
+      try {
+        setIsLoading(true);
+        // Admin can load all trees, regular users only their own
+        const allTrees = await Trees.list(isAdmin ? null : userId, { includeDeleted: false });
+        setTrees(allTrees);
+      } catch (err) {
+        console.error('Error loading trees:', err);
+        setError('Failed to load trees');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
     if (isOpen) {
       loadTrees();
     } else {
@@ -35,20 +49,6 @@ const BulkTreeShareModal = ({ isOpen, onClose, onComplete, userEmail, userId, is
       setSelectAll(false);
     }
   }, [isOpen, userId, isAdmin]);
-
-  const loadTrees = async () => {
-    try {
-      setIsLoading(true);
-      // Admin can load all trees, regular users only their own
-      const allTrees = await Trees.list(isAdmin ? null : userId, { includeDeleted: false });
-      setTrees(allTrees);
-    } catch (err) {
-      console.error('Error loading trees:', err);
-      setError('Failed to load trees');
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   const handleTreeSelect = (treeId) => {
     setSelectedTrees(prev => {
