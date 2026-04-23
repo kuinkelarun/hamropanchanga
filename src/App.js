@@ -21,6 +21,7 @@ import TreeSelectionPage from './components/TreeBuilder/TreeSelectionPage';
 import TreeDetailPage from './components/TreeBuilder/TreeDetailPage';
 import DeveloperPage from './components/DeveloperPage';
 import EventsPage from './components/EventsPage';
+import LlmSettingsPage from './components/Settings/LlmSettingsPage';
 import { useUserPermissions } from './hooks/usePermissions';
 import { useTithiDateResolver } from './hooks/useTithiDateResolver';
 
@@ -112,6 +113,7 @@ function AppContent() {
         if (pathname.startsWith('/events')) return 'Events & Reminders';
         if (pathname.startsWith('/builder')) return 'Builder';
         if (pathname.startsWith('/chat')) return 'Chat';
+        if (pathname.startsWith('/settings/llm')) return 'AI Provider';
 
         const clean = pathname.replace(/^\//, '').split('/')[0] || '';
         return clean
@@ -201,6 +203,10 @@ function AppContent() {
 
     const handleDeveloperPage = () => {
         navigate('/developer');
+    };
+
+    const handleLlmSettings = () => {
+        navigate('/settings/llm');
     };
 
     const handleTithiCalculator = () => {
@@ -423,14 +429,15 @@ function AppContent() {
                             <LanguageSelector compact={true} />
                             {user ? (
                                 <div className="border-l border-gray-200 pl-3">
-                                    <SettingsMenu 
-                                        user={user} 
-                                        onSignOut={handleSignOut} 
+                                    <SettingsMenu
+                                        user={user}
+                                        onSignOut={handleSignOut}
                                         isAdmin={isAdmin}
                                         onAdminEditCards={handleAdminEditCards}
                                         onAdminManagement={handleAdminManagement}
                                         onUserManagement={handleUserManagement}
                                         onDeveloperPage={handleDeveloperPage}
+                                        onLlmSettings={handleLlmSettings}
                                     />
                                 </div>
                             ) : (
@@ -594,6 +601,8 @@ function AppContent() {
                     } />
 
                     <Route path="/chat" element={<ChatPage />} />
+
+                    <Route path="/settings/llm" element={<LlmSettingsPage />} />
                 </Routes>
             </main>
 
