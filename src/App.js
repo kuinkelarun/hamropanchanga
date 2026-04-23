@@ -5,6 +5,9 @@ import { signInWithGoogle, db } from './firebase';
 import { useAppData } from './hooks/useAppData';
 import { LanguageProvider, useLanguage } from './contexts/LanguageContext';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { ChatProvider } from './contexts/ChatContext';
+import FloatingChat from './components/Chat/FloatingChat';
+import ChatPage from './components/Chat/ChatPage';
 import SettingsMenu from './components/SettingsMenu';
 import LanguageSelector from './components/LanguageSelector';
 import LandingPage from './components/LandingPage';
@@ -59,9 +62,11 @@ export default function App() {
     return (
         <AuthProvider>
             <LanguageProvider>
-                <Router>
-                    <AppContent />
-                </Router>
+                <ChatProvider>
+                    <Router>
+                        <AppContent />
+                    </Router>
+                </ChatProvider>
             </LanguageProvider>
         </AuthProvider>
     );
@@ -106,6 +111,7 @@ function AppContent() {
         if (pathname.startsWith('/developer')) return 'Developer API';
         if (pathname.startsWith('/events')) return 'Events & Reminders';
         if (pathname.startsWith('/builder')) return 'Builder';
+        if (pathname.startsWith('/chat')) return 'Chat';
 
         const clean = pathname.replace(/^\//, '').split('/')[0] || '';
         return clean
@@ -586,8 +592,12 @@ function AppContent() {
                             familyMembers={allFamilyMembers}
                         />
                     } />
+
+                    <Route path="/chat" element={<ChatPage />} />
                 </Routes>
             </main>
+
+            <FloatingChat />
         </div>
     );
 }
