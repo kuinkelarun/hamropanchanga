@@ -19,21 +19,26 @@ export default function UnconfiguredPrompt({ onAfterNavigate }) {
           </svg>
         </div>
         <h3 className="text-base font-semibold text-gray-900 mb-1">
-          Configure your AI assistant
+          Let's connect your AI first
         </h3>
         <p className="text-sm text-gray-600 mb-4">
-          Connect your Anthropic API key or AWS Bedrock credentials before you start chatting.
+          HamroPanchanga uses your own Anthropic or AWS Bedrock key, so your
+          chats stay tied to your account — not a shared one. Takes about
+          30&nbsp;seconds.
         </p>
         <button
           type="button"
           onClick={goToSettings}
           className="inline-flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white text-sm font-medium rounded-full transition-colors"
         >
-          Configure now
+          Set up AI provider
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
           </svg>
         </button>
+        <p className="mt-3 text-xs text-gray-400">
+          Keys are encrypted and stored only against your user account.
+        </p>
       </div>
     </div>
   );

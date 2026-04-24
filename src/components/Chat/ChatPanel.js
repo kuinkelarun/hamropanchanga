@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useChat } from '../../contexts/ChatContext';
 import { useAuth } from '../../contexts/AuthContext';
 import ChatMessage from './ChatMessage';
@@ -29,16 +30,26 @@ export default function ChatPanel({
     checkConfig,
   } = useChat();
 
+  const navigate = useNavigate();
   const [input, setInput] = useState('');
   const listRef = useRef(null);
   const inputRef = useRef(null);
 
+  // ChatProvider also triggers a check on user-available, but keep this as a
+  // safety net in case the panel is mounted in an edge-case where configStatus
+  // is still 'unknown'.
   useEffect(() => {
     if (!user) return;
     if (configStatus === 'unknown') {
       checkConfig();
     }
   }, [user, configStatus, checkConfig]);
+
+  const isReady = configStatus === 'configured';
+  const goToSettings = () => {
+    if (onClose) onClose();
+    navigate('/settings/llm');
+  };
 
   useEffect(() => {
     if (variant === 'floating' && !isOpen) return;
@@ -57,14 +68,14 @@ export default function ChatPanel({
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!input.trim() || isSending) return;
+    if (!input.trim() || isSending || !isReady) return;
     const text = input;
     setInput('');
     sendMessage(text);
   };
 
   const handleStarter = (prompt) => {
-    if (isSending) return;
+    if (isSending || !isReady) return;
     setInput('');
     sendMessage(prompt);
   };
@@ -96,11 +107,16 @@ export default function ChatPanel({
           onExpand={onExpand}
           onClear={clearChat}
           disabledClear={messages.length === 0}
+          configStatus={configStatus}
         />
       )}
 
-      {configStatus === 'unconfigured' ? (
+      {configStatus === 'unknown' ? (
+        <CheckingState />
+      ) : configStatus === 'unconfigured' ? (
         <UnconfiguredPrompt onAfterNavigate={onClose} />
+      ) : configStatus === 'error' ? (
+        <ConfigErrorState onRetry={checkConfig} onGoToSettings={goToSettings} message={error} />
       ) : (
         <>
           <div
@@ -116,8 +132,15 @@ export default function ChatPanel({
           </div>
 
           {error && (
-            <div className="px-4 py-2 text-xs text-red-700 bg-red-50 border-t border-red-100">
-              {error}
+            <div className="px-4 py-2 text-xs text-red-700 bg-red-50 border-t border-red-100 flex items-start justify-between gap-3">
+              <span className="flex-1">{error}</span>
+              <button
+                type="button"
+                onClick={goToSettings}
+                className="shrink-0 underline font-medium hover:text-red-900"
+              >
+                Check AI settings
+              </button>
             </div>
           )}
 
@@ -136,13 +159,13 @@ export default function ChatPanel({
                 }
               }}
               rows={1}
-              placeholder="Ask about tithis, events, family trees…"
-              className="flex-1 resize-none px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent max-h-32"
-              disabled={isSending}
+              placeholder={isReady ? 'Ask about tithis, events, family trees…' : 'Set up your AI provider to start chatting…'}
+              className="flex-1 resize-none px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent max-h-32 disabled:bg-gray-50 disabled:text-gray-400"
+              disabled={isSending || !isReady}
             />
             <button
               type="submit"
-              disabled={!input.trim() || isSending}
+              disabled={!input.trim() || isSending || !isReady}
               className="px-4 py-2 bg-purple-600 text-white text-sm font-medium rounded-lg hover:bg-purple-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
               aria-label="Send message"
             >
@@ -158,11 +181,20 @@ export default function ChatPanel({
   );
 }
 
-function Header({ variant, onClose, onExpand, onClear, disabledClear }) {
+function Header({ variant, onClose, onExpand, onClear, disabledClear, configStatus }) {
+  const dot = (() => {
+    switch (configStatus) {
+      case 'configured': return { color: 'bg-green-500', label: 'AI ready' };
+      case 'unconfigured': return { color: 'bg-amber-500', label: 'AI not configured' };
+      case 'error': return { color: 'bg-red-500', label: 'AI check failed' };
+      default: return { color: 'bg-gray-300 animate-pulse', label: 'Checking AI…' };
+    }
+  })();
+
   return (
     <div className="flex items-center justify-between px-4 py-2 border-b border-gray-200 bg-white rounded-t-lg">
       <div className="flex items-center gap-2">
-        <div className="w-2 h-2 rounded-full bg-green-500" />
+        <div className={`w-2 h-2 rounded-full ${dot.color}`} title={dot.label} />
         <span className="text-sm font-semibold text-gray-900">Panchanga AI</span>
       </div>
       <div className="flex items-center gap-1">
@@ -234,6 +266,54 @@ function EmptyState({ onPick }) {
             {p}
           </button>
         ))}
+      </div>
+    </div>
+  );
+}
+
+function CheckingState() {
+  return (
+    <div className="flex-1 flex items-center justify-center p-6">
+      <div className="text-center">
+        <div className="w-8 h-8 mx-auto mb-3 rounded-full border-2 border-purple-200 border-t-purple-600 animate-spin" />
+        <p className="text-sm text-gray-600">Checking your AI configuration…</p>
+      </div>
+    </div>
+  );
+}
+
+function ConfigErrorState({ onRetry, onGoToSettings, message }) {
+  return (
+    <div className="flex-1 flex items-center justify-center p-6">
+      <div className="max-w-sm text-center">
+        <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-red-100 flex items-center justify-center">
+          <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+              d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+          </svg>
+        </div>
+        <h3 className="text-base font-semibold text-gray-900 mb-1">
+          Couldn't reach the AI service
+        </h3>
+        <p className="text-sm text-gray-600 mb-4">
+          {message || "We couldn't check your AI configuration. This is usually a temporary network issue."}
+        </p>
+        <div className="flex items-center justify-center gap-2">
+          <button
+            type="button"
+            onClick={onRetry}
+            className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white text-sm font-medium rounded-full transition-colors"
+          >
+            Retry
+          </button>
+          <button
+            type="button"
+            onClick={onGoToSettings}
+            className="px-4 py-2 border border-gray-300 hover:bg-gray-50 text-gray-700 text-sm font-medium rounded-full transition-colors"
+          >
+            Open settings
+          </button>
+        </div>
       </div>
     </div>
   );

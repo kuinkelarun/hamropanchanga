@@ -1,4 +1,4 @@
-import React, { createContext, useCallback, useContext, useMemo, useRef, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { useAuth } from './AuthContext';
 import {
   ChatBackendError,
@@ -46,6 +46,19 @@ export function ChatProvider({ children }) {
   }, [user]);
 
   const refreshConfig = checkConfig;
+
+  // Kick off a single config check as soon as a user is available. This lets
+  // the launcher button surface a "needs setup" hint before the user even
+  // opens the chat, and avoids the "open → looks fine → send → fail" loop.
+  useEffect(() => {
+    if (user && configStatus === 'unknown') {
+      checkConfig();
+    }
+    if (!user) {
+      setConfigStatus('unknown');
+      setConfigInfo(null);
+    }
+  }, [user, configStatus, checkConfig]);
 
   const sendMessage = useCallback(async (text) => {
     const trimmed = (text || '').trim();
