@@ -3,14 +3,14 @@ import { useNavigate } from 'react-router-dom';
 import './LandingPageEventsSection.css';
 import { useLanguage } from '../contexts/LanguageContext';
 import { formatNepaliDate, formatEnglishDate, formatNepaliMonthYear, getNepalDate } from '../utils/nepaliDateUtils';
-import { normalizePakshaToNepali } from '../constants/calendarConstants';
+import { formatTithiForDisplay } from '../utils/calendarHelpers';
 import { useEventDisplay, isValidDate } from '../hooks/useEventDisplay';
 
 // Filters that navigate to /events (broad views better on a full page)
 const NAVIGATE_FILTERS = ['upcoming', 'all', 'past'];
 
 const LandingPageEventsSection = ({ events, familyMembers, onDoubleClickEvent, onEventClick }) => {
-    const { t } = useLanguage();
+    const { t, isNepali } = useLanguage();
     const navigate = useNavigate();
     const [eventFilter, setEventFilter] = useState('next-week');
 
@@ -101,7 +101,7 @@ const LandingPageEventsSection = ({ events, familyMembers, onDoubleClickEvent, o
             ) : null}
             {event.tithi?.month && event.tithi?.name ? (
                 <div className="event-detail-line">
-                    {event.tithi.month} {normalizePakshaToNepali(event.tithi.paksha)} {event.tithi.name}
+                    {formatTithiForDisplay(event.tithi, isNepali)}
                 </div>
             ) : null}
             {(event.host || event.hostLocation) && (

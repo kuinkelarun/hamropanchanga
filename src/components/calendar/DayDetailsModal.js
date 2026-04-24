@@ -1,8 +1,8 @@
 import React from 'react';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { convertAdToBs } from '../../utils/nepaliDateUtils';
-import { compareTithisByStart } from '../../utils/calendarHelpers';
-import { NEPALI_MONTHS, ENGLISH_NEPALI_MONTHS, normalizePakshaToNepali } from '../../constants/calendarConstants';
+import { compareTithisByStart, formatTithiForDisplay } from '../../utils/calendarHelpers';
+import { NEPALI_MONTHS, ENGLISH_NEPALI_MONTHS } from '../../constants/calendarConstants';
 import { signInWithGoogle } from '../../firebase';
 import { PERMISSIONS } from '../../constants/roles';
 
@@ -162,8 +162,7 @@ const DayDetailsModal = ({
 
                     let tithiDisplay = '';
                   if (event.tithi) {
-                    const pakshaDisplay = normalizePakshaToNepali(event.tithi.paksha);
-                    tithiDisplay = `${event.tithi.month} ${pakshaDisplay} ${event.tithi.name}`;
+                    tithiDisplay = formatTithiForDisplay(event.tithi, isNepali);
                   }
 
                   return (

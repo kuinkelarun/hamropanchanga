@@ -27,6 +27,7 @@ import {
 } from '../../utils/nepaliDateUtils';
 import { createEvent } from '../../services/CalendarEventService';
 import { getEnglishPakshyaName, getEnglishTithiName } from '../../utils/calendarHelpers';
+import { resolveTithiForCurrentYear } from '../../utils/resolveTithiForCurrentYear';
 
 export default function AddEventModal({
   isOpen,
@@ -159,7 +160,8 @@ export default function AddEventModal({
     if (!eventTitle.trim()) { setEventValidation('Please enter an event title.'); return; }
     if (!eventDate) { setEventValidation('Please select a date.'); return; }
 
-    let tithiPayload = null;
+    // Sync pre-validate the tithi selection (DB call happens inside the try/finally below)
+    let tithiSelection = null;
     if (eventAssociateMode === 'tithi') {
       const [y, m, d] = eventDate.split('-').map(Number);
       const tithisForEventDate = findTithisForAdDate(y, m - 1, d) || [];
@@ -167,11 +169,11 @@ export default function AddEventModal({
       const selectedTithi = tithisForEventDate.find((t) => t.id === selectedEventTithiId) || tithisForEventDate[0];
       if (!selectedTithi) { setEventValidation('Please select a tithi.'); return; }
       const { pakshya, tithi: tithiName } = parseTithiName(selectedTithi.name);
-      const pakshaNormalized = normalizePakshaToEnglish(pakshya);
+      const pakshaEn = normalizePakshaToEnglish(pakshya);
       const tithiIndex = getTithiIndexByName(tithiName, { fallbackToOne: false });
       if (!tithiIndex) { setEventValidation('Could not determine the selected tithi. Please try selecting the tithi again.'); return; }
-      const lunarMonthName = tithiIndex != null ? getTithiLunarMonthName(pakshaNormalized, tithiIndex, eventDate) : null;
-      tithiPayload = { id: selectedTithi.id, name: tithiName, paksha: pakshaNormalized, month: lunarMonthName || null };
+      const lunarMonthName = getTithiLunarMonthName(pakshaEn, tithiIndex, eventDate);
+      tithiSelection = { tithiId: selectedTithi.id, tithiName, pakshaEn, lunarMonthName };
     }
 
     if (eventType === 'customer') {
@@ -183,12 +185,23 @@ export default function AddEventModal({
     setEventValidation('');
 
     try {
+      let finalDate = eventDate;
+      let tithiPayload = null;
+
+      if (tithiSelection) {
+        // Re-resolve to the current BS year so non-repeating tithi events are
+        // stored against this year, not whatever past year the clicked tile sat in.
+        const result = await resolveTithiForCurrentYear(tithiSelection);
+        finalDate = result.date;
+        tithiPayload = result.tithiPayload;
+      }
+
       const isPublic = eventType === 'public';
       const createdByAdmin = isAdmin || isSuperUser;
       await createEvent({
         name: eventTitle,
         description: eventDescription,
-        date: eventDate,
+        date: finalDate,
         personId: eventType === 'customer' ? selectedTreeMemberId : null,
         repetition: eventRepetition,
         tithi: tithiPayload,
@@ -201,7 +214,7 @@ export default function AddEventModal({
       onClose();
     } catch (error) {
       console.error('Error adding event:', error);
-      setEventValidation(`Error adding event: ${error.message}`);
+      setEventValidation(error.message || 'Error adding event');
     } finally {
       setIsAddingEvent(false);
     }

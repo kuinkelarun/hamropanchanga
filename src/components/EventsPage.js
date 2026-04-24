@@ -2,9 +2,10 @@ import React, { useMemo, useEffect, useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { signInWithGoogle } from '../firebase';
 import { formatNepaliDate, formatEnglishDate, convertAdToBs, convertBsToAd, getNepalDate } from '../utils/nepaliDateUtils';
-import { NEPALI_MONTHS, ENGLISH_NEPALI_MONTHS, normalizePakshaToNepali } from '../constants/calendarConstants';
+import { NEPALI_MONTHS, ENGLISH_NEPALI_MONTHS } from '../constants/calendarConstants';
 import { useEventDisplay, isValidDate } from '../hooks/useEventDisplay';
 import { useLanguage } from '../contexts/LanguageContext';
+import { formatTithiForDisplay } from '../utils/calendarHelpers';
 import './EventsPage.css';
 
 function getNptMidnight() {
@@ -26,11 +27,8 @@ function toDateKey(d) {
 }
 
 
-function getTithiDisplay(event) {
-    if (!event.tithi) return '';
-    const { month, paksha, name } = event.tithi;
-    if (!month || !name) return '';
-    return `${month} ${normalizePakshaToNepali(paksha)} ${name}`;
+function getTithiDisplay(event, isNepali) {
+    return formatTithiForDisplay(event?.tithi, isNepali);
 }
 
 function getCurrentBsYear() {
@@ -89,7 +87,7 @@ function getYearlyDateInBsYear(ev, bsYear) {
 
 export default function EventsPage({ user, events, familyMembers }) {
     const navigate = useNavigate();
-    const { t } = useLanguage();
+    const { t, isNepali } = useLanguage();
     const [searchParams, setSearchParams] = useSearchParams();
     const filter = searchParams.get('filter') || 'upcoming';
     const currentBsYear = getCurrentBsYear();
@@ -316,8 +314,8 @@ export default function EventsPage({ user, events, familyMembers }) {
                                                         <div className="ep-event-line2">
                                                             {formatNepaliDate(d).withDayShortNepali}
                                                             <span className="ep-event-date-en"> ({formatEnglishDate(d).short})</span>
-                                                            {getTithiDisplay(ev) && (
-                                                                <span className="ep-event-tithi-inline"> | {getTithiDisplay(ev)}</span>
+                                                            {getTithiDisplay(ev, isNepali) && (
+                                                                <span className="ep-event-tithi-inline"> | {getTithiDisplay(ev, isNepali)}</span>
                                                             )}
                                                         </div>
                                                     )}

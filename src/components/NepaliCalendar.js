@@ -41,6 +41,7 @@ import {
   compareTithisByStart,
   dateKeyFromAd,
   getTithiEventDisplayDate,
+  formatTithiForDisplay,
 } from '../utils/calendarHelpers';
 import { useTithisData } from '../hooks/useTithisData';
 import { useCalendarEvents } from '../hooks/useCalendarEvents';
@@ -843,12 +844,11 @@ export default function NepaliCalendar({ user: propUser, isAdmin, trees = [], tr
   const formatEventWithTithi = useCallback((event) => {
     let display = event.title;
     if (event.tithi) {
-      // Normalize paksha to Nepali if it's in English (legacy data)
-      const pakshaDisplay = normalizePakshaToNepali(event.tithi.paksha);
-      display += ` (${event.tithi.month} ${pakshaDisplay} ${event.tithi.name})`;
+      const tithiStr = formatTithiForDisplay(event.tithi, isNepali);
+      if (tithiStr) display += ` (${tithiStr})`;
     }
     return display;
-  }, []);
+  }, [isNepali]);
 
   // Helper function to get tithi display name with lunar month
   const getTithiDisplayName = (tithi) => {

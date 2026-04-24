@@ -1,11 +1,9 @@
 import { useState, useEffect } from 'react';
-import { collection, query, where, getDocs } from 'firebase/firestore';
-import { db } from '../firebase';
-import { COLLECTIONS } from '../constants/firestoreCollections';
 import NepaliDatePicker from './NepaliDatePicker';
 import { useLanguage } from '../contexts/LanguageContext';
-import { nepaliMonths, getTithisForMonth, convertAdToBs, getTithiIndexByName, getTithiLunarMonthName, getTithiYearFromAdDate } from '../utils/nepaliDateUtils';
-import { normalizePakshaToEnglish, normalizePakshaToNepali } from '../constants/calendarConstants';
+import { nepaliMonths, getTithisForMonth } from '../utils/nepaliDateUtils';
+import { normalizePakshaToEnglish } from '../constants/calendarConstants';
+import { resolveTithiForCurrentYear } from '../utils/resolveTithiForCurrentYear';
 import './NepaliCalendar.css';
 
 const AddEventForm = ({ onAdd, familyMembers, onCancel, editingEvent }) => {
@@ -42,9 +40,21 @@ const AddEventForm = ({ onAdd, familyMembers, onCancel, editingEvent }) => {
                     if (idx !== -1) monthVal = idx + 1;
                 }
                 const monthString = String(monthVal);
-                console.log('[AddEventForm] Setting tithiMonth:', monthString, 'tithiId:', editingEvent.tithi.id);
+
+                const rawId = editingEvent.tithi.id || '';
+                const rawParts = rawId.split('-');
+                const knownPakshas = ['shukla', 'krishna'];
+                const rawIsComposite = rawParts.length >= 2 && knownPakshas.includes(rawParts[0]?.toLowerCase());
+                let dropdownTithiId = rawId;
+                if (!rawIsComposite && editingEvent.tithi.paksha && editingEvent.tithi.name) {
+                    const pakshaLower = String(editingEvent.tithi.paksha).toLowerCase();
+                    const pakshaKey = knownPakshas.includes(pakshaLower) ? pakshaLower : pakshaLower;
+                    dropdownTithiId = `${pakshaKey}-${editingEvent.tithi.name}`;
+                }
+
+                console.log('[AddEventForm] Setting tithiMonth:', monthString, 'tithiId:', dropdownTithiId);
                 setTithiMonth(monthString);
-                sessionStorage.setItem('pendingTithiId', editingEvent.tithi.id || '');
+                sessionStorage.setItem('pendingTithiId', dropdownTithiId);
             } else {
                 setEntryMode('date');
                 setTithiMonth('');
@@ -74,55 +84,37 @@ const AddEventForm = ({ onAdd, familyMembers, onCancel, editingEvent }) => {
 
             setResolvingTithi(true);
             try {
-                const [pakshaKey, tithiName] = tithiId.split('-');
-                const paksha = normalizePakshaToEnglish(pakshaKey);
-                const pakshaNepali = normalizePakshaToNepali(pakshaKey);
+                const idParts = tithiId.split('-');
+                const knownPakshas = ['shukla', 'krishna'];
+                const looksComposite = idParts.length >= 2 && knownPakshas.includes(idParts[0]?.toLowerCase());
 
-                const today = new Date();
-                const bsToday = convertAdToBs(today.getFullYear(), today.getMonth(), today.getDate());
-                const currentBsYear = bsToday.year;
+                let pakshaEn;
+                let tithiName;
+                if (looksComposite) {
+                    pakshaEn = normalizePakshaToEnglish(idParts[0]);
+                    tithiName = idParts.slice(1).join('-');
+                } else {
+                    pakshaEn = normalizePakshaToEnglish(editingEvent?.tithi?.paksha || '');
+                    tithiName = editingEvent?.tithi?.name || '';
+                }
+
+                if (!pakshaEn || !tithiName) {
+                    throw new Error('Could not determine tithi paksha or name from selection.');
+                }
+
                 const selectedMonthName = nepaliMonths[parseInt(tithiMonth) - 1];
 
-                const qNew = query(collection(db, COLLECTIONS.TITHIS), where('pakshya', '==', pakshaNepali), where('tithiName', '==', tithiName));
-                const old2PartName = `${pakshaNepali} ${tithiName}`;
-                const qOld = query(collection(db, COLLECTIONS.TITHIS), where('name', '>=', old2PartName), where('name', '<=', old2PartName + '\uf8ff'));
-                const [snapNew, snapOld] = await Promise.all([getDocs(qNew), getDocs(qOld)]);
-
-                const allDocs = new Map();
-                snapNew.docs.forEach(d => allDocs.set(d.id, d));
-                snapOld.docs.forEach(d => { if (!allDocs.has(d.id)) allDocs.set(d.id, d); });
-
-                let matchingTithi = null;
-                let actualTithiLunarMonth = null;
-                allDocs.forEach((docSnap) => {
-                    const t = docSnap.data();
-                    if (!t.name.includes(tithiName) || !t.name.includes(pakshaNepali)) return;
-                    const tithiIndex = getTithiIndexByName(tithiName, { fallbackToOne: false });
-                    if (!tithiIndex) return;
-                    const lunarMonthName = getTithiLunarMonthName(paksha, tithiIndex, t.startDate);
-                    const tithiYearInfo = getTithiYearFromAdDate(t.startDate, null, paksha, tithiIndex);
-                    if (lunarMonthName === selectedMonthName && tithiYearInfo.tithiYear === currentBsYear) {
-                        matchingTithi = t;
-                        actualTithiLunarMonth = lunarMonthName;
-                    }
+                const result = await resolveTithiForCurrentYear({
+                    pakshaEn,
+                    tithiName,
+                    lunarMonthName: selectedMonthName,
+                    tithiId,
                 });
-
-                if (matchingTithi && actualTithiLunarMonth) {
-                    finalDate = matchingTithi.startDate;
-                    tithiInfo = {
-                        month: actualTithiLunarMonth,
-                        id: tithiId,
-                        name: tithiName,
-                        paksha: paksha,
-                    };
-                } else {
-                    alert(`Could not find date for ${selectedMonthName} ${pakshaNepali} ${tithiName} in year ${currentBsYear}. Please ensure Tithis are generated.`);
-                    setResolvingTithi(false);
-                    return;
-                }
+                finalDate = result.date;
+                tithiInfo = result.tithiPayload;
             } catch (err) {
                 console.error('Error resolving tithi:', err);
-                alert('Error resolving tithi date');
+                alert(err.message || 'Error resolving tithi date');
                 setResolvingTithi(false);
                 return;
             }

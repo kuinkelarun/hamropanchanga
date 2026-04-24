@@ -6,7 +6,7 @@
  * safe to call from any module.
  */
 
-import { NEPALI_TO_ENGLISH_TITHI_MAP, NEPALI_MONTHS, normalizePakshaToEnglish } from '../constants/calendarConstants';
+import { NEPALI_TO_ENGLISH_TITHI_MAP, NEPALI_MONTHS, ENGLISH_NEPALI_MONTHS, normalizePakshaToEnglish, normalizePakshaToNepali } from '../constants/calendarConstants';
 import { toNepaliNumber, getNepalDate } from './nepaliDateUtils';
 
 // Re-export so existing imports from calendarHelpers keep working
@@ -69,6 +69,40 @@ export function getEnglishTithiName(nepaliTithiName) {
 /** Map a Nepali pakshya name (e.g. "शुक्लपक्ष") to its English transliteration. */
 export function getEnglishPakshyaName(nepaliPakshyaName) {
   return normalizePakshaToEnglish(nepaliPakshyaName) || nepaliPakshyaName;
+}
+
+/**
+ * Format a saved event's tithi (`{ month, paksha, name }`) for display in the
+ * user's selected language. Storage is Nepali-script for month/name and English
+ * PascalCase for paksha; this picks the right rendering for each field.
+ *
+ * Returns an empty string when `tithi` is missing or incomplete.
+ */
+export function formatTithiForDisplay(tithi, isNepali) {
+  if (!tithi) return '';
+  const { month, paksha, name } = tithi;
+  if (!month || !name) return '';
+
+  let monthDisplay = month;
+  if (!isNepali) {
+    const nepaliIdx = NEPALI_MONTHS.indexOf(month);
+    if (nepaliIdx !== -1) {
+      monthDisplay = ENGLISH_NEPALI_MONTHS[nepaliIdx];
+    } else if (!ENGLISH_NEPALI_MONTHS.includes(month)) {
+      monthDisplay = month;
+    }
+  } else {
+    const englishIdx = ENGLISH_NEPALI_MONTHS.indexOf(month);
+    if (englishIdx !== -1) monthDisplay = NEPALI_MONTHS[englishIdx];
+  }
+
+  const pakshaDisplay = isNepali
+    ? normalizePakshaToNepali(paksha)
+    : getEnglishPakshyaName(normalizePakshaToNepali(paksha));
+
+  const tithiDisplay = isNepali ? name : getEnglishTithiName(name);
+
+  return `${monthDisplay} ${pakshaDisplay} ${tithiDisplay}`;
 }
 
 // ──── Time normalisation & tithi sort helpers ────
