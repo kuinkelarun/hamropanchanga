@@ -10,7 +10,6 @@ export default function FloatingChat() {
   const location = useLocation();
   const navigate = useNavigate();
 
-  if (!user) return null;
   if (location.pathname.startsWith('/chat')) return null;
 
   const handleExpand = () => {
@@ -18,10 +17,12 @@ export default function FloatingChat() {
     navigate('/chat');
   };
 
-  const needsSetup = configStatus === 'unconfigured' || configStatus === 'error';
-  const launcherTitle = needsSetup
-    ? 'AI assistant — setup required'
-    : 'Open chat assistant';
+  const needsSetup = user && (configStatus === 'unconfigured' || configStatus === 'error');
+  const launcherTitle = !user
+    ? 'HamroPanchanga AI — sign in to use'
+    : needsSetup
+      ? 'AI assistant — setup required'
+      : 'Open chat assistant';
 
   return (
     <>
