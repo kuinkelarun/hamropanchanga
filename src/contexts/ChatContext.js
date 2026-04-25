@@ -3,6 +3,7 @@ import { useAuth } from './AuthContext';
 import {
   ChatBackendError,
   getLlmConfig,
+  checkChatAvailable,
   streamChatMessage,
 } from '../services/chatBackendService';
 
@@ -50,9 +51,13 @@ export function ChatProvider({ children }) {
       return null;
     }
     try {
-      const info = await getLlmConfig();
+      const [info, availability] = await Promise.all([
+        getLlmConfig(),
+        checkChatAvailable().catch(() => ({ available: false })),
+      ]);
       setConfigInfo(info);
-      setConfigStatus(info?.configured ? 'configured' : 'unconfigured');
+      // Chat is available if user has their own key OR admin shared key is active
+      setConfigStatus((info?.configured || availability?.available) ? 'configured' : 'unconfigured');
       return info;
     } catch (err) {
       setConfigStatus('error');

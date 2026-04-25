@@ -106,6 +106,11 @@ export default function AdminAiProviderTab() {
     setSaving(true);
     try {
       const updated = await saveAdminLlmConfig(body);
+      // Auto-enable after save so the key is immediately active
+      if (!updated.enabled) {
+        await toggleAdminLlmConfig(true);
+        updated.enabled = true;
+      }
       setConfig(updated);
       setSaveSuccess(true);
       setMode('view');

@@ -50,6 +50,11 @@ export function getLlmConfig() {
   return request('/api/llm-config');
 }
 
+/** Returns { available: boolean } — true if user's own key OR admin shared key is active. */
+export function checkChatAvailable() {
+  return request('/api/chat/available');
+}
+
 export function saveLlmConfig(config) {
   return request('/api/llm-config', { method: 'PUT', body: config });
 }
