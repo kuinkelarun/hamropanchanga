@@ -488,6 +488,16 @@ export default function DeveloperPage({ user, isAdmin }) {
             onResetRequest={() => setRequest(null)}
           />
 
+          <div className="bg-indigo-50 rounded-xl border border-indigo-200 p-4">
+            <h4 className="text-sm font-semibold text-indigo-900 mb-1">Using an AI coding tool?</h4>
+            <p className="text-xs text-indigo-700 mb-2">
+              Connect Claude Desktop, VS Code Copilot, or Codex CLI directly to HamroPanchanga via MCP.
+            </p>
+            <a href="/mcp" className="text-xs font-medium text-indigo-600 hover:underline">
+              MCP Setup →
+            </a>
+          </div>
+
           <div className="bg-white rounded-xl border border-gray-200 p-4">
             <h4 className="text-sm font-semibold text-gray-700 mb-2">Support</h4>
             <p className="text-xs text-gray-500">

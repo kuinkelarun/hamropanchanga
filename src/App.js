@@ -20,6 +20,7 @@ import EmbeddedBuilderPage from './components/TreeBuilder/EmbeddedBuilderPage';
 import TreeSelectionPage from './components/TreeBuilder/TreeSelectionPage';
 import TreeDetailPage from './components/TreeBuilder/TreeDetailPage';
 import DeveloperPage from './components/DeveloperPage';
+import McpPage from './components/McpPage';
 import EventsPage from './components/EventsPage';
 import LlmSettingsPage from './components/Settings/LlmSettingsPage';
 import { useUserPermissions } from './hooks/usePermissions';
@@ -591,6 +592,8 @@ function AppContent() {
                             isAdmin={isAdmin}
                         />
                     } />
+
+                    <Route path="/mcp" element={<McpPage />} />
 
                     <Route path="/events" element={
                         <EventsPage
