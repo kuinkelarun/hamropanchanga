@@ -298,7 +298,7 @@ function GuestPrompt({ onSignIn }) {
       <div>
         <h3 className="text-sm font-semibold text-gray-900 mb-1">Sign in to use HamroPanchanga AI</h3>
         <p className="text-xs text-gray-500 leading-relaxed">
-          The MCP assistant can access your calendars, family trees, and tithi data — but only for signed-in users.
+          The MCP assistant can read and update your calendars, events, family trees, and tithi data — but only for signed-in users.
         </p>
       </div>
       <button
@@ -332,7 +332,7 @@ function EmptyState({ onPick }) {
         Connected to HamroPanchanga MCP
       </h3>
       <p className="text-xs text-gray-500 mb-1">
-        Your AI assistant can read your calendars, tithis, and family trees in real time.
+        Your AI assistant can look up tithis, create events, add family members, and query your trees in real time.
       </p>
       <div className="flex items-center gap-1.5 text-xs text-purple-500 mb-4">
         <span className="w-1.5 h-1.5 rounded-full bg-purple-400 animate-pulse" />

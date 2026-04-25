@@ -111,6 +111,7 @@ function AppContent() {
         if (pathname.startsWith('/admin/data-management')) return 'Admin';
         if (pathname.startsWith('/user-management')) return 'User Management';
         if (pathname.startsWith('/developer')) return 'Developer API';
+        if (pathname.startsWith('/mcp')) return 'MCP Server';
         if (pathname.startsWith('/events')) return 'Events & Reminders';
         if (pathname.startsWith('/builder')) return 'Builder';
         if (pathname.startsWith('/chat')) return 'Chat';
@@ -204,6 +205,10 @@ function AppContent() {
 
     const handleDeveloperPage = () => {
         navigate('/developer');
+    };
+
+    const handleMcpPage = () => {
+        navigate('/mcp');
     };
 
     const handleLlmSettings = () => {
@@ -421,6 +426,12 @@ function AppContent() {
                                     >
                                         <span className="nav-menu-text">Developer API</span>
                                     </button>
+                                    <button
+                                        onClick={handleMcpPage}
+                                        className="nav-menu-item"
+                                    >
+                                        <span className="nav-menu-text">MCP</span>
+                                    </button>
                                 </nav>
                             )}
                         </div>
@@ -492,6 +503,12 @@ function AppContent() {
                                 className="mobile-nav-item"
                             >
                                 Developer API
+                            </button>
+                            <button
+                                onClick={() => { handleMcpPage(); setMobileMenuOpen(false); }}
+                                className="mobile-nav-item"
+                            >
+                                MCP
                             </button>
                         </nav>
                     </div>

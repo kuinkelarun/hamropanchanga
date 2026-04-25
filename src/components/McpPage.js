@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 
-const MCP_URL = 'https://welcoming-cooperation-production-b057.up.railway.app/mcp';
-const HEALTH_URL = 'https://welcoming-cooperation-production-b057.up.railway.app/health';
+const MCP_URL = 'https://hamropanchanga-mcp-server.up.railway.app/mcp';
+const HEALTH_URL = 'https://hamropanchanga-mcp-server.up.railway.app/health';
 
 const CLIENTS = [
   {
@@ -203,7 +203,7 @@ export default function McpPage() {
             The HamroPanchanga MCP (Model Context Protocol) server exposes Nepali calendar, tithi,
             events, and family tree tools to any MCP-compatible AI client — including Claude Desktop,
             VS Code Copilot, Codex CLI, and more. Your AI assistant can look up today's tithi, convert
-            dates, manage events, and query family trees directly in chat.
+            dates, create events, add family members, and query your family trees — all directly in chat.
           </p>
           <div className="flex flex-wrap gap-3 mt-6">
             <span className="inline-flex items-center gap-1.5 bg-indigo-50 text-indigo-700 text-sm px-3 py-1.5 rounded-full font-medium">

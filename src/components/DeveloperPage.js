@@ -489,9 +489,9 @@ export default function DeveloperPage({ user, isAdmin }) {
           />
 
           <div className="bg-indigo-50 rounded-xl border border-indigo-200 p-4">
-            <h4 className="text-sm font-semibold text-indigo-900 mb-1">Using an AI coding tool?</h4>
+            <h4 className="text-sm font-semibold text-indigo-900 mb-1">Using an AI assistant?</h4>
             <p className="text-xs text-indigo-700 mb-2">
-              Connect Claude Desktop, VS Code Copilot, or Codex CLI directly to HamroPanchanga via MCP.
+              Connect Claude Desktop, VS Code Copilot, or Codex CLI directly to HamroPanchanga via MCP to query tithis, dates, events, and family trees in chat.
             </p>
             <a href="/mcp" className="text-xs font-medium text-indigo-600 hover:underline">
               MCP Setup →
