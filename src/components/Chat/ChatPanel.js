@@ -36,6 +36,24 @@ export default function ChatPanel({
   const listRef = useRef(null);
   const inputRef = useRef(null);
 
+  // Auto-expand textarea up to 7 lines, then enable subtle scroll
+  useEffect(() => {
+    const ta = inputRef.current;
+    if (!ta) return;
+    ta.style.height = 'auto';
+    const style = getComputedStyle(ta);
+    const lineHeight = parseFloat(style.lineHeight) || 20;
+    const paddingY = parseFloat(style.paddingTop) + parseFloat(style.paddingBottom);
+    const maxHeight = lineHeight * 7 + paddingY;
+    if (ta.scrollHeight <= maxHeight) {
+      ta.style.height = `${ta.scrollHeight}px`;
+      ta.style.overflowY = 'hidden';
+    } else {
+      ta.style.height = `${maxHeight}px`;
+      ta.style.overflowY = 'auto';
+    }
+  }, [input]);
+
   // ChatProvider also triggers a check on user-available, but keep this as a
   // safety net in case the panel is mounted in an edge-case where configStatus
   // is still 'unknown'.
@@ -160,7 +178,7 @@ export default function ChatPanel({
               }}
               rows={1}
               placeholder={isReady ? 'Ask about tithis, events, family trees…' : 'Set up your AI provider to start chatting…'}
-              className="flex-1 resize-none px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent max-h-32 disabled:bg-gray-50 disabled:text-gray-400"
+              className="flex-1 resize-none px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent disabled:bg-gray-50 disabled:text-gray-400"
               disabled={isSending || !isReady}
             />
             <button

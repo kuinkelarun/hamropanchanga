@@ -15,7 +15,14 @@ function makeId() {
 export function ChatProvider({ children }) {
   const { user } = useAuth();
 
-  const [messages, setMessages] = useState([]);
+  const [messages, setMessages] = useState(() => {
+    try {
+      const saved = sessionStorage.getItem('chat_messages');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
   const [isOpen, setIsOpen] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [error, setError] = useState(null);
@@ -25,6 +32,15 @@ export function ChatProvider({ children }) {
   const [configInfo, setConfigInfo] = useState(null);
 
   const abortRef = useRef(null);
+
+  // Sync messages to sessionStorage (auto-clears when the browser is closed)
+  useEffect(() => {
+    try {
+      sessionStorage.setItem('chat_messages', JSON.stringify(messages));
+    } catch {
+      // storage quota exceeded or unavailable — fail silently
+    }
+  }, [messages]);
 
   const checkConfig = useCallback(async () => {
     if (!user) {
@@ -105,6 +121,7 @@ export function ChatProvider({ children }) {
   const clearChat = useCallback(() => {
     setMessages([]);
     setError(null);
+    try { sessionStorage.removeItem('chat_messages'); } catch { /* ignore */ }
   }, []);
 
   const openChat = useCallback(() => setIsOpen(true), []);

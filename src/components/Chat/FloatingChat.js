@@ -6,7 +6,7 @@ import ChatPanel from './ChatPanel';
 
 export default function FloatingChat() {
   const { user } = useAuth();
-  const { isOpen, openChat, closeChat, configStatus } = useChat();
+  const { isOpen, openChat, closeChat, configStatus, messages } = useChat();
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -45,6 +45,13 @@ export default function FloatingChat() {
             >
               !
             </span>
+          )}
+          {!needsSetup && messages.length > 0 && (
+            <span
+              aria-hidden="true"
+              title="Previous conversation available"
+              className="absolute -top-0.5 -right-0.5 w-3 h-3 rounded-full bg-green-400 border-2 border-white"
+            />
           )}
         </button>
       )}
