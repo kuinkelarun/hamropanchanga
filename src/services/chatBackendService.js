@@ -128,3 +128,27 @@ export async function streamChatMessage(messages, { signal, onToolCall } = {}) {
 }
 
 export { ChatBackendError, BACKEND_URL };
+
+// ---------------------------------------------------------------------------
+// Admin shared AI provider
+// ---------------------------------------------------------------------------
+
+export function getAdminLlmConfig() {
+  return request('/api/admin/llm-config');
+}
+
+export function saveAdminLlmConfig(config) {
+  return request('/api/admin/llm-config', { method: 'PUT', body: config });
+}
+
+export function deleteAdminLlmConfig() {
+  return request('/api/admin/llm-config', { method: 'DELETE' });
+}
+
+export function testAdminLlmConfig() {
+  return request('/api/admin/llm-config/test', { method: 'POST' });
+}
+
+export function toggleAdminLlmConfig(enabled) {
+  return request('/api/admin/llm-config/toggle', { method: 'POST', body: { enabled } });
+}

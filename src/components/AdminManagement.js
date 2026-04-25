@@ -22,6 +22,7 @@ import AdminDataManagementTab from './Admin/AdminDataManagementTab';
 import AdminApiKeyRequestsTab from './Admin/AdminApiKeyRequestsTab';
 import AdminBulkUploadSection from './Admin/AdminBulkUploadSection';
 import AdminTithiGeneratorSection from './Admin/AdminTithiGeneratorSection';
+import AdminAiProviderTab from './Admin/AdminAiProviderTab';
 import DeleteConfirmationModal from './Admin/DeleteConfirmationModal';
 
 // Tithi lists from single source of truth
@@ -1572,6 +1573,14 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
             🔑 API Keys
           </button>
         )}
+        {isAdmin && (
+          <button
+            className={`admin-tab ${activeTab === 'ai-provider' ? 'active' : ''}`}
+            onClick={() => setActiveTab('ai-provider')}
+          >
+            🤖 AI Provider
+          </button>
+        )}
       </div>
 
       {/* Tab Descriptions */}
@@ -1629,6 +1638,13 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
       {activeTab === 'api-keys' && isAdmin && (
         <div className="admin-section">
           <AdminApiKeyRequestsTab user={user} />
+        </div>
+      )}
+
+      {/* AI Provider Tab */}
+      {activeTab === 'ai-provider' && isAdmin && (
+        <div className="admin-section">
+          <AdminAiProviderTab />
         </div>
       )}
 
