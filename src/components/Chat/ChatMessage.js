@@ -5,7 +5,8 @@ export default function ChatMessage({ message }) {
   const hasTools = Array.isArray(message.toolCalls) && message.toolCalls.length > 0;
 
   return (
-    <div className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}>
+    <div className={`flex flex-col ${isUser ? 'items-end' : 'items-start'} gap-1`}>
+      {hasTools && !isUser && <ToolCallBadges calls={message.toolCalls} />}
       <div
         className={[
           'max-w-[85%] rounded-2xl px-4 py-2 text-sm whitespace-pre-wrap leading-relaxed',
@@ -15,40 +16,51 @@ export default function ChatMessage({ message }) {
         ].join(' ')}
       >
         {message.content || (isUser ? '' : <span className="text-gray-400">(no reply)</span>)}
-        {hasTools && !isUser && <ToolCallList calls={message.toolCalls} />}
       </div>
     </div>
   );
 }
 
-function ToolCallList({ calls }) {
-  const [open, setOpen] = useState(false);
+function ToolCallBadges({ calls }) {
+  const [expanded, setExpanded] = useState(false);
+
   return (
-    <div className="mt-2 border-t border-gray-200 pt-2">
+    <div className="max-w-[85%] space-y-1">
       <button
         type="button"
-        onClick={() => setOpen((v) => !v)}
-        className="text-xs text-gray-500 hover:text-gray-700 flex items-center gap-1"
+        onClick={() => setExpanded((v) => !v)}
+        className="flex items-center gap-1.5 text-xs text-purple-600 hover:text-purple-800 group"
       >
+        {/* MCP plug icon */}
+        <svg className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+            d="M13 10V3L4 14h7v7l9-11h-7z" />
+        </svg>
+        <span className="font-medium">{calls.length} MCP tool{calls.length === 1 ? '' : 's'} used</span>
         <svg
-          className={`w-3 h-3 transform transition-transform ${open ? 'rotate-90' : ''}`}
+          className={`w-3 h-3 transition-transform ${expanded ? 'rotate-180' : ''}`}
           fill="none" stroke="currentColor" viewBox="0 0 24 24"
         >
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
         </svg>
-        {calls.length} tool call{calls.length === 1 ? '' : 's'}
       </button>
-      {open && (
-        <ul className="mt-1 space-y-1">
+
+      {expanded && (
+        <div className="bg-purple-50 border border-purple-100 rounded-xl px-3 py-2 space-y-2">
           {calls.map((c, i) => (
-            <li key={i} className="text-xs font-mono text-gray-600">
-              <span className="text-gray-900">{c.name}</span>
-              {c.input && (
-                <span className="text-gray-500"> · {JSON.stringify(c.input)}</span>
+            <div key={i} className="flex flex-col gap-0.5">
+              <div className="flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-purple-400 shrink-0" />
+                <span className="text-xs font-semibold text-purple-800 font-mono">{c.name}</span>
+              </div>
+              {c.input && Object.keys(c.input).length > 0 && (
+                <div className="ml-3 text-xs text-purple-600 font-mono break-all">
+                  {JSON.stringify(c.input)}
+                </div>
               )}
-            </li>
+            </div>
           ))}
-        </ul>
+        </div>
       )}
     </div>
   );
