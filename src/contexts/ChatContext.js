@@ -3,7 +3,7 @@ import { useAuth } from './AuthContext';
 import {
   ChatBackendError,
   getLlmConfig,
-  sendChatMessage,
+  streamChatMessage,
 } from '../services/chatBackendService';
 
 const ChatContext = createContext(null);
@@ -25,6 +25,7 @@ export function ChatProvider({ children }) {
   });
   const [isOpen, setIsOpen] = useState(false);
   const [isSending, setIsSending] = useState(false);
+  const [liveTools, setLiveTools] = useState([]); // tool_call events streaming in
   const [error, setError] = useState(null);
 
   // LLM config state: 'unknown' (never checked), 'configured', 'unconfigured', 'error'
@@ -84,6 +85,7 @@ export function ChatProvider({ children }) {
     const nextMessages = [...messages, userMsg];
     setMessages(nextMessages);
     setIsSending(true);
+    setLiveTools([]);
     setError(null);
 
     const controller = new AbortController();
@@ -91,7 +93,10 @@ export function ChatProvider({ children }) {
 
     try {
       const payload = nextMessages.map((m) => ({ role: m.role, content: m.content }));
-      const response = await sendChatMessage(payload, { signal: controller.signal });
+      const response = await streamChatMessage(payload, {
+        signal: controller.signal,
+        onToolCall: (tool) => setLiveTools((prev) => [...prev, tool]),
+      });
 
       const assistantMsg = {
         id: makeId(),
@@ -110,6 +115,7 @@ export function ChatProvider({ children }) {
       }
     } finally {
       setIsSending(false);
+      setLiveTools([]);
       abortRef.current = null;
     }
   }, [messages, isSending]);
@@ -131,6 +137,7 @@ export function ChatProvider({ children }) {
   const value = useMemo(() => ({
     messages,
     isSending,
+    liveTools,
     error,
     configStatus,
     configInfo,
@@ -144,7 +151,7 @@ export function ChatProvider({ children }) {
     checkConfig,
     refreshConfig,
   }), [
-    messages, isSending, error, configStatus, configInfo, isOpen,
+    messages, isSending, liveTools, error, configStatus, configInfo, isOpen,
     openChat, closeChat, toggleChat, sendMessage, cancelSend, clearChat,
     checkConfig, refreshConfig,
   ]);

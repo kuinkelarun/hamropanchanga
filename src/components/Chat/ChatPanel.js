@@ -23,6 +23,7 @@ export default function ChatPanel({
   const {
     messages,
     isSending,
+    liveTools,
     error,
     configStatus,
     isOpen,
@@ -146,7 +147,7 @@ export default function ChatPanel({
             ) : (
               messages.map((m) => <ChatMessage key={m.id} message={m} />)
             )}
-            {isSending && <ThinkingBubble />}
+            {isSending && <ThinkingBubble liveTools={liveTools} />}
           </div>
 
           {error && (
@@ -415,23 +416,8 @@ function TypingBubble() {
   );
 }
 
-const THINKING_PHRASES = [
-  'Thinking…',
-  'Consulting HamroPanchanga MCP…',
-  'Fetching live data…',
-  'Running tools…',
-  'Processing…',
-];
-
-function ThinkingBubble() {
-  const [phraseIdx, setPhraseIdx] = useState(0);
-
-  useEffect(() => {
-    const id = setInterval(() => {
-      setPhraseIdx((i) => (i + 1) % THINKING_PHRASES.length);
-    }, 1800);
-    return () => clearInterval(id);
-  }, []);
+function ThinkingBubble({ liveTools = [] }) {
+  const lastTool = liveTools[liveTools.length - 1];
 
   return (
     <div className="flex justify-start">
@@ -442,10 +428,27 @@ function ThinkingBubble() {
             <span className="w-1.5 h-1.5 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
             <span className="w-1.5 h-1.5 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
           </div>
-          <span className="text-xs text-gray-500 transition-all duration-300">
-            {THINKING_PHRASES[phraseIdx]}
-          </span>
+          {lastTool ? (
+            <span className="text-xs text-purple-600 font-mono truncate">
+              Calling <span className="font-semibold">{lastTool.name}</span>…
+            </span>
+          ) : (
+            <span className="text-xs text-gray-500">Thinking…</span>
+          )}
         </div>
+        {liveTools.length > 0 && (
+          <div className="mt-2 flex flex-wrap gap-1">
+            {liveTools.map((t, i) => (
+              <span
+                key={i}
+                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-purple-100 text-purple-700 text-[10px] font-mono"
+              >
+                <span className="w-1 h-1 rounded-full bg-purple-400" />
+                {t.name}
+              </span>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
