@@ -59,6 +59,7 @@ export default function LlmSettingsPage() {
       }
     } catch (err) {
       setError(err.message || 'Failed to load configuration');
+      setMode('edit');
     } finally {
       setLoading(false);
     }
@@ -203,6 +204,11 @@ export default function LlmSettingsPage() {
         <div className="text-gray-500">Loading configuration…</div>
       ) : (
         <>
+          {error && mode !== 'edit' && (
+            <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2 mb-4">
+              {error}
+            </div>
+          )}
           {config?.configured && mode === 'view' && (
             <ConfiguredView
               config={config}
@@ -265,6 +271,7 @@ export default function LlmSettingsPage() {
                   {error}
                 </div>
               )}
+              {/* Note: page-level error banner also shown above for load errors */}
 
               <div className="flex items-center gap-3 pt-2">
                 <button

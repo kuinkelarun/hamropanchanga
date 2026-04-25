@@ -324,5 +324,12 @@ service cloud.firestore {
           (isAuthenticated() && hasTreeEditPermission(treeId));
       }
     }
+
+    // Encrypted per-user LLM credentials — managed exclusively by the chat backend
+    // via the Firebase Admin SDK (which bypasses these rules). Browser clients must
+    // never be able to read or write this collection directly.
+    match /userLlmConfigs/{uid} {
+      allow read, write: if false;
+    }
   }
 }
