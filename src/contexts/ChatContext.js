@@ -79,6 +79,9 @@ export function ChatProvider({ children }) {
     if (!user) {
       setConfigStatus('unknown');
       setConfigInfo(null);
+      setMessages([]);
+      setError(null);
+      try { sessionStorage.removeItem('chat_messages'); } catch { /* ignore */ }
     }
   }, [user, configStatus, checkConfig]);
 

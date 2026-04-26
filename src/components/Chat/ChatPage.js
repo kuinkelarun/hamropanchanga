@@ -1,4 +1,5 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { signInWithGoogle } from '../../firebase';
 import { useChat } from '../../contexts/ChatContext';
@@ -6,7 +7,13 @@ import ChatPanel from './ChatPanel';
 
 export default function ChatPage() {
   const { user } = useAuth();
-  const { clearChat, messages } = useChat();
+  const navigate = useNavigate();
+  const { clearChat, messages, openChat } = useChat();
+
+  const handlePopOut = () => {
+    openChat();
+    navigate(-1);
+  };
 
   if (!user) {
     return (
@@ -46,14 +53,27 @@ export default function ChatPage() {
               Ask about tithis, festivals, your family trees, or upcoming events.
             </p>
           </div>
-          <button
-            type="button"
-            onClick={clearChat}
-            disabled={messages.length === 0}
-            className="text-sm px-3 py-1.5 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded disabled:text-gray-300 disabled:hover:bg-transparent disabled:cursor-not-allowed transition-colors"
-          >
-            New conversation
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={handlePopOut}
+              title="Back to floating chat"
+              className="p-1.5 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded transition-colors"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                  d="M9 9V4.5M9 9H4.5M9 15v4.5M9 15H4.5M15 9h4.5M15 9V4.5M15 15h4.5M15 15v4.5" />
+              </svg>
+            </button>
+            <button
+              type="button"
+              onClick={clearChat}
+              disabled={messages.length === 0}
+              className="text-sm px-3 py-1.5 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded disabled:text-gray-300 disabled:hover:bg-transparent disabled:cursor-not-allowed transition-colors"
+            >
+              New conversation
+            </button>
+          </div>
         </div>
         <div className="flex-1 min-h-0">
           <ChatPanel variant="page" showHeader={false} />
