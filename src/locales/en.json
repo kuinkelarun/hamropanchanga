@@ -353,8 +353,8 @@
     "eventCountPlural": "{count} events"
   },
   "developer": {
-    "navLabel": "Developer API",
-    "pageTitle": "HamroPanchanga Developer API",
+    "navLabel": "Calendar API",
+    "pageTitle": "HamroPanchanga Calendar API",
     "pageSubtitle": "Nepali Calendar & Tithi data for your applications",
     "requestKey": "Request a Free API Key",
     "requestSubtitle": "Free plan: 1,000 requests/day. We'll review and send your key within 24 hours.",

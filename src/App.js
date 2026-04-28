@@ -85,9 +85,12 @@ function AppContent() {
     const { trees, treeCalendarEvents, personalCalendarEvents, sharedTreeCalendarEvents, treeMembers } = useAppData(user, isAdmin);
     const resolveEventDate = useTithiDateResolver();
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+    const [devDropdownOpen, setDevDropdownOpen] = useState(false);
+    const [mobileDevOpen, setMobileDevOpen] = useState(false);
 
     const hamburgerButtonRef = useRef(null);
     const mobileMenuPanelRef = useRef(null);
+    const devDropdownRef = useRef(null);
     
     // Smart home button state
     // eslint-disable-next-line no-unused-vars
@@ -110,7 +113,7 @@ function AppContent() {
         if (pathname.startsWith('/admin/calendar')) return 'Admin';
         if (pathname.startsWith('/admin/data-management')) return 'Admin';
         if (pathname.startsWith('/user-management')) return 'User Management';
-        if (pathname.startsWith('/developer')) return 'Developer API';
+        if (pathname.startsWith('/developer')) return 'Calendar API';
         if (pathname.startsWith('/mcp')) return 'MCP Server';
         if (pathname.startsWith('/events')) return 'Events & Reminders';
         if (pathname.startsWith('/builder')) return 'Builder';
@@ -145,6 +148,18 @@ function AppContent() {
     useEffect(() => {
         setMobileMenuOpen(false);
     }, [location.pathname]);
+
+    // Close dev dropdown on outside click
+    useEffect(() => {
+        if (!devDropdownOpen) return undefined;
+        const onPointerDown = (e) => {
+            if (devDropdownRef.current && !devDropdownRef.current.contains(e.target)) {
+                setDevDropdownOpen(false);
+            }
+        };
+        document.addEventListener('pointerdown', onPointerDown);
+        return () => document.removeEventListener('pointerdown', onPointerDown);
+    }, [devDropdownOpen]);
 
     // Close menu on outside click; also scroll to top
     useEffect(() => {
@@ -420,18 +435,39 @@ function AppContent() {
                                     >
                                         <span className="nav-menu-text">Tree View</span>
                                     </button>
-                                    <button
-                                        onClick={handleDeveloperPage}
-                                        className="nav-menu-item"
-                                    >
-                                        <span className="nav-menu-text">Developer API</span>
-                                    </button>
-                                    <button
-                                        onClick={handleMcpPage}
-                                        className="nav-menu-item"
-                                    >
-                                        <span className="nav-menu-text">MCP</span>
-                                    </button>
+                                    {/* For Developer dropdown */}
+                                    <div className="relative" ref={devDropdownRef}>
+                                        <button
+                                            onClick={() => setDevDropdownOpen(o => !o)}
+                                            className="nav-menu-item"
+                                        >
+                                            <span className="nav-menu-text" style={{display:'inline-flex', alignItems:'center', gap:'4px'}}>
+                                                For Developer
+                                                <svg
+                                                    className={`w-3.5 h-3.5 text-gray-400 transition-transform duration-200 ${devDropdownOpen ? 'rotate-180' : ''}`}
+                                                    fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                                                >
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                                </svg>
+                                            </span>
+                                        </button>
+                                        {devDropdownOpen && (
+                                            <div className="absolute left-0 mt-0 w-44 bg-white border border-gray-200 shadow-lg z-50 py-1 overflow-hidden">
+                                                <button
+                                                    onClick={() => { handleDeveloperPage(); setDevDropdownOpen(false); }}
+                                                    className="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-purple-50 hover:text-purple-700 transition-colors"
+                                                >
+                                                    Calendar API
+                                                </button>
+                                                <button
+                                                    onClick={() => { handleMcpPage(); setDevDropdownOpen(false); }}
+                                                    className="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-purple-50 hover:text-purple-700 transition-colors"
+                                                >
+                                                    MCP Integration
+                                                </button>
+                                            </div>
+                                        )}
+                                    </div>
                                 </nav>
                             )}
                         </div>
@@ -498,18 +534,35 @@ function AppContent() {
                             >
                                 Tree View
                             </button>
+                            {/* For Developer expandable item */}
                             <button
-                                onClick={() => { handleDeveloperPage(); setMobileMenuOpen(false); }}
-                                className="mobile-nav-item"
+                                onClick={() => setMobileDevOpen(o => !o)}
+                                className="mobile-nav-item flex items-center justify-between w-full"
                             >
-                                Developer API
+                                <span>For Developer</span>
+                                <svg
+                                    className={`w-3.5 h-3.5 text-gray-400 transition-transform duration-200 ${mobileDevOpen ? 'rotate-180' : ''}`}
+                                    fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                                >
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                </svg>
                             </button>
-                            <button
-                                onClick={() => { handleMcpPage(); setMobileMenuOpen(false); }}
-                                className="mobile-nav-item"
-                            >
-                                MCP
-                            </button>
+                            {mobileDevOpen && (
+                                <div className="ml-4 flex flex-col">
+                                    <button
+                                        onClick={() => { handleDeveloperPage(); setMobileMenuOpen(false); setMobileDevOpen(false); }}
+                                        className="mobile-nav-item text-left"
+                                    >
+                                        Calendar API
+                                    </button>
+                                    <button
+                                        onClick={() => { handleMcpPage(); setMobileMenuOpen(false); setMobileDevOpen(false); }}
+                                        className="mobile-nav-item text-left"
+                                    >
+                                        MCP Integration
+                                    </button>
+                                </div>
+                            )}
                         </nav>
                     </div>
                 )}

@@ -58,7 +58,7 @@ export default function FloatingChat() {
 
       {isOpen && (
         <div
-          className="fixed bottom-5 right-5 z-40 w-[calc(100vw-2.5rem)] sm:w-96 h-[min(600px,calc(100vh-6rem))] max-h-[90vh]"
+          className="fixed bottom-5 left-2 right-2 sm:left-auto sm:right-5 sm:w-96 z-40 h-[min(600px,calc(100vh-6rem))] max-h-[90vh]"
         >
           <ChatPanel
             variant="floating"

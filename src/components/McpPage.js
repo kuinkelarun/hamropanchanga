@@ -193,7 +193,6 @@ export default function McpPage() {
       <div className="bg-white border-b border-gray-200">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 py-12">
           <div className="flex items-center gap-3 mb-4">
-            <span className="text-4xl">🔌</span>
             <div>
               <h1 className="text-3xl font-bold text-gray-900">MCP Server</h1>
               <p className="text-gray-500 mt-1">Connect your AI assistant to HamroPanchanga tools</p>
@@ -239,7 +238,7 @@ export default function McpPage() {
             </p>
             <ol className="space-y-2 text-sm text-gray-700 mb-5">
               {[
-                'Sign in at the Developer page.',
+                'Sign in at the Calendar API page.',
                 'Submit an API key request with your name and use case.',
                 'Once approved, copy your key — it is shown only once.',
                 'Paste it into the client config below.',
@@ -254,7 +253,7 @@ export default function McpPage() {
               href="/developer"
               className="inline-flex items-center gap-2 bg-indigo-600 text-white px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors"
             >
-              Go to Developer page →
+              Go to Calendar API page →
             </a>
           </section>
 
@@ -415,7 +414,7 @@ export default function McpPage() {
           <div className="bg-amber-50 rounded-xl border border-amber-200 p-5">
             <h3 className="text-sm font-semibold text-amber-900 mb-2">Troubleshooting</h3>
             <ul className="space-y-1.5 text-xs text-amber-800">
-              <li>• Verify your API key is active on the <a href="/developer" className="underline">Developer page</a>.</li>
+              <li>• Verify your API key is active on the <a href="/developer" className="underline">Calendar API page</a>.</li>
               <li>• Check the <a href={HEALTH_URL} target="_blank" rel="noreferrer" className="underline">health endpoint</a> to confirm the server is running.</li>
               <li>• Ensure your config file is valid JSON.</li>
               <li>• Restart your AI client after editing the config.</li>
