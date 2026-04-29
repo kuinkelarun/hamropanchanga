@@ -9,27 +9,32 @@ const CLIENTS = [
     label: 'Claude Desktop',
     icon: '🤖',
     configFile: {
-      Mac: '~/Library/Application Support/Claude/claude_desktop_config.json',
-      Windows: '%APPDATA%\\Claude\\claude_desktop_config.json',
+      'Windows (direct install)': '%APPDATA%\\Claude\\claude_desktop_config.json',
+      'Windows (Store)': 'C:\\Users\\<you>\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Roaming\\Claude\\claude_desktop_config.json',
+      'macOS': '~/Library/Application Support/Claude/claude_desktop_config.json',
     },
+    warning: 'The "type": "http" config format is not supported by Claude Desktop — it produces a "not valid MCP server configuration" error. The "type": "http" format only works on the claude.ai web interface (Custom Connectors). Use the mcp-remote proxy config below instead.',
     steps: [
-      'Open Claude Desktop and go to Settings → Developer → Edit Config.',
+      'Install mcp-remote globally (requires Node.js — verify with node --version): npm install -g mcp-remote',
+      'Open Claude Desktop → File → Settings → Developer → Edit Config to open the correct config file automatically.',
       'Merge the snippet below into your config file (inside "mcpServers").',
-      'Replace npcal_your_key_here with your actual API key.',
-      'Save the file and restart Claude Desktop.',
-      'Click the 🔌 icon in the chat input bar to verify HamroPanchanga is connected.',
+      'Replace <you> with your Windows username and npcal_your_key_here with your actual API key.',
+      'Save the file, then fully quit Claude Desktop from the system tray and relaunch.',
+      'Click the + icon in the chat input bar, then select Connectors — HamroPanchanga should appear in the connected servers list.',
     ],
     config: `{
   "mcpServers": {
     "hamropanchanga": {
-      "type": "http",
-      "url": "${MCP_URL}",
-      "headers": {
-        "Authorization": "Bearer npcal_your_key_here"
-      }
+      "command": "C:\\\\Users\\\\<you>\\\\AppData\\\\Roaming\\\\npm\\\\mcp-remote.cmd",
+      "args": [
+        "${MCP_URL}",
+        "--header",
+        "Authorization:Bearer npcal_your_key_here"
+      ]
     }
   }
 }`,
+    configNote: 'Why the full .cmd path instead of npx? Claude Desktop invokes commands via cmd.exe. If Node.js is installed in C:\\Program Files\\nodejs\\ (the default), the npx path contains a space and cmd.exe misparses it — producing \'C:\\Program\' is not recognized. Referencing mcp-remote.cmd by its full AppData\\Roaming\\npm\\ path (no spaces) avoids this entirely.',
   },
   {
     id: 'vscode',
@@ -294,6 +299,14 @@ export default function McpPage() {
               </div>
             )}
 
+            {/* Warning banner (e.g. Claude Desktop "type: http" gotcha) */}
+            {client.warning && (
+              <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg flex gap-2">
+                <span className="text-amber-500 text-sm shrink-0 mt-0.5">⚠️</span>
+                <p className="text-xs text-amber-800">{client.warning}</p>
+              </div>
+            )}
+
             {/* Steps */}
             <ol className="space-y-1.5 text-sm text-gray-700 mb-5">
               {client.steps.map((step, i) => (
@@ -312,6 +325,12 @@ export default function McpPage() {
 
             {client.note && (
               <p className="mt-2 text-xs text-gray-500 font-mono">{client.note}</p>
+            )}
+
+            {client.configNote && (
+              <div className="mt-3 p-3 bg-gray-50 border border-gray-200 rounded-lg">
+                <p className="text-xs text-gray-500 italic">{client.configNote}</p>
+              </div>
             )}
 
             {client.id !== 'inspector' && (
@@ -418,6 +437,9 @@ export default function McpPage() {
               <li>• Check the <a href={HEALTH_URL} target="_blank" rel="noreferrer" className="underline">health endpoint</a> to confirm the server is running.</li>
               <li>• Ensure your config file is valid JSON.</li>
               <li>• Restart your AI client after editing the config.</li>
+              <li>• <strong>Claude Desktop:</strong> "not valid MCP server configuration" error — remove any <code className="bg-amber-100 px-0.5 rounded">"type": "http"</code> config and use the <code className="bg-amber-100 px-0.5 rounded">mcp-remote</code> proxy config shown in the Claude Desktop tab above.</li>
+              <li>• <strong>Claude Desktop on Windows:</strong> <code className="bg-amber-100 px-0.5 rounded">'C:\Program' is not recognized</code> — use the full path to <code className="bg-amber-100 px-0.5 rounded">mcp-remote.cmd</code> in <code className="bg-amber-100 px-0.5 rounded">AppData\Roaming\npm\</code> instead of <code className="bg-amber-100 px-0.5 rounded">npx</code> (npx path contains spaces if Node.js is in Program Files).</li>
+              <li>• <strong>Claude Desktop (Windows Store):</strong> Config edits to <code className="bg-amber-100 px-0.5 rounded">%APPDATA%\Claude\</code> have no effect — the Store version uses a sandboxed path. Use <em>File → Settings → Developer → Edit Config</em> in Claude Desktop to open the correct file.</li>
             </ul>
           </div>
         </div>
