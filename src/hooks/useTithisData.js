@@ -36,6 +36,8 @@ function parseTithisSnapshot(docs) {
           tithiYear: tithi.tithiYear || null,
           pakshya: tithi.pakshya || null,
           tithiName: tithi.tithiName || null,
+          indicatorNepali: tithi.indicatorNepali || null,
+          indicatorEnglish: tithi.indicatorEnglish || null,
         });
         currentDate.setDate(currentDate.getDate() + 1);
       }
@@ -54,6 +56,8 @@ function parseTithisSnapshot(docs) {
           tithiYear: tithi.tithiYear || null,
           pakshya: tithi.pakshya || null,
           tithiName: tithi.tithiName || null,
+          indicatorNepali: tithi.indicatorNepali || null,
+          indicatorEnglish: tithi.indicatorEnglish || null,
         });
       }
     }

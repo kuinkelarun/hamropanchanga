@@ -22,6 +22,7 @@ const AddEventForm = ({ onAdd, familyMembers, onCancel, editingEvent }) => {
     const [tithiMonth, setTithiMonth] = useState('');
     const [tithiId, setTithiId] = useState('');
     const [resolvingTithi, setResolvingTithi] = useState(false);
+    const [showInAdhika, setShowInAdhika] = useState(false);
 
     useEffect(() => {
         if (editingEvent) {
@@ -130,6 +131,7 @@ const AddEventForm = ({ onAdd, familyMembers, onCancel, editingEvent }) => {
             personId: selectedPersonId,
             repetition,
             tithi: tithiInfo,
+            showInAdhika,
         });
 
         setName('');
@@ -278,6 +280,32 @@ const AddEventForm = ({ onAdd, familyMembers, onCancel, editingEvent }) => {
                                     ))}
                                 </select>
                             </div>
+                        </div>
+                    )}
+
+                    {/* Adhika Maas checkbox */}
+                    {entryMode === 'tithi' && (
+                        <div className="ddm-form-group" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            <input
+                                type="checkbox"
+                                id="aef-showInAdhika"
+                                checked={showInAdhika}
+                                onChange={(e) => {
+                                    const checked = e.target.checked;
+                                    if (checked) {
+                                        const confirmed = window.confirm(
+                                            'This event will only appear on Adhika (intercalary) month tithis. Are you sure?'
+                                        );
+                                        if (confirmed) setShowInAdhika(true);
+                                    } else {
+                                        setShowInAdhika(false);
+                                    }
+                                }}
+                                style={{ width: '1rem', height: '1rem', cursor: 'pointer' }}
+                            />
+                            <label htmlFor="aef-showInAdhika" className="ddm-label" style={{ margin: 0, cursor: 'pointer' }}>
+                                {t('addEventForm.showInAdhika') || 'Show in Adhika Maas only'}
+                            </label>
                         </div>
                     )}
 

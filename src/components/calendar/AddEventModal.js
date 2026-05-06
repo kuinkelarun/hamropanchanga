@@ -56,6 +56,7 @@ export default function AddEventModal({
   const [isAddingEvent, setIsAddingEvent] = useState(false);
   const [availableTrees, setAvailableTrees] = useState([]);
   const [availableTreeMembers, setAvailableTreeMembers] = useState([]);
+  const [showInAdhika, setShowInAdhika] = useState(false);
 
   // ── Reset form when modal opens / closes ────────────────────
   useEffect(() => {
@@ -71,6 +72,7 @@ export default function AddEventModal({
       setSelectedTreeMemberId('');
       setEventValidation('');
       setIsAddingEvent(false);
+      setShowInAdhika(false);
     }
     if (!isOpen) {
       setEventTitle('');
@@ -84,6 +86,7 @@ export default function AddEventModal({
       setSelectedTreeMemberId('');
       setEventValidation('');
       setIsAddingEvent(false);
+      setShowInAdhika(false);
     }
   }, [isOpen, activeDate]);
 
@@ -209,6 +212,7 @@ export default function AddEventModal({
         treeId: eventType === 'customer' ? selectedTreeId : null,
         isPublic,
         isAdmin: createdByAdmin,
+        showInAdhika,
       });
       if (isDev) console.log(`${isPublic ? 'Public' : eventType === 'customer' ? 'Family member' : 'Private'} event added`);
       onClose();
@@ -391,6 +395,34 @@ export default function AddEventModal({
                   </select>
                 );
               })()}
+            </div>
+          )}
+
+          {/* Show in Adhika Maas checkbox (only shown when tithi-mode is active) */}
+          {eventAssociateMode === 'tithi' && (
+            <div className="ddm-form-group" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <input
+                type="checkbox"
+                id="showInAdhika"
+                checked={showInAdhika}
+                onChange={(e) => {
+                  const checked = e.target.checked;
+                  if (checked) {
+                    const confirmed = window.confirm(
+                      isNepali
+                        ? 'यो कार्यक्रम अधिक मासमा मात्र देखिनेछ। के तपाईं निश्चित हुनुहुन्छ?'
+                        : 'This event will only appear on Adhika (intercalary) month tithis. Are you sure?'
+                    );
+                    if (confirmed) setShowInAdhika(true);
+                  } else {
+                    setShowInAdhika(false);
+                  }
+                }}
+                style={{ width: '1rem', height: '1rem', cursor: 'pointer' }}
+              />
+              <label htmlFor="showInAdhika" className="ddm-label" style={{ margin: 0, cursor: 'pointer' }}>
+                {isNepali ? 'अधिक मासमा देखाउनुस्' : 'Show in Adhika Maas only'}
+              </label>
             </div>
           )}
 

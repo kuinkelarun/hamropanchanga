@@ -28,7 +28,7 @@ const COLLECTION = 'calendarEvents';
  * @param {boolean} [params.isAdmin]  – Whether created by an admin (default false)
  * @returns {Object} Firestore-ready document (without serverTimestamp for createdAt – added in create)
  */
-export function buildEventDocument({ name, description, date, personId, repetition = 'none', tithi, userId, treeId, isPublic = false, isAdmin = false }) {
+export function buildEventDocument({ name, description, date, personId, repetition = 'none', tithi, userId, treeId, isPublic = false, isAdmin = false, showInAdhika = false }) {
   const nepaliDateForRecurrence = computeNepaliRecurrence(date, repetition, tithi);
 
   return {
@@ -45,6 +45,7 @@ export function buildEventDocument({ name, description, date, personId, repetiti
     createdByAdmin: isAdmin,
     treeId: treeId || null,
     memberId: personId || null,
+    showInAdhika: !!showInAdhika,
   };
 }
 
@@ -67,7 +68,7 @@ export async function createEvent(params) {
  * @param {Object} params  – Fields to update (same shape as buildEventDocument sans userId/treeId)
  * @returns {Promise<void>}
  */
-export async function updateEvent(eventId, { name, description, date, personId, repetition = 'none', tithi }) {
+export async function updateEvent(eventId, { name, description, date, personId, repetition = 'none', tithi, showInAdhika = false }) {
   const nepaliDateForRecurrence = computeNepaliRecurrence(date, repetition, tithi);
 
   const updateData = {
@@ -80,6 +81,7 @@ export async function updateEvent(eventId, { name, description, date, personId, 
     memberId: personId || null,
     nepaliDateForRecurrence: nepaliDateForRecurrence || null,
     tithi: tithi || null,
+    showInAdhika: !!showInAdhika,
   };
 
   const eventRef = doc(db, COLLECTION, eventId);

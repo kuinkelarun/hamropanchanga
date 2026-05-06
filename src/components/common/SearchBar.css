@@ -1,0 +1,56 @@
+.sb-wrap {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    width: 100%;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    background: #fff;
+    padding: 0.4rem 0.75rem;
+    box-sizing: border-box;
+    transition: border-color 0.15s, box-shadow 0.15s;
+}
+.sb-wrap:focus-within {
+    border-color: #667eea;
+    box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.2);
+}
+
+.sb-icon {
+    flex-shrink: 0;
+    color: #a0aec0;
+}
+
+.sb-input {
+    flex: 1;
+    border: none;
+    outline: none;
+    font-size: 0.875rem;
+    color: #2d3748;
+    background: transparent;
+    min-width: 0;
+}
+.sb-input::placeholder {
+    color: #cbd5e0;
+}
+
+.sb-clear {
+    flex-shrink: 0;
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: #a0aec0;
+    font-size: 1rem;
+    line-height: 1;
+    padding: 0 0.15rem;
+    border-radius: 4px;
+}
+.sb-clear:hover {
+    color: #4a5568;
+    background: #f7fafc;
+}
+
+/* Trees page toolbar context — fixed width so it sits next to action buttons */
+.sb-wrap.tsp-search {
+    width: 13rem;
+    flex-shrink: 0;
+}

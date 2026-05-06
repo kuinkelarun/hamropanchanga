@@ -12,6 +12,7 @@ import { useLanguage } from '../../contexts/LanguageContext';
 import BulkUploadModal from '../BulkUploadModal';
 import BulkTreeShareModal from '../BulkTreeShareModal';
 import { useUserPermissions } from '../../hooks/usePermissions';
+import SearchBar from '../common/SearchBar';
 
 export default function TreeSelectionPage({ user, isAdmin }) {
   const navigate = useNavigate();
@@ -380,10 +381,10 @@ export default function TreeSelectionPage({ user, isAdmin }) {
     }
   };
 
-  const handleAddEventFromModal = async ({ name, description, date, personId, repetition, tithi }) => {
+  const handleAddEventFromModal = async ({ name, description, date, personId, repetition, tithi, showInAdhika }) => {
     try {
       if (!eventModal.treeId || !user) return;
-      await createEvent({ name, description, date, personId, repetition, tithi, userId: user.uid, treeId: eventModal.treeId });
+      await createEvent({ name, description, date, personId, repetition, tithi, userId: user.uid, treeId: eventModal.treeId, showInAdhika });
       setEventModal({ open: false, treeId: null, members: [] });
     } catch (err) {
       console.error('Error adding event:', err);
@@ -449,12 +450,11 @@ export default function TreeSelectionPage({ user, isAdmin }) {
           <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
             <h3 className="text-xl font-bold text-gray-800">{t('treeSelection.yourTrees')}</h3>
             <div className="flex gap-3 flex-wrap items-center">
-              <input
-                type="text"
-                placeholder="Search trees..."
+              <SearchBar
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="border border-gray-300 rounded-xl px-3 py-2 text-sm w-48 focus:outline-none focus:ring-2 focus:ring-blue-300"
+                onChange={setSearchQuery}
+                placeholder="Search trees..."
+                className="tsp-search"
               />
               <button
                 onClick={handleCreateTree}

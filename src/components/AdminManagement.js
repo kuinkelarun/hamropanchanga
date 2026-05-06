@@ -1818,6 +1818,8 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
                     <th>Tithi</th>
                     <th>Pakshya</th>
                     <th>Tithi Month</th>
+                    <th>Indicator (नेपाली)</th>
+                    <th>Indicator (English)</th>
                     <th>Start Date</th>
                     <th>Start Time</th>
                     <th>End Date</th>
@@ -1963,6 +1965,24 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
                             <span className="computed-field">{editingData.tithiMonth || '(auto)'}</span>
                           </td>
                           <td>
+                            <input
+                              type="text"
+                              value={editingData.indicatorNepali || ''}
+                              onChange={(e) => updateEditField('indicatorNepali', e.target.value)}
+                              className="edit-input"
+                              placeholder="अधिक"
+                            />
+                          </td>
+                          <td>
+                            <input
+                              type="text"
+                              value={editingData.indicatorEnglish || ''}
+                              onChange={(e) => updateEditField('indicatorEnglish', e.target.value)}
+                              className="edit-input"
+                              placeholder="Adhik"
+                            />
+                          </td>
+                          <td>
                             <NepaliDatePicker
                               value={editingData.startDate || ''}
                               onChange={(adDate) => updateEditField('startDate', adDate)}
@@ -2003,6 +2023,8 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
                           <td>{tithi.tithiName || parseTithiName(tithi.name).tithi || tithi.name}</td>
                           <td>{tithi.pakshya || parseTithiName(tithi.name).pakshya || ''}</td>
                           <td>{tithi.tithiMonth || parseTithiName(tithi.name).tithiMonth || ''}</td>
+                          <td>{tithi.indicatorNepali || ''}</td>
+                          <td>{tithi.indicatorEnglish || ''}</td>
                           <td>{formatDateToNepali(tithi.startDate)}</td>
                           <td>{formatTime12Hour(tithi.startTime)}</td>
                           <td>{formatDateToNepali(tithi.endDate)}</td>
@@ -2018,7 +2040,7 @@ export default function AdminManagement({ user, isAdmin, onBack }) {
                     </tr>
                   ))
                 ) : (
-                  <tr><td colSpan="8" className="empty-state">No tithis found</td></tr>
+                  <tr><td colSpan="10" className="empty-state">No tithis found</td></tr>
                 )
               ) : (
                 <>

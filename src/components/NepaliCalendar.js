@@ -721,7 +721,13 @@ export default function NepaliCalendar({ user: propUser, isAdmin, trees = [], tr
           // applying the 12:30 PM cutoff so the event shows on exactly one day.
           return targetTithis.some(t => {
             const { pakshya: tPaksha, tithi: tName } = parseTithiName(t.name);
-            
+
+            // Adhika Maas suppression: skip Adhika tithis unless the event explicitly opts in
+            const isAdhika = t.indicatorNepali === 'अधिक' ||
+              (t.indicatorEnglish && t.indicatorEnglish.toLowerCase().startsWith('adhik'));
+            if (isAdhika && event.showInAdhika !== true) return false;
+            if (!isAdhika && event.showInAdhika === true) return false;
+
             // Match Paksha and Tithi Name
             const eventPakshaNepali = normalizePakshaToNepali(event.tithi.paksha);
             if (tPaksha !== eventPakshaNepali) return false;
@@ -741,12 +747,18 @@ export default function NepaliCalendar({ user: propUser, isAdmin, trees = [], tr
             
             // If Yearly, check Tithi Month
             if (event.repetition === 'yearly') {
-              const lunarMonthName = getTithiLunarMonthName(event.tithi.paksha, eventTithiIndex, dateKey);
               let eventMonthName = event.tithi.month;
               if (typeof eventMonthName === 'number') {
                 eventMonthName = nepaliMonths[eventMonthName - 1];
               }
-              return lunarMonthName === eventMonthName;
+              // Use the tithi's stored lunar month — NOT the BS calendar month of the current day.
+              // Tithis routinely cross BS month boundaries.
+              if (t.tithiMonth) {
+                return t.tithiMonth === eventMonthName;
+              }
+              // Fallback for legacy tithis without a stored month
+              const computedMonth = getTithiLunarMonthName(event.tithi.paksha, eventTithiIndex, t.startDate);
+              return computedMonth === eventMonthName;
             }
             
             return false;
@@ -853,8 +865,11 @@ export default function NepaliCalendar({ user: propUser, isAdmin, trees = [], tr
   // Helper function to get tithi display name with lunar month
   const getTithiDisplayName = (tithi) => {
     const { tithiMonth: parsedMonth, pakshya, tithi: tithiName } = parseTithiName(tithi.name);
+    const indicator = isNepali ? (tithi.indicatorNepali || '') : (tithi.indicatorEnglish || '');
+    const indicatorPrefix = indicator ? `${indicator} ` : '';
+
     if (!tithi.startDate) {
-      return tithi.name; // Fallback if no date
+      return `${indicatorPrefix}${tithi.name}`; // Fallback if no date
     }
     
     // Prefer stored tithiMonth from Firestore doc, then parsed from name, then compute
@@ -876,10 +891,10 @@ export default function NepaliCalendar({ user: propUser, isAdmin, trees = [], tr
         : lunarMonth;
       const pakshyaDisplay = isNepali ? pakshya : getEnglishPakshyaName(pakshya);
       const tithiDisplay = isNepali ? tithiName : getEnglishTithiName(tithiName);
-      return `${monthDisplay} ${pakshyaDisplay} ${tithiDisplay}`;
+      return `${indicatorPrefix}${monthDisplay} ${pakshyaDisplay} ${tithiDisplay}`;
     }
     
-    return tithi.name; // Fallback to original name if calculation fails
+    return `${indicatorPrefix}${tithi.name}`; // Fallback to original name if calculation fails
   };
 
   // Helper function to format tithi datetime display
@@ -913,6 +928,27 @@ export default function NepaliCalendar({ user: propUser, isAdmin, trees = [], tr
   // Handles edge cases where paksha changes within the same day
   const formatTithiForDayCard = (sortedParsedTithis) => {
     if (sortedParsedTithis.length === 0) return '';
+
+    // Helper: get indicator prefix for a single parsed tithi
+    const getIndicator = (t) => {
+      const ind = isNepali ? (t.indicatorNepali || '') : (t.indicatorEnglish || '');
+      return ind ? `${ind} ` : '';
+    };
+
+    // If any tithi has an indicator, render each tithi individually (no grouping)
+    const anyHasIndicator = sortedParsedTithis.some(t =>
+      isNepali ? t.indicatorNepali : t.indicatorEnglish
+    );
+
+    if (anyHasIndicator) {
+      return sortedParsedTithis
+        .map(t => {
+          const pakshyaDisplay = isNepali ? t.pakshya : getEnglishPakshyaName(t.pakshya);
+          const tithiDisplay = isNepali ? t.tithi : getEnglishTithiName(t.tithi);
+          return `${getIndicator(t)}${pakshyaDisplay} ${tithiDisplay}`;
+        })
+        .join(' / ');
+    }
     
     if (sortedParsedTithis.length === 1) {
       const t = sortedParsedTithis[0];

@@ -150,10 +150,10 @@ export default function TreeDetailPage({ user }) {
     }
   };
 
-  const handleAddEvent = async ({ name, description, date, personId, repetition, tithi }) => {
+  const handleAddEvent = async ({ name, description, date, personId, repetition, tithi, showInAdhika }) => {
     if (!user || !treeId) return;
     try {
-      await createEvent({ name, description, date, personId, repetition, tithi, userId: user.uid, treeId });
+      await createEvent({ name, description, date, personId, repetition, tithi, userId: user.uid, treeId, showInAdhika });
       setIsAddingEvent(false);
       loadTreeData(); // Refresh events
     } catch (err) {
@@ -189,10 +189,10 @@ export default function TreeDetailPage({ user }) {
     }, 3000);
   };
 
-  const handleUpdateEvent = async ({ name, description, date, personId, repetition, tithi }) => {
+  const handleUpdateEvent = async ({ name, description, date, personId, repetition, tithi, showInAdhika }) => {
     if (!user || !treeId || !editingEvent) return;
     try {
-      await updateEvent(editingEvent.id, { name, description, date, personId, repetition, tithi });
+      await updateEvent(editingEvent.id, { name, description, date, personId, repetition, tithi, showInAdhika });
       setIsAddingEvent(false);
       setEditingEvent(null);
       loadTreeData(); // Refresh events
