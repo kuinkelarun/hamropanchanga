@@ -14,6 +14,55 @@ import BulkTreeShareModal from '../BulkTreeShareModal';
 import { useUserPermissions } from '../../hooks/usePermissions';
 import SearchBar from '../common/SearchBar';
 
+const NEPALI_CHAR_ORDER = [
+  'अ','आ','इ','ई','उ','ऊ','ऋ','ए','ऐ','ओ','औ','अं','अः',
+  'क','ख','ग','घ','ङ',
+  'च','छ','ज','झ','ञ',
+  'ट','ठ','ड','ढ','ण',
+  'त','थ','द','ध','न',
+  'प','फ','ब','भ','म',
+  'य','र','ल','व',
+  'श','ष','स','ह',
+  'क्ष','त्र','ज्ञ',
+];
+const NEPALI_ORDER_IDX = new Map(NEPALI_CHAR_ORDER.map((c, i) => [c, i]));
+
+function nepaliFirstKey(s) {
+  for (const seq of ['क्ष','त्र','ज्ञ','अं','अः']) {
+    if (s.startsWith(seq)) return seq;
+  }
+  return s.charAt(0);
+}
+
+function getScriptGroup(title) {
+  const c = (title || '').trim().charAt(0);
+  if (!c) return 3;
+  if (/[0-9]/.test(c)) return 0;
+  if (/[a-zA-Z]/.test(c)) return 1;
+  if (/[ऀ-ॿ]/.test(c)) return 2;
+  return 3;
+}
+
+function sortTrees(arr, ascending) {
+  const sorted = [...arr].sort((a, b) => {
+    const ta = (a.title || '').trim();
+    const tb = (b.title || '').trim();
+    const ga = getScriptGroup(ta);
+    const gb = getScriptGroup(tb);
+    if (ga !== gb) return ga - gb;
+    if (ga === 2) {
+      const ka = nepaliFirstKey(ta);
+      const kb = nepaliFirstKey(tb);
+      const ia = NEPALI_ORDER_IDX.has(ka) ? NEPALI_ORDER_IDX.get(ka) : 999;
+      const ib = NEPALI_ORDER_IDX.has(kb) ? NEPALI_ORDER_IDX.get(kb) : 999;
+      if (ia !== ib) return ia - ib;
+      return ta < tb ? -1 : ta > tb ? 1 : 0;
+    }
+    return ta.localeCompare(tb, 'en', { numeric: true, sensitivity: 'base' });
+  });
+  return ascending ? sorted : sorted.reverse();
+}
+
 export default function TreeSelectionPage({ user, isAdmin }) {
   const navigate = useNavigate();
   const { isSuperUser } = useUserPermissions(user);
@@ -56,6 +105,9 @@ export default function TreeSelectionPage({ user, isAdmin }) {
 
   // Search state for filtering trees
   const [searchQuery, setSearchQuery] = useState('');
+
+  // Sort state — resets to ascending on every page load
+  const [sortAscending, setSortAscending] = useState(true);
 
   // Cache owner email lookups for admin display in Other Users section
   const [ownerEmailByUid, setOwnerEmailByUid] = useState({});
@@ -457,6 +509,23 @@ export default function TreeSelectionPage({ user, isAdmin }) {
                 className="tsp-search"
               />
               <button
+                onClick={() => setSortAscending(prev => !prev)}
+                className="p-2.5 border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-100 transition-colors"
+                title={sortAscending ? 'Sorted A→Z (click for Z→A)' : 'Sorted Z→A (click for A→Z)'}
+                aria-label="Toggle sort order"
+              >
+                <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+                  <line x1="2" y1="4"  x2="12" y2="4" />
+                  <line x1="2" y1="9"  x2="12" y2="9" />
+                  <line x1="2" y1="14" x2="12" y2="14" />
+                  <line x1="15" y1="4" x2="15" y2="14" />
+                  {sortAscending
+                    ? <polyline points="12,11 15,14 18,11" />
+                    : <polyline points="12,7 15,4 18,7" />
+                  }
+                </svg>
+              </button>
+              <button
                 onClick={handleCreateTree}
                 disabled={creating}
                 className="px-6 py-2.5 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 disabled:opacity-60 disabled:cursor-not-allowed text-white rounded-lg font-semibold shadow-md transition-all transform hover:scale-105"
@@ -486,7 +555,7 @@ export default function TreeSelectionPage({ user, isAdmin }) {
 
           {myTrees.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {myTrees.filter(tree => {
+              {sortTrees(myTrees.filter(tree => {
                 if (!searchQuery) return true;
                 const s = searchQuery.toLowerCase();
                 return (
@@ -496,7 +565,7 @@ export default function TreeSelectionPage({ user, isAdmin }) {
                   (tree.contact || '').toLowerCase().includes(s) ||
                   (tree.location || '').toLowerCase().includes(s)
                 );
-              }).map(tree => (
+              }), sortAscending).map(tree => (
                 <div key={tree.id} className="relative bg-gradient-to-br from-white to-gray-50 p-6 rounded-xl shadow-md border border-gray-200 hover:shadow-lg transition-shadow">
                   <div className="cursor-pointer" onClick={() => handleOpenTree(tree.id)}>
                     <div className="flex items-start justify-between mb-3">
@@ -569,7 +638,7 @@ export default function TreeSelectionPage({ user, isAdmin }) {
               <span className="text-sm text-gray-500">{sharedTrees.length} tree{sharedTrees.length !== 1 ? 's' : ''}</span>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {sharedTrees.filter(tree => {
+              {sortTrees(sharedTrees.filter(tree => {
                 if (!searchQuery) return true;
                 const s = searchQuery.toLowerCase();
                 return (
@@ -578,7 +647,7 @@ export default function TreeSelectionPage({ user, isAdmin }) {
                   (tree.contact || '').toLowerCase().includes(s) ||
                   (tree.location || '').toLowerCase().includes(s)
                 );
-              }).map(tree => (
+              }), sortAscending).map(tree => (
                 <div key={tree.id} className="relative bg-gradient-to-br from-blue-50 to-white p-6 rounded-xl shadow-md border border-blue-200 hover:shadow-lg transition-shadow">
                   <div className="cursor-pointer" onClick={() => handleOpenTree(tree.id)}>
                     <div className="flex items-start justify-between mb-3">
@@ -631,7 +700,7 @@ export default function TreeSelectionPage({ user, isAdmin }) {
               <h3 className="text-xl font-bold text-gray-800">{t('treeSelection.otherUsersTrees')}</h3>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {otherTrees.map(tree => (
+              {sortTrees(otherTrees, sortAscending).map(tree => (
                 <div key={tree.id} className="relative bg-gradient-to-br from-white to-gray-50 p-6 rounded-xl shadow-md border border-gray-200 hover:shadow-lg transition-shadow">
                   <div className="cursor-pointer" onClick={() => handleOpenTree(tree.id)}>
                     <div className="flex items-start justify-between mb-3">
