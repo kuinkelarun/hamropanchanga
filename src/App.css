@@ -74,6 +74,27 @@ html, body {
 }
 
 /* Brand + breadcrumb (non-home header) */
+.brand-logo-btn {
+  background: transparent;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  opacity: 0.9;
+  transition: opacity 0.2s ease;
+}
+
+.brand-logo-btn:hover {
+  opacity: 1;
+}
+
+.brand-logo-img {
+  height: 32px;
+  width: 32px;
+  object-fit: contain;
+}
+
 .brand-link {
   font-size: 18px;
   font-weight: 600;

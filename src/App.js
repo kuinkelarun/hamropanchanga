@@ -390,7 +390,19 @@ function AppContent() {
                             )}
 
                             {/* Logo */}
-                            <div className="flex-shrink-0 flex items-center">
+                            <div className="flex-shrink-0 flex items-center gap-2">
+                                <button
+                                    type="button"
+                                    onClick={handleBrandClick}
+                                    className="brand-logo-btn"
+                                    aria-label="Go to home"
+                                >
+                                    <img
+                                        src="/HamroPanchangaLogo.png"
+                                        alt="HamroPanchanga logo"
+                                        className="brand-logo-img"
+                                    />
+                                </button>
                                 <button
                                     type="button"
                                     onClick={handleBrandClick}
