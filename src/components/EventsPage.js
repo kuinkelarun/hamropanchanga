@@ -1,6 +1,5 @@
 import React, { useMemo, useEffect, useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { signInWithGoogle } from '../firebase';
 import { formatNepaliDate, formatEnglishDate, convertAdToBs, convertBsToAd, getNepalDate } from '../utils/nepaliDateUtils';
 import { NEPALI_MONTHS, ENGLISH_NEPALI_MONTHS } from '../constants/calendarConstants';
 import { useEventDisplay, isValidDate } from '../hooks/useEventDisplay';
@@ -200,7 +199,7 @@ export default function EventsPage({ user, events, familyMembers }) {
                         <path d="M7 11V7a5 5 0 0110 0v4" />
                     </svg>
                     <p>{t('events.signInPrompt')}</p>
-                    <button className="ep-signin-btn" onClick={async () => { try { await signInWithGoogle(); } catch (_) {} }}>
+                    <button className="ep-signin-btn" onClick={() => navigate('/login')}>
                         {t('events.signInButton')}
                     </button>
                 </div>

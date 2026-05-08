@@ -4,7 +4,6 @@ import { useChat } from '../../contexts/ChatContext';
 import { useAuth } from '../../contexts/AuthContext';
 import ChatMessage from './ChatMessage';
 import UnconfiguredPrompt from './UnconfiguredPrompt';
-import { signInWithGoogle } from '../../firebase';
 
 const STARTER_PROMPTS = [
   "What's today's tithi?",
@@ -111,7 +110,7 @@ export default function ChatPanel({
         {showHeader && (
           <Header variant={variant} onClose={onClose} onExpand={onExpand} onClear={null} />
         )}
-        <GuestPrompt onSignIn={signInWithGoogle} />
+        <GuestPrompt onSignIn={() => navigate('/login')} />
       </div>
     );
   }

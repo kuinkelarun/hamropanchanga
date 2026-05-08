@@ -2,7 +2,6 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Trees, Members } from './utils/firestoreTreeApi';
 import AddEventForm from '../AddEventForm';
-import { signInWithGoogle } from '../../firebase';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { COLLECTIONS } from '../../constants/firestoreCollections';
@@ -240,13 +239,7 @@ export default function TreeSelectionPage({ user, isAdmin }) {
 
   const handleRequireAuth = async () => {
     if (user) return true;
-    try {
-      await signInWithGoogle();
-    } catch (err) {
-      console.error('Sign in failed:', err);
-      return false;
-    }
-    // App will re-render with a user after successful sign-in.
+    navigate('/login');
     return false;
   };
 
@@ -453,28 +446,8 @@ export default function TreeSelectionPage({ user, isAdmin }) {
   }
 
   if (!user) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-100">
-        <div className="bg-white rounded-lg shadow-md p-6 max-w-md w-full text-center">
-          <h1 className="text-xl font-semibold mb-4 text-gray-800">{t('auth.signInToManageTrees')}</h1>
-          <p className="text-sm text-gray-600 mb-6">
-            {t('auth.needToSignIn')}
-          </p>
-          <button
-            onClick={handleRequireAuth}
-            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md text-sm font-semibold shadow-sm"
-          >
-            {t('auth.signInWithGoogle')}
-          </button>
-          <button
-            onClick={() => navigate('/', { replace: true })}
-            className="mt-3 px-3 py-1 text-sm text-gray-600 hover:text-gray-800"
-          >
-            {t('auth.backToHome')}
-          </button>
-        </div>
-      </div>
-    );
+    navigate('/login', { replace: true, state: { from: '/trees' } });
+    return null;
   }
 
   return (

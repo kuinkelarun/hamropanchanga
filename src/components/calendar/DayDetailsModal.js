@@ -1,9 +1,9 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { convertAdToBs } from '../../utils/nepaliDateUtils';
 import { compareTithisByStart, formatTithiForDisplay } from '../../utils/calendarHelpers';
 import { NEPALI_MONTHS, ENGLISH_NEPALI_MONTHS } from '../../constants/calendarConstants';
-import { signInWithGoogle } from '../../firebase';
 import { PERMISSIONS } from '../../constants/roles';
 
 const DayDetailsModal = ({
@@ -29,6 +29,7 @@ const DayDetailsModal = ({
   getResolvedTithiEventDate,
 }) => {
   const { t, tn, isNepali } = useLanguage();
+  const navigate = useNavigate();
 
   if (!isOpen) return null;
 
@@ -230,9 +231,7 @@ const DayDetailsModal = ({
           {!user && (
             <button
               className="ddm-btn ddm-btn-primary"
-              onClick={async () => {
-                try { await signInWithGoogle(); } catch (err) { console.error('Login error:', err); }
-              }}
+              onClick={() => navigate('/login')}
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M15 3h4a2 2 0 012 2v14a2 2 0 01-2 2h-4M10 17l5-5-5-5M15 12H3" />

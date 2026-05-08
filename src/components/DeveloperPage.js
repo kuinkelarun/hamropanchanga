@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { signInWithGoogle } from '../firebase';
+import { useNavigate } from 'react-router-dom';
 import { submitApiKeyRequest, getMyRequest, acknowledgeKey } from '../services/apiKeyRequestService';
 
 const API_BASE = 'https://us-central1-hamropanchanga.cloudfunctions.net/api';
@@ -119,6 +119,7 @@ function KeyPanel({
   onAcknowledge,
   onResetRequest,
 }) {
+  const navigate = useNavigate();
   if (!user) {
     return (
       <div className="bg-white rounded-xl border border-gray-200 p-6 text-center">
@@ -130,7 +131,7 @@ function KeyPanel({
         <h3 className="text-lg font-semibold text-gray-900 mb-2">Sign in to Request an API Key</h3>
         <p className="text-sm text-gray-500 mb-4">Create a free account to get started with the HamroPanchanga API.</p>
         <button
-          onClick={async () => { try { await signInWithGoogle(); } catch (_) {} }}
+          onClick={async () => { try { navigate('/login'); } catch (_) {} }}
           className="inline-flex items-center gap-2 bg-gray-900 text-white px-5 py-2.5 rounded-lg text-sm font-medium hover:bg-gray-800 transition-colors"
         >
           Sign in with Google
@@ -307,6 +308,7 @@ function KeyPanel({
 }
 
 export default function DeveloperPage({ user, isAdmin }) {
+  const navigate = useNavigate();
   const [request, setRequest] = useState(null);
   const [loadingRequest, setLoadingRequest] = useState(false);
   const [submitting, setSubmitting] = useState(false);

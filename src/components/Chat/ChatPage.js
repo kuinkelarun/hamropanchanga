@@ -1,7 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
-import { signInWithGoogle } from '../../firebase';
 import { useChat } from '../../contexts/ChatContext';
 import ChatPanel from './ChatPanel';
 
@@ -33,7 +32,7 @@ export default function ChatPage() {
           </p>
           <button
             type="button"
-            onClick={() => { signInWithGoogle().catch(() => {}); }}
+            onClick={() => { navigate('/login'); }}
             className="inline-flex items-center gap-2 px-4 py-2 bg-gray-900 text-white text-sm font-medium rounded hover:bg-gray-800 transition-colors"
           >
             Sign in with Google

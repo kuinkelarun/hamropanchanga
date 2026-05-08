@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { BrowserRouter as Router, Routes, Route, useNavigate, useLocation } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { doc, getDoc } from 'firebase/firestore';
-import { signInWithGoogle, db } from './firebase';
+import { db } from './firebase';
 import { useAppData } from './hooks/useAppData';
 import { LanguageProvider, useLanguage } from './contexts/LanguageContext';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
@@ -23,6 +23,8 @@ import DeveloperPage from './components/DeveloperPage';
 import McpPage from './components/McpPage';
 import EventsPage from './components/EventsPage';
 import LlmSettingsPage from './components/Settings/LlmSettingsPage';
+import Login from './Login';
+import VerifyEmailPage from './VerifyEmailPage';
 import { useUserPermissions } from './hooks/usePermissions';
 import { useTithiDateResolver } from './hooks/useTithiDateResolver';
 
@@ -80,7 +82,7 @@ function AppContent() {
     const { t } = useLanguage();
     
     // AUTH STATE (from AuthContext)
-    const { user, isAdmin, isLoading, logout } = useAuth();
+    const { user, isAdmin, isLoading, needsEmailVerification, logout } = useAuth();
     // All Firestore data subscriptions managed by useAppData hook
     const { trees, treeCalendarEvents, personalCalendarEvents, sharedTreeCalendarEvents, treeMembers } = useAppData(user, isAdmin);
     const resolveEventDate = useTithiDateResolver();
@@ -267,7 +269,10 @@ function AppContent() {
     }
 
     // Do not force-navigation to Login; allow landing page to be public.
-    // The Login UI is available via header button or the explicit /login route (Login component still exists).
+    // Hard gate: email/password users who haven't verified are redirected to /verify-email.
+    if (needsEmailVerification && location.pathname !== '/verify-email' && location.pathname !== '/login') {
+        return <Navigate to="/verify-email" replace state={{ from: location.pathname }} />;
+    }
 
     const handleDoubleClickEvent = (event) => {
         sessionStorage.setItem('landingPageScrollPosition', window.scrollY.toString());
@@ -502,13 +507,7 @@ function AppContent() {
                                 </div>
                             ) : (
                                 <button
-                                    onClick={async () => {
-                                        try {
-                                            await signInWithGoogle();
-                                        } catch (err) {
-                                            // logged in helper handles logging
-                                        }
-                                    }}
+                                    onClick={() => navigate('/login')}
                                     className="flex items-center gap-2 text-sm font-medium bg-gray-900 text-white px-4 py-2 rounded hover:bg-gray-800 transition-all"
                                 >
                                     {t('auth.signIn')}
@@ -582,6 +581,8 @@ function AppContent() {
 
             <main role="main">
                 <Routes>
+                    <Route path="/login" element={<Login />} />
+                    <Route path="/verify-email" element={<VerifyEmailPage />} />
                     <Route path="/" element={
                         <LandingPage
                             user={user}
@@ -592,7 +593,7 @@ function AppContent() {
                             familyMembers={allFamilyMembers}
                             onDoubleClickEvent={handleDoubleClickEvent}
                             onEventClick={handleEventClick}
-                            onSignIn={signInWithGoogle}
+                            onSignIn={() => navigate('/login')}
                         />
                     } />
 

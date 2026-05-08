@@ -1,6 +1,17 @@
 // src/firebase.js
 import { initializeApp } from "firebase/app";
-import { getAuth, GoogleAuthProvider, signInWithPopup } from "firebase/auth";
+import {
+  getAuth,
+  GoogleAuthProvider,
+  signInWithPopup,
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  sendPasswordResetEmail,
+  sendEmailVerification,
+  fetchSignInMethodsForEmail,
+  linkWithCredential,
+  EmailAuthProvider,
+} from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
 import { getFunctions, connectFunctionsEmulator } from "firebase/functions";
@@ -43,4 +54,36 @@ export async function signInWithGoogle() {
         console.error('Error signing in with Google', error);
         throw error;
     }
+}
+
+// Helper: create a new account with email + password, then send a verification email
+export async function signUpWithEmail(email, password) {
+    const { user } = await createUserWithEmailAndPassword(auth, email, password);
+    await sendEmailVerification(user);
+    return user;
+}
+
+// Helper: sign in with email + password
+export async function signInWithEmail(email, password) {
+    const { user } = await signInWithEmailAndPassword(auth, email, password);
+    return user;
+}
+
+// Helper: send a password reset email
+export async function sendPasswordReset(email) {
+    await sendPasswordResetEmail(auth, email);
+}
+
+// Helper: check which sign-in methods are registered for an email address.
+// Used to detect when an email/password signup collides with an existing Google account.
+export async function getSignInMethodsForEmail(email) {
+    return fetchSignInMethodsForEmail(auth, email);
+}
+
+// Helper: link an email+password credential to the currently signed-in user.
+// Called after a Google sign-in when the user previously had an email/password account
+// under the same address — merges both providers under one Firebase UID.
+export async function linkEmailCredential(user, email, password) {
+    const credential = EmailAuthProvider.credential(email, password);
+    await linkWithCredential(user, credential);
 }

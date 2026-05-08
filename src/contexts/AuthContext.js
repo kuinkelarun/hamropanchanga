@@ -17,6 +17,7 @@ const AuthContext = createContext({
   user: null,
   isAdmin: false,
   isLoading: true,
+  needsEmailVerification: false,
   logout: async () => {},
 });
 
@@ -152,11 +153,21 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  // True only for email/password accounts that haven't verified their address yet.
+  // Google accounts are always considered verified.
+  const [needsEmailVerification, setNeedsEmailVerification] = useState(false);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       if (currentUser) {
         setUser(currentUser);
+
+        // Flag email/password users who haven't verified their address yet.
+        // Google-linked accounts always have emailVerified = true.
+        const isEmailPasswordUser = currentUser.providerData?.some(
+          (p) => p.providerId === 'password'
+        );
+        setNeedsEmailVerification(isEmailPasswordUser && !currentUser.emailVerified);
 
         // Process invitation (non-blocking for UI but must finish before admin check)
         try {
@@ -176,6 +187,7 @@ export function AuthProvider({ children }) {
       } else {
         setUser(null);
         setIsAdmin(false);
+        setNeedsEmailVerification(false);
       }
       setIsLoading(false);
     });
@@ -192,7 +204,7 @@ export function AuthProvider({ children }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, isAdmin, isLoading, logout }}>
+    <AuthContext.Provider value={{ user, isAdmin, isLoading, needsEmailVerification, logout }}>
       {children}
     </AuthContext.Provider>
   );
