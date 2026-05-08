@@ -1,7 +1,54 @@
 import React, { useState } from 'react';
 
 const MCP_URL = 'https://hamropanchanga-mcp-server.up.railway.app/mcp';
+const SERVER_BASE_URL = 'https://hamropanchanga-mcp-server.up.railway.app';
 const HEALTH_URL = 'https://hamropanchanga-mcp-server.up.railway.app/health';
+
+const OAUTH_SECTIONS = [
+  {
+    id: 'claude-ai-web',
+    label: 'Claude.ai Web',
+    icon: '🌐',
+    description: 'Add the MCP server as a custom connector on claude.ai — no API key needed. Claude handles the OAuth flow automatically.',
+    steps: [
+      'Go to claude.ai and sign in.',
+      'Click your profile name or icon at the bottom-left, then open Settings.',
+      'Navigate to the Connectors section.',
+      'Click "Add custom connector".',
+      'In the Name field enter: hamro-panchanga',
+      'In the Remote MCP server URL field paste the server URL shown below, then click Add.',
+      'Once added, click the Connect button next to hamro-panchanga to authenticate.',
+      'Sign in with the same Google account you use for HamroPanchanga. If you don\'t have a HamroPanchanga account, create one first at hamropanchanga.web.app.',
+      'Once connected, HamroPanchanga tools are available in any Claude.ai chat.',
+    ],
+    configLabel: 'Remote MCP server URL',
+    config: SERVER_BASE_URL,
+    configNote: 'Use the base server URL (without /mcp) in the connector form.',
+    syncCallout: 'Once you add this connector on claude.ai, it syncs automatically to Claude Mobile and Claude Desktop. Verify by clicking the + icon next to the prompt field → Connectors.',
+  },
+  {
+    id: 'claude-mobile',
+    label: 'Claude Mobile',
+    icon: '📱',
+    description: 'The connector you set up on claude.ai web syncs automatically to the Claude iOS and Android app — no separate setup needed.',
+    steps: [
+      'Complete the setup on the Claude.ai Web tab first (if you haven\'t already).',
+      'Open the Claude app on iOS or Android.',
+      'Tap the + icon next to the prompt field and select Connectors — hamro-panchanga should appear and be ready to use.',
+    ],
+  },
+  {
+    id: 'claude-desktop-oauth',
+    label: 'Claude Desktop',
+    icon: '🤖',
+    description: 'The connector you set up on claude.ai web syncs automatically to Claude Desktop — no separate setup needed.',
+    steps: [
+      'Complete the setup on the Claude.ai Web tab first (if you haven\'t already).',
+      'Open Claude Desktop.',
+      'Click the + icon next to the prompt field and select Connectors — hamro-panchanga should appear and be ready to use.',
+    ],
+  },
+];
 
 const CLIENTS = [
   {
@@ -189,8 +236,11 @@ function CodeBlock({ code }) {
 const totalTools = TOOL_GROUPS.reduce((n, g) => n + g.tools.length, 0);
 
 export default function McpPage() {
+  const [connectionMode, setConnectionMode] = useState('oauth'); // 'oauth' | 'apikey'
+  const [activeOAuthSection, setActiveOAuthSection] = useState('claude-ai-web');
   const [activeClient, setActiveClient] = useState('claude-desktop');
   const client = CLIENTS.find(c => c.id === activeClient);
+  const oauthSection = OAUTH_SECTIONS.find(s => s.id === activeOAuthSection);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -218,9 +268,13 @@ export default function McpPage() {
               <span className="w-2 h-2 bg-green-500 rounded-full inline-block"></span>
               {totalTools}+ tools available
             </span>
+            <span className="inline-flex items-center gap-1.5 bg-violet-50 text-violet-700 text-sm px-3 py-1.5 rounded-full font-medium">
+              <span className="w-2 h-2 bg-violet-500 rounded-full inline-block"></span>
+              OAuth — No API key required
+            </span>
             <span className="inline-flex items-center gap-1.5 bg-yellow-50 text-yellow-700 text-sm px-3 py-1.5 rounded-full font-medium">
               <span className="w-2 h-2 bg-yellow-500 rounded-full inline-block"></span>
-              API key required
+              API key (free, 1,000 req/day)
             </span>
           </div>
         </div>
@@ -229,6 +283,152 @@ export default function McpPage() {
       <div className="max-w-6xl mx-auto px-4 sm:px-6 py-10 grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Main content */}
         <div className="lg:col-span-2 space-y-8">
+
+          {/* Mode selector cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {/* OAuth card */}
+            <button
+              onClick={() => setConnectionMode('oauth')}
+              className={`text-left p-5 rounded-xl border-2 transition-all ${
+                connectionMode === 'oauth'
+                  ? 'border-violet-500 bg-violet-50 shadow-sm'
+                  : 'border-gray-200 bg-white hover:border-violet-200 hover:bg-violet-50/40'
+              }`}
+            >
+              <div className="flex items-start justify-between gap-2 mb-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-xl">🔐</span>
+                  <span className={`text-sm font-semibold ${connectionMode === 'oauth' ? 'text-violet-900' : 'text-gray-800'}`}>
+                    Connect with HamroPanchanga MCP
+                  </span>
+                </div>
+                <span className="shrink-0 text-xs font-semibold bg-violet-600 text-white px-2 py-0.5 rounded-full">
+                  Recommended
+                </span>
+              </div>
+              <p className={`text-xs mb-3 ${connectionMode === 'oauth' ? 'text-violet-700' : 'text-gray-500'}`}>
+                OAuth — No API key required
+              </p>
+              <div className="flex flex-wrap gap-1.5">
+                {['Claude.ai', 'Claude Mobile', 'Claude Desktop'].map(chip => (
+                  <span
+                    key={chip}
+                    className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                      connectionMode === 'oauth'
+                        ? 'bg-violet-100 text-violet-700'
+                        : 'bg-gray-100 text-gray-500'
+                    }`}
+                  >
+                    {chip}
+                  </span>
+                ))}
+              </div>
+            </button>
+
+            {/* API Key card */}
+            <button
+              onClick={() => setConnectionMode('apikey')}
+              className={`text-left p-5 rounded-xl border-2 transition-all ${
+                connectionMode === 'apikey'
+                  ? 'border-indigo-500 bg-indigo-50 shadow-sm'
+                  : 'border-gray-200 bg-white hover:border-indigo-200 hover:bg-indigo-50/40'
+              }`}
+            >
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-xl">🔑</span>
+                <span className={`text-sm font-semibold ${connectionMode === 'apikey' ? 'text-indigo-900' : 'text-gray-800'}`}>
+                  Connect with HamroPanchanga MCP
+                </span>
+              </div>
+              <p className={`text-xs mb-3 ${connectionMode === 'apikey' ? 'text-indigo-700' : 'text-gray-500'}`}>
+                Requires API Key
+              </p>
+              <div className="flex flex-wrap gap-1.5">
+                {['Claude Desktop', 'VS Code', 'Codex CLI', 'Inspector'].map(chip => (
+                  <span
+                    key={chip}
+                    className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                      connectionMode === 'apikey'
+                        ? 'bg-indigo-100 text-indigo-700'
+                        : 'bg-gray-100 text-gray-500'
+                    }`}
+                  >
+                    {chip}
+                  </span>
+                ))}
+              </div>
+            </button>
+          </div>
+
+          {/* OAuth flow */}
+          {connectionMode === 'oauth' && (
+            <section className="bg-white rounded-xl border border-gray-200 p-6">
+              <h2 className="text-lg font-semibold text-gray-900 mb-5">Connect Your Client</h2>
+              <div className="flex flex-wrap gap-2 mb-6 border-b border-gray-200 pb-4">
+                {OAUTH_SECTIONS.map(s => (
+                  <button
+                    key={s.id}
+                    onClick={() => setActiveOAuthSection(s.id)}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                      activeOAuthSection === s.id
+                        ? 'bg-violet-600 text-white'
+                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    }`}
+                  >
+                    <span>{s.icon}</span>
+                    {s.label}
+                  </button>
+                ))}
+              </div>
+              {oauthSection && (
+                <>
+                  <p className="text-sm text-gray-600 mb-5">{oauthSection.description}</p>
+                  <ol className="space-y-1.5 text-sm text-gray-700 mb-5">
+                    {oauthSection.steps.map((step, i) => (
+                      <li key={i} className="flex gap-2">
+                        <span className="text-gray-400 font-mono text-xs mt-0.5 shrink-0">{i + 1}.</span>
+                        <span>{step}</span>
+                      </li>
+                    ))}
+                  </ol>
+                  {oauthSection.config && (
+                    <>
+                      <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+                        {oauthSection.configLabel}
+                      </p>
+                      {oauthSection.configs ? (
+                        <div className="space-y-3">
+                          {Object.entries(oauthSection.configs).map(([label, cfg]) => (
+                            <div key={label}>
+                              <p className="text-xs text-gray-500 mb-1">{label}</p>
+                              <CodeBlock code={cfg} />
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <CodeBlock code={oauthSection.config} />
+                      )}
+                    </>
+                  )}
+                  {oauthSection.configNote && (
+                    <div className="mt-3 p-3 bg-gray-50 border border-gray-200 rounded-lg">
+                      <p className="text-xs text-gray-500 italic">{oauthSection.configNote}</p>
+                    </div>
+                  )}
+                  {oauthSection.syncCallout && (
+                    <div className="mt-4 p-3 bg-violet-50 border border-violet-200 rounded-lg flex gap-2">
+                      <span className="text-violet-500 shrink-0 mt-0.5">✓</span>
+                      <p className="text-xs text-violet-800">{oauthSection.syncCallout}</p>
+                    </div>
+                  )}
+                </>
+              )}
+            </section>
+          )}
+
+          {/* API key flow */}
+          {connectionMode === 'apikey' && (
+            <>
 
           {/* Step 1: Get API Key */}
           <section className="bg-white rounded-xl border border-gray-200 p-6">
@@ -342,6 +542,9 @@ export default function McpPage() {
             )}
           </section>
 
+            </>
+          )}
+
           {/* Available Tools */}
           <section className="bg-white rounded-xl border border-gray-200 p-6">
             <h2 className="text-lg font-semibold text-gray-900 mb-1">Available Tools</h2>
@@ -388,7 +591,8 @@ export default function McpPage() {
               </div>
               <div>
                 <p className="text-xs text-gray-500 mb-1">Authentication</p>
-                <code className="text-xs font-mono text-gray-700">Authorization: Bearer npcal_…</code>
+                <span className="text-xs text-gray-700 block">OAuth (recommended)</span>
+                <code className="text-xs font-mono text-gray-500">Authorization: Bearer npcal_… (API key)</code>
               </div>
               <div>
                 <p className="text-xs text-gray-500 mb-1">Rate limit (free plan)</p>
@@ -437,6 +641,7 @@ export default function McpPage() {
               <li>• Check the <a href={HEALTH_URL} target="_blank" rel="noreferrer" className="underline">health endpoint</a> to confirm the server is running.</li>
               <li>• Ensure your config file is valid JSON.</li>
               <li>• Restart your AI client after editing the config.</li>
+              <li>• <strong>OAuth (Claude.ai / Mobile):</strong> If the authorization page doesn't load, check that pop-ups are allowed for claude.ai and try again. If mcp-remote doesn't open a browser window, run it once manually from the terminal to complete the OAuth flow.</li>
               <li>• <strong>Claude Desktop:</strong> "not valid MCP server configuration" error — remove any <code className="bg-amber-100 px-0.5 rounded">"type": "http"</code> config and use the <code className="bg-amber-100 px-0.5 rounded">mcp-remote</code> proxy config shown in the Claude Desktop tab above.</li>
               <li>• <strong>Claude Desktop on Windows:</strong> <code className="bg-amber-100 px-0.5 rounded">'C:\Program' is not recognized</code> — use the full path to <code className="bg-amber-100 px-0.5 rounded">mcp-remote.cmd</code> in <code className="bg-amber-100 px-0.5 rounded">AppData\Roaming\npm\</code> instead of <code className="bg-amber-100 px-0.5 rounded">npx</code> (npx path contains spaces if Node.js is in Program Files).</li>
               <li>• <strong>Claude Desktop (Windows Store):</strong> Config edits to <code className="bg-amber-100 px-0.5 rounded">%APPDATA%\Claude\</code> have no effect — the Store version uses a sandboxed path. Use <em>File → Settings → Developer → Edit Config</em> in Claude Desktop to open the correct file.</li>

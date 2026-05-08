@@ -417,7 +417,7 @@ function AppContent() {
                                         <button
                                             type="button"
                                             onClick={handleBreadcrumbClick}
-                                            className="breadcrumb-title"
+                                            className="breadcrumb-title max-w-[140px] sm:max-w-none truncate"
                                             aria-label={`Refresh ${headerPageName}`}
                                         >
                                             {headerPageName}

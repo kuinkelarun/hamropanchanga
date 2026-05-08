@@ -90,8 +90,8 @@ html, body {
 }
 
 .brand-logo-img {
-  height: 32px;
-  width: 32px;
+  height: 38px;
+  width: 38px;
   object-fit: contain;
 }
 
@@ -108,6 +108,12 @@ html, body {
 
 .brand-link:hover {
   color: #7c3aed; /* purple-600 */
+}
+
+@media (max-width: 639px) {
+  .brand-link {
+    display: none;
+  }
 }
 
 .breadcrumb-title {
