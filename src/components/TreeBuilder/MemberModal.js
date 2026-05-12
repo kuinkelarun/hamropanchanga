@@ -173,6 +173,7 @@ export default function MemberModal({
               onClick={onClose}
               style={{
                 position: 'absolute', top: '12px', right: '12px',
+                zIndex: 2,
                 background: 'rgba(255,255,255,0.12)', border: 'none',
                 color: 'rgba(255,255,255,0.8)', width: '32px', height: '32px',
                 borderRadius: '8px', cursor: 'pointer', display: 'flex',
@@ -301,20 +302,6 @@ export default function MemberModal({
             </div>
           </div>
 
-          {/* Footer */}
-          <div style={{
-            padding: '12px 20px 16px', borderTop: '1px solid #f1f5f9',
-            background: '#ffffff', borderRadius: '0 0 16px 16px',
-            display: 'flex', justifyContent: 'center',
-          }}>
-            <button
-              onClick={onClose}
-              className="ddm-btn ddm-btn-ghost"
-              style={{ minWidth: '120px' }}
-            >
-              {t('memberModal.close')}
-            </button>
-          </div>
         </div>
       </div>
     );
