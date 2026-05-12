@@ -75,7 +75,7 @@ const DayDetailsModal = ({
         <div className="nc-modal-body">
 
           {/* ---- Tithis Section ---- */}
-          <div className="ddm-section">
+          <div className="ddm-section ddm-section-tithi">
             <div className="ddm-section-header">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" />
@@ -103,7 +103,7 @@ const DayDetailsModal = ({
           </div>
 
           {/* ---- Public Events Section ---- */}
-          <div className="ddm-section">
+          <div className="ddm-section ddm-section-public">
             <div className="ddm-section-header">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <rect x="3" y="4" width="18" height="18" rx="2" />
@@ -136,7 +136,7 @@ const DayDetailsModal = ({
           </div>
 
           {/* ---- Private Events Section ---- */}
-          <div className="ddm-section">
+          <div className="ddm-section ddm-section-private">
             <div className="ddm-section-header">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" />

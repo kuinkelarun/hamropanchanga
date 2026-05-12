@@ -1744,7 +1744,7 @@
 
 /* ---- Header ---- */
 .ddm-header {
-    background: linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #4c1d95 100%);
+    background: linear-gradient(135deg, #4a3a8a 0%, #5a4fa8 50%, #764ba2 100%);
     padding: 20px 20px 16px;
     display: flex;
     justify-content: space-between;
@@ -1791,18 +1791,24 @@
 }
 
 /* ---- Body (override parent) ---- */
+.ddm-modal.nc-modal {
+    background: #faf8ff;
+}
 .ddm-modal .nc-modal-body {
     padding: 4px 20px 0;
 }
 
 /* ---- Sections ---- */
 .ddm-section {
-    padding: 14px 0;
-    border-bottom: 1px solid #f1f5f9;
+    padding: 12px 10px;
+    border-bottom: 1px solid rgba(139, 92, 246, 0.08);
+    border-radius: 10px;
+    margin-bottom: 6px;
 }
 
 .ddm-section:last-of-type {
     border-bottom: none;
+    margin-bottom: 0;
 }
 
 .ddm-section-header {
@@ -1810,14 +1816,12 @@
     align-items: center;
     gap: 8px;
     margin-bottom: 10px;
-    color: #475569;
 }
 
 .ddm-section-header h4 {
     margin: 0;
     font-size: 0.8rem;
     font-weight: 700;
-    color: #334155;
     text-transform: uppercase;
     letter-spacing: 0.04em;
     flex: 1;
@@ -1825,12 +1829,10 @@
 
 .ddm-section-header svg {
     flex-shrink: 0;
-    opacity: 0.6;
+    opacity: 0.7;
 }
 
 .ddm-badge {
-    background: #f1f5f9;
-    color: #64748b;
     font-size: 0.7rem;
     font-weight: 700;
     padding: 2px 8px;
@@ -1838,6 +1840,31 @@
     min-width: 22px;
     text-align: center;
 }
+
+/* ---- Per-section tints ---- */
+.ddm-section-tithi {
+    background: rgba(254, 243, 199, 0.45);
+    border: 1px solid rgba(245, 158, 11, 0.15);
+}
+.ddm-section-tithi .ddm-section-header { color: #92400e; }
+.ddm-section-tithi .ddm-section-header h4 { color: #92400e; }
+.ddm-section-tithi .ddm-badge { background: #fef3c7; color: #92400e; }
+
+.ddm-section-public {
+    background: rgba(219, 234, 254, 0.45);
+    border: 1px solid rgba(59, 130, 246, 0.15);
+}
+.ddm-section-public .ddm-section-header { color: #1e3a8a; }
+.ddm-section-public .ddm-section-header h4 { color: #1e3a8a; }
+.ddm-section-public .ddm-badge { background: #dbeafe; color: #1e40af; }
+
+.ddm-section-private {
+    background: rgba(209, 250, 229, 0.45);
+    border: 1px solid rgba(16, 185, 129, 0.15);
+}
+.ddm-section-private .ddm-section-header { color: #064e3b; }
+.ddm-section-private .ddm-section-header h4 { color: #064e3b; }
+.ddm-section-private .ddm-badge { background: #d1fae5; color: #065f46; }
 
 /* ---- Items ---- */
 .ddm-items {
@@ -1860,6 +1887,25 @@
 .ddm-item:hover {
     background: #f8fafc;
 }
+
+/* Per-type item tints */
+.ddm-item-tithi {
+    background: rgba(255, 251, 235, 0.9);
+    border-color: rgba(245, 158, 11, 0.2);
+}
+.ddm-item-tithi:hover { background: rgba(254, 243, 199, 0.95); }
+
+.ddm-item-public {
+    background: rgba(239, 246, 255, 0.9);
+    border-color: rgba(59, 130, 246, 0.2);
+}
+.ddm-item-public:hover { background: rgba(219, 234, 254, 0.95); }
+
+.ddm-item-private {
+    background: rgba(236, 253, 245, 0.9);
+    border-color: rgba(16, 185, 129, 0.2);
+}
+.ddm-item-private:hover { background: rgba(209, 250, 229, 0.95); }
 
 /* Dot indicator */
 .ddm-item-icon-dot {
@@ -1986,7 +2032,8 @@
     display: flex;
     gap: 8px;
     padding: 14px 20px 18px;
-    border-top: 1px solid #f1f5f9;
+    border-top: 1px solid rgba(139, 92, 246, 0.1);
+    background: rgba(139, 92, 246, 0.04);
     flex-wrap: wrap;
 }
 
