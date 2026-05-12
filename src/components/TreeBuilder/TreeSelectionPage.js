@@ -102,6 +102,16 @@ export default function TreeSelectionPage({ user, isAdmin }) {
 
   // (Migration state removed - one-time operations completed)
 
+  // User's saved phone number (pre-populate contact field)
+  const [userPhone, setUserPhone] = useState('');
+
+  useEffect(() => {
+    if (!user?.uid) return;
+    getDoc(doc(db, 'users', user.uid)).then(snap => {
+      if (snap.exists()) setUserPhone(snap.data().phoneNumber || '');
+    }).catch(() => {});
+  }, [user?.uid]);
+
   // Search state for filtering trees
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -256,6 +266,7 @@ export default function TreeSelectionPage({ user, isAdmin }) {
       return;
     }
     // Open creation modal to collect tree title and initial member name
+    setNewTreeData(prev => ({ ...prev, contact: prev.contact || userPhone }));
     setCreatingModalOpen(true);
   };
 

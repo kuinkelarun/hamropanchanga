@@ -418,3 +418,692 @@ exports.regenerateApiKey = functions.https.onCall(async (data, context) => {
 
   return { success: true, keyId: keyRef.id };
 });
+
+// ─── WhatsApp: notify on tree share ──────────────────────────────────────────
+//
+// Triggers when a `trees/{treeId}` document is updated.
+// NOTE: WhatsApp notification is now handled by the shareTreeWithWhatsApp callable.
+// This trigger is kept for future use but WhatsApp sending is disabled here.
+
+const { sendTemplateMessage } = require('./whatsapp/sendWhatsApp');
+const { getTargetDatesNPT } = require('./utils/dateUtils');
+
+exports.onTreeShared = functions.firestore
+  .database('hamropanchanga-db')
+  .document('trees/{treeId}')
+  .onUpdate(async (change, context) => {
+    // WhatsApp notifications are sent directly by the shareTreeWithWhatsApp callable
+    // which handles the invitation token logic. This trigger is a no-op for sharing.
+    return null;
+  });
+
+// ─── WhatsApp: daily event reminders ─────────────────────────────────────────
+//
+// Runs daily at 00:15 UTC (≈ 06:00 NPT).
+// Sends WhatsApp reminders for calendar events that fall on:
+//   - today in NPT (day-of reminder)
+//   - today + 7 days in NPT (week-ahead reminder)
+//
+// The calendarEvents collection uses `dateKey` (YYYY-MM-DD AD) as the date field.
+// Only non-public (personal/tree) events are considered.
+
+exports.sendEventReminders = functions.pubsub
+  .schedule('15 0 * * *')
+  .timeZone('UTC')
+  .onRun(async () => {
+    const db = admin.firestore();
+
+    // Determine target dates (today NPT and +7 days NPT, in AD YYYY-MM-DD format)
+    const targetDates = getTargetDatesNPT();
+    console.log('[sendEventReminders] Target dates:', targetDates);
+
+    // Fetch all non-public events on either target date
+    const eventSnaps = await Promise.all(
+      targetDates.map((dateKey) =>
+        db.collection('calendarEvents')
+          .where('dateKey', '==', dateKey)
+          .where('isPublic', '==', false)
+          .get()
+      )
+    );
+
+    // Collect all matching events, annotate with which date offset triggered them
+    const allEvents = [];
+    eventSnaps.forEach((snap, idx) => {
+      const isWeekAhead = idx === 1;
+      snap.docs.forEach((d) => {
+        allEvents.push({ id: d.id, ...d.data(), isWeekAhead });
+      });
+    });
+
+    if (allEvents.length === 0) {
+      console.log('[sendEventReminders] No events to remind today.');
+      return null;
+    }
+
+    // Group events by the UID that created them (createdBy field)
+    const byCreator = {};
+    for (const event of allEvents) {
+      const uid = event.createdBy;
+      if (!uid) continue;
+      if (!byCreator[uid]) byCreator[uid] = [];
+      byCreator[uid].push(event);
+    }
+
+    // Also collect tree-shared events: for each event that has a treeId,
+    // notify every member of that tree who has opted in.
+    const treeEventsByMember = {}; // memberEmail → events[]
+    const treeCache = {};
+
+    for (const event of allEvents) {
+      if (!event.treeId) continue;
+
+      if (!treeCache[event.treeId]) {
+        try {
+          const treeDoc = await db.collection('trees').doc(event.treeId).get();
+          treeCache[event.treeId] = treeDoc.exists ? treeDoc.data() : null;
+        } catch (_) {
+          treeCache[event.treeId] = null;
+        }
+      }
+
+      const treeData = treeCache[event.treeId];
+      if (!treeData) continue;
+
+      // sharedWith is a map { email: true }
+      const memberEmails = Object.keys(treeData.sharedWith || {});
+      for (const email of memberEmails) {
+        if (!treeEventsByMember[email]) treeEventsByMember[email] = [];
+        treeEventsByMember[email].push(event);
+      }
+    }
+
+    // Helper to send a single reminder
+    async function sendReminder(phoneNumber, displayName, event) {
+      const dateLabel = event.isWeekAhead ? 'in 7 days' : 'today';
+      const title     = event.title || event.tithi || 'an event';
+
+      try {
+        await sendTemplateMessage(
+          phoneNumber,
+          'event_reminder',
+          'en',
+          [
+            {
+              type: 'body',
+              parameters: [
+                { type: 'text', text: displayName },
+                { type: 'text', text: title },
+                { type: 'text', text: dateLabel },
+              ],
+            },
+          ]
+        );
+      } catch (err) {
+        console.error(`[sendEventReminders] Failed for ${phoneNumber}:`, err.message);
+      }
+    }
+
+    // Notify event creators
+    await Promise.all(
+      Object.entries(byCreator).map(async ([uid, events]) => {
+        try {
+          const userDoc = await db.collection('users').doc(uid).get();
+          if (!userDoc.exists) return;
+          const userData = userDoc.data();
+          if (!userData.phoneNumber || !userData.whatsAppOptIn) return;
+
+          for (const event of events) {
+            await sendReminder(userData.phoneNumber, userData.displayName || 'there', event);
+          }
+        } catch (err) {
+          console.error(`[sendEventReminders] Error for creator ${uid}:`, err.message);
+        }
+      })
+    );
+
+    // Notify tree-shared members (by email lookup)
+    await Promise.all(
+      Object.entries(treeEventsByMember).map(async ([email, events]) => {
+        try {
+          const usersSnap = await db.collection('users')
+            .where('email', '==', email)
+            .limit(1)
+            .get();
+          if (usersSnap.empty) return;
+
+          const userData = usersSnap.docs[0].data();
+          const uid      = usersSnap.docs[0].id;
+
+          if (!userData.phoneNumber || !userData.whatsAppOptIn) return;
+
+          // Skip events already notified via the byCreator path
+          const eventsToNotify = events.filter((e) => e.createdBy !== uid);
+          for (const event of eventsToNotify) {
+            await sendReminder(userData.phoneNumber, userData.displayName || 'there', event);
+          }
+        } catch (err) {
+          console.error(`[sendEventReminders] Error for member ${email}:`, err.message);
+        }
+      })
+    );
+
+    console.log('[sendEventReminders] Done.');
+    return null;
+  });
+// ─── Email: share tree callable ────────────────────────────────────────────
+//
+// Called when a user shares a tree by email (no WhatsApp phone provided).
+// Two-branch logic:
+//   A) Email found in users → grant access + send WhatsApp notification if opted in
+//   B) Email NOT found → create invitation token + send email via Resend
+
+const { Resend } = require('resend');
+
+function buildInviteEmailHtml({ fromEmail, treeName, inviteUrl }) {
+  return `
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><title>Family Tree Invitation</title></head>
+<body style="font-family:Arial,sans-serif;background:#f9fafb;padding:32px;">
+  <div style="max-width:480px;margin:0 auto;background:#fff;border-radius:12px;padding:32px;border:1px solid #e5e7eb;">
+    <h1 style="font-size:20px;color:#1a1a1a;margin-top:0;margin-bottom:8px;">Family tree shared with you</h1>
+    <p style="color:#374151;font-size:15px;line-height:1.6;">
+      <strong>${fromEmail}</strong> has shared the family tree
+      <strong>&ldquo;${treeName}&rdquo;</strong> with you on HamroPanchanga.
+    </p>
+    <p style="color:#374151;font-size:15px;line-height:1.6;">Click the link below to accept and view the tree:</p>
+    <div style="margin:28px 0;">
+      <a href="${inviteUrl}"
+         style="background:#16a34a;color:#fff;text-decoration:none;padding:12px 28px;border-radius:6px;font-size:15px;font-weight:600;display:inline-block;">
+        Accept Invitation
+      </a>
+    </div>
+    <p style="color:#6b7280;font-size:13px;">Or copy this link into your browser:</p>
+    <p style="color:#6b7280;font-size:12px;word-break:break-all;">${inviteUrl}</p>
+    <hr style="border:none;border-top:1px solid #e5e7eb;margin:24px 0;" />
+    <p style="color:#9ca3af;font-size:11px;margin:0;">This invitation expires in 30 days. If you did not expect this email, you can safely ignore it. This is a one-time notification from HamroPanchanga.</p>
+  </div>
+</body>
+</html>`;
+}
+
+function buildNotificationEmailHtml({ fromEmail, treeName, appUrl }) {
+  return `
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><title>Family Tree Shared</title></head>
+<body style="font-family:Arial,sans-serif;background:#f9fafb;padding:32px;">
+  <div style="max-width:480px;margin:0 auto;background:#fff;border-radius:12px;padding:32px;border:1px solid #e5e7eb;">
+    <h1 style="font-size:20px;color:#1a1a1a;margin-top:0;margin-bottom:8px;">A family tree was shared with you</h1>
+    <p style="color:#374151;font-size:15px;line-height:1.6;">
+      <strong>${fromEmail}</strong> has shared the family tree
+      <strong>&ldquo;${treeName}&rdquo;</strong> with you on HamroPanchanga.
+      Sign in to view it.
+    </p>
+    <div style="margin:28px 0;">
+      <a href="${appUrl}"
+         style="background:#16a34a;color:#fff;text-decoration:none;padding:12px 28px;border-radius:6px;font-size:15px;font-weight:600;display:inline-block;">
+        Open HamroPanchanga
+      </a>
+    </div>
+    <hr style="border:none;border-top:1px solid #e5e7eb;margin:24px 0;" />
+    <p style="color:#9ca3af;font-size:11px;margin:0;">If you did not expect this email, you can safely ignore it. This is a one-time notification from HamroPanchanga.</p>
+  </div>
+</body>
+</html>`;
+}
+
+exports.shareTreeWithEmail = functions.https.onCall(async (data, context) => {
+  if (!context.auth) {
+    throw new functions.https.HttpsError('unauthenticated', 'Must be signed in.');
+  }
+
+  const { treeId, recipientEmail, permission } = data;
+
+  if (!treeId || typeof treeId !== 'string') {
+    throw new functions.https.HttpsError('invalid-argument', 'treeId is required.');
+  }
+  if (!recipientEmail || typeof recipientEmail !== 'string') {
+    throw new functions.https.HttpsError('invalid-argument', 'recipientEmail is required.');
+  }
+  const allowedPermissions = ['view', 'edit'];
+  const resolvedPermission = allowedPermissions.includes(permission) ? permission : 'view';
+
+  const db = admin.firestore();
+  const treeRef = db.collection('trees').doc(treeId);
+  const treeSnap = await treeRef.get();
+  if (!treeSnap.exists) {
+    throw new functions.https.HttpsError('not-found', 'Tree not found.');
+  }
+  const treeData = treeSnap.data();
+  if (treeData.ownerUid !== context.auth.uid) {
+    throw new functions.https.HttpsError('permission-denied', 'Only the tree owner can share it.');
+  }
+
+  const treeName = treeData.title || treeData.name || 'a family tree';
+  const fromEmail = (context.auth.token.email || '').toLowerCase();
+  const ownerDisplay = treeData.ownerName || fromEmail;
+  const recipientLower = recipientEmail.toLowerCase();
+
+  // ── Branch A: recipient already has an account ────────────────────────
+  const byEmailSnap = await db.collection('users')
+    .where('email', '==', recipientLower)
+    .limit(1)
+    .get();
+
+  if (!byEmailSnap.empty) {
+    const foundUser = byEmailSnap.docs[0].data();
+    const recipientDisplay = foundUser.displayName || recipientLower;
+
+    await treeRef.update({
+      [`sharedWith.${recipientLower}`]: {
+        permission: resolvedPermission,
+        sharedAt: admin.firestore.FieldValue.serverTimestamp(),
+        sharedBy: fromEmail,
+      },
+      sharedWithEmails: admin.firestore.FieldValue.arrayUnion(recipientLower),
+    });
+
+    // Send WhatsApp notification if recipient has opted in
+    if (foundUser.phoneNumber && foundUser.whatsAppOptIn) {
+      const lang = foundUser.phoneNumber.startsWith('+977') ? 'ne' : 'en';
+      try {
+        await sendTemplateMessage(foundUser.phoneNumber, 'tree_shared_notification', lang, [
+          {
+            type: 'body',
+            parameters: [
+              { type: 'text', text: recipientDisplay },
+              { type: 'text', text: ownerDisplay },
+              { type: 'text', text: treeName },
+            ],
+          },
+        ]);
+      } catch (err) {
+        console.error('[shareTreeWithEmail] Branch A: WhatsApp notify failed:', err.message);
+      }
+    }
+
+    // Always send email notification to existing user
+    const RESEND_API_KEY_A = process.env.RESEND_API_KEY;
+    const RESEND_FROM_EMAIL_A = process.env.RESEND_FROM_EMAIL || 'noreply@hamropanchanga.com';
+    if (RESEND_API_KEY_A) {
+      try {
+        const resend = new Resend(RESEND_API_KEY_A);
+        await resend.emails.send({
+          from: `HamroPanchanga <${RESEND_FROM_EMAIL_A}>`,
+          to: [recipientLower],
+          subject: `${ownerDisplay} shared a family tree with you on HamroPanchanga`,
+          text: `${ownerDisplay} has shared the family tree "${treeName}" with you on HamroPanchanga. Sign in at https://hamropanchanga.com to view it.`,
+          html: buildNotificationEmailHtml({
+            fromEmail: ownerDisplay,
+            treeName,
+            appUrl: 'https://hamropanchanga.com',
+          }),
+        });
+      } catch (err) {
+        console.error('[shareTreeWithEmail] Branch A: Email notify failed:', err.message);
+      }
+    }
+
+    return { branch: 'A', email: recipientLower };
+  }
+
+  // ── Branch B: unknown recipient → create invitation + send email ──────
+  const RESEND_API_KEY = process.env.RESEND_API_KEY;
+  const RESEND_FROM_EMAIL = process.env.RESEND_FROM_EMAIL || 'noreply@hamropanchanga.com';
+
+  if (!RESEND_API_KEY) {
+    // Fallback: just grant access without sending email (graceful degradation)
+    console.warn('[shareTreeWithEmail] RESEND_API_KEY not set — skipping email send.');
+  }
+
+  const expiresAt = new Date();
+  expiresAt.setDate(expiresAt.getDate() + 30);
+
+  const invitationRef = db.collection('invitations').doc();
+  const invitationId = invitationRef.id;
+
+  await invitationRef.set({
+    treeId,
+    treeTitle: treeName,
+    fromUid: context.auth.uid,
+    fromEmail,
+    hintEmail: recipientLower,
+    whatsappPhone: null,
+    permission: resolvedPermission,
+    status: 'pending',
+    expiresAt: admin.firestore.Timestamp.fromDate(expiresAt),
+    claimedByEmail: null,
+    claimedByUid: null,
+    claimedAt: null,
+    expiredReason: null,
+    createdAt: admin.firestore.FieldValue.serverTimestamp(),
+  });
+
+  const inviteUrl = `https://hamropanchanga.com/invite/${invitationId}`;
+
+  if (RESEND_API_KEY) {
+    try {
+      const resend = new Resend(RESEND_API_KEY);
+      await resend.emails.send({
+        from: `HamroPanchanga <${RESEND_FROM_EMAIL}>`,
+        to: [recipientLower],
+        subject: `${ownerDisplay} shared a family tree with you on HamroPanchanga`,
+        text: `${ownerDisplay} has shared the family tree "${treeName}" with you on HamroPanchanga. Accept your invitation here: ${inviteUrl}`,
+        html: buildInviteEmailHtml({ fromEmail: ownerDisplay, treeName, inviteUrl }),
+      });
+      console.log(`[shareTreeWithEmail] Email sent to ${recipientLower}`);
+    } catch (err) {
+      console.error('[shareTreeWithEmail] Branch B: Email send failed:', err.message);
+      // Invitation is still created — don't throw
+    }
+  }
+
+  return { branch: 'B', invitationId };
+});
+
+// ─── WhatsApp: share tree callable ───────────────────────────────────────────
+//
+// Called from the client when a user shares a tree with a WhatsApp phone number.
+// Three-branch logic:
+//   A) Phone found in users → user already has an account → grant access + notify
+//   B) Not found by phone but hintEmail user exists → grant access + notify (no token)
+//   C) Neither found → create invitation token → send invite link via WhatsApp
+
+exports.shareTreeWithWhatsApp = functions.https.onCall(async (data, context) => {
+  if (!context.auth) {
+    throw new functions.https.HttpsError('unauthenticated', 'Must be signed in.');
+  }
+
+  const { treeId, hintEmail, whatsappPhone, permission } = data;
+
+  if (!treeId || typeof treeId !== 'string') {
+    throw new functions.https.HttpsError('invalid-argument', 'treeId is required.');
+  }
+  if (!whatsappPhone || typeof whatsappPhone !== 'string') {
+    throw new functions.https.HttpsError('invalid-argument', 'whatsappPhone is required.');
+  }
+  if (!hintEmail || typeof hintEmail !== 'string') {
+    throw new functions.https.HttpsError('invalid-argument', 'hintEmail is required.');
+  }
+  const allowedPermissions = ['view', 'edit'];
+  const resolvedPermission = allowedPermissions.includes(permission) ? permission : 'view';
+
+  const db = admin.firestore();
+
+  // Load the tree to verify caller is the owner
+  const treeRef = db.collection('trees').doc(treeId);
+  const treeSnap = await treeRef.get();
+  if (!treeSnap.exists) {
+    throw new functions.https.HttpsError('not-found', 'Tree not found.');
+  }
+  const treeData = treeSnap.data();
+  if (treeData.ownerUid !== context.auth.uid) {
+    throw new functions.https.HttpsError('permission-denied', 'Only the tree owner can share it.');
+  }
+
+  const treeName = treeData.title || treeData.name || 'a family tree';
+  const fromEmail = context.auth.token.email || hintEmail;
+  const ownerDisplay = treeData.ownerName || fromEmail;
+
+  // ── Branch A: look up user by phone number ─────────────────────────────
+  const byPhoneSnap = await db.collection('users')
+    .where('phoneNumber', '==', whatsappPhone)
+    .limit(1)
+    .get();
+
+  if (!byPhoneSnap.empty) {
+    // User found by phone — grant access
+    const foundUser = byPhoneSnap.docs[0].data();
+    const foundEmail = (foundUser.email || hintEmail).toLowerCase();
+    const recipientDisplay = foundUser.displayName || foundEmail;
+
+    await treeRef.update({
+      [`sharedWith.${foundEmail}`]: {
+        permission: resolvedPermission,
+        sharedAt: admin.firestore.FieldValue.serverTimestamp(),
+        sharedBy: fromEmail,
+      },
+      sharedWithEmails: admin.firestore.FieldValue.arrayUnion(foundEmail),
+    });
+
+    // Send notification (existing user, no invite needed)
+    const langA = whatsappPhone.startsWith('+977') ? 'ne' : 'en';
+    try {
+      await sendTemplateMessage(whatsappPhone, 'tree_shared_notification', langA, [
+        {
+          type: 'body',
+          parameters: [
+            { type: 'text', text: recipientDisplay },
+            { type: 'text', text: ownerDisplay },
+            { type: 'text', text: treeName },
+          ],
+        },
+      ]);
+    } catch (err) {
+      console.error('[shareTreeWithWhatsApp] Branch A: WhatsApp send failed:', err.message);
+    }
+
+    return { branch: 'A', email: foundEmail };
+  }
+
+  // ── Branch B: no phone match, but hintEmail user exists ───────────────
+  const hintEmailLower = hintEmail.toLowerCase();
+  const byEmailSnap = await db.collection('users')
+    .where('email', '==', hintEmailLower)
+    .limit(1)
+    .get();
+
+  if (!byEmailSnap.empty) {
+    const foundUser = byEmailSnap.docs[0].data();
+    const recipientDisplay = foundUser.displayName || hintEmailLower;
+
+    await treeRef.update({
+      [`sharedWith.${hintEmailLower}`]: {
+        permission: resolvedPermission,
+        sharedAt: admin.firestore.FieldValue.serverTimestamp(),
+        sharedBy: fromEmail,
+      },
+      sharedWithEmails: admin.firestore.FieldValue.arrayUnion(hintEmailLower),
+    });
+
+    // Notify on the WhatsApp number they provided (may not match stored phone)
+    const langB = whatsappPhone.startsWith('+977') ? 'ne' : 'en';
+    try {
+      await sendTemplateMessage(whatsappPhone, 'tree_shared_notification', langB, [
+        {
+          type: 'body',
+          parameters: [
+            { type: 'text', text: recipientDisplay },
+            { type: 'text', text: ownerDisplay },
+            { type: 'text', text: treeName },
+          ],
+        },
+      ]);
+    } catch (err) {
+      console.error('[shareTreeWithWhatsApp] Branch B: WhatsApp send failed:', err.message);
+    }
+
+    return { branch: 'B', email: hintEmailLower };
+  }
+
+  // ── Branch C: unknown recipient → create invitation token ─────────────
+  const expiresAt = new Date();
+  expiresAt.setDate(expiresAt.getDate() + 30);
+
+  const invitationRef = db.collection('invitations').doc();
+  const invitationId = invitationRef.id;
+
+  await invitationRef.set({
+    treeId,
+    treeTitle: treeName,
+    fromUid: context.auth.uid,
+    fromEmail,
+    hintEmail: hintEmailLower,
+    whatsappPhone,
+    permission: resolvedPermission,
+    status: 'pending',
+    expiresAt: admin.firestore.Timestamp.fromDate(expiresAt),
+    claimedByEmail: null,
+    claimedByUid: null,
+    claimedAt: null,
+    expiredReason: null,
+    createdAt: admin.firestore.FieldValue.serverTimestamp(),
+  });
+
+  const inviteUrl = `https://hamropanchanga.com/invite/${invitationId}`;
+
+  const langC = whatsappPhone.startsWith('+977') ? 'ne' : 'en';
+  try {
+    await sendTemplateMessage(whatsappPhone, 'tree_shared_invitation', langC, [
+      {
+        type: 'body',
+        parameters: [
+          { type: 'text', text: ownerDisplay },
+          { type: 'text', text: inviteUrl },
+        ],
+      },
+    ]);
+  } catch (err) {
+    console.error('[shareTreeWithWhatsApp] Branch C: WhatsApp send failed:', err.message);
+    // Invitation is still created — user can resend manually
+  }
+
+  return { branch: 'C', invitationId };
+});
+
+// ─── Claim invitation callable ─────────────────────────────────────────────
+//
+// Called when an authenticated user visits /invite/:invitationId and clicks "Join".
+// Validates the invitation, grants tree access to the caller, marks it claimed.
+
+exports.claimInvitation = functions.https.onCall(async (data, context) => {
+  if (!context.auth) {
+    throw new functions.https.HttpsError('unauthenticated', 'Must be signed in to claim an invitation.');
+  }
+
+  const { invitationId } = data;
+  if (!invitationId || typeof invitationId !== 'string') {
+    throw new functions.https.HttpsError('invalid-argument', 'invitationId is required.');
+  }
+
+  const db = admin.firestore();
+  const invRef = db.collection('invitations').doc(invitationId);
+  const invSnap = await invRef.get();
+
+  if (!invSnap.exists) {
+    throw new functions.https.HttpsError('not-found', 'Invitation not found.');
+  }
+
+  const inv = invSnap.data();
+
+  if (inv.status !== 'pending') {
+    throw new functions.https.HttpsError(
+      'failed-precondition',
+      inv.status === 'claimed' ? 'This invitation has already been claimed.' : 'This invitation has expired.'
+    );
+  }
+
+  const now = admin.firestore.Timestamp.now();
+  if (inv.expiresAt && inv.expiresAt.toMillis() < now.toMillis()) {
+    await invRef.update({ status: 'expired', expiredReason: 'expired_by_date' });
+    throw new functions.https.HttpsError('deadline-exceeded', 'This invitation has expired.');
+  }
+
+  const callerEmail = (context.auth.token.email || '').toLowerCase();
+  const treeRef = db.collection('trees').doc(inv.treeId);
+
+  // Atomically grant tree access and mark claimed
+  const batch = db.batch();
+
+  batch.update(treeRef, {
+    [`sharedWith.${callerEmail}`]: {
+      permission: inv.permission,
+      sharedAt: now,
+      sharedBy: inv.fromEmail,
+    },
+    sharedWithEmails: admin.firestore.FieldValue.arrayUnion(callerEmail),
+  });
+
+  // If a hintEmail was set, remove it from sharedWith (not yet granted, just pending)
+  if (inv.hintEmail && inv.hintEmail !== callerEmail) {
+    batch.update(treeRef, {
+      [`sharedWith.${inv.hintEmail}`]: admin.firestore.FieldValue.delete(),
+      sharedWithEmails: admin.firestore.FieldValue.arrayRemove(inv.hintEmail),
+    });
+  }
+
+  batch.update(invRef, {
+    status: 'claimed',
+    claimedByEmail: callerEmail,
+    claimedByUid: context.auth.uid,
+    claimedAt: now,
+    expiredReason: 'claimed_by_hint_email',
+  });
+
+  await batch.commit();
+
+  return { treeId: inv.treeId, treeTitle: inv.treeTitle };
+});
+// ─── WhatsApp Webhook ─────────────────────────────────────────────────────────
+//
+// Callback URL: https://us-central1-hamropanchanga.cloudfunctions.net/whatsappWebhook
+//
+// GET  — Meta verification challenge (one-time during setup)
+// POST — Incoming messages / delivery status updates
+
+exports.whatsappWebhook = functions.https.onRequest((req, res) => {
+  const VERIFY_TOKEN = process.env.WHATSAPP_WEBHOOK_VERIFY_TOKEN;
+
+  // ── Webhook verification (GET) ──────────────────────────────────────────
+  if (req.method === 'GET') {
+    const mode      = req.query['hub.mode'];
+    const token     = req.query['hub.verify_token'];
+    const challenge = req.query['hub.challenge'];
+
+    if (mode === 'subscribe' && token === VERIFY_TOKEN) {
+      console.log('[whatsappWebhook] Webhook verified successfully.');
+      return res.status(200).send(challenge);
+    }
+    console.warn('[whatsappWebhook] Verification failed — token mismatch.');
+    return res.sendStatus(403);
+  }
+
+  // ── Incoming events (POST) ──────────────────────────────────────────────
+  if (req.method === 'POST') {
+    const body = req.body;
+
+    // Validate it's from WhatsApp
+    if (body.object !== 'whatsapp_business_account') {
+      return res.sendStatus(404);
+    }
+
+    try {
+      for (const entry of (body.entry || [])) {
+        for (const change of (entry.changes || [])) {
+          const value = change.value || {};
+
+          // Status updates (delivered, read, failed, etc.)
+          for (const status of (value.statuses || [])) {
+            console.log('[whatsappWebhook] Status update:', JSON.stringify(status));
+            // Future: update Firestore delivery status here
+          }
+
+          // Incoming messages (replies from users)
+          for (const message of (value.messages || [])) {
+            console.log('[whatsappWebhook] Incoming message from', message.from, ':', JSON.stringify(message));
+            // Future: handle opt-out keywords like "STOP" here
+          }
+        }
+      }
+    } catch (err) {
+      console.error('[whatsappWebhook] Error processing payload:', err.message);
+    }
+
+    // Always respond 200 quickly so Meta doesn't retry
+    return res.sendStatus(200);
+  }
+
+  return res.sendStatus(405);
+});

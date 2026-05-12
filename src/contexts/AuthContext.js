@@ -8,7 +8,8 @@
  */
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { onAuthStateChanged, signOut, getIdTokenResult } from 'firebase/auth';
-import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc, collection, query, where, getDocs } from 'firebase/firestore';
+import { getFunctions, httpsCallable } from 'firebase/functions';
 import { auth, db } from '../firebase';
 import { COLLECTIONS } from '../constants/firestoreCollections';
 import { USER_ROLES, DEFAULT_ROLE_PERMISSIONS } from '../constants/roles';
@@ -18,6 +19,10 @@ const AuthContext = createContext({
   isAdmin: false,
   isLoading: true,
   needsEmailVerification: false,
+  setNeedsEmailVerification: () => {},
+  needsPhone: false,
+  skipPhone: false,
+  setSkipPhone: () => {},
   logout: async () => {},
 });
 
@@ -126,6 +131,35 @@ async function processInvitation(currentUser) {
 }
 
 /**
+ * Auto-claim any pending WhatsApp invitations where the signed-in user's email
+ * matches the hintEmail on the invitation. This handles the case where a user
+ * signs up after receiving a WhatsApp invitation but doesn't use the invite link.
+ */
+async function autoClaimPendingInvitations(currentUser) {
+  const email = (currentUser.email || '').toLowerCase();
+  if (!email) return;
+
+  try {
+    const invRef = collection(db, 'invitations');
+    const q = query(invRef,
+      where('hintEmail', '==', email),
+      where('status', '==', 'pending')
+    );
+    const snap = await getDocs(q);
+    if (snap.empty) return;
+
+    const claimFn = httpsCallable(getFunctions(), 'claimInvitation');
+    await Promise.allSettled(
+      snap.docs.map((d) => claimFn({ invitationId: d.id }))
+    );
+    console.log(`[AuthContext] Auto-claimed ${snap.docs.length} pending invitation(s) for ${email}`);
+  } catch (err) {
+    // Non-fatal — invitation claiming failures shouldn't block sign-in
+    console.warn('[AuthContext] Auto-claim invitations failed:', err.message);
+  }
+}
+
+/**
  * Determine whether the current user is an admin.
  * Check order: adminList/{uid} → token custom claims → users/{uid}.role
  */
@@ -156,6 +190,16 @@ export function AuthProvider({ children }) {
   // True only for email/password accounts that haven't verified their address yet.
   // Google accounts are always considered verified.
   const [needsEmailVerification, setNeedsEmailVerification] = useState(false);
+  // True when the user is signed in, verified, but hasn't added a phone number yet.
+  const [needsPhone, setNeedsPhone] = useState(false);
+  const [skipPhone, setSkipPhoneState] = useState(
+    () => sessionStorage.getItem('skipPhone') === 'true'
+  );
+  const setSkipPhone = (val) => {
+    if (val) sessionStorage.setItem('skipPhone', 'true');
+    else sessionStorage.removeItem('skipPhone');
+    setSkipPhoneState(val);
+  };
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
@@ -167,7 +211,23 @@ export function AuthProvider({ children }) {
         const isEmailPasswordUser = currentUser.providerData?.some(
           (p) => p.providerId === 'password'
         );
-        setNeedsEmailVerification(isEmailPasswordUser && !currentUser.emailVerified);
+        const unverified = isEmailPasswordUser && !currentUser.emailVerified;
+        setNeedsEmailVerification(unverified);
+
+        // Check if the user still needs to add a phone number.
+        // Only check after email is verified to avoid a race with the verification gate.
+        if (!unverified) {
+          try {
+            const userDocRef = doc(db, COLLECTIONS.USERS, currentUser.uid);
+            const userDocSnap = await getDoc(userDocRef);
+            const hasPhone = userDocSnap.exists() && !!userDocSnap.data().phoneNumber;
+            setNeedsPhone(!hasPhone);
+          } catch (_phoneCheckErr) {
+            setNeedsPhone(false);
+          }
+        } else {
+          setNeedsPhone(false);
+        }
 
         // Process invitation (non-blocking for UI but must finish before admin check)
         try {
@@ -175,6 +235,9 @@ export function AuthProvider({ children }) {
         } catch (err) {
           console.error('Error processing user invitation:', err.code || err.message || err);
         }
+
+        // Auto-claim any pending WhatsApp invitations for this email
+        autoClaimPendingInvitations(currentUser).catch(() => {});
 
         // Check admin status
         try {
@@ -188,6 +251,8 @@ export function AuthProvider({ children }) {
         setUser(null);
         setIsAdmin(false);
         setNeedsEmailVerification(false);
+        setNeedsPhone(false);
+        setSkipPhone(false);
       }
       setIsLoading(false);
     });
@@ -204,7 +269,7 @@ export function AuthProvider({ children }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, isAdmin, isLoading, needsEmailVerification, logout }}>
+    <AuthContext.Provider value={{ user, isAdmin, isLoading, needsEmailVerification, setNeedsEmailVerification, needsPhone, setNeedsPhone, skipPhone, setSkipPhone, logout }}>
       {children}
     </AuthContext.Provider>
   );

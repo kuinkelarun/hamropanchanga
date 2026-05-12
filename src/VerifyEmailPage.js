@@ -3,11 +3,13 @@ import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { sendEmailVerification, reload } from 'firebase/auth';
 import { auth } from './firebase';
+import { useAuth } from './contexts/AuthContext';
 
 export default function VerifyEmailPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const from = location.state?.from || '/';
+  const { setNeedsEmailVerification } = useAuth();
 
   const [resendStatus, setResendStatus] = useState('idle'); // idle | sending | sent | error
   const [checkStatus, setCheckStatus] = useState('idle');  // idle | checking | error
@@ -29,7 +31,9 @@ export default function VerifyEmailPage() {
     try {
       await reload(auth.currentUser);
       if (auth.currentUser.emailVerified) {
-        navigate(from, { replace: true });
+        // Clear the gate in context so App.js doesn't immediately redirect back
+        setNeedsEmailVerification(false);
+        navigate('/add-phone', { replace: true, state: { from } });
       } else {
         setCheckStatus('error');
       }

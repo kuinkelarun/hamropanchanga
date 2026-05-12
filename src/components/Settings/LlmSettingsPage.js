@@ -1,5 +1,8 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { doc, getDoc, updateDoc } from 'firebase/firestore';
+import PhoneInput, { isValidPhoneNumber } from 'react-phone-number-input';
+import 'react-phone-number-input/style.css';
+import { db } from '../../firebase';
 import { useAuth } from '../../contexts/AuthContext';
 import { useChat } from '../../contexts/ChatContext';
 import {
@@ -14,7 +17,6 @@ const ANTHROPIC_DEFAULT_MODEL = 'claude-opus-4-7';
 const BEDROCK_DEFAULT_MODEL = 'anthropic.claude-opus-4-v1:0';
 
 export default function LlmSettingsPage() {
-  const navigate = useNavigate();
   const { user, isLoading: authLoading } = useAuth();
   const { refreshConfig } = useChat();
 
@@ -38,6 +40,7 @@ export default function LlmSettingsPage() {
   const [error, setError] = useState(null);
   const [testResult, setTestResult] = useState(null);
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [activeTab, setActiveTab] = useState('whatsapp'); // 'whatsapp' | 'ai-provider'
 
   const loadConfig = useCallback(async () => {
     setLoading(true);
@@ -177,125 +180,151 @@ export default function LlmSettingsPage() {
   if (!user) {
     return (
       <div className="max-w-3xl mx-auto py-10 px-4">
-        <h1 className="text-2xl font-semibold text-gray-900 mb-3">AI Provider</h1>
-        <p className="text-gray-600">Sign in to configure your AI provider.</p>
+        <h1 className="text-2xl font-semibold text-gray-900 mb-3">Settings</h1>
+        <p className="text-gray-600">Sign in to configure your settings.</p>
       </div>
     );
   }
 
   return (
     <div className="max-w-3xl mx-auto py-8 px-4">
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-semibold text-gray-900">AI Provider</h1>
-          <p className="text-sm text-gray-500 mt-1">
-            Bring your own API key. Credentials are encrypted on the server and never shared with other users.
-          </p>
-        </div>
-        <button
-          onClick={() => navigate('/')}
-          className="text-sm text-gray-500 hover:text-gray-700"
-        >
-          ← Back
-        </button>
+      {/* Tab bar */}
+      <div className="flex gap-1 border-b border-gray-200 mb-6">
+        <TabButton
+          label="WhatsApp Notifications"
+          active={activeTab === 'whatsapp'}
+          onClick={() => setActiveTab('whatsapp')}
+        />
+        <TabButton
+          label="AI Provider"
+          active={activeTab === 'ai-provider'}
+          onClick={() => setActiveTab('ai-provider')}
+        />
       </div>
 
-      {loading ? (
-        <div className="text-gray-500">Loading configuration…</div>
-      ) : (
+      {/* Tab: WhatsApp Notifications */}
+      {activeTab === 'whatsapp' && (
+        <WhatsAppSection uid={user.uid} />
+      )}
+
+      {/* Tab: AI Provider */}
+      {activeTab === 'ai-provider' && (
         <>
-          {error && mode !== 'edit' && (
-            <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2 mb-4">
-              {error}
-            </div>
-          )}
-          {config?.configured && mode === 'view' && (
-            <ConfiguredView
-              config={config}
-              onEdit={() => { setMode('edit'); setSaveSuccess(false); setTestResult(null); }}
-              onTest={handleTest}
-              onDelete={handleDelete}
-              testing={testing}
-              deleting={deleting}
-              testResult={testResult}
-              saveSuccess={saveSuccess}
-            />
-          )}
-
-          {mode === 'edit' && (
-            <form onSubmit={handleSave} className="bg-white rounded-xl border border-gray-200 p-6 space-y-5">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Provider</label>
-                <div className="flex gap-3">
-                  <ProviderRadio
-                    id="anthropic"
-                    label="Anthropic API"
-                    sublabel="Use your Anthropic API key directly"
-                    checked={provider === 'anthropic'}
-                    onChange={() => setProvider('anthropic')}
-                  />
-                  <ProviderRadio
-                    id="bedrock"
-                    label="AWS Bedrock"
-                    sublabel="Use Claude via your AWS account"
-                    checked={provider === 'bedrock'}
-                    onChange={() => setProvider('bedrock')}
-                  />
-                </div>
-              </div>
-
-              {provider === 'anthropic' ? (
-                <AnthropicFields
-                  apiKey={anthropicKey}
-                  setApiKey={setAnthropicKey}
-                  model={anthropicModel}
-                  setModel={setAnthropicModel}
-                />
-              ) : (
-                <BedrockFields
-                  region={bedrockRegion}
-                  setRegion={setBedrockRegion}
-                  accessKeyId={bedrockAccessKeyId}
-                  setAccessKeyId={setBedrockAccessKeyId}
-                  secretKey={bedrockSecretKey}
-                  setSecretKey={setBedrockSecretKey}
-                  sessionToken={bedrockSessionToken}
-                  setSessionToken={setBedrockSessionToken}
-                  model={bedrockModel}
-                  setModel={setBedrockModel}
-                />
-              )}
-
-              {error && (
-                <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+          <p className="text-sm text-gray-500 mb-5">
+            Bring your own API key. Credentials are encrypted on the server and never shared with other users.
+          </p>
+          {loading ? (
+            <div className="text-gray-500">Loading configuration…</div>
+          ) : (
+            <>
+              {error && mode !== 'edit' && (
+                <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2 mb-4">
                   {error}
                 </div>
               )}
-              {/* Note: page-level error banner also shown above for load errors */}
+              {config?.configured && mode === 'view' && (
+                <ConfiguredView
+                  config={config}
+                  onEdit={() => { setMode('edit'); setSaveSuccess(false); setTestResult(null); }}
+                  onTest={handleTest}
+                  onDelete={handleDelete}
+                  testing={testing}
+                  deleting={deleting}
+                  testResult={testResult}
+                  saveSuccess={saveSuccess}
+                />
+              )}
 
-              <div className="flex items-center gap-3 pt-2">
-                <button
-                  type="submit"
-                  disabled={saving}
-                  className="px-4 py-2 bg-gray-900 text-white text-sm font-medium rounded-lg hover:bg-gray-800 disabled:opacity-50"
-                >
-                  {saving ? 'Saving…' : 'Save'}
-                </button>
-                {config?.configured && (
-                  <button
-                    type="button"
-                    onClick={() => { setMode('view'); resetForms(); }}
-                    className="px-4 py-2 text-sm text-gray-600 hover:text-gray-900"
-                  >
-                    Cancel
-                  </button>
-                )}
-              </div>
-            </form>
+              {mode === 'edit' && (
+                <form onSubmit={handleSave} className="bg-white rounded-xl border border-gray-200 p-6 space-y-5">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Provider</label>
+                    <div className="flex gap-3">
+                      <ProviderRadio
+                        id="anthropic"
+                        label="Anthropic API"
+                        sublabel="Use your Anthropic API key directly"
+                        checked={provider === 'anthropic'}
+                        onChange={() => setProvider('anthropic')}
+                      />
+                      <ProviderRadio
+                        id="bedrock"
+                        label="AWS Bedrock"
+                        sublabel="Use Claude via your AWS account"
+                        checked={provider === 'bedrock'}
+                        onChange={() => setProvider('bedrock')}
+                      />
+                    </div>
+                  </div>
+
+                  {provider === 'anthropic' ? (
+                    <AnthropicFields
+                      apiKey={anthropicKey}
+                      setApiKey={setAnthropicKey}
+                      model={anthropicModel}
+                      setModel={setAnthropicModel}
+                    />
+                  ) : (
+                    <BedrockFields
+                      region={bedrockRegion}
+                      setRegion={setBedrockRegion}
+                      accessKeyId={bedrockAccessKeyId}
+                      setAccessKeyId={setBedrockAccessKeyId}
+                      secretKey={bedrockSecretKey}
+                      setSecretKey={setBedrockSecretKey}
+                      sessionToken={bedrockSessionToken}
+                      setSessionToken={setBedrockSessionToken}
+                      model={bedrockModel}
+                      setModel={setBedrockModel}
+                    />
+                  )}
+
+                  {error && (
+                    <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+                      {error}
+                    </div>
+                  )}
+
+                  <div className="flex items-center gap-3 pt-2">
+                    <button
+                      type="submit"
+                      disabled={saving}
+                      className="px-4 py-2 bg-gray-900 text-white text-sm font-medium rounded-lg hover:bg-gray-800 disabled:opacity-50"
+                    >
+                      {saving ? 'Saving…' : 'Save'}
+                    </button>
+                    {config?.configured && (
+                      <button
+                        type="button"
+                        onClick={() => { setMode('view'); resetForms(); }}
+                        className="px-4 py-2 text-sm text-gray-600 hover:text-gray-900"
+                      >
+                        Cancel
+                      </button>
+                    )}
+                  </div>
+                </form>
+              )}
+            </>
           )}
         </>
       )}
     </div>
+  );
+}
+
+function TabButton({ label, active, onClick }) {
+  return (
+    <button
+      onClick={onClick}
+      className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
+        active
+          ? 'border-gray-900 text-gray-900'
+          : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+      }`}
+    >
+      {label}
+    </button>
   );
 }
 
@@ -518,6 +547,156 @@ function ConfiguredView({ config, onEdit, onTest, onDelete, testing, deleting, t
           {deleting ? 'Removing…' : 'Remove configuration'}
         </button>
       </div>
+    </div>
+  );
+}
+
+// ─── WhatsApp Notifications section ──────────────────────────────────────────
+
+function WhatsAppSection({ uid }) {
+  const { setNeedsPhone } = useAuth();
+  const [loading, setLoading] = useState(true);
+  const [phone, setPhone] = useState('');
+  const [optIn, setOptIn] = useState(true);
+  const [mode, setMode] = useState('view'); // 'view' | 'edit'
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const snap = await getDoc(doc(db, 'users', uid));
+        if (!cancelled && snap.exists()) {
+          const data = snap.data();
+          setPhone(data.phoneNumber || '');
+          setOptIn(data.whatsAppOptIn !== false);
+        }
+      } catch (_) {
+        // silently ignore
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [uid]);
+
+  const handleSave = async () => {
+    if (phone && !isValidPhoneNumber(phone)) {
+      setError('Enter a valid phone number including country code, or leave blank to remove.');
+      return;
+    }
+    setSaving(true);
+    setError('');
+    try {
+      await updateDoc(doc(db, 'users', uid), {
+        phoneNumber: phone || null,
+        whatsAppOptIn: phone ? optIn : false,
+        phoneAddedAt: phone ? new Date().toISOString() : null,
+      });
+      // Update the needsPhone banner in the header via AuthContext setter
+      setNeedsPhone(!phone);
+      setMode('view');
+    } catch (err) {
+      console.error('Failed to update phone number:', err);
+      setError('Save failed. Please try again.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="mt-2">
+      <p className="text-sm text-gray-500 mb-4">
+        Receive event reminders and tree-sharing alerts via WhatsApp.
+        Messages are sent only to you and only for events you have access to.
+      </p>
+
+      {loading ? (
+        <div className="text-sm text-gray-400">Loading…</div>
+      ) : mode === 'view' ? (
+        <div className="bg-white rounded-xl border border-gray-200 p-5 flex items-center justify-between gap-4">
+          <div>
+            {phone ? (
+              <>
+                <div className="flex items-center gap-2 mb-0.5">
+                  <div className="w-2 h-2 rounded-full bg-green-500" />
+                  <span className="text-sm font-medium text-gray-900">Notifications active</span>
+                </div>
+                <p className="text-sm text-gray-500">{phone} · {optIn ? 'Reminders on' : 'Reminders off'}</p>
+              </>
+            ) : (
+              <>
+                <div className="flex items-center gap-2 mb-0.5">
+                  <div className="w-2 h-2 rounded-full bg-gray-300" />
+                  <span className="text-sm font-medium text-gray-900">No WhatsApp number set</span>
+                </div>
+                <p className="text-sm text-gray-500">Add a number to receive event reminders.</p>
+              </>
+            )}
+          </div>
+          <button
+            onClick={() => setMode('edit')}
+            className="px-4 py-2 bg-gray-900 text-white text-sm font-medium rounded-lg hover:bg-gray-800 whitespace-nowrap"
+          >
+            {phone ? 'Edit' : 'Add number'}
+          </button>
+        </div>
+      ) : (
+        <div className="bg-white rounded-xl border border-gray-200 p-5 space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">
+              WhatsApp Number
+            </label>
+            <div className={`phone-input-wrapper rounded-lg border ${error ? 'border-red-400' : 'border-gray-300'} focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500 transition-colors`}>
+              <PhoneInput
+                international
+                countryCallingCodeEditable={false}
+                defaultCountry="NP"
+                value={phone}
+                onChange={(val) => { setPhone(val || ''); setError(''); }}
+              />
+            </div>
+            {error && <p className="mt-1 text-xs text-red-600">{error}</p>}
+            <p className="mt-1 text-xs text-gray-400">Leave blank to remove your number.</p>
+          </div>
+
+          <label className="flex items-center gap-3 cursor-pointer">
+            <div className="relative flex-shrink-0">
+              <input
+                type="checkbox"
+                checked={optIn}
+                onChange={(e) => setOptIn(e.target.checked)}
+                className="sr-only peer"
+              />
+              <div className="w-5 h-5 rounded border-2 border-gray-300 peer-checked:bg-green-500 peer-checked:border-green-500 transition-colors flex items-center justify-center">
+                {optIn && (
+                  <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                  </svg>
+                )}
+              </div>
+            </div>
+            <span className="text-sm text-gray-700">Send me WhatsApp reminders for events I've added</span>
+          </label>
+
+          <div className="flex items-center gap-3 pt-1">
+            <button
+              onClick={handleSave}
+              disabled={saving}
+              className="px-4 py-2 bg-gray-900 text-white text-sm font-medium rounded-lg hover:bg-gray-800 disabled:opacity-50"
+            >
+              {saving ? 'Saving…' : 'Save'}
+            </button>
+            <button
+              onClick={() => { setMode('view'); setError(''); }}
+              className="px-4 py-2 text-sm text-gray-600 hover:text-gray-900"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

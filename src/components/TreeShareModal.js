@@ -4,8 +4,11 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import PhoneInput, { isValidPhoneNumber } from 'react-phone-number-input';
+import 'react-phone-number-input/style.css';
+import { httpsCallable } from 'firebase/functions';
+import { functions } from '../firebase';
 import {
-  shareTreeWithUser,
   updateSharePermission,
   removeTreeShare
 } from '../services/BulkUploadService';
@@ -14,6 +17,7 @@ import './TreeShareModal.css';
 
 const TreeShareModal = ({ isOpen, onClose, tree, onComplete, userEmail, userId }) => {
   const [recipientEmail, setRecipientEmail] = useState('');
+  const [whatsappPhone, setWhatsappPhone] = useState('');
   const [permission, setPermission] = useState(SHARE_PERMISSIONS.VIEW);
   const [sharedUsers, setSharedUsers] = useState({});
   const [isLoading, setIsLoading] = useState(false);
@@ -54,9 +58,32 @@ const TreeShareModal = ({ isOpen, onClose, tree, onComplete, userEmail, userId }
       return;
     }
 
+    if (whatsappPhone && !isValidPhoneNumber(whatsappPhone)) {
+      setError('Please enter a valid WhatsApp phone number (include country code)');
+      return;
+    }
+
     try {
       setIsLoading(true);
-      await shareTreeWithUser(tree.id, recipientEmail.toLowerCase(), permission, userEmail);
+
+      if (whatsappPhone) {
+        // Use WhatsApp-enhanced sharing callable (handles invite token logic)
+        const fn = httpsCallable(functions, 'shareTreeWithWhatsApp');
+        await fn({
+          treeId: tree.id,
+          hintEmail: recipientEmail.toLowerCase(),
+          whatsappPhone,
+          permission,
+        });
+      } else {
+        // Email-only share: sends invite email or WhatsApp notification if user exists
+        const fn = httpsCallable(functions, 'shareTreeWithEmail');
+        await fn({
+          treeId: tree.id,
+          recipientEmail: recipientEmail.toLowerCase(),
+          permission,
+        });
+      }
 
       setSharedUsers({
         ...sharedUsers,
@@ -67,8 +94,11 @@ const TreeShareModal = ({ isOpen, onClose, tree, onComplete, userEmail, userId }
         }
       });
 
-      setSuccess(`Tree shared with ${recipientEmail}`);
+      setSuccess(whatsappPhone
+        ? `Invitation sent to ${recipientEmail} via WhatsApp`
+        : `Invitation sent to ${recipientEmail}`);
       setRecipientEmail('');
+      setWhatsappPhone('');
       setPermission(SHARE_PERMISSIONS.VIEW);
 
       if (onComplete) {
@@ -133,6 +163,7 @@ const TreeShareModal = ({ isOpen, onClose, tree, onComplete, userEmail, userId }
 
   const handleClose = () => {
     setRecipientEmail('');
+    setWhatsappPhone('');
     setPermission(SHARE_PERMISSIONS.VIEW);
     setError(null);
     setSuccess(null);
@@ -197,6 +228,22 @@ const TreeShareModal = ({ isOpen, onClose, tree, onComplete, userEmail, userId }
                 className="tsm-input"
                 disabled={isLoading}
               />
+            </div>
+
+            <div className="tsm-form-group">
+              <label className="tsm-label">
+                📱 WhatsApp Phone <span className="tsm-optional">(optional)</span>
+              </label>
+              <PhoneInput
+                international
+                defaultCountry="NP"
+                value={whatsappPhone}
+                onChange={setWhatsappPhone}
+                disabled={isLoading}
+                placeholder="+977 98XXXXXXXX"
+                className="tsm-phone-input"
+              />
+              <p className="tsm-field-hint">If provided, an invitation link will be sent via WhatsApp</p>
             </div>
 
             <div className="tsm-form-group">

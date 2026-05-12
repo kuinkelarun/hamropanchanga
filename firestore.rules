@@ -325,6 +325,25 @@ service cloud.firestore {
       }
     }
 
+    // Tree sharing invitations via WhatsApp
+    // Created by the shareTreeWithWhatsApp Cloud Function (Admin SDK bypasses rules).
+    // Recipient can read their own invitation by ID or by matching phone/email.
+    // Claiming is handled by the claimInvitation Cloud Function (Admin SDK).
+    match /invitations/{invitationId} {
+      // Sender or admin can read any invitation
+      allow read: if isAdmin() ||
+        (isAuthenticated() && resource.data.fromUid == request.auth.uid);
+
+      // Recipient can read if their email matches hintEmail or they were linked by phone
+      allow read: if isAuthenticated() && (
+        (resource.data.hintEmail != null && resource.data.hintEmail == userEmailLower()) ||
+        (resource.data.claimedByUid != null && resource.data.claimedByUid == request.auth.uid)
+      );
+
+      // No client-side writes — all mutations go through Cloud Functions (Admin SDK)
+      allow create, update, delete: if false;
+    }
+
     // Encrypted per-user LLM credentials — managed exclusively by the chat backend
     // via the Firebase Admin SDK (which bypasses these rules). Browser clients must
     // never be able to read or write this collection directly.

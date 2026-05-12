@@ -23,8 +23,10 @@ import DeveloperPage from './components/DeveloperPage';
 import McpPage from './components/McpPage';
 import EventsPage from './components/EventsPage';
 import LlmSettingsPage from './components/Settings/LlmSettingsPage';
+import InvitationLandingPage from './components/InvitationLandingPage';
 import Login from './Login';
 import VerifyEmailPage from './VerifyEmailPage';
+import PhoneSetupPage from './components/PhoneSetupPage';
 import { useUserPermissions } from './hooks/usePermissions';
 import { useTithiDateResolver } from './hooks/useTithiDateResolver';
 
@@ -82,7 +84,7 @@ function AppContent() {
     const { t } = useLanguage();
     
     // AUTH STATE (from AuthContext)
-    const { user, isAdmin, isLoading, needsEmailVerification, logout } = useAuth();
+    const { user, isAdmin, isLoading, needsEmailVerification, needsPhone, skipPhone, logout } = useAuth();
     // All Firestore data subscriptions managed by useAppData hook
     const { trees, treeCalendarEvents, personalCalendarEvents, sharedTreeCalendarEvents, treeMembers } = useAppData(user, isAdmin);
     const resolveEventDate = useTithiDateResolver();
@@ -120,7 +122,7 @@ function AppContent() {
         if (pathname.startsWith('/events')) return 'Events & Reminders';
         if (pathname.startsWith('/builder')) return 'Builder';
         if (pathname.startsWith('/chat')) return 'Chat';
-        if (pathname.startsWith('/settings/llm')) return 'AI Provider';
+        if (pathname.startsWith('/settings/llm')) return 'Settings';
 
         const clean = pathname.replace(/^\//, '').split('/')[0] || '';
         return clean
@@ -134,10 +136,6 @@ function AppContent() {
     const headerPageName = getHeaderPageName(location.pathname);
 
     const handleBrandClick = () => {
-        if (location.pathname === '/') {
-            window.location.reload();
-            return;
-        }
         navigate('/', { replace: true });
     };
 
@@ -150,6 +148,15 @@ function AppContent() {
     useEffect(() => {
         setMobileMenuOpen(false);
     }, [location.pathname]);
+
+    // Auto-redirect new users to phone setup page (skip if already there or on auth pages)
+    const authPages = ['/login', '/verify-email', '/add-phone', '/invite'];
+    const isAuthPage = authPages.some(p => location.pathname.startsWith(p));
+    useEffect(() => {
+        if (!isLoading && user && needsPhone && !skipPhone && !isAuthPage) {
+            navigate('/add-phone', { state: { from: location.pathname }, replace: true });
+        }
+    }, [needsPhone, skipPhone, isLoading, user, isAuthPage]); // eslint-disable-line react-hooks/exhaustive-deps
 
     // Close dev dropdown on outside click
     useEffect(() => {
@@ -579,10 +586,26 @@ function AppContent() {
                 )}
             </header>
 
+            {/* Soft banner: prompt verified users to add their WhatsApp number */}
+            {user && needsPhone && location.pathname !== '/add-phone' && (
+                <div className="bg-green-50 border-b border-green-200 px-4 py-2 flex items-center justify-center gap-3 text-sm">
+                    <span className="text-green-800">
+                        📱 Add your WhatsApp number to receive event reminders
+                    </span>
+                    <button
+                        onClick={() => navigate('/add-phone', { state: { from: location.pathname } })}
+                        className="text-green-700 font-medium underline hover:text-green-900 whitespace-nowrap"
+                    >
+                        Add now
+                    </button>
+                </div>
+            )}
+
             <main role="main">
                 <Routes>
                     <Route path="/login" element={<Login />} />
                     <Route path="/verify-email" element={<VerifyEmailPage />} />
+                    <Route path="/add-phone" element={<PhoneSetupPage />} />
                     <Route path="/" element={
                         <LandingPage
                             user={user}
@@ -689,6 +712,8 @@ function AppContent() {
                     <Route path="/chat" element={<ChatPage />} />
 
                     <Route path="/settings/llm" element={<LlmSettingsPage />} />
+
+                    <Route path="/invite/:invitationId" element={<InvitationLandingPage />} />
                 </Routes>
             </main>
 

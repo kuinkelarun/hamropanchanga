@@ -152,6 +152,44 @@
   cursor: not-allowed;
 }
 
+/* WhatsApp Phone Input */
+.tsm-phone-input {
+  --PhoneInputCountryFlag-height: 1em;
+}
+
+.tsm-phone-input .PhoneInputInput {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 14px;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.tsm-phone-input .PhoneInputInput:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.tsm-phone-input .PhoneInputInput:disabled {
+  background: #f3f4f6;
+  color: #9ca3af;
+  cursor: not-allowed;
+}
+
+.tsm-optional {
+  font-size: 12px;
+  color: #6b7280;
+  font-weight: 400;
+}
+
+.tsm-field-hint {
+  font-size: 12px;
+  color: #6b7280;
+  margin-top: 4px;
+}
+
 /* Permission Options */
 .tsm-permission-options {
   display: flex;

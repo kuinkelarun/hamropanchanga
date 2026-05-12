@@ -4,8 +4,11 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import PhoneInput, { isValidPhoneNumber } from 'react-phone-number-input';
+import 'react-phone-number-input/style.css';
+import { httpsCallable } from 'firebase/functions';
+import { functions } from '../firebase';
 import { Trees } from './TreeBuilder/utils/firestoreTreeApi';
-import { shareBulkTreesWithUser } from '../services/BulkUploadService';
 import { SHARE_PERMISSIONS, getPermissionDescription, isValidEmail } from '../utils/TreeSharingUtils';
 import './TreeShareModal.css';
 
@@ -13,6 +16,7 @@ const BulkTreeShareModal = ({ isOpen, onClose, onComplete, userEmail, userId, is
   const [trees, setTrees] = useState([]);
   const [selectedTrees, setSelectedTrees] = useState([]);
   const [recipientEmail, setRecipientEmail] = useState('');
+  const [whatsappPhone, setWhatsappPhone] = useState('');
   const [permission, setPermission] = useState(SHARE_PERMISSIONS.VIEW);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -42,6 +46,7 @@ const BulkTreeShareModal = ({ isOpen, onClose, onComplete, userEmail, userId, is
       // Reset state when modal closes
       setSelectedTrees([]);
       setRecipientEmail('');
+      setWhatsappPhone('');
       setPermission(SHARE_PERMISSIONS.VIEW);
       setError(null);
       setSuccess(null);
@@ -119,31 +124,54 @@ const BulkTreeShareModal = ({ isOpen, onClose, onComplete, userEmail, userId, is
       return;
     }
 
+    if (whatsappPhone && !isValidPhoneNumber(whatsappPhone)) {
+      setError('Please enter a valid WhatsApp phone number (include country code)');
+      return;
+    }
+
     try {
       setIsLoading(true);
-      const results = await shareBulkTreesWithUser(
-        selectedTrees,
-        recipientEmail.toLowerCase(),
-        permission,
-        userEmail
-      );
 
-      if (results.success > 0) {
-        setSuccess(`Successfully shared ${results.success} tree(s) with ${recipientEmail}`);
-        setSelectedTrees([]);
-        setRecipientEmail('');
-        setPermission(SHARE_PERMISSIONS.VIEW);
-        
-        if (results.failed.length > 0) {
-          setError(`Failed to share ${results.failed.length} tree(s). Check console for details.`);
-          console.error('Failed shares:', results.errors);
-        }
-
-        if (onComplete) {
-          onComplete();
+      if (whatsappPhone) {
+        // Send WhatsApp invitations for each selected tree
+        const fn = httpsCallable(functions, 'shareTreeWithWhatsApp');
+        const results = await Promise.allSettled(
+          selectedTrees.map(treeId =>
+            fn({ treeId, hintEmail: recipientEmail.toLowerCase(), whatsappPhone, permission })
+          )
+        );
+        const succeeded = results.filter(r => r.status === 'fulfilled').length;
+        const failed = results.filter(r => r.status === 'rejected').length;
+        if (succeeded > 0) {
+          setSuccess(`WhatsApp invitations sent for ${succeeded} tree(s) to ${recipientEmail}`);
+          setSelectedTrees([]);
+          setRecipientEmail('');
+          setWhatsappPhone('');
+          setPermission(SHARE_PERMISSIONS.VIEW);
+          if (failed > 0) setError(`Failed to send for ${failed} tree(s).`);
+          if (onComplete) onComplete();
+        } else {
+          setError('Failed to send WhatsApp invitations. Please try again.');
         }
       } else {
-        setError('Failed to share trees. Please try again.');
+        const emailFn = httpsCallable(functions, 'shareTreeWithEmail');
+        const results = await Promise.allSettled(
+          selectedTrees.map(treeId =>
+            emailFn({ treeId, recipientEmail: recipientEmail.toLowerCase(), permission })
+          )
+        );
+        const succeeded = results.filter(r => r.status === 'fulfilled').length;
+        const failed = results.filter(r => r.status === 'rejected').length;
+        if (succeeded > 0) {
+          setSuccess(`Invitation sent for ${succeeded} tree(s) to ${recipientEmail}`);
+          setSelectedTrees([]);
+          setRecipientEmail('');
+          setPermission(SHARE_PERMISSIONS.VIEW);
+          if (failed > 0) setError(`Failed to send for ${failed} tree(s).`);
+          if (onComplete) onComplete();
+        } else {
+          setError('Failed to send invitations. Please try again.');
+        }
       }
     } catch (err) {
       setError(err.message || 'Failed to share trees');
@@ -155,6 +183,7 @@ const BulkTreeShareModal = ({ isOpen, onClose, onComplete, userEmail, userId, is
   const handleClose = () => {
     setSelectedTrees([]);
     setRecipientEmail('');
+    setWhatsappPhone('');
     setPermission(SHARE_PERMISSIONS.VIEW);
     setError(null);
     setSuccess(null);
@@ -209,6 +238,22 @@ const BulkTreeShareModal = ({ isOpen, onClose, onComplete, userEmail, userId, is
                 disabled={isLoading}
                 required
               />
+            </div>
+
+            <div className="tsm-form-group">
+              <label className="tsm-label">
+                📱 WhatsApp Phone <span className="tsm-optional">(optional)</span>
+              </label>
+              <PhoneInput
+                international
+                defaultCountry="NP"
+                value={whatsappPhone}
+                onChange={setWhatsappPhone}
+                disabled={isLoading}
+                placeholder="+977 98XXXXXXXX"
+                className="tsm-phone-input"
+              />
+              <p className="tsm-field-hint">If provided, an invitation link will be sent via WhatsApp</p>
             </div>
 
             <div className="tsm-form-group">
