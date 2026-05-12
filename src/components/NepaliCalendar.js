@@ -1231,53 +1231,43 @@ export default function NepaliCalendar({ user: propUser, isAdmin, trees = [], tr
         tabIndex={0}
         onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleGoToToday(); }}
       >
-        <div
-          className="nc-topbar-content"
-          style={{ display: 'flex', flexDirection: 'column', gap: '2px', alignItems: 'flex-start', width: '100%' }}
-        >
-          <div style={{ fontSize: '1.5rem', fontWeight: 'bold', lineHeight: '1.4' }}>
-            {isNepali ? toNepaliNumber(todayBs.day) : todayBs.day} {isNepali ? nepaliMonths[todayBs.month-1] : englishNepaliMonths[todayBs.month-1]} {isNepali ? toNepaliNumber(todayBs.year) : todayBs.year}, {isNepali ? nepaliWeekdays[todayBs.dayOfWeek] : englishWeekdays[todayBs.dayOfWeek]}
+        <div className="nc-topbar-content">
+          {/* Line 1: Nepali date (hero) */}
+          <div className="nc-hero-date">
+            {isNepali ? toNepaliNumber(todayBs.day) : todayBs.day}{' '}
+            {isNepali ? nepaliMonths[todayBs.month-1] : englishNepaliMonths[todayBs.month-1]}{' '}
+            {isNepali ? toNepaliNumber(todayBs.year) : todayBs.year}
           </div>
-          <div style={{ fontSize: '0.85rem', opacity: 0.9 }}>
+          {/* Line 2: Weekday, time period + time */}
+          <div className="nc-meta-time nc-header-line">
+            {isNepali ? nepaliWeekdays[todayBs.dayOfWeek] : englishWeekdays[todayBs.dayOfWeek]},{' '}
             {(() => {
               const h = todayAd.getUTCHours();
               const m = todayAd.getUTCMinutes();
               const s = todayAd.getUTCSeconds();
-              // Determine time of day based on hour
               let timePeriodIndex = 0;
-              if (h >= 0 && h < 12) {
-                timePeriodIndex = 0; // Morning (midnight to noon)
-              } else if (h >= 12 && h < 17) {
-                timePeriodIndex = 1; // Afternoon (noon to 5 PM)
-              } else if (h >= 17 && h < 19) {
-                timePeriodIndex = 2; // Evening (5 PM to 7 PM)
-              } else {
-                timePeriodIndex = 3; // Night (7 PM to midnight)
-              }
+              if (h >= 0 && h < 12) timePeriodIndex = 0;
+              else if (h >= 12 && h < 17) timePeriodIndex = 1;
+              else if (h >= 17 && h < 19) timePeriodIndex = 2;
+              else timePeriodIndex = 3;
               const timeOfDay = isNepali ? timePeriods.ne[timePeriodIndex] : timePeriods.en[timePeriodIndex];
               const h12 = h % 12 || 12;
-              const displayTime = isNepali 
-                ? `${timeOfDay} ${toNepaliNumber(h12)}:${toNepaliNumber(String(m).padStart(2, '0'))}:${toNepaliNumber(String(s).padStart(2, '0'))}` 
+              return isNepali
+                ? `${timeOfDay} ${toNepaliNumber(h12)}:${toNepaliNumber(String(m).padStart(2, '0'))}:${toNepaliNumber(String(s).padStart(2, '0'))}`
                 : `${timeOfDay} ${h12}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
-              return displayTime;
             })()}
           </div>
+          {/* Line 3: Tithi */}
           {(() => {
-             const tithis = findTithisForAdDate(todayAd.getUTCFullYear(), todayAd.getUTCMonth(), todayAd.getUTCDate()) || [];
-             if (tithis.length > 0) {
-               // Sort to find the most relevant tithi if multiple (usually one per day or spanning)
-               // Just taking the first one is usually fine for display
-               const t = tithis[0]; 
-               return (
-                 <div style={{ fontSize: '0.8rem', marginTop: '2px', opacity: 0.9 }}>
-                   {getTithiDisplayName(t)}
-                 </div>
-               );
-             }
-             return null;
+            const tithis = findTithisForAdDate(todayAd.getUTCFullYear(), todayAd.getUTCMonth(), todayAd.getUTCDate()) || [];
+            if (tithis.length > 0) {
+              return <div className="nc-meta-tithi nc-header-line">{getTithiDisplayName(tithis[0])}</div>;
+            }
+            return null;
           })()}
-          <div style={{ fontSize: '0.8rem', marginTop: '2px', opacity: 0.9 }}>
-            {isNepali 
+          {/* Line 4: English date */}
+          <div className="nc-meta-engdate nc-header-line">
+            {isNepali
               ? `${englishMonthsNepali[todayAd.getUTCMonth()]} ${tn(todayAd.getUTCDate())}, ${tn(todayAd.getUTCFullYear())}`
               : `${englishMonths[todayAd.getUTCMonth()]} ${todayAd.getUTCDate()}, ${todayAd.getUTCFullYear()}`
             }

@@ -1,16 +1,14 @@
 /* Nepali Calendar Container */
-.nepali-calendar-container { 
-    position: relative; /* allow positioning of inner elements */
-    background: #cab5ef; 
-    padding: 16px; 
-    border-radius: 8px; 
-    box-shadow: 0 6px 18px rgba(0,0,0,0.06); 
+.nepali-calendar-container {
+    position: relative;
+    background: linear-gradient(180deg, #4a3a8a 0%, #4e3f8a 30%, #5a4fa8 65%, #764ba2 100%);
+    padding: 16px;
+    border-radius: 12px;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.35), 0 4px 12px rgba(49,46,129,0.4);
     margin-bottom: 18px;
-    /* Desktop default - comfortable width */
     max-width: 100%;
     margin-left: auto;
     margin-right: auto;
-    /* Smooth transitions for responsive changes */
     transition: padding 0.3s ease, min-height 0.3s ease, border-radius 0.3s ease;
 }
 
@@ -21,12 +19,13 @@
     justify-content:space-between; 
     margin-bottom:12px; 
 }
-.nc-btn { 
-    background:#eef2ff; 
-    border:0; 
-    padding:8px 12px; 
-    border-radius:6px; 
-    cursor:pointer; 
+.nc-btn {
+    background: rgba(255, 255, 255, 0.12);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    color: rgba(255, 255, 255, 0.9);
+    padding: 8px 12px;
+    border-radius: 6px;
+    cursor: pointer;
 }
 
 /* Navigation buttons (Prev/Next) - wider but shorter and smaller text to avoid layout shift when label changes */
@@ -98,8 +97,8 @@
     }
 }
 .nc-center { text-align:center; }
-.nc-nepali { font-weight:700; font-size:18px; }
-.nc-english { color:#6b7280; font-size:13px; }
+.nc-nepali { font-weight:700; font-size:18px; color: rgba(255,255,255,0.9); }
+.nc-english { color: rgba(255,255,255,0.5); font-size:13px; }
 
 /* Header selectors for month/year dropdowns */
 .nc-header-selectors {
@@ -113,9 +112,9 @@
 .nc-header-year-select {
     font-weight: 700;
     font-size: 20px;
-    color: #0f172a;
-    background: rgba(255, 255, 255, 0.9);
-    border: 1px solid #d1d5db;
+    color: #fff;
+    background: rgba(255, 255, 255, 0.12);
+    border: 1px solid rgba(255, 255, 255, 0.22);
     border-radius: 6px;
     padding: 4px 8px;
     cursor: pointer;
@@ -123,10 +122,15 @@
 }
 .nc-header-month-select:focus,
 .nc-header-year-select:focus {
-    outline: 2px solid #9f7aea;
+    outline: 2px solid rgba(167, 139, 250, 0.8);
     outline-offset: 2px;
 }
-.nc-header-ad { font-size:13px; color:#6b7280; }
+.nc-header-month-select option,
+.nc-header-year-select option {
+    background: #2d1b69;
+    color: #fff;
+}
+.nc-header-ad { font-size:13px; color: rgba(255,255,255,0.5); }
 
 
 /* Responsive tweaks: adjust header selectors on smaller viewports */
@@ -161,21 +165,20 @@
     /* Smooth transition for gap changes */
     transition: gap 0.3s ease, margin-bottom 0.3s ease;
 }
-.nc-weekday { 
-    text-align:center; 
-    font-weight:600; 
-    color:#4b5563; 
-    font-size:13px; 
-    padding: 12px 6px; /* Increased padding */
-    background: rgba(255, 255, 255, 0.7);
-    border-radius: 8px; /* Slightly larger radius */
-    border: 1px solid rgba(75, 85, 99, 0.1);
-    min-height: 50px; /* Ensure a minimum height */
+.nc-weekday {
+    text-align: center;
+    font-weight: 600;
+    color: rgba(255,255,255,0.7);
+    font-size: 13px;
+    padding: 10px 6px;
+    background: rgba(255, 255, 255, 0.07);
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    min-height: 50px;
     display: flex;
     flex-direction: column;
     justify-content: center;
     align-items: center;
-    /* Smooth transitions */
     transition: padding 0.3s ease, min-height 0.3s ease, font-size 0.3s ease;
     gap: 2px;
 }
@@ -183,12 +186,12 @@
     font-size: 14px;
     font-weight: 700;
     margin-bottom: 2px;
-    color: #374151;
+    color: rgba(255,255,255,0.92);
 }
 .nc-weekday-english {
     font-size: 11px;
     font-weight: 500;
-    color: #6b7280;
+    color: rgba(255,255,255,0.45);
     text-transform: uppercase;
     letter-spacing: 0.5px;
 }
@@ -197,15 +200,15 @@
     font-size: 13px;
     font-weight: 700;
     margin-bottom: 2px;
-    color: #374151;
-    order: -1; /* Put it on top */
+    color: rgba(255,255,255,0.92);
+    order: -1;
     text-transform: none;
     letter-spacing: 0;
 }
 .nc-weekday.nc-weekday-english-primary .nc-weekday-nepali-bottom {
     font-size: 11px;
     font-weight: 500;
-    color: #6b7280;
+    color: rgba(255,255,255,0.45);
     text-transform: uppercase;
     letter-spacing: 0.5px;
 }
@@ -235,19 +238,18 @@
     justify-content: center;
 }
 .nc-select-month, .nc-select-year {
-    background: white;
-    border: 1px solid #e5e7eb;
+    background-color: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.18);
     padding: 8px 10px;
     border-radius: 8px;
-    font-size: 13px; /* match nav button text size */
-    font-weight: 600; /* stronger weight to match Prev/Next text */
-    color: #0f172a;
-    font-family: inherit; /* inherit app font */
-    -webkit-appearance: none; /* remove native arrow where possible */
+    font-size: 13px;
+    font-weight: 600;
+    color: rgba(255,255,255,0.9);
+    font-family: inherit;
+    -webkit-appearance: none;
     -moz-appearance: none;
     appearance: none;
-    /* single svg caret for consistent placement across browsers */
-    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'><path fill='%23374151' d='M0 0l5 6 5-6z'/></svg>");
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'><path fill='%23ffffff' d='M0 0l5 6 5-6z'/></svg>");
     background-position: right 12px center;
     background-size: 10px 6px;
     background-repeat: no-repeat;
@@ -258,208 +260,247 @@
 /* Make selects feel interactive like nav buttons */
 .nc-select-month:hover, .nc-select-year:hover,
 .nc-select-month:focus, .nc-select-year:focus {
-    background-color: #f8fafc; /* use background-color so background-image (caret) remains visible */
-    border-color: #dbeafe;
+    background-color: rgba(255, 255, 255, 0.18);
+    border-color: rgba(255, 255, 255, 0.28);
     outline: none;
-    box-shadow: 0 6px 18px rgba(15, 23, 42, 0.06);
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2);
 }
 
 /* Soft-population hint for native option lists: browsers limit option styling/animation, but this adds a subtle transition where supported */
 .nc-select-month option, .nc-select-year option {
-    transition: background 160ms ease, color 160ms ease;
+    background: #2d1b69;
+    color: #fff;
 }
-.nc-select-month option:focus, .nc-select-year option:focus,
 .nc-select-month option:hover, .nc-select-year option:hover {
-    background: #eef2ff;
-    color: #0f172a;
+    background: #3730a3;
+    color: #fff;
 }
 
 @media (max-width: 640px) {
     .nc-select-month, .nc-select-year { font-size: 13px; padding: 6px 8px; }
 }
 
-/* Today quick-jump button (top-right) */
+/* Today quick-jump topbar */
 .nc-topbar {
     position: relative;
-    height: auto; /* let content define height to avoid overlap */
-    display:flex;
-    flex-direction: column; /* stack items vertically */
+    height: auto;
+    display: flex;
+    flex-direction: column;
     justify-content: center;
-    background: #9f7aea; /* slightly darker than the calendar card */
+    background: transparent;
     color: #fff;
-    padding: 8px 18px;
-    border-radius: 8px 8px 0 0; /* round top corners flush with card */
-    /* stretch to container edges even though container has padding */
-    margin: -16px -16px 12px -16px;
+    padding: 12px 4px 16px 4px;
+    margin: -16px -16px 14px -16px;
     cursor: pointer;
-    transition: background-color 0.2s ease;
+    transition: opacity 0.2s ease;
 }
 
 .nc-topbar:hover {
-    background: #8b5cf6; /* Darker violet on hover */
+    opacity: 0.9;
 }
 
 .nc-topbar:focus-visible {
-    outline: 2px solid #fff;
-    outline-offset: -2px;
+    outline: 2px solid rgba(255,255,255,0.5);
+    outline-offset: 2px;
+    border-radius: 8px;
 }
 
-/* Keep rounded top corners on mobile to match calendar container */
 @media (max-width: 768px) {
     .nc-topbar {
-        border-radius: 8px 8px 0 0; /* Keep top corners rounded on mobile */
-        padding: 6px 8px; /* Reduce horizontal padding */
-        /* On mobile the container has no inner padding; avoid negative margins that can create
-           apparent blank space above the header and/or horizontal overflow. */
+        padding: 10px 4px 14px 4px;
         margin: 0 0 12px 0;
     }
 }
+
 .nc-topbar-content {
     background: transparent;
     border: 0;
-    color: #000; /* changed from white to black as requested */
-    font-weight: 800;
-    font-size: 18px; /* reduced font size for longer text */
-    /* padding: 8px 12px; Removed padding as it's handled by parent */
-    border-radius: 6px;
-    white-space: nowrap;
-    pointer-events: none; /* Let clicks pass through to parent */
+    color: #fff;
+    pointer-events: none;
+    width: 100%;
 }
-/* .nc-topbar-btn:hover { background: rgba(255,255,255,0.06); } Removed old hover */
 
-/* Right-aligned month/year inside topbar - now positioned below the title */
+/* Hero date line */
+.nc-hero-date {
+    font-size: 2.2rem;
+    font-weight: 800;
+    color: #fff;
+    line-height: 1.15;
+    letter-spacing: -0.02em;
+}
+
+/* Weekday secondary line */
+.nc-hero-weekday {
+    font-size: 1rem;
+    font-weight: 500;
+    color: rgba(255,255,255,0.72);
+    margin-top: 3px;
+    letter-spacing: 0.01em;
+}
+
+/* Header lines: each item on its own line */
+.nc-header-line {
+    display: block;
+    margin-top: 5px;
+}
+
+.nc-meta-time {
+    font-size: 0.8rem;
+    color: #bfdbfe;
+}
+
+.nc-meta-tithi {
+    font-size: 0.8rem;
+    color: #fbbf24;
+    font-weight: 600;
+}
+
+.nc-meta-engdate {
+    font-size: 0.8rem;
+    color: rgba(255,255,255,0.88);
+}
+
+@media (max-width: 640px) {
+    .nc-hero-date { font-size: 1.6rem; }
+    .nc-meta-time, .nc-meta-tithi, .nc-meta-engdate { font-size: 0.75rem; }
+    .nc-header-line { margin-top: 4px; }
+}
+
+@media (max-width: 400px) {
+    .nc-hero-date { font-size: 1.35rem; }
+}
+
+/* Right-aligned month/year inside topbar */
 .nc-topbar-right {
     margin-left: auto;
-    margin-top: 8px; /* space between title row and controls row */
-    display:flex;
-    gap:12px;
-    align-items:center;
-    color: #000;
+    margin-top: 8px;
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    color: rgba(255,255,255,0.8);
 }
 .nc-topbar-bs {
-    font-weight:700;
+    font-weight: 700;
     font-size: 16px;
+    color: rgba(255,255,255,0.9);
 }
 .nc-topbar-ad {
-    font-size:13px;
-    color: #111827;
+    font-size: 13px;
+    color: rgba(255,255,255,0.55);
 }
 @media (max-width: 640px) {
-    .nc-topbar { padding: 6px 16px; }
-    .nc-topbar-right { gap:8px; margin-top: 4px; }
+    .nc-topbar-right { gap: 8px; margin-top: 4px; }
     .nc-topbar-bs { font-size: 15px; }
     .nc-topbar-ad { font-size: 12px; }
-    .nc-topbar-btn { font-size: 14px; padding: 6px 8px; line-height: 1.3; } /* smaller font and tighter line height */
 }
 
 /* Day Tiles */
-.nt-day-tile { 
-    background:#fff; 
-    border-radius:10px; 
-    padding:10px; 
-    min-height:105px; 
-    max-height:105px; /* Fixed height to prevent expansion */
-    position:relative; 
-    box-shadow:0 4px 10px rgba(0,0,0,0.04); 
-    cursor:pointer; 
-    display:flex; 
-    flex-direction:column; 
-    overflow:hidden; /* Prevent content overflow */
-    transition: background 0.08s ease, box-shadow 0.08s ease, transform 0.08s ease, 
-                padding 0.3s ease, min-height 0.3s ease, border-radius 0.3s ease; /* Added smooth responsive transitions */
+.nt-day-tile {
+    background: rgba(255, 255, 255, 0.07);
+    border-radius: 10px;
+    padding: 10px;
+    min-height: 105px;
+    max-height: 105px;
+    position: relative;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.08);
+    border: 1px solid rgba(255, 255, 255, 0.09);
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    transition: background 0.08s ease, box-shadow 0.08s ease, transform 0.08s ease,
+                padding 0.3s ease, min-height 0.3s ease, border-radius 0.3s ease;
 }
 
-/* Immediate hover effect for day tiles */
 .nt-day-tile:hover:not(.empty):not(.active) {
-    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-    box-shadow: 0 8px 20px rgba(0,0,0,0.12), 
-                0 4px 8px rgba(0,0,0,0.08);
+    background: rgba(255, 255, 255, 0.13);
+    box-shadow: 0 6px 20px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.12);
     transform: translateY(-2px);
+    border-color: rgba(255,255,255,0.16);
 }
 
-/* Focus-visible for keyboard accessibility */
 .nt-day-tile:focus-visible:not(.empty):not(.active) {
-    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-    box-shadow: 0 8px 20px rgba(0,0,0,0.12), 
-                0 4px 8px rgba(0,0,0,0.08),
-                0 0 0 3px rgba(79, 70, 229, 0.3); /* Focus ring */
+    background: rgba(255, 255, 255, 0.13);
+    box-shadow: 0 6px 20px rgba(0,0,0,0.25), 0 0 0 3px rgba(167, 139, 250, 0.45);
     transform: translateY(-2px);
     outline: none;
 }
 
-/* Ensure child elements don't interfere with hover */
 .nt-day-tile * {
     pointer-events: none;
 }
 
 .nt-day-tile.other-month {
-  background: #f1f5f9; /* A slightly different background */
-  cursor: default;
-  box-shadow: none;
-  opacity: 0.6; /* Make them appear faded */
+    background: rgba(255, 255, 255, 0.03);
+    border-color: rgba(255,255,255,0.05);
+    cursor: default;
+    box-shadow: none;
+    opacity: 0.5;
 }
 
 .nt-day-tile.other-month:hover {
-  transform: none;
-  box-shadow: none;
-  background: #f1f5f9;
+    transform: none;
+    box-shadow: none;
+    background: rgba(255, 255, 255, 0.03);
 }
 
 .nt-day-tile.other-month .nt-nepali-date,
 .nt-day-tile.other-month .nt-english-date {
-  color: #94a3b8; /* Faded text color */
+    color: rgba(255,255,255,0.35);
 }
 
-.nt-day-tile.empty { 
-    background:transparent; 
-    box-shadow:none; 
-    cursor:default; 
-    transition: none; /* No transition for empty tiles */
+.nt-day-tile.empty {
+    background: transparent;
+    box-shadow: none;
+    border-color: transparent;
+    cursor: default;
+    transition: none;
 }
-.nt-day-tile.today { border:4px solid #3f72c9; }
 
-/* Active/Selected tile styling */
+.nt-day-tile.today {
+    border: 2px solid #a78bfa;
+    background: rgba(167, 139, 250, 0.18);
+    box-shadow: 0 0 16px rgba(167, 139, 250, 0.35), inset 0 1px 0 rgba(255,255,255,0.12);
+}
+
+/* Active/Selected tile */
 .nt-day-tile.active {
-    background: linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%);
-    border: 3px solid #4f46e5;
-    box-shadow: 0 8px 25px rgba(79, 70, 229, 0.25), 
-                0 0 0 4px rgba(79, 70, 229, 0.1);
+    background: rgba(99, 102, 241, 0.42);
+    border: 2px solid #818cf8;
+    box-shadow: 0 8px 25px rgba(99, 102, 241, 0.4), 0 0 0 3px rgba(129, 140, 248, 0.2);
     transform: translateY(-2px);
     transition: background 0.08s ease, box-shadow 0.08s ease, transform 0.08s ease;
 }
 
-/* Active tile with today modifier */
 .nt-day-tile.active.today {
-    border: 3px solid #4f46e5;
-    background: linear-gradient(135deg, #ddd6fe 0%, #c4b5fd 100%);
-    box-shadow: 0 8px 25px rgba(79, 70, 229, 0.3), 
-                0 0 0 4px rgba(79, 70, 229, 0.15),
-                0 0 0 6px #3f72c9;
+    background: rgba(139, 92, 246, 0.5);
+    border: 2px solid #a78bfa;
+    box-shadow: 0 8px 25px rgba(139, 92, 246, 0.45), 0 0 0 3px rgba(167, 139, 250, 0.25);
 }
 
-/* Enhanced styling for active tile content */
 .nt-day-tile.active .nt-nepali-date {
-    color: #312e81;
+    color: #fff;
     font-weight: 800;
 }
 
 .nt-day-tile.active .nt-english-date {
-    color: #4338ca;
+    color: rgba(255,255,255,0.7);
     font-weight: 600;
 }
-.nt-nepali-date { 
-    position:absolute; 
-    top:8px; 
-    left:8px; 
-    font-size:18px; 
-    font-weight:700; 
+.nt-nepali-date {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    font-size: 18px;
+    font-weight: 700;
+    color: rgba(255,255,255,0.92);
 }
-.nt-english-date { 
-    position:absolute; 
-    bottom:8px; 
-    right:8px; 
-    color:#9ca3af; 
-    font-size:12px; 
+.nt-english-date {
+    position: absolute;
+    bottom: 8px;
+    right: 8px;
+    color: rgba(255,255,255,0.38);
+    font-size: 12px;
 }
 
 /* Tithi at bottom left */
@@ -469,7 +510,7 @@
     left: 8px;
     font-size: 9px;
     font-weight: 600;
-    color: #000000; /* Black for tithis */
+    color: #fbbf24;
     white-space: nowrap;
     max-width: 60%;
     overflow: hidden;
@@ -490,29 +531,29 @@
     overflow:hidden; /* Hide overflow content */
 }
 
-.nt-summary-item { 
-    font-size:10px; 
-    color:#374151; 
-    white-space:nowrap; 
-    overflow:hidden; 
-    text-overflow:ellipsis; 
-    display:block;
-    padding:0;
-    line-height:1.5;
-    text-align:center; /* Center text */
-    background: transparent; /* Remove background */
-    max-width: 100%; /* Ensure text doesn't overflow container */
+.nt-summary-item {
+    font-size: 10px;
+    color: rgba(255,255,255,0.75);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: block;
+    padding: 0;
+    line-height: 1.5;
+    text-align: center;
+    background: transparent;
+    max-width: 100%;
 }
 
-/* Public Events - Red */
-.nt-summary-item.event-public { 
-    color: #ef4444; /* red-500 */
+/* Public Events - soft coral red, readable on dark indigo */
+.nt-summary-item.event-public {
+    color: #fca5a5;
     font-weight: 500;
 }
 
-/* Personal Events - Blue */
-.nt-summary-item.event-personal { 
-    color: #3b82f6; /* blue-500 */
+/* Personal Events - sky blue, readable on dark indigo */
+.nt-summary-item.event-personal {
+    color: #93c5fd;
     font-weight: 500;
 }
 
@@ -527,8 +568,8 @@
 }
 
 /* Legacy event class - keep for backwards compatibility */
-.nt-summary-item.event { 
-    color: #ef4444; /* red-500 */
+.nt-summary-item.event {
+    color: #fca5a5;
     font-weight: 500;
 }
 
@@ -1192,39 +1233,36 @@
         justify-content: space-between;
     }
     
-    /* Immediate hover effect for 768px */
+    /* Hover effect for 768px */
     .nt-day-tile:hover:not(.empty):not(.active) {
-        background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-        box-shadow: 0 6px 16px rgba(0,0,0,0.1), 
-                    0 3px 6px rgba(0,0,0,0.06);
+        background: rgba(255, 255, 255, 0.13);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.2);
         transform: translateY(-1px);
     }
-    
-    /* Focus-visible for keyboard accessibility on mobile */
+
     .nt-day-tile:focus-visible:not(.empty):not(.active) {
-        background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-        box-shadow: 0 6px 16px rgba(0,0,0,0.1), 
-                    0 3px 6px rgba(0,0,0,0.06),
-                    0 0 0 2px rgba(79, 70, 229, 0.3);
+        background: rgba(255, 255, 255, 0.13);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.2), 0 0 0 2px rgba(167, 139, 250, 0.45);
         transform: translateY(-1px);
         outline: none;
     }
-    
+
     .nc-nepali-date {
-        font-size: 16px; /* Larger for better readability */
+        font-size: 16px;
         margin-bottom: 1px;
         position: absolute;
-        top: 8px; /* Better spacing */
+        top: 8px;
         left: 8px;
         font-weight: 700;
+        color: rgba(255,255,255,0.92);
     }
-    
+
     .nc-english-date {
-        font-size: 11px; /* Larger for easier reading */
+        font-size: 11px;
         position: absolute;
-        bottom: 8px; /* Better spacing */
+        bottom: 8px;
         right: 8px;
-        color: #9ca3af;
+        color: rgba(255,255,255,0.38);
     }
     
     .nt-tithi-bottom {
@@ -1419,45 +1457,41 @@
     
     /* Touch-optimized hover effect for 480px */
     .nt-day-tile:hover:not(.empty):not(.active) {
-        background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-        box-shadow: 0 5px 14px rgba(0,0,0,0.08), 
-                    0 2px 4px rgba(0,0,0,0.05);
+        background: rgba(255, 255, 255, 0.13);
+        box-shadow: 0 4px 10px rgba(0,0,0,0.2);
         transform: translateY(-1px);
     }
-    
-    /* Touch active state for mobile interaction */
+
     .nt-day-tile:active:not(.empty):not(.active) {
-        background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
-        box-shadow: 0 3px 8px rgba(0,0,0,0.1);
+        background: rgba(255, 255, 255, 0.18);
+        box-shadow: 0 2px 6px rgba(0,0,0,0.2);
         transform: translateY(0px);
         transition: all 0.05s ease;
     }
-    
-    /* Focus-visible for 480px */
+
     .nt-day-tile:focus-visible:not(.empty):not(.active) {
-        background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-        box-shadow: 0 5px 14px rgba(0,0,0,0.08), 
-                    0 2px 4px rgba(0,0,0,0.05),
-                    0 0 0 2px rgba(79, 70, 229, 0.3);
+        background: rgba(255, 255, 255, 0.13);
+        box-shadow: 0 4px 10px rgba(0,0,0,0.2), 0 0 0 2px rgba(167, 139, 250, 0.45);
         transform: translateY(-1px);
         outline: none;
     }
-    
+
     .nc-nepali-date {
-        font-size: 15px; /* Larger for better readability */
+        font-size: 15px;
         line-height: 1.2;
         position: absolute;
-        top: 6px; /* Comfortable spacing from top */
-        left: 6px; /* Comfortable spacing from left */
+        top: 6px;
+        left: 6px;
         font-weight: 700;
+        color: rgba(255,255,255,0.92);
     }
-    
+
     .nc-english-date {
-        font-size: 11px; /* Larger for better readability */
+        font-size: 11px;
         position: absolute;
-        bottom: 6px; /* Comfortable spacing from bottom */
-        right: 6px; /* Comfortable spacing from right */
-        color: #9ca3af;
+        bottom: 6px;
+        right: 6px;
+        color: rgba(255,255,255,0.38);
         line-height: 1.2;
     }
     
@@ -1650,47 +1684,43 @@
         justify-content: space-between;
     }
     
-    /* Minimal hover effect for 420px */
+    /* Hover effect for 420px */
     .nt-day-tile:hover:not(.empty):not(.active) {
-        background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-        box-shadow: 0 4px 12px rgba(0,0,0,0.07), 
-                    0 2px 4px rgba(0,0,0,0.04);
+        background: rgba(255, 255, 255, 0.13);
+        box-shadow: 0 3px 8px rgba(0,0,0,0.2);
         transform: translateY(-0.5px);
     }
-    
-    /* Touch active state for small screens */
+
     .nt-day-tile:active:not(.empty):not(.active) {
-        background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
-        box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+        background: rgba(255, 255, 255, 0.18);
+        box-shadow: 0 2px 4px rgba(0,0,0,0.2);
         transform: translateY(0px);
         transition: all 0.05s ease;
     }
-    
-    /* Focus-visible for 420px */
+
     .nt-day-tile:focus-visible:not(.empty):not(.active) {
-        background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-        box-shadow: 0 4px 12px rgba(0,0,0,0.07), 
-                    0 2px 4px rgba(0,0,0,0.04),
-                    0 0 0 2px rgba(79, 70, 229, 0.3);
+        background: rgba(255, 255, 255, 0.13);
+        box-shadow: 0 3px 8px rgba(0,0,0,0.2), 0 0 0 2px rgba(167, 139, 250, 0.45);
         transform: translateY(-0.5px);
         outline: none;
     }
-    
+
     .nc-nepali-date {
-        font-size: 14px; /* Clear and readable */
+        font-size: 14px;
         position: absolute;
-        top: 5px; /* Comfortable spacing from top */
-        left: 5px; /* Comfortable spacing from left */
+        top: 5px;
+        left: 5px;
         font-weight: 700;
         line-height: 1.2;
+        color: rgba(255,255,255,0.92);
     }
-    
+
     .nc-english-date {
-        font-size: 10px; /* Clear and readable */
+        font-size: 10px;
         position: absolute;
-        bottom: 5px; /* Comfortable spacing from bottom */
-        right: 5px; /* Comfortable spacing from right */
-        color: #9ca3af;
+        bottom: 5px;
+        right: 5px;
+        color: rgba(255,255,255,0.38);
         line-height: 1.2;
     }
 }

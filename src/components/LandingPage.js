@@ -125,7 +125,7 @@ const LandingPage = ({ user, isAdmin, trees = [], treeMembers = [], events, fami
                         {t('landing.calendarHeading')}
                     </h2>
                     <p className="section-subheading">{t('landing.calendarSubheading')}</p>
-                    <div className="section-card calendar-wrapper">
+                    <div className="calendar-wrapper">
                         <NepaliCalendar
                             user={user}
                             isAdmin={isAdmin}
