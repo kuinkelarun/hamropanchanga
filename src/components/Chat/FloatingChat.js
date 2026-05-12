@@ -17,6 +17,14 @@ export default function FloatingChat() {
     navigate('/chat');
   };
 
+  const handleOpen = () => {
+    if (window.innerWidth < 640) {
+      navigate('/chat');
+    } else {
+      openChat();
+    }
+  };
+
   const needsSetup = user && (configStatus === 'unconfigured' || configStatus === 'error');
   const launcherTitle = !user
     ? 'HamroPanchanga AI — sign in to use'
@@ -29,7 +37,7 @@ export default function FloatingChat() {
       {!isOpen && (
         <button
           type="button"
-          onClick={openChat}
+          onClick={handleOpen}
           aria-label={launcherTitle}
           title={launcherTitle}
           className="fixed bottom-5 right-5 z-40 w-14 h-14 rounded-full bg-purple-600 hover:bg-purple-700 shadow-lg hover:shadow-xl text-white flex items-center justify-center transition-all hover:scale-105"
@@ -56,7 +64,7 @@ export default function FloatingChat() {
         </button>
       )}
 
-      {isOpen && (
+      {isOpen && window.innerWidth >= 640 && (
         <div
           className="fixed bottom-5 left-2 right-2 sm:left-auto sm:right-5 sm:w-96 z-40 h-[min(600px,calc(100vh-6rem))] max-h-[90vh]"
         >

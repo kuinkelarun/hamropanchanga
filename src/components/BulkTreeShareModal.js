@@ -10,6 +10,7 @@ import { httpsCallable } from 'firebase/functions';
 import { functions } from '../firebase';
 import { Trees } from './TreeBuilder/utils/firestoreTreeApi';
 import { SHARE_PERMISSIONS, getPermissionDescription, isValidEmail } from '../utils/TreeSharingUtils';
+import { useDetectedCountry } from '../hooks/useDetectedCountry';
 import './TreeShareModal.css';
 
 const BulkTreeShareModal = ({ isOpen, onClose, onComplete, userEmail, userId, isAdmin }) => {
@@ -23,6 +24,7 @@ const BulkTreeShareModal = ({ isOpen, onClose, onComplete, userEmail, userId, is
   const [success, setSuccess] = useState(null);
   const [filter, setFilter] = useState('');
   const [selectAll, setSelectAll] = useState(false);
+  const { country: detectedCountry } = useDetectedCountry();
 
   // Load trees when modal opens
   useEffect(() => {
@@ -246,7 +248,7 @@ const BulkTreeShareModal = ({ isOpen, onClose, onComplete, userEmail, userId, is
               </label>
               <PhoneInput
                 international
-                defaultCountry="NP"
+                defaultCountry={detectedCountry}
                 value={whatsappPhone}
                 onChange={setWhatsappPhone}
                 disabled={isLoading}

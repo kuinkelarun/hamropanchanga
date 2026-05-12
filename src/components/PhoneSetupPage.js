@@ -1,31 +1,12 @@
 // src/components/PhoneSetupPage.js
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import PhoneInput, { isValidPhoneNumber } from 'react-phone-number-input';
 import 'react-phone-number-input/style.css';
 import { doc, updateDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useAuth } from '../contexts/AuthContext';
-
-// Detect user's country code via free IP geolocation (no key required)
-async function detectCountry() {
-  try {
-    const res = await fetch('https://ipapi.co/json/', { signal: AbortSignal.timeout(3000) });
-    if (!res.ok) return null;
-    const data = await res.json();
-    return data.country_code || null; // e.g. "NP", "US", "GB"
-  } catch {
-    return null;
-  }
-}
-
-// Fallback: guess from browser language ("ne" → NP, "hi" → IN, etc.)
-function guessCountryFromLocale() {
-  const lang = (navigator.language || '').toLowerCase();
-  if (lang.startsWith('ne')) return 'NP';
-  if (lang.startsWith('hi')) return 'IN';
-  return 'NP'; // default for this app
-}
+import { useDetectedCountry } from '../hooks/useDetectedCountry';
 
 export default function PhoneSetupPage() {
   const { user, setNeedsPhone, setSkipPhone } = useAuth();
@@ -34,23 +15,10 @@ export default function PhoneSetupPage() {
   const from = location.state?.from || '/';
 
   const [phone, setPhone] = useState('');
-  const [country, setCountry] = useState('NP');
   const [optIn, setOptIn] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
-  const [detecting, setDetecting] = useState(true);
-
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      const detected = await detectCountry();
-      if (!cancelled) {
-        setCountry(detected || guessCountryFromLocale());
-        setDetecting(false);
-      }
-    })();
-    return () => { cancelled = true; };
-  }, []);
+  const { country, detecting } = useDetectedCountry();
 
   const handleSave = async () => {
     if (!phone || !isValidPhoneNumber(phone)) {

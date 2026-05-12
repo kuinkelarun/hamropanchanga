@@ -13,12 +13,14 @@ import {
   removeTreeShare
 } from '../services/BulkUploadService';
 import { SHARE_PERMISSIONS, isValidEmail } from '../utils/TreeSharingUtils';
+import { useDetectedCountry } from '../hooks/useDetectedCountry';
 import './TreeShareModal.css';
 
 const TreeShareModal = ({ isOpen, onClose, tree, onComplete, userEmail, userId }) => {
   const [recipientEmail, setRecipientEmail] = useState('');
   const [whatsappPhone, setWhatsappPhone] = useState('');
   const [permission, setPermission] = useState(SHARE_PERMISSIONS.VIEW);
+  const { country: detectedCountry } = useDetectedCountry();
   const [sharedUsers, setSharedUsers] = useState({});
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -236,7 +238,7 @@ const TreeShareModal = ({ isOpen, onClose, tree, onComplete, userEmail, userId }
               </label>
               <PhoneInput
                 international
-                defaultCountry="NP"
+                defaultCountry={detectedCountry}
                 value={whatsappPhone}
                 onChange={setWhatsappPhone}
                 disabled={isLoading}
