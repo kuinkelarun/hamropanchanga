@@ -689,67 +689,84 @@ export default function TreeDetailPage({ user }) {
           }}
         >
           <div
-            className="w-full max-w-sm sm:max-w-md rounded-2xl shadow-2xl backdrop-blur-xl bg-white/80 border border-white/20"
+            className="w-full max-w-sm sm:max-w-md overflow-hidden"
             onClick={e => e.stopPropagation()}
+            style={{ borderRadius: '16px', boxShadow: '0 20px 50px rgba(2,6,23,0.25)' }}
           >
-            <div className="flex items-center justify-between border-b px-4 py-3 rounded-t-2xl bg-gradient-to-r from-slate-400 to-slate-500 text-white">
-              <h3 className="text-sm font-semibold">{(previewingEvent?.title || t('eventPreview.eventDetails'))}</h3>
+            {/* Header */}
+            <div style={{
+              background: 'linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #4c1d95 100%)',
+              padding: '20px 20px 28px',
+              position: 'relative',
+              borderRadius: '16px 16px 0 0',
+              overflow: 'hidden',
+            }}>
+              <div style={{ position: 'absolute', top: '-20px', right: '-15px', width: '100px', height: '100px', borderRadius: '50%', background: 'rgba(167,139,250,0.08)', pointerEvents: 'none' }} />
+              <div style={{ position: 'absolute', bottom: '-30px', left: '-15px', width: '80px', height: '80px', borderRadius: '50%', background: 'rgba(246,173,85,0.06)', pointerEvents: 'none' }} />
               <button
-                type="button"
-                onClick={() => {
-                  setEventPreviewOpen(false);
-                  setPreviewingEvent(null);
-                }}
-                className="text-xs font-medium px-2 py-1 rounded-md bg-white/20 hover:bg-white/30 transition-colors"
-                title="Press Escape or click outside to close"
+                onClick={() => { setEventPreviewOpen(false); setPreviewingEvent(null); }}
+                style={{ position: 'absolute', top: '12px', right: '12px', zIndex: 2, background: 'rgba(255,255,255,0.12)', border: 'none', color: 'rgba(255,255,255,0.8)', width: '32px', height: '32px', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                 aria-label={t('eventPreview.close')}
               >
-                ✕
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6L6 18M6 6l12 12" /></svg>
               </button>
+              <div style={{ position: 'relative', zIndex: 1, textAlign: 'center' }}>
+                <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: 'linear-gradient(135deg, #667eea, #764ba2)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px', border: '3px solid rgba(255,255,255,0.25)', boxShadow: '0 4px 16px rgba(0,0,0,0.2)' }}>
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+                </div>
+                <h3 style={{ color: '#ffffff', fontSize: '1.1rem', fontWeight: '700', margin: '0', lineHeight: '1.3' }}>
+                  {previewingEvent?.title || t('eventPreview.eventDetails')}
+                </h3>
+              </div>
             </div>
-            
-            <div className="px-4 py-4 space-y-3 max-h-[70vh] overflow-y-auto">
-              {previewingEvent.memberId && (
+
+            {/* Body */}
+            <div style={{ background: '#ffffff', padding: '20px', maxHeight: '50vh', overflowY: 'auto', borderRadius: '0 0 16px 16px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                {previewingEvent.memberId && (
+                  <div>
+                    <div style={{ fontSize: '0.72rem', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#94a3b8', marginBottom: '3px' }}>{t('eventPreview.associatedMember')}</div>
+                    <div style={{ fontSize: '0.9rem', color: '#1e293b', background: '#f8fafc', padding: '8px 12px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                      {getMemberName(previewingEvent.memberId) || '—'}
+                    </div>
+                  </div>
+                )}
+
+                {previewingEvent.description && (
+                  <div>
+                    <div style={{ fontSize: '0.72rem', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#94a3b8', marginBottom: '3px' }}>{t('eventPreview.description')}</div>
+                    <div style={{ fontSize: '0.9rem', color: '#1e293b', background: '#f8fafc', padding: '8px 12px', borderRadius: '8px', border: '1px solid #e2e8f0', maxHeight: '70px', overflowY: 'auto', whiteSpace: 'pre-wrap' }}>
+                      {previewingEvent.description}
+                    </div>
+                  </div>
+                )}
+
                 <div>
-                  <label className="text-xs font-semibold text-gray-700">{t('eventPreview.associatedMember')}</label>
-                  <div className="mt-1 px-3 py-2 bg-white text-gray-900 rounded-md text-sm border border-gray-300">
-                    {getMemberName(previewingEvent.memberId) || '—'}
+                  <div style={{ fontSize: '0.72rem', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#94a3b8', marginBottom: '3px' }}>{t('eventPreview.dateGregorian')}</div>
+                  <div style={{ fontSize: '0.9rem', color: '#1e293b', background: '#f8fafc', padding: '8px 12px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                    {(resolveEventDate(previewingEvent) || previewingEvent.dateKey) || '—'}
                   </div>
                 </div>
-              )}
 
-              <div>
-                <label className="text-xs font-semibold text-gray-700">{t('eventPreview.description')}</label>
-                <div className="mt-1 px-3 py-2 bg-white text-gray-900 rounded-md text-sm border border-gray-300 max-h-[70px] overflow-y-auto whitespace-pre-wrap">
-                  {previewingEvent.description || '—'}
-                </div>
+                {(resolveEventDate(previewingEvent) || previewingEvent.dateKey) && (
+                  <div>
+                    <div style={{ fontSize: '0.72rem', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#94a3b8', marginBottom: '3px' }}>{t('eventPreview.dateNepali')}</div>
+                    <div style={{ fontSize: '0.9rem', color: '#1e293b', background: '#f8fafc', padding: '8px 12px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                      {formatAdDateToNepaliStringWithNumerals(resolveEventDate(previewingEvent) || previewingEvent.dateKey)}
+                      {getTithiDisplayString(previewingEvent.tithi)}
+                    </div>
+                  </div>
+                )}
+
+                {previewingEvent.repetition && previewingEvent.repetition !== 'none' && (
+                  <div>
+                    <div style={{ fontSize: '0.72rem', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#94a3b8', marginBottom: '3px' }}>{t('eventPreview.repetition')}</div>
+                    <div style={{ fontSize: '0.9rem', color: '#1e293b', background: '#f8fafc', padding: '8px 12px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                      {t(`repetitionValues.${previewingEvent.repetition}`) || previewingEvent.repetition}
+                    </div>
+                  </div>
+                )}
               </div>
-
-              <div>
-                <label className="text-xs font-semibold text-gray-700">{t('eventPreview.dateGregorian')}</label>
-                <div className="mt-1 px-3 py-2 bg-white text-gray-900 rounded-md text-sm border border-gray-300">
-                  {(resolveEventDate(previewingEvent) || previewingEvent.dateKey) || '—'}
-                </div>
-              </div>
-
-              {(resolveEventDate(previewingEvent) || previewingEvent.dateKey) && (
-                <div>
-                  <label className="text-xs font-semibold text-gray-700">{t('eventPreview.dateNepali')}</label>
-                  <div className="mt-1 px-3 py-2 bg-white text-gray-900 rounded-md text-sm border border-gray-300">
-                    {formatAdDateToNepaliStringWithNumerals(resolveEventDate(previewingEvent) || previewingEvent.dateKey)}
-                    {getTithiDisplayString(previewingEvent.tithi)}
-                  </div>
-                </div>
-              )}
-
-              {previewingEvent.repetition && previewingEvent.repetition !== 'none' && (
-                <div>
-                  <label className="text-xs font-semibold text-gray-700">{t('eventPreview.repetition')}</label>
-                  <div className="mt-1 px-3 py-2 bg-white text-gray-900 rounded-md text-sm border border-gray-300">
-                    {t(`repetitionValues.${previewingEvent.repetition}`) || previewingEvent.repetition}
-                  </div>
-                </div>
-              )}
             </div>
           </div>
         </div>
