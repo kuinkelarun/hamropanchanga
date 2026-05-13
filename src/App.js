@@ -140,8 +140,7 @@ function AppContent() {
     };
 
     const handleBreadcrumbClick = () => {
-        // Breadcrumb represents the CURRENT page; clicking should refresh.
-        window.location.reload();
+        navigate(location.pathname, { replace: true });
     };
 
     // Close menu on route change

@@ -28,13 +28,11 @@
     cursor: pointer;
 }
 
-/* Navigation buttons (Prev/Next) - wider but shorter and smaller text to avoid layout shift when label changes */
+/* Navigation buttons — arrow-only, compact on all screen sizes */
 .nc-nav-btn {
-    min-width: 96px; /* wider so month name fits without pushing header */
-    max-width: 140px;
-    padding: 6px 10px;
-    height: 36px; /* reduce height */
-    font-size: 13px; /* slightly smaller text */
+    width: 36px;
+    height: 32px;
+    padding: 0;
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -43,57 +41,20 @@
 .nc-nav-btn:hover {
     transform: translateY(-1px);
 }
+.nc-nav-btn .nc-arrow {
+    font-weight: 700;
+    font-size: 20px;
+    line-height: 1;
+    color: inherit;
+}
 
-/* Arrow and label spacing & soft swap */
-.nc-nav-btn { position: relative; overflow: hidden; padding-left: 34px; padding-right: 34px; }
-/* position arrows absolutely so labels can be perfectly centered */
-.nc-nav-btn .nc-arrow { font-weight:700; color: inherit; position: absolute; top: 45%; transform: translateY(calc(-50% - 0.08em)); font-size: 22px; line-height:1; }
-.nc-arrow-left { left: 10px; }
-.nc-arrow-right { right: 10px; }
-
-/* center labels exactly between arrows and use cross-fade/slide for soft swap */
-.nc-nav-btn .nc-label { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); white-space: nowrap; transition: opacity 180ms ease, transform 180ms ease; }
-.nc-nav-btn .nc-label-default { opacity: 1; }
-.nc-nav-btn .nc-label-hover { opacity: 0; }
-.nc-nav-btn:hover .nc-label-default { opacity: 0; /* nudge up 6px relative to centered position */ transform: translate(-50%, calc(-50% - 6px)); }
-.nc-nav-btn:hover .nc-label-hover { opacity: 1; /* ensure hover label stays centered vertically */ transform: translate(-50%, -50%); }
-
-/* Mobile: Always show month names, remove hover behavior, fix overlap */
 @media (max-width: 768px) {
     .nc-nav-btn {
-        min-width: 100px;
-        padding: 6px 8px;
-        padding-left: 26px; /* Reduced left padding to prevent overlap */
-        padding-right: 26px; /* Reduced right padding to prevent overlap */
-        font-size: 11px; /* Smaller font for compact view */
-        height: 32px;
+        width: 32px;
+        height: 28px;
     }
-    
-    /* Smaller arrows on mobile */
-    .nc-nav-btn .nc-arrow { 
-        font-size: 16px; /* Reduced arrow size */
-    }
-    .nc-arrow-left { left: 6px; } /* Move arrow closer to edge */
-    .nc-arrow-right { right: 6px; } /* Move arrow closer to edge */
-    
-    /* Always show month name (hover label), hide default label */
-    .nc-nav-btn .nc-label-default { 
-        opacity: 0;
-        display: none; /* Completely hide "Prev/Next" */
-    }
-    .nc-nav-btn .nc-label-hover { 
-        opacity: 1; /* Always show month name */
-        font-size: 10px; /* Smaller text for month name */
-    }
-    
-    /* Remove hover effects on mobile */
-    .nc-nav-btn:hover .nc-label-default { 
-        opacity: 0;
-        transform: translate(-50%, -50%); /* No animation */
-    }
-    .nc-nav-btn:hover .nc-label-hover { 
-        opacity: 1;
-        transform: translate(-50%, -50%); /* No animation */
+    .nc-nav-btn .nc-arrow {
+        font-size: 17px;
     }
 }
 .nc-center { text-align:center; }
@@ -212,6 +173,8 @@
     text-transform: uppercase;
     letter-spacing: 0.5px;
 }
+.nc-weekday-english-primary .nc-wd-short { display: none; }
+.nc-weekday-english-primary .nc-wd-full  { display: inline; }
 .nc-grid { 
     display:grid; 
     grid-template-columns:repeat(7,1fr); 
@@ -1164,10 +1127,9 @@
     }
     
     .nc-nav-btn {
-        padding: 6px 10px;
-        font-size: 12px;
-        flex-shrink: 0;
-        min-width: 60px;
+        width: 34px;
+        height: 30px;
+        padding: 0;
     }
     
     .nc-btn {
@@ -1212,7 +1174,10 @@
         overflow: hidden;
         text-overflow: ellipsis;
     }
-    
+
+    .nc-weekday-english-primary .nc-wd-full  { display: none; }
+    .nc-weekday-english-primary .nc-wd-short { display: inline; }
+
     .nc-grid {
         gap: 4px;
         /* Allow grid to expand and fill available space */
@@ -1374,25 +1339,11 @@
     }
     
     .nc-nav-btn {
-        padding: 5px 8px;
-        font-size: 10px;
-        flex-shrink: 0;
-        min-width: 90px;
-        padding-left: 24px;
-        padding-right: 24px;
-        height: 30px;
+        width: 28px;
+        height: 26px;
     }
-    
-    /* Smaller arrows for 480px */
-    .nc-nav-btn .nc-arrow { 
-        font-size: 14px;
-    }
-    .nc-arrow-left { left: 5px; }
-    .nc-arrow-right { right: 5px; }
-    
-    /* Month name styling */
-    .nc-nav-btn .nc-label-hover { 
-        font-size: 9px;
+    .nc-nav-btn .nc-arrow {
+        font-size: 15px;
     }
     
     .nc-btn {
@@ -1604,25 +1555,12 @@
     }
     
     .nc-nav-btn {
-        padding: 4px 6px;
-        font-size: 9px;
-        flex-shrink: 0;
-        min-width: 80px;
-        padding-left: 22px;
-        padding-right: 22px;
-        height: 28px;
+        width: 26px;
+        height: 24px;
+        padding: 0;
     }
-    
-    /* Even smaller arrows for 420px */
-    .nc-nav-btn .nc-arrow { 
+    .nc-nav-btn .nc-arrow {
         font-size: 13px;
-    }
-    .nc-arrow-left { left: 4px; }
-    .nc-arrow-right { right: 4px; }
-    
-    /* Month name styling */
-    .nc-nav-btn .nc-label-hover { 
-        font-size: 8px;
     }
     
     .nc-btn {

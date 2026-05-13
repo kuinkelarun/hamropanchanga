@@ -81,7 +81,6 @@ const DayDetailsModal = ({
                 <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" />
               </svg>
               <h4>{t('calendar.tithis')}</h4>
-              <span className="ddm-badge">{tithis.length}</span>
             </div>
             {sortedTithis.length === 0 ? (
               <div className="ddm-empty">
@@ -110,7 +109,6 @@ const DayDetailsModal = ({
                 <path d="M16 2v4M8 2v4M3 10h18" />
               </svg>
               <h4>{t('calendar.publicEvents')}</h4>
-              <span className="ddm-badge">{publicEvents.length}</span>
             </div>
             {publicEvents.length === 0 ? (
               <div className="ddm-empty">
@@ -143,7 +141,6 @@ const DayDetailsModal = ({
                 <circle cx="12" cy="7" r="4" />
               </svg>
               <h4>{t('calendar.privateEvents')}</h4>
-              <span className="ddm-badge">{personalEvents.length}</span>
             </div>
             {personalEvents.length === 0 ? (
               <div className="ddm-empty">

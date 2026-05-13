@@ -14,9 +14,11 @@ import {
 } from '../services/BulkUploadService';
 import { SHARE_PERMISSIONS, isValidEmail } from '../utils/TreeSharingUtils';
 import { useDetectedCountry } from '../hooks/useDetectedCountry';
+import { useLanguage } from '../contexts/LanguageContext';
 import './TreeShareModal.css';
 
 const TreeShareModal = ({ isOpen, onClose, tree, onComplete, userEmail, userId }) => {
+  const { t } = useLanguage();
   const [recipientEmail, setRecipientEmail] = useState('');
   const [whatsappPhone, setWhatsappPhone] = useState('');
   const [permission, setPermission] = useState(SHARE_PERMISSIONS.VIEW);
@@ -41,27 +43,27 @@ const TreeShareModal = ({ isOpen, onClose, tree, onComplete, userEmail, userId }
 
     // Validation
     if (!recipientEmail.trim()) {
-      setError('Please enter an email address');
+      setError(t('treeShare.errorEmailEmpty'));
       return;
     }
 
     if (!isValidEmail(recipientEmail)) {
-      setError('Please enter a valid email address');
+      setError(t('treeShare.errorEmailInvalid'));
       return;
     }
 
     if (recipientEmail.toLowerCase() === userEmail.toLowerCase()) {
-      setError('You cannot share with yourself');
+      setError(t('treeShare.errorEmailSelf'));
       return;
     }
 
     if (sharedUsers[recipientEmail.toLowerCase()]) {
-      setError('This tree is already shared with this user');
+      setError(t('treeShare.errorEmailDuplicate'));
       return;
     }
 
     if (whatsappPhone && !isValidPhoneNumber(whatsappPhone)) {
-      setError('Please enter a valid WhatsApp phone number (include country code)');
+      setError(t('treeShare.errorPhoneInvalid'));
       return;
     }
 
@@ -97,8 +99,8 @@ const TreeShareModal = ({ isOpen, onClose, tree, onComplete, userEmail, userId }
       });
 
       setSuccess(whatsappPhone
-        ? `Invitation sent to ${recipientEmail} via WhatsApp`
-        : `Invitation sent to ${recipientEmail}`);
+        ? t('treeShare.successWhatsapp').replace('{email}', recipientEmail)
+        : t('treeShare.successEmail').replace('{email}', recipientEmail));
       setRecipientEmail('');
       setWhatsappPhone('');
       setPermission(SHARE_PERMISSIONS.VIEW);
@@ -126,7 +128,7 @@ const TreeShareModal = ({ isOpen, onClose, tree, onComplete, userEmail, userId }
         }
       });
 
-      setSuccess('Permission updated');
+      setSuccess(t('treeShare.successPermissionUpdated'));
 
       if (onComplete) {
         onComplete();
@@ -139,7 +141,7 @@ const TreeShareModal = ({ isOpen, onClose, tree, onComplete, userEmail, userId }
   };
 
   const handleRemoveShare = async (email) => {
-    if (!window.confirm(`Remove ${email} from sharing?`)) {
+    if (!window.confirm(t('treeShare.confirmRemove').replace('{email}', email))) {
       return;
     }
 
@@ -151,7 +153,7 @@ const TreeShareModal = ({ isOpen, onClose, tree, onComplete, userEmail, userId }
       delete updated[email];
       setSharedUsers(updated);
 
-      setSuccess(`Sharing removed for ${email}`);
+      setSuccess(t('treeShare.successRemovedSharing').replace('{email}', email));
 
       if (onComplete) {
         onComplete();
@@ -180,7 +182,7 @@ const TreeShareModal = ({ isOpen, onClose, tree, onComplete, userEmail, userId }
         {/* Header */}
         <div className="tsm-header">
           <div>
-            <h2>Share Tree</h2>
+            <h2>{t('treeShare.title')}</h2>
             <p className="tsm-tree-name">{tree.title || tree.name || 'Untitled Tree'}</p>
           </div>
           <button className="tsm-close nc-header-close" onClick={handleClose} aria-label="Close">✕</button>
@@ -193,8 +195,9 @@ const TreeShareModal = ({ isOpen, onClose, tree, onComplete, userEmail, userId }
             <div className="tsm-alert tsm-alert-info">
               <span>ℹ️</span>
               <p>
-                This tree is currently shared with {sharedEmailsList.length} {sharedEmailsList.length === 1 ? 'user' : 'users'}. 
-                You can manage their permissions or add more users below.
+                {t('treeShare.alreadySharedInfo')
+                  .replace('{count}', sharedEmailsList.length)
+                  .replace('{userWord}', sharedEmailsList.length === 1 ? t('treeShare.user') : t('treeShare.users'))}
               </p>
             </div>
           )}
@@ -219,14 +222,14 @@ const TreeShareModal = ({ isOpen, onClose, tree, onComplete, userEmail, userId }
           <form onSubmit={handleShare} className="tsm-form">
             <div className="tsm-form-group">
               <label htmlFor="email" className="tsm-label">
-                Email Address
+                {t('treeShare.emailLabel')}
               </label>
               <input
                 id="email"
                 type="email"
                 value={recipientEmail}
                 onChange={(e) => setRecipientEmail(e.target.value)}
-                placeholder="user@example.com"
+                placeholder={t('treeShare.emailPlaceholder')}
                 className="tsm-input"
                 disabled={isLoading}
               />
@@ -234,7 +237,7 @@ const TreeShareModal = ({ isOpen, onClose, tree, onComplete, userEmail, userId }
 
             <div className="tsm-form-group">
               <label className="tsm-label">
-                📱 WhatsApp Phone <span className="tsm-optional">(optional)</span>
+                {t('treeShare.whatsappLabel')} <span className="tsm-optional">{t('treeShare.optional')}</span>
               </label>
               <PhoneInput
                 international
@@ -245,11 +248,10 @@ const TreeShareModal = ({ isOpen, onClose, tree, onComplete, userEmail, userId }
                 placeholder="+977 98XXXXXXXX"
                 className="tsm-phone-input"
               />
-              <p className="tsm-field-hint">If provided, an invitation link will be sent via WhatsApp</p>
             </div>
 
             <div className="tsm-form-group">
-              <label className="tsm-label">Permission Level</label>
+              <label className="tsm-label">{t('treeShare.permissionLabel')}</label>
               <div className="tsm-permission-options">
                 <label className="tsm-permission-option">
                   <input
@@ -261,9 +263,9 @@ const TreeShareModal = ({ isOpen, onClose, tree, onComplete, userEmail, userId }
                     disabled={isLoading}
                   />
                   <div>
-                    <span className="tsm-permission-name">👁️ View Only</span>
-                    <span className="tsm-permission-desc">Can view tree, builder, and events but cannot edit</span>
+                    <span className="tsm-permission-name">{t('treeShare.viewOnly')}</span>
                   </div>
+                  <span className="tsm-info-icon" aria-hidden="true" title={t('treeShare.viewOnlyTooltip')}><i>i</i></span>
                 </label>
 
                 <label className="tsm-permission-option">
@@ -276,9 +278,9 @@ const TreeShareModal = ({ isOpen, onClose, tree, onComplete, userEmail, userId }
                     disabled={isLoading}
                   />
                   <div>
-                    <span className="tsm-permission-name">✏️ Can Edit</span>
-                    <span className="tsm-permission-desc">Can view and edit everything except delete/share</span>
+                    <span className="tsm-permission-name">{t('treeShare.canEdit')}</span>
                   </div>
+                  <span className="tsm-info-icon" aria-hidden="true" title={t('treeShare.canEditTooltip')}><i>i</i></span>
                 </label>
               </div>
             </div>
@@ -288,14 +290,14 @@ const TreeShareModal = ({ isOpen, onClose, tree, onComplete, userEmail, userId }
               className="app-save-btn"
               disabled={isLoading || !recipientEmail.trim()}
             >
-              {isLoading ? '🔄 Sharing...' : '📤 Share Tree'}
+              {isLoading ? t('treeShare.sharingButton') : t('treeShare.shareButton')}
             </button>
           </form>
 
           {/* Divider */}
           {sharedEmailsList.length > 0 && (
             <div className="tsm-divider">
-              <span>Currently Shared With ({sharedEmailsList.length})</span>
+              <span>{t('treeShare.currentlySharedWith')} ({sharedEmailsList.length})</span>
             </div>
           )}
 
@@ -304,19 +306,17 @@ const TreeShareModal = ({ isOpen, onClose, tree, onComplete, userEmail, userId }
             <div className="tsm-shared-list">
               {sharedEmailsList.map((email) => {
                 const shareData = sharedUsers[email];
-                const permissionIcon = shareData.permission === SHARE_PERMISSIONS.VIEW ? '👁️' : '✏️';
-                const permissionText = shareData.permission === SHARE_PERMISSIONS.VIEW ? 'View Only' : 'Can Edit';
-                
+                const permissionText = shareData.permission === SHARE_PERMISSIONS.VIEW ? t('treeShare.viewOnly') : t('treeShare.canEdit');
+
                 return (
                   <div key={email} className="tsm-shared-item">
                     <div className="tsm-shared-info">
                       <div className="flex items-center gap-2">
-                        <span className="text-lg">{permissionIcon}</span>
                         <p className="tsm-shared-email">{email}</p>
                       </div>
                       <p className="tsm-shared-date">
-                        {permissionText} • Shared on {new Date(shareData.sharedAt).toLocaleDateString()}
-                        {shareData.sharedBy && ` by ${shareData.sharedBy}`}
+                        {permissionText} • {t('treeShare.sharedOn')} {(shareData.sharedAt?.toDate ? shareData.sharedAt.toDate() : new Date(shareData.sharedAt)).toLocaleDateString()}
+                        {shareData.sharedBy && ` ${t('treeShare.by')} ${shareData.sharedBy}`}
                       </p>
                     </div>
 
@@ -327,8 +327,8 @@ const TreeShareModal = ({ isOpen, onClose, tree, onComplete, userEmail, userId }
                         className="tsm-permission-select"
                         disabled={isLoading}
                       >
-                        <option value={SHARE_PERMISSIONS.VIEW}>👁️ View</option>
-                        <option value={SHARE_PERMISSIONS.EDIT}>✏️ Edit</option>
+                        <option value={SHARE_PERMISSIONS.VIEW}>{t('treeShare.viewLabel')}</option>
+                        <option value={SHARE_PERMISSIONS.EDIT}>{t('treeShare.editLabel')}</option>
                       </select>
 
                       <button
@@ -336,7 +336,7 @@ const TreeShareModal = ({ isOpen, onClose, tree, onComplete, userEmail, userId }
                         className="tsm-btn-remove"
                         onClick={() => handleRemoveShare(email)}
                         disabled={isLoading}
-                        title="Remove share"
+                        title={t('treeShare.removeShare')}
                       >
                         🗑️
                       </button>
@@ -347,30 +347,16 @@ const TreeShareModal = ({ isOpen, onClose, tree, onComplete, userEmail, userId }
             </div>
           ) : (
             <div className="tsm-empty">
-              <p>Tree not shared with anyone yet</p>
+              <p>{t('treeShare.notSharedYet')}</p>
             </div>
           )}
 
-          {/* Permission Info */}
-          <div className="tsm-info-box">
-            <h4>📋 About Permissions</h4>
-            <div className="tsm-info-items">
-              <div className="tsm-info-item">
-                <strong>👁️ View Only</strong>
-                <p>Can view the tree, builder, and events but cannot make any changes</p>
-              </div>
-              <div className="tsm-info-item">
-                <strong>✏️ Can Edit</strong>
-                <p>Can view and edit all tree data, members, and events. Cannot delete the tree or manage sharing.</p>
-              </div>
-            </div>
-          </div>
         </div>
 
         {/* Footer */}
         <div className="tsm-footer">
           <button className="tsm-btn tsm-btn-secondary" onClick={handleClose}>
-            Close
+            {t('treeShare.closeButton')}
           </button>
         </div>
       </div>

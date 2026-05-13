@@ -27,6 +27,7 @@ import {
   ENGLISH_NEPALI_MONTHS as englishNepaliMonths,
   NEPALI_WEEKDAYS as nepaliWeekdays,
   ENGLISH_WEEKDAYS as englishWeekdays,
+  SHORT_ENGLISH_WEEKDAYS as shortEnglishWeekdays,
   TIME_PERIODS as timePeriods,
   normalizePakshaToNepali,
   normalizePakshaToEnglish,
@@ -1280,9 +1281,7 @@ export default function NepaliCalendar({ user: propUser, isAdmin, trees = [], tr
           className="nc-btn nc-nav-btn"
           aria-label={`Previous Nepali month: ${getPrevMonthName()}`}
         >
-          <span className="nc-arrow nc-arrow-left">‹</span>
-          <span className="nc-label nc-label-default">{t('calendar.prev')}</span>
-          <span className="nc-label nc-label-hover">{getPrevMonthName()}</span>
+          <span className="nc-arrow nc-arrow-left">«</span>
         </button>
         <div className="nc-center">
           {/* Month and year dropdown selectors */}
@@ -1324,9 +1323,7 @@ export default function NepaliCalendar({ user: propUser, isAdmin, trees = [], tr
           className="nc-btn nc-nav-btn"
           aria-label={`Next Nepali month: ${getNextMonthName()}`}
         >
-          <span className="nc-label nc-label-default">{t('calendar.next')}</span>
-          <span className="nc-label nc-label-hover">{getNextMonthName()}</span>
-          <span className="nc-arrow nc-arrow-right">›</span>
+          <span className="nc-arrow nc-arrow-right">»</span>
         </button>
       </div>
 
@@ -1340,7 +1337,10 @@ export default function NepaliCalendar({ user: propUser, isAdmin, trees = [], tr
               </>
             ) : (
               <>
-                <div className="nc-weekday-english nc-weekday-english-top">{englishWeekdays[index]}</div>
+                <div className="nc-weekday-english nc-weekday-english-top">
+                  <span className="nc-wd-full">{englishWeekdays[index]}</span>
+                  <span className="nc-wd-short">{shortEnglishWeekdays[index]}</span>
+                </div>
                 <div className="nc-weekday-nepali nc-weekday-nepali-bottom">{nepaliDay}</div>
               </>
             )}
