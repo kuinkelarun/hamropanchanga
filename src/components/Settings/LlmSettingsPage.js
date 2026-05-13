@@ -181,7 +181,7 @@ export default function LlmSettingsPage() {
 
   if (authLoading) {
     return (
-      <div className="max-w-3xl mx-auto py-10 px-4">
+      <div className="max-w-6xl mx-auto py-10 px-4">
         <div className="text-gray-500">Loading…</div>
       </div>
     );
@@ -189,7 +189,7 @@ export default function LlmSettingsPage() {
 
   if (!user) {
     return (
-      <div className="max-w-3xl mx-auto py-10 px-4">
+      <div className="max-w-6xl mx-auto py-10 px-4">
         <h1 className="text-2xl font-semibold text-gray-900 mb-3">Settings</h1>
         <p className="text-gray-600">Sign in to configure your settings.</p>
       </div>
@@ -197,7 +197,7 @@ export default function LlmSettingsPage() {
   }
 
   return (
-    <div className="max-w-3xl mx-auto py-8 px-4">
+    <div className="max-w-6xl mx-auto py-8 px-4">
       {/* Tab bar */}
       <div className="flex gap-1 border-b border-gray-200 mb-6">
         <TabButton
