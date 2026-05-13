@@ -1,10 +1,12 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
+import { useNavigate, useParams } from 'react-router-dom';
 import PhoneInput, { isValidPhoneNumber } from 'react-phone-number-input';
 import 'react-phone-number-input/style.css';
 import { db } from '../../firebase';
 import { useAuth } from '../../contexts/AuthContext';
 import { useChat } from '../../contexts/ChatContext';
+import { useLanguage } from '../../contexts/LanguageContext';
 import {
   ChatBackendError,
   deleteLlmConfig,
@@ -12,13 +14,20 @@ import {
   saveLlmConfig,
   testLlmConfig,
 } from '../../services/chatBackendService';
+import UserGroupsSection from './UserGroupsSection';
+import ContactsSection from './ContactsSection';
 
 const ANTHROPIC_DEFAULT_MODEL = 'claude-opus-4-7';
 const BEDROCK_DEFAULT_MODEL = 'anthropic.claude-opus-4-v1:0';
 
+const VALID_TABS = ['whatsapp', 'contacts', 'groups', 'ai-provider'];
+
 export default function LlmSettingsPage() {
   const { user, isLoading: authLoading } = useAuth();
   const { refreshConfig } = useChat();
+  const { t } = useLanguage();
+  const navigate = useNavigate();
+  const { tab } = useParams();
 
   const [loading, setLoading] = useState(true);
   const [config, setConfig] = useState(null);
@@ -40,7 +49,8 @@ export default function LlmSettingsPage() {
   const [error, setError] = useState(null);
   const [testResult, setTestResult] = useState(null);
   const [saveSuccess, setSaveSuccess] = useState(false);
-  const [activeTab, setActiveTab] = useState('whatsapp'); // 'whatsapp' | 'ai-provider'
+  const activeTab = VALID_TABS.includes(tab) ? tab : 'whatsapp';
+  const setActiveTab = (newTab) => navigate(`/settings/${newTab}`, { replace: true });
 
   const loadConfig = useCallback(async () => {
     setLoading(true);
@@ -196,6 +206,16 @@ export default function LlmSettingsPage() {
           onClick={() => setActiveTab('whatsapp')}
         />
         <TabButton
+          label={t('contacts.tabLabel')}
+          active={activeTab === 'contacts'}
+          onClick={() => setActiveTab('contacts')}
+        />
+        <TabButton
+          label={t('userGroups.tabLabel')}
+          active={activeTab === 'groups'}
+          onClick={() => setActiveTab('groups')}
+        />
+        <TabButton
           label="AI Provider"
           active={activeTab === 'ai-provider'}
           onClick={() => setActiveTab('ai-provider')}
@@ -205,6 +225,16 @@ export default function LlmSettingsPage() {
       {/* Tab: WhatsApp Notifications */}
       {activeTab === 'whatsapp' && (
         <WhatsAppSection uid={user.uid} />
+      )}
+
+      {/* Tab: Contacts */}
+      {activeTab === 'contacts' && (
+        <ContactsSection uid={user.uid} />
+      )}
+
+      {/* Tab: Contact Groups */}
+      {activeTab === 'groups' && (
+        <UserGroupsSection uid={user.uid} />
       )}
 
       {/* Tab: AI Provider */}

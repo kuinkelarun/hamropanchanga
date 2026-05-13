@@ -122,7 +122,7 @@ function AppContent() {
         if (pathname.startsWith('/events')) return 'Events & Reminders';
         if (pathname.startsWith('/builder')) return 'Builder';
         if (pathname.startsWith('/chat')) return 'Chat';
-        if (pathname.startsWith('/settings/llm')) return 'Settings';
+        if (pathname.startsWith('/settings')) return 'Settings';
 
         const clean = pathname.replace(/^\//, '').split('/')[0] || '';
         return clean
@@ -235,7 +235,7 @@ function AppContent() {
     };
 
     const handleLlmSettings = () => {
-        navigate('/settings/llm');
+        navigate('/settings/ai-provider');
     };
 
     const handleTithiCalculator = () => {
@@ -589,13 +589,13 @@ function AppContent() {
             {user && needsPhone && location.pathname !== '/add-phone' && (
                 <div className="bg-green-50 border-b border-green-200 px-4 py-2 flex items-center justify-center gap-3 text-sm">
                     <span className="text-green-800">
-                        📱 Add your WhatsApp number to receive event reminders
+                        📱 {t('phoneSetup.bannerText')}
                     </span>
                     <button
                         onClick={() => navigate('/add-phone', { state: { from: location.pathname } })}
                         className="text-green-700 font-medium underline hover:text-green-900 whitespace-nowrap"
                     >
-                        Add now
+                        {t('phoneSetup.bannerAction')}
                     </button>
                 </div>
             )}
@@ -710,7 +710,7 @@ function AppContent() {
 
                     <Route path="/chat" element={<ChatPage />} />
 
-                    <Route path="/settings/llm" element={<LlmSettingsPage />} />
+                    <Route path="/settings/:tab?" element={<LlmSettingsPage />} />
 
                     <Route path="/invite/:invitationId" element={<InvitationLandingPage />} />
                 </Routes>

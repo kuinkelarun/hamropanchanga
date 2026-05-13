@@ -17,6 +17,9 @@ export const COLLECTIONS = Object.freeze({
   USER_INVITATIONS: 'userInvitations',
   CUSTOMERS: 'customers',
 
+  USER_GROUPS: 'userGroups',
+  USER_CONTACTS: 'userContacts',
+
   // Subcollections (under a tree document)
   MEMBERS: 'members',
   RELATIONSHIPS: 'relationships',

@@ -344,6 +344,22 @@ service cloud.firestore {
       allow create, update, delete: if false;
     }
 
+    // User contacts (personal address book) — owned by the user who created them
+    match /userContacts/{contactId} {
+      allow read, update, delete: if isAuthenticated()
+        && request.auth.uid == resource.data.ownerUid;
+      allow create: if isAuthenticated()
+        && request.auth.uid == request.resource.data.ownerUid;
+    }
+
+    // User contact groups — owned by the user who created them
+    match /userGroups/{groupId} {
+      allow read, update, delete: if isAuthenticated()
+        && request.auth.uid == resource.data.ownerUid;
+      allow create: if isAuthenticated()
+        && request.auth.uid == request.resource.data.ownerUid;
+    }
+
     // Encrypted per-user LLM credentials — managed exclusively by the chat backend
     // via the Firebase Admin SDK (which bypasses these rules). Browser clients must
     // never be able to read or write this collection directly.

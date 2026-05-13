@@ -67,7 +67,7 @@ export default function ChatPanel({
   const isReady = configStatus === 'configured';
   const goToSettings = () => {
     if (onClose) onClose();
-    navigate('/settings/llm');
+    navigate('/settings/ai-provider');
   };
 
   useEffect(() => {
