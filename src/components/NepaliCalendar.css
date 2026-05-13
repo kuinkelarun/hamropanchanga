@@ -28,13 +28,11 @@
     cursor: pointer;
 }
 
-/* Navigation buttons - icon only (« and ») */
+/* Navigation buttons — arrow-only, compact on all screen sizes */
 .nc-nav-btn {
-    min-width: 44px;
-    max-width: 52px;
-    padding: 6px 10px;
-    height: 36px;
-    font-size: 22px;
+    width: 36px;
+    height: 32px;
+    padding: 0;
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -43,23 +41,20 @@
 .nc-nav-btn:hover {
     transform: translateY(-1px);
 }
+.nc-nav-btn .nc-arrow {
+    font-weight: 700;
+    font-size: 20px;
+    line-height: 1;
+    color: inherit;
+}
 
-/* Arrow - centered in button */
-.nc-nav-btn { position: relative; overflow: hidden; padding-left: 8px; padding-right: 8px; }
-.nc-nav-btn .nc-arrow { font-weight: 700; color: inherit; font-size: 22px; line-height: 1; }
-
-/* Mobile: compact icon-only nav buttons */
 @media (max-width: 768px) {
     .nc-nav-btn {
-        min-width: 40px;
-        max-width: 48px;
-        padding: 6px 8px;
-        font-size: 20px;
-        height: 32px;
+        width: 32px;
+        height: 28px;
     }
-    
-    .nc-nav-btn .nc-arrow { 
-        font-size: 20px;
+    .nc-nav-btn .nc-arrow {
+        font-size: 17px;
     }
 }
 .nc-center { text-align:center; }
@@ -178,6 +173,8 @@
     text-transform: uppercase;
     letter-spacing: 0.5px;
 }
+.nc-weekday-english-primary .nc-wd-short { display: none; }
+.nc-weekday-english-primary .nc-wd-full  { display: inline; }
 .nc-grid { 
     display:grid; 
     grid-template-columns:repeat(7,1fr); 
@@ -1132,10 +1129,9 @@
     }
     
     .nc-nav-btn {
-        padding: 6px 10px;
-        font-size: 12px;
-        flex-shrink: 0;
-        min-width: 60px;
+        width: 34px;
+        height: 30px;
+        padding: 0;
     }
     
     .nc-btn {
@@ -1180,7 +1176,10 @@
         overflow: hidden;
         text-overflow: ellipsis;
     }
-    
+
+    .nc-weekday-english-primary .nc-wd-full  { display: none; }
+    .nc-weekday-english-primary .nc-wd-short { display: inline; }
+
     .nc-grid {
         gap: 4px;
         /* Allow grid to expand and fill available space */
@@ -1342,25 +1341,11 @@
     }
     
     .nc-nav-btn {
-        padding: 5px 8px;
-        font-size: 10px;
-        flex-shrink: 0;
-        min-width: 90px;
-        padding-left: 24px;
-        padding-right: 24px;
-        height: 30px;
+        width: 28px;
+        height: 26px;
     }
-    
-    /* Smaller arrows for 480px */
-    .nc-nav-btn .nc-arrow { 
-        font-size: 14px;
-    }
-    .nc-arrow-left { left: 5px; }
-    .nc-arrow-right { right: 5px; }
-    
-    /* Month name styling */
-    .nc-nav-btn .nc-label-hover { 
-        font-size: 9px;
+    .nc-nav-btn .nc-arrow {
+        font-size: 15px;
     }
     
     .nc-btn {
@@ -1572,25 +1557,12 @@
     }
     
     .nc-nav-btn {
-        padding: 4px 6px;
-        font-size: 9px;
-        flex-shrink: 0;
-        min-width: 80px;
-        padding-left: 22px;
-        padding-right: 22px;
-        height: 28px;
+        width: 26px;
+        height: 24px;
+        padding: 0;
     }
-    
-    /* Even smaller arrows for 420px */
-    .nc-nav-btn .nc-arrow { 
+    .nc-nav-btn .nc-arrow {
         font-size: 13px;
-    }
-    .nc-arrow-left { left: 4px; }
-    .nc-arrow-right { right: 4px; }
-    
-    /* Month name styling */
-    .nc-nav-btn .nc-label-hover { 
-        font-size: 8px;
     }
     
     .nc-btn {

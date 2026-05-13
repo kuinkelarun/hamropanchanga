@@ -36,6 +36,10 @@ export const ENGLISH_WEEKDAYS = [
   "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"
 ];
 
+export const SHORT_ENGLISH_WEEKDAYS = [
+  "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"
+];
+
 // ──── Nepali numeral characters ────
 export const NEPALI_NUMBERS = ["०","१","२","३","४","५","६","७","८","९"];
 

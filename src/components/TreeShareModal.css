@@ -153,6 +153,39 @@
 }
 
 /* WhatsApp Phone Input */
+.tsm-phone-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.tsm-phone-row .tsm-phone-input {
+  flex: 1;
+}
+
+.tsm-contact-btn {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  background: #f9fafb;
+  color: #6b7280;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.tsm-contact-btn:hover:not(:disabled) {
+  background: #f3f4f6;
+  color: #374151;
+}
+.tsm-contact-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
 .tsm-phone-input {
   --PhoneInputCountryFlag-height: 1em;
 }
@@ -198,6 +231,7 @@
 }
 
 .tsm-permission-option {
+  position: relative;
   display: flex;
   gap: 12px;
   padding: 12px;
@@ -239,9 +273,130 @@
   font-size: 14px;
 }
 
-.tsm-permission-desc {
+.tsm-info-icon {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 17px;
+  height: 17px;
+  border-radius: 50%;
+  background: #3b5bdb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.55;
+  cursor: default;
+  pointer-events: auto;
+  flex-shrink: 0;
+}
+.tsm-info-icon i {
+  font-style: italic;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 11px;
+  font-weight: 700;
+  color: #fff;
+  line-height: 1;
+  user-select: none;
+}
+.tsm-info-icon:hover {
+  opacity: 1;
+}
+
+/* Tab bar */
+.tsm-tab-bar {
+  display: flex;
+  gap: 2px;
+  border-bottom: 2px solid #e5e7eb;
+  margin-bottom: 20px;
+}
+
+.tsm-tab-btn {
+  padding: 8px 18px;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #6b7280;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.tsm-tab-btn:hover {
+  color: #374151;
+}
+
+.tsm-tab-btn.active {
+  color: #111827;
+  border-bottom-color: #111827;
+}
+
+/* Group tab */
+.tsm-group-tab {
+  padding-bottom: 8px;
+}
+
+/* Phone autocomplete suggestions */
+.tsm-phone-suggestions {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  z-index: 60;
+  margin-top: 2px;
+  overflow: hidden;
+}
+
+.tsm-phone-suggestions-label {
+  margin: 0;
+  padding: 6px 12px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #9ca3af;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  background: #f9fafb;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.tsm-phone-suggestion-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  padding: 8px 12px;
+  background: none;
+  border: none;
+  border-bottom: 1px solid #f9fafb;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.1s;
+  gap: 8px;
+}
+
+.tsm-phone-suggestion-item:last-child {
+  border-bottom: none;
+}
+
+.tsm-phone-suggestion-item:hover {
+  background: #f9fafb;
+}
+
+.tsm-suggestion-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: #111827;
+}
+
+.tsm-suggestion-phone {
   font-size: 12px;
   color: #6b7280;
+  font-family: monospace;
 }
 
 /* Divider */

@@ -6,7 +6,7 @@ export default function UnconfiguredPrompt({ onAfterNavigate }) {
 
   const goToSettings = () => {
     if (onAfterNavigate) onAfterNavigate();
-    navigate('/settings/llm');
+    navigate('/settings/ai-provider');
   };
 
   return (

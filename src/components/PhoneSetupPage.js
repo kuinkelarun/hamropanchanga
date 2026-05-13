@@ -1,5 +1,5 @@
 // src/components/PhoneSetupPage.js
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import PhoneInput, { isValidPhoneNumber } from 'react-phone-number-input';
 import 'react-phone-number-input/style.css';
@@ -7,9 +7,11 @@ import { doc, updateDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useAuth } from '../contexts/AuthContext';
 import { useDetectedCountry } from '../hooks/useDetectedCountry';
+import { useLanguage } from '../contexts/LanguageContext';
 
 export default function PhoneSetupPage() {
   const { user, setNeedsPhone, setSkipPhone } = useAuth();
+  const { t } = useLanguage();
   const navigate = useNavigate();
   const location = useLocation();
   const from = location.state?.from || '/';
@@ -18,11 +20,32 @@ export default function PhoneSetupPage() {
   const [optIn, setOptIn] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [supportsContacts, setSupportsContacts] = useState(false);
   const { country, detecting } = useDetectedCountry();
+
+  useEffect(() => {
+    setSupportsContacts(
+      typeof navigator !== 'undefined' &&
+      'contacts' in navigator &&
+      'ContactsManager' in window
+    );
+  }, []);
+
+  const handlePickContact = async () => {
+    try {
+      const contacts = await navigator.contacts.select(['tel'], { multiple: false });
+      if (contacts.length > 0 && contacts[0].tel?.length > 0) {
+        setPhone(contacts[0].tel[0]);
+        setError('');
+      }
+    } catch {
+      // user cancelled or permission denied — do nothing
+    }
+  };
 
   const handleSave = async () => {
     if (!phone || !isValidPhoneNumber(phone)) {
-      setError('Please enter a valid phone number including country code.');
+      setError(t('phoneSetup.errorInvalid'));
       return;
     }
     if (!user) return;
@@ -39,7 +62,7 @@ export default function PhoneSetupPage() {
       navigate(from, { replace: true });
     } catch (err) {
       console.error('Failed to save phone number:', err);
-      setError('Failed to save. Please try again.');
+      setError(t('phoneSetup.errorSave'));
     } finally {
       setSaving(false);
     }
@@ -62,35 +85,50 @@ export default function PhoneSetupPage() {
         </div>
 
         <h1 className="text-xl font-semibold text-gray-900 text-center mb-1">
-          Get WhatsApp Notifications
+          {t('phoneSetup.title')}
         </h1>
         <p className="text-sm text-gray-500 text-center mb-6">
-          Add your WhatsApp number to receive reminders for events you've added —
-          one week before and on the day of the event.
+          {t('phoneSetup.subtitle')}
         </p>
 
         {/* Phone Input */}
         <div className="mb-4">
           <label className="block text-sm font-medium text-gray-700 mb-1.5">
-            WhatsApp Number
+            {t('phoneSetup.label')}
           </label>
-          <div className={`phone-input-wrapper rounded-lg border ${error ? 'border-red-400' : 'border-gray-300'} focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500 transition-colors`}>
-            {detecting ? (
-              <div className="px-3 py-2.5 text-sm text-gray-400">Detecting your country…</div>
-            ) : (
-              <PhoneInput
-                international
-                countryCallingCodeEditable={false}
-                defaultCountry={country}
-                value={phone}
-                onChange={(val) => { setPhone(val || ''); setError(''); }}
-                className="w-full"
-              />
+          <div className="flex items-center gap-2">
+            <div className={`flex-1 phone-input-wrapper rounded-lg border ${error ? 'border-red-400' : 'border-gray-300'} focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500 transition-colors`}>
+              {detecting ? (
+                <div className="px-3 py-2.5 text-sm text-gray-400">{t('phoneSetup.detecting')}</div>
+              ) : (
+                <PhoneInput
+                  international
+                  countryCallingCodeEditable={false}
+                  defaultCountry={country}
+                  value={phone}
+                  onChange={(val) => { setPhone(val || ''); setError(''); }}
+                  className="w-full"
+                />
+              )}
+            </div>
+            {supportsContacts && (
+              <button
+                type="button"
+                onClick={handlePickContact}
+                disabled={saving || detecting}
+                title={t('phoneSetup.pickContact')}
+                className="flex-shrink-0 w-10 h-10 flex items-center justify-center border border-gray-300 rounded-lg bg-gray-50 text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                  <circle cx="12" cy="7" r="4"/>
+                </svg>
+              </button>
             )}
           </div>
           {error && <p className="mt-1.5 text-xs text-red-600">{error}</p>}
           <p className="mt-1.5 text-xs text-gray-400">
-            Enter the number you use on WhatsApp. Only you will receive these messages.
+            {t('phoneSetup.hint')}
           </p>
         </div>
 
@@ -112,7 +150,7 @@ export default function PhoneSetupPage() {
             </div>
           </div>
           <span className="text-sm text-gray-600 group-hover:text-gray-800 transition-colors">
-            Send me WhatsApp reminders for events I've added to my calendar
+            {t('phoneSetup.optIn')}
           </span>
         </label>
 
@@ -122,13 +160,13 @@ export default function PhoneSetupPage() {
           disabled={saving || detecting}
           className="w-full bg-green-600 hover:bg-green-700 text-white py-2.5 rounded-lg text-sm font-medium transition-colors disabled:opacity-60 mb-3"
         >
-          {saving ? 'Saving…' : 'Save & Enable Notifications'}
+          {saving ? t('phoneSetup.saving') : t('phoneSetup.save')}
         </button>
         <button
           onClick={handleSkip}
           className="w-full text-sm text-gray-500 hover:text-gray-700 py-2 transition-colors"
         >
-          Skip for now
+          {t('phoneSetup.skip')}
         </button>
       </div>
     </div>
