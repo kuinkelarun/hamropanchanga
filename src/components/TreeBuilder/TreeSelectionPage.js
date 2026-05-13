@@ -8,6 +8,7 @@ import { COLLECTIONS } from '../../constants/firestoreCollections';
 import { normalizeForCompare } from '../../utils/textNormalize';
 import { createEvent } from '../../services/CalendarEventService';
 import { useLanguage } from '../../contexts/LanguageContext';
+import { useAuth } from '../../contexts/AuthContext';
 import BulkUploadModal from '../BulkUploadModal';
 import BulkTreeShareModal from '../BulkTreeShareModal';
 import { useUserPermissions } from '../../hooks/usePermissions';
@@ -64,6 +65,7 @@ function sortTrees(arr, ascending) {
 
 export default function TreeSelectionPage({ user, isAdmin }) {
   const navigate = useNavigate();
+  const { isLoading: authLoading } = useAuth();
   const { isSuperUser } = useUserPermissions(user);
   const { t } = useLanguage();
   const currentUserEmailLower = (user?.email || '').toLowerCase().trim();
@@ -448,6 +450,13 @@ export default function TreeSelectionPage({ user, isAdmin }) {
     }
   };
 
+  // Redirect to login when unauthenticated — use useEffect so sign-out's navigate('/') fires first
+  useEffect(() => {
+    if (!authLoading && !user) {
+      navigate('/login', { replace: true, state: { from: '/trees' } });
+    }
+  }, [user, authLoading, navigate]);
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-100">
@@ -457,7 +466,6 @@ export default function TreeSelectionPage({ user, isAdmin }) {
   }
 
   if (!user) {
-    navigate('/login', { replace: true, state: { from: '/trees' } });
     return null;
   }
 

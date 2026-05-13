@@ -28,13 +28,13 @@
     cursor: pointer;
 }
 
-/* Navigation buttons (Prev/Next) - wider but shorter and smaller text to avoid layout shift when label changes */
+/* Navigation buttons - icon only (« and ») */
 .nc-nav-btn {
-    min-width: 96px; /* wider so month name fits without pushing header */
-    max-width: 140px;
+    min-width: 44px;
+    max-width: 52px;
     padding: 6px 10px;
-    height: 36px; /* reduce height */
-    font-size: 13px; /* slightly smaller text */
+    height: 36px;
+    font-size: 22px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -44,56 +44,22 @@
     transform: translateY(-1px);
 }
 
-/* Arrow and label spacing & soft swap */
-.nc-nav-btn { position: relative; overflow: hidden; padding-left: 34px; padding-right: 34px; }
-/* position arrows absolutely so labels can be perfectly centered */
-.nc-nav-btn .nc-arrow { font-weight:700; color: inherit; position: absolute; top: 45%; transform: translateY(calc(-50% - 0.08em)); font-size: 22px; line-height:1; }
-.nc-arrow-left { left: 10px; }
-.nc-arrow-right { right: 10px; }
+/* Arrow - centered in button */
+.nc-nav-btn { position: relative; overflow: hidden; padding-left: 8px; padding-right: 8px; }
+.nc-nav-btn .nc-arrow { font-weight: 700; color: inherit; font-size: 22px; line-height: 1; }
 
-/* center labels exactly between arrows and use cross-fade/slide for soft swap */
-.nc-nav-btn .nc-label { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); white-space: nowrap; transition: opacity 180ms ease, transform 180ms ease; }
-.nc-nav-btn .nc-label-default { opacity: 1; }
-.nc-nav-btn .nc-label-hover { opacity: 0; }
-.nc-nav-btn:hover .nc-label-default { opacity: 0; /* nudge up 6px relative to centered position */ transform: translate(-50%, calc(-50% - 6px)); }
-.nc-nav-btn:hover .nc-label-hover { opacity: 1; /* ensure hover label stays centered vertically */ transform: translate(-50%, -50%); }
-
-/* Mobile: Always show month names, remove hover behavior, fix overlap */
+/* Mobile: compact icon-only nav buttons */
 @media (max-width: 768px) {
     .nc-nav-btn {
-        min-width: 100px;
+        min-width: 40px;
+        max-width: 48px;
         padding: 6px 8px;
-        padding-left: 26px; /* Reduced left padding to prevent overlap */
-        padding-right: 26px; /* Reduced right padding to prevent overlap */
-        font-size: 11px; /* Smaller font for compact view */
+        font-size: 20px;
         height: 32px;
     }
     
-    /* Smaller arrows on mobile */
     .nc-nav-btn .nc-arrow { 
-        font-size: 16px; /* Reduced arrow size */
-    }
-    .nc-arrow-left { left: 6px; } /* Move arrow closer to edge */
-    .nc-arrow-right { right: 6px; } /* Move arrow closer to edge */
-    
-    /* Always show month name (hover label), hide default label */
-    .nc-nav-btn .nc-label-default { 
-        opacity: 0;
-        display: none; /* Completely hide "Prev/Next" */
-    }
-    .nc-nav-btn .nc-label-hover { 
-        opacity: 1; /* Always show month name */
-        font-size: 10px; /* Smaller text for month name */
-    }
-    
-    /* Remove hover effects on mobile */
-    .nc-nav-btn:hover .nc-label-default { 
-        opacity: 0;
-        transform: translate(-50%, -50%); /* No animation */
-    }
-    .nc-nav-btn:hover .nc-label-hover { 
-        opacity: 1;
-        transform: translate(-50%, -50%); /* No animation */
+        font-size: 20px;
     }
 }
 .nc-center { text-align:center; }
@@ -289,8 +255,8 @@
     justify-content: center;
     background: transparent;
     color: #fff;
-    padding: 12px 4px 16px 4px;
-    margin: -16px -16px 14px -16px;
+    padding: 12px 4px 8px 4px;
+    margin: -16px -16px 6px -16px;
     cursor: pointer;
     transition: opacity 0.2s ease;
 }
@@ -307,8 +273,8 @@
 
 @media (max-width: 768px) {
     .nc-topbar {
-        padding: 10px 4px 14px 4px;
-        margin: 0 0 12px 0;
+        padding: 10px 4px 6px 4px;
+        margin: 0 0 6px 0;
     }
 }
 
