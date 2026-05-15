@@ -718,14 +718,16 @@ exports.shareTreeWithEmail = functions.https.onCall(async (data, context) => {
     const foundUser = byEmailSnap.docs[0].data();
     const recipientDisplay = foundUser.displayName || recipientLower;
 
-    await treeRef.update({
-      [`sharedWith.${recipientLower}`]: {
+    await treeRef.update(
+      new admin.firestore.FieldPath('sharedWith', recipientLower),
+      {
         permission: resolvedPermission,
         sharedAt: admin.firestore.FieldValue.serverTimestamp(),
         sharedBy: fromEmail,
       },
-      sharedWithEmails: admin.firestore.FieldValue.arrayUnion(recipientLower),
-    });
+      'sharedWithEmails',
+      admin.firestore.FieldValue.arrayUnion(recipientLower),
+    );
 
     // Send WhatsApp notification if recipient has opted in
     if (foundUser.phoneNumber && foundUser.whatsAppOptIn) {
@@ -902,14 +904,16 @@ exports.shareTreeWithWhatsApp = functions.https.onCall(async (data, context) => 
     const foundEmail = (foundUser.email || hintEmail).toLowerCase();
     const recipientDisplay = foundUser.displayName || foundEmail;
 
-    await treeRef.update({
-      [`sharedWith.${foundEmail}`]: {
+    await treeRef.update(
+      new admin.firestore.FieldPath('sharedWith', foundEmail),
+      {
         permission: resolvedPermission,
         sharedAt: admin.firestore.FieldValue.serverTimestamp(),
         sharedBy: fromEmail,
       },
-      sharedWithEmails: admin.firestore.FieldValue.arrayUnion(foundEmail),
-    });
+      'sharedWithEmails',
+      admin.firestore.FieldValue.arrayUnion(foundEmail),
+    );
 
     // Send notification (existing user, no invite needed)
     const langA = whatsappPhone.startsWith('+977') ? 'ne' : 'en';
@@ -942,14 +946,16 @@ exports.shareTreeWithWhatsApp = functions.https.onCall(async (data, context) => 
     const foundUser = byEmailSnap.docs[0].data();
     const recipientDisplay = foundUser.displayName || hintEmailLower;
 
-    await treeRef.update({
-      [`sharedWith.${hintEmailLower}`]: {
+    await treeRef.update(
+      new admin.firestore.FieldPath('sharedWith', hintEmailLower),
+      {
         permission: resolvedPermission,
         sharedAt: admin.firestore.FieldValue.serverTimestamp(),
         sharedBy: fromEmail,
       },
-      sharedWithEmails: admin.firestore.FieldValue.arrayUnion(hintEmailLower),
-    });
+      'sharedWithEmails',
+      admin.firestore.FieldValue.arrayUnion(hintEmailLower),
+    );
 
     // Notify on the WhatsApp number they provided (may not match stored phone)
     const langB = whatsappPhone.startsWith('+977') ? 'ne' : 'en';
@@ -1055,26 +1061,38 @@ exports.claimInvitation = functions.https.onCall(async (data, context) => {
   }
 
   const callerEmail = (context.auth.token.email || '').toLowerCase();
+  if (!callerEmail) {
+    throw new functions.https.HttpsError(
+      'failed-precondition',
+      'Your account email is unavailable. Please sign in again and retry claiming the invitation.',
+    );
+  }
   const treeRef = db.collection('trees').doc(inv.treeId);
 
   // Atomically grant tree access and mark claimed
   const batch = db.batch();
 
-  batch.update(treeRef, {
-    [`sharedWith.${callerEmail}`]: {
+  batch.update(
+    treeRef,
+    new admin.firestore.FieldPath('sharedWith', callerEmail),
+    {
       permission: inv.permission,
       sharedAt: now,
       sharedBy: inv.fromEmail,
     },
-    sharedWithEmails: admin.firestore.FieldValue.arrayUnion(callerEmail),
-  });
+    'sharedWithEmails',
+    admin.firestore.FieldValue.arrayUnion(callerEmail),
+  );
 
   // If a hintEmail was set, remove it from sharedWith (not yet granted, just pending)
   if (inv.hintEmail && inv.hintEmail !== callerEmail) {
-    batch.update(treeRef, {
-      [`sharedWith.${inv.hintEmail}`]: admin.firestore.FieldValue.delete(),
-      sharedWithEmails: admin.firestore.FieldValue.arrayRemove(inv.hintEmail),
-    });
+    batch.update(
+      treeRef,
+      new admin.firestore.FieldPath('sharedWith', inv.hintEmail),
+      admin.firestore.FieldValue.delete(),
+      'sharedWithEmails',
+      admin.firestore.FieldValue.arrayRemove(inv.hintEmail),
+    );
   }
 
   batch.update(invRef, {

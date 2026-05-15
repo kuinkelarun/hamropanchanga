@@ -947,12 +947,6 @@
   color: #9ca3af;
 }
 
-.tsm-divider {
-  height: 1px;
-  background: #e5e7eb;
-  margin: 20px 0;
-}
-
 @media (max-width: 768px) {
   .tsm-modal-bulk {
     max-width: 95vw;
