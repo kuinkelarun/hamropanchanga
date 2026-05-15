@@ -1,7 +1,7 @@
 import { db } from '../firebase';
 import {
   collection, doc, addDoc, updateDoc, deleteDoc,
-  query, where, orderBy, getDocs, serverTimestamp,
+  query, where, orderBy, getDocs, getDoc, serverTimestamp,
 } from 'firebase/firestore';
 
 const COL = 'userContacts';
@@ -26,6 +26,36 @@ function buildDisplayName(title, firstName, lastName) {
   return [title, firstName, lastName].filter(Boolean).join(' ');
 }
 
+async function buildOwnerDirectory(ownerUids) {
+  const uniqueOwnerUids = Array.from(new Set(ownerUids.filter(Boolean)));
+  const ownerEntries = await Promise.all(uniqueOwnerUids.map(async (ownerUid) => {
+    const ownerSnap = await getDoc(doc(db, 'users', ownerUid));
+    if (!ownerSnap.exists()) {
+      return [ownerUid, { ownerUid, ownerDisplayName: '', ownerEmail: '' }];
+    }
+    const ownerData = ownerSnap.data();
+    return [ownerUid, {
+      ownerUid,
+      ownerDisplayName: ownerData.displayName || '',
+      ownerEmail: ownerData.email || '',
+    }];
+  }));
+
+  return new Map(ownerEntries);
+}
+
+function attachOwnerMetadata(records, ownerDirectory, currentUid) {
+  return records.map((record) => {
+    const ownerMeta = ownerDirectory.get(record.ownerUid) || {};
+    return {
+      ...record,
+      ownerDisplayName: ownerMeta.ownerDisplayName || '',
+      ownerEmail: ownerMeta.ownerEmail || '',
+      isOwnedByCurrentUser: record.ownerUid === currentUid,
+    };
+  });
+}
+
 export const getUserContacts = async (uid) => {
   const q = query(
     collection(db, COL),
@@ -34,6 +64,22 @@ export const getUserContacts = async (uid) => {
   );
   const snap = await getDocs(q);
   return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+};
+
+export const getAccessibleContacts = async (uid, options = {}) => {
+  const { includeAllOwners = false } = options;
+  if (!includeAllOwners) {
+    return getUserContacts(uid);
+  }
+
+  const q = query(
+    collection(db, COL),
+    orderBy('displayName', 'asc'),
+  );
+  const snap = await getDocs(q);
+  const contacts = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  const ownerDirectory = await buildOwnerDirectory(contacts.map((contact) => contact.ownerUid));
+  return attachOwnerMetadata(contacts, ownerDirectory, uid);
 };
 
 export const createContact = async (uid, data) => {

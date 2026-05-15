@@ -3,7 +3,7 @@
  * Allows users to share trees with other users and manage permissions
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import PhoneInput, { isValidPhoneNumber } from 'react-phone-number-input';
 import 'react-phone-number-input/style.css';
 import { httpsCallable } from 'firebase/functions';
@@ -15,8 +15,16 @@ import {
 import { SHARE_PERMISSIONS, isValidEmail } from '../utils/TreeSharingUtils';
 import { useDetectedCountry } from '../hooks/useDetectedCountry';
 import { useLanguage } from '../contexts/LanguageContext';
-import { getUserGroups } from '../services/UserGroupService';
-import { getUserContacts } from '../services/ContactService';
+import { useAuth } from '../contexts/AuthContext';
+import { getAccessibleGroups } from '../services/UserGroupService';
+import { getAccessibleContacts } from '../services/ContactService';
+import {
+  getContactDisplayName,
+  getContactOwnerLabel,
+  filterGroups,
+  getEmailSuggestions,
+  getPhoneSuggestions,
+} from '../utils/shareDirectory';
 import './TreeShareModal.css';
 
 function resolveMembers(members, contacts) {
@@ -31,6 +39,7 @@ function resolveMembers(members, contacts) {
 
 const TreeShareModal = ({ isOpen, onClose, tree, onComplete, userEmail, userId }) => {
   const { t } = useLanguage();
+  const { isAdmin } = useAuth();
   const [recipientEmail, setRecipientEmail] = useState('');
   const [whatsappPhone, setWhatsappPhone] = useState('');
   const [permission, setPermission] = useState(SHARE_PERMISSIONS.VIEW);
@@ -48,7 +57,12 @@ const TreeShareModal = ({ isOpen, onClose, tree, onComplete, userEmail, userId }
   const [groupPermission, setGroupPermission] = useState(SHARE_PERMISSIONS.VIEW);
   const [groupSharing, setGroupSharing] = useState(false);
   const [groupResult, setGroupResult] = useState(null);
-  const [phoneSuggestions, setPhoneSuggestions] = useState([]);
+  const [emailQuery, setEmailQuery] = useState('');
+  const [phoneQuery, setPhoneQuery] = useState('');
+  const [groupSearchQuery, setGroupSearchQuery] = useState('');
+  const [isGroupPickerOpen, setIsGroupPickerOpen] = useState(false);
+  const [showEmailSuggestions, setShowEmailSuggestions] = useState(false);
+  const [showPhoneSuggestions, setShowPhoneSuggestions] = useState(false);
 
   useEffect(() => {
     setSupportsContacts(
@@ -66,22 +80,20 @@ const TreeShareModal = ({ isOpen, onClose, tree, onComplete, userEmail, userId }
 
   useEffect(() => {
     if (isOpen && userId) {
-      getUserGroups(userId).then(setGroups).catch(() => {});
-      getUserContacts(userId).then(setContacts).catch(() => {});
+      getAccessibleGroups(userId, { includeAllOwners: isAdmin }).then(setGroups).catch(() => {});
+      getAccessibleContacts(userId, { includeAllOwners: isAdmin }).then(setContacts).catch(() => {});
     }
-  }, [isOpen, userId]);
+  }, [isOpen, userId, isAdmin]);
 
-  useEffect(() => {
-    if (!whatsappPhone || whatsappPhone.replace(/\D/g, '').length < 4) {
-      setPhoneSuggestions([]);
-      return;
-    }
-    const q = whatsappPhone.replace(/\s/g, '');
-    const matches = contacts
-      .filter((c) => c.phone && c.phone.replace(/\s/g, '').startsWith(q))
-      .slice(0, 5);
-    setPhoneSuggestions(matches);
-  }, [whatsappPhone, contacts]);
+  const emailSuggestions = useMemo(() => (
+    showEmailSuggestions ? getEmailSuggestions(contacts, emailQuery) : []
+  ), [contacts, emailQuery, showEmailSuggestions]);
+
+  const phoneSuggestions = useMemo(() => (
+    showPhoneSuggestions ? getPhoneSuggestions(contacts, phoneQuery) : []
+  ), [contacts, phoneQuery, showPhoneSuggestions]);
+
+  const filteredGroups = useMemo(() => filterGroups(groups, groupSearchQuery), [groups, groupSearchQuery]);
 
   if (!isOpen || !tree) return null;
 
@@ -152,6 +164,8 @@ const TreeShareModal = ({ isOpen, onClose, tree, onComplete, userEmail, userId }
         : t('treeShare.successEmail').replace('{email}', recipientEmail));
       setRecipientEmail('');
       setWhatsappPhone('');
+      setEmailQuery('');
+      setPhoneQuery('');
       setPermission(SHARE_PERMISSIONS.VIEW);
 
       if (onComplete) {
@@ -267,20 +281,45 @@ const TreeShareModal = ({ isOpen, onClose, tree, onComplete, userEmail, userId }
     if (onComplete) onComplete();
   };
 
+  const applyContactSuggestion = (contact, source) => {
+    if (contact.email) {
+      setRecipientEmail(contact.email);
+    }
+    if (contact.phone) {
+      setWhatsappPhone(contact.phone);
+    }
+    if (source === 'email' && contact.phone && !phoneQuery) {
+      setPhoneQuery(contact.phone);
+    }
+    if (source === 'phone' && contact.email && !emailQuery) {
+      setEmailQuery(contact.email);
+    }
+    setEmailQuery('');
+    setPhoneQuery('');
+    setShowEmailSuggestions(false);
+    setShowPhoneSuggestions(false);
+  };
+
   const handleClose = () => {
     setRecipientEmail('');
     setWhatsappPhone('');
+    setEmailQuery('');
+    setPhoneQuery('');
+    setGroupSearchQuery('');
     setPermission(SHARE_PERMISSIONS.VIEW);
     setError(null);
     setSuccess(null);
     setGroupResult(null);
     setSelectedGroupId('');
     setShareTab('person');
-    setPhoneSuggestions([]);
+    setIsGroupPickerOpen(false);
+    setShowEmailSuggestions(false);
+    setShowPhoneSuggestions(false);
     onClose();
   };
 
   const sharedEmailsList = Object.keys(sharedUsers);
+  const selectedGroup = groups.find((group) => group.id === selectedGroupId);
 
   return (
     <div className="tsm-backdrop" onClick={handleClose}>
@@ -341,7 +380,7 @@ const TreeShareModal = ({ isOpen, onClose, tree, onComplete, userEmail, userId }
           {/* Person tab */}
           {shareTab === 'person' && (
             <form onSubmit={handleShare} className="tsm-form">
-              <div className="tsm-form-group">
+              <div className="tsm-form-group" style={{ position: 'relative' }}>
                 <label htmlFor="email" className="tsm-label">
                   {t('treeShare.emailLabel')}
                 </label>
@@ -349,11 +388,41 @@ const TreeShareModal = ({ isOpen, onClose, tree, onComplete, userEmail, userId }
                   id="email"
                   type="email"
                   value={recipientEmail}
-                  onChange={(e) => setRecipientEmail(e.target.value)}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setRecipientEmail(value);
+                    setEmailQuery(value);
+                    setShowEmailSuggestions(true);
+                  }}
+                  onFocus={() => setShowEmailSuggestions(true)}
+                  onBlur={() => setShowEmailSuggestions(false)}
                   placeholder={t('treeShare.emailPlaceholder')}
                   className="tsm-input"
                   disabled={isLoading}
                 />
+                {emailSuggestions.length > 0 && (
+                  <div className="tsm-phone-suggestions">
+                    <p className="tsm-phone-suggestions-label">Matching contacts</p>
+                    {emailSuggestions.map((contact) => (
+                      <button
+                        key={contact.id}
+                        type="button"
+                        className={`tsm-phone-suggestion-item${contact.isOwnedByCurrentUser ? '' : ' tsm-phone-suggestion-item-external'}`}
+                        onMouseDown={(e) => e.preventDefault()}
+                        onClick={() => applyContactSuggestion(contact, 'email')}
+                      >
+                        <span className="tsm-suggestion-details">
+                          <span className="tsm-suggestion-name">{getContactDisplayName(contact)}</span>
+                          <span className="tsm-suggestion-email">{contact.email}</span>
+                          {contact.phone && <span className="tsm-suggestion-phone">{contact.phone}</span>}
+                        </span>
+                        {!contact.isOwnedByCurrentUser && (
+                          <span className="tsm-suggestion-owner">{getContactOwnerLabel(contact)}</span>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
 
               <div className="tsm-form-group" style={{ position: 'relative' }}>
@@ -365,7 +434,14 @@ const TreeShareModal = ({ isOpen, onClose, tree, onComplete, userEmail, userId }
                     international
                     defaultCountry={detectedCountry}
                     value={whatsappPhone}
-                    onChange={(val) => setWhatsappPhone(val || '')}
+                    onChange={(val) => {
+                      const value = val || '';
+                      setWhatsappPhone(value);
+                      setPhoneQuery(value);
+                      setShowPhoneSuggestions(true);
+                    }}
+                    onFocus={() => setShowPhoneSuggestions(true)}
+                    onBlur={() => setShowPhoneSuggestions(false)}
                     disabled={isLoading}
                     placeholder="+977 98XXXXXXXX"
                     className="tsm-phone-input"
@@ -392,15 +468,18 @@ const TreeShareModal = ({ isOpen, onClose, tree, onComplete, userEmail, userId }
                       <button
                         key={c.id}
                         type="button"
-                        className="tsm-phone-suggestion-item"
-                        onClick={() => {
-                          setWhatsappPhone(c.phone);
-                          if (!recipientEmail && c.email) setRecipientEmail(c.email);
-                          setPhoneSuggestions([]);
-                        }}
+                        className={`tsm-phone-suggestion-item${c.isOwnedByCurrentUser ? '' : ' tsm-phone-suggestion-item-external'}`}
+                        onMouseDown={(e) => e.preventDefault()}
+                        onClick={() => applyContactSuggestion(c, 'phone')}
                       >
-                        <span className="tsm-suggestion-name">{c.displayName || c.firstName}</span>
-                        <span className="tsm-suggestion-phone">{c.phone}</span>
+                        <span className="tsm-suggestion-details">
+                          <span className="tsm-suggestion-name">{getContactDisplayName(c)}</span>
+                          <span className="tsm-suggestion-phone">{c.phone}</span>
+                          {c.email && <span className="tsm-suggestion-email">{c.email}</span>}
+                        </span>
+                        {!c.isOwnedByCurrentUser && (
+                          <span className="tsm-suggestion-owner">{getContactOwnerLabel(c)}</span>
+                        )}
                       </button>
                     ))}
                   </div>
@@ -461,41 +540,111 @@ const TreeShareModal = ({ isOpen, onClose, tree, onComplete, userEmail, userId }
                   <a href="/settings/groups" style={{ color: '#2563eb', textDecoration: 'underline' }}>{t('userGroups.createOne')}</a>
                 </p>
               ) : (
-                <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', marginBottom: 12 }}>
-                  <select
-                    value={selectedGroupId}
-                    onChange={(e) => { setSelectedGroupId(e.target.value); setGroupResult(null); }}
-                    className="tsm-permission-select"
-                    style={{ minWidth: 160, flex: '1 1 160px' }}
-                    disabled={groupSharing}
-                  >
-                    <option value="">{t('userGroups.selectGroup')}</option>
-                    {groups.map((g) => (
-                      <option key={g.id} value={g.id}>
-                        {g.name} ({t('userGroups.memberCount').replace('{n}', g.members?.length ?? 0)})
-                      </option>
-                    ))}
-                  </select>
+                <div className="tsm-group-layout">
+                  <div className="tsm-form-group">
+                    <label className="tsm-label">{t('userGroups.selectGroup')}</label>
+                    <div className="tsm-group-picker">
+                      <button
+                        type="button"
+                        className="tsm-group-picker-btn"
+                        onClick={() => setIsGroupPickerOpen((prev) => !prev)}
+                        disabled={groupSharing}
+                        aria-expanded={isGroupPickerOpen}
+                      >
+                        <span className="tsm-group-picker-value">
+                          {selectedGroup ? (
+                            <>
+                              <span>{selectedGroup.name}</span>
+                              <span className="tsm-group-picker-meta">
+                                {selectedGroup.members?.length ?? 0} members{!selectedGroup.isOwnedByCurrentUser ? ` • ${getContactOwnerLabel(selectedGroup)}` : ''}
+                              </span>
+                            </>
+                          ) : (
+                            <span className="tsm-group-picker-placeholder">{t('userGroups.selectGroup')}</span>
+                          )}
+                        </span>
+                        <span className="tsm-group-picker-chevron">▾</span>
+                      </button>
 
-                  <select
-                    value={groupPermission}
-                    onChange={(e) => setGroupPermission(e.target.value)}
-                    className="tsm-permission-select"
-                    disabled={groupSharing}
-                  >
-                    <option value={SHARE_PERMISSIONS.VIEW}>{t('treeShare.viewOnly')}</option>
-                    <option value={SHARE_PERMISSIONS.EDIT}>{t('treeShare.canEdit')}</option>
-                  </select>
+                      {isGroupPickerOpen && (
+                        <div className="tsm-group-dropdown">
+                          <div className="tsm-group-dropdown-search">
+                            <input
+                              type="text"
+                              value={groupSearchQuery}
+                              onChange={(e) => setGroupSearchQuery(e.target.value)}
+                              placeholder="Search by group or owner"
+                              className="tsm-input"
+                              disabled={groupSharing}
+                              autoFocus
+                            />
+                          </div>
+                          <div className="tsm-group-dropdown-list">
+                            {filteredGroups.length > 0 ? filteredGroups.map((g) => (
+                              <button
+                                key={g.id}
+                                type="button"
+                                className={`tsm-group-option${g.isOwnedByCurrentUser ? '' : ' tsm-group-option-external'}`}
+                                onMouseDown={(e) => e.preventDefault()}
+                                onClick={() => {
+                                  setSelectedGroupId(g.id);
+                                  setGroupResult(null);
+                                  setIsGroupPickerOpen(false);
+                                }}
+                              >
+                                <span className="tsm-group-option-name">{g.name}</span>
+                                <span className="tsm-group-option-meta">
+                                  {g.members?.length ?? 0} members{!g.isOwnedByCurrentUser ? ` • ${getContactOwnerLabel(g)}` : ''}
+                                </span>
+                              </button>
+                            )) : (
+                              <div className="tsm-group-empty">No groups match your search.</div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                    {selectedGroup ? (
+                      <div className="tsm-group-meta">
+                        {selectedGroup.members?.length ?? 0} members{!selectedGroup.isOwnedByCurrentUser ? ` • ${getContactOwnerLabel(selectedGroup)}` : ''}
+                      </div>
+                    ) : null}
+                  </div>
 
-                  <button
-                    type="button"
-                    className="tsm-btn tsm-btn-primary"
-                    style={{ margin: 0, width: 'auto', flex: '0 0 auto' }}
-                    onClick={handleShareGroup}
-                    disabled={groupSharing || !selectedGroupId}
-                  >
-                    {groupSharing ? '...' : t('userGroups.shareGroupBtn')}
-                  </button>
+                  <div className="tsm-form-group">
+                    <label className="tsm-label">{t('treeShare.permissionLabel')}</label>
+                    <div className="tsm-permission-options">
+                      <label className="tsm-permission-option">
+                        <input
+                          type="radio"
+                          name="groupPermission"
+                          value={SHARE_PERMISSIONS.VIEW}
+                          checked={groupPermission === SHARE_PERMISSIONS.VIEW}
+                          onChange={(e) => setGroupPermission(e.target.value)}
+                          disabled={groupSharing}
+                        />
+                        <div>
+                          <span className="tsm-permission-name">{t('treeShare.viewOnly')}</span>
+                        </div>
+                        <span className="tsm-info-icon" aria-hidden="true" title={t('treeShare.viewOnlyTooltip')}><i>i</i></span>
+                      </label>
+
+                      <label className="tsm-permission-option">
+                        <input
+                          type="radio"
+                          name="groupPermission"
+                          value={SHARE_PERMISSIONS.EDIT}
+                          checked={groupPermission === SHARE_PERMISSIONS.EDIT}
+                          onChange={(e) => setGroupPermission(e.target.value)}
+                          disabled={groupSharing}
+                        />
+                        <div>
+                          <span className="tsm-permission-name">{t('treeShare.canEdit')}</span>
+                        </div>
+                        <span className="tsm-info-icon" aria-hidden="true" title={t('treeShare.canEditTooltip')}><i>i</i></span>
+                      </label>
+                    </div>
+                  </div>
                 </div>
               )}
 
@@ -508,6 +657,17 @@ const TreeShareModal = ({ isOpen, onClose, tree, onComplete, userEmail, userId }
                       .replace('{skipped}', groupResult.skipped)}
                   </p>
                 </div>
+              )}
+
+              {groups.length > 0 && (
+                <button
+                  type="button"
+                  className="app-save-btn"
+                  onClick={handleShareGroup}
+                  disabled={groupSharing || !selectedGroupId}
+                >
+                  {groupSharing ? t('treeShare.sharingButton') : t('userGroups.shareGroupBtn')}
+                </button>
               )}
             </div>
           )}
@@ -569,13 +729,6 @@ const TreeShareModal = ({ isOpen, onClose, tree, onComplete, userEmail, userId }
             </div>
           )}
 
-        </div>
-
-        {/* Footer */}
-        <div className="tsm-footer">
-          <button className="tsm-btn tsm-btn-secondary" onClick={handleClose}>
-            {t('treeShare.closeButton')}
-          </button>
         </div>
       </div>
     </div>

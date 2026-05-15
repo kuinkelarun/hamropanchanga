@@ -346,7 +346,9 @@ service cloud.firestore {
 
     // User contacts (personal address book) — owned by the user who created them
     match /userContacts/{contactId} {
-      allow read, update, delete: if isAuthenticated()
+      allow read: if isAuthenticated()
+        && (request.auth.uid == resource.data.ownerUid || isAdmin());
+      allow update, delete: if isAuthenticated()
         && request.auth.uid == resource.data.ownerUid;
       allow create: if isAuthenticated()
         && request.auth.uid == request.resource.data.ownerUid;
@@ -354,7 +356,9 @@ service cloud.firestore {
 
     // User contact groups — owned by the user who created them
     match /userGroups/{groupId} {
-      allow read, update, delete: if isAuthenticated()
+      allow read: if isAuthenticated()
+        && (request.auth.uid == resource.data.ownerUid || isAdmin());
+      allow update, delete: if isAuthenticated()
         && request.auth.uid == resource.data.ownerUid;
       allow create: if isAuthenticated()
         && request.auth.uid == request.resource.data.ownerUid;

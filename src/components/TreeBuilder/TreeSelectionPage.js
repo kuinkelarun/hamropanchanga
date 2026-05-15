@@ -159,6 +159,36 @@ export default function TreeSelectionPage({ user, isAdmin }) {
     return trees.filter(t => t.ownerUid !== user?.uid);
   }, [trees, user, isAdmin]);
 
+  const matchesTreeSearch = useMemo(() => {
+    const normalizedSearch = searchQuery.trim().toLowerCase();
+    if (!normalizedSearch) {
+      return () => true;
+    }
+
+    return (tree) => (
+      (tree.title || '').toLowerCase().includes(normalizedSearch) ||
+      (tree.id || '').toLowerCase().includes(normalizedSearch) ||
+      (tree.primaryMemberName || '').toLowerCase().includes(normalizedSearch) ||
+      (tree.contact || '').toLowerCase().includes(normalizedSearch) ||
+      (tree.location || '').toLowerCase().includes(normalizedSearch)
+    );
+  }, [searchQuery]);
+
+  const filteredMyTrees = useMemo(
+    () => myTrees.filter(matchesTreeSearch),
+    [myTrees, matchesTreeSearch],
+  );
+
+  const filteredSharedTrees = useMemo(
+    () => sharedTrees.filter(matchesTreeSearch),
+    [sharedTrees, matchesTreeSearch],
+  );
+
+  const filteredOtherTrees = useMemo(
+    () => otherTrees.filter(matchesTreeSearch),
+    [otherTrees, matchesTreeSearch],
+  );
+
   // Check for duplicate tree names (case-insensitive, normalized) and show suggestions
   const checkDuplicateTreeName = (inputName) => {
     if (!inputName.trim()) {
@@ -489,17 +519,26 @@ export default function TreeSelectionPage({ user, isAdmin }) {
           </div>
         )}
 
+        <div className="bg-white rounded-2xl shadow-md p-6 mb-6 border border-gray-200">
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <div>
+              <h3 className="text-xl font-bold text-gray-800">Search All Trees</h3>
+              <p className="text-sm text-gray-500">Search across your trees and trees shared with you.</p>
+            </div>
+            <SearchBar
+              value={searchQuery}
+              onChange={setSearchQuery}
+              placeholder="Search all trees..."
+              className="tsp-search"
+            />
+          </div>
+        </div>
+
         {/* My Trees Grid */}
         <div className="bg-white rounded-2xl shadow-md p-6 mb-6 border border-gray-200">
           <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
             <h3 className="text-xl font-bold text-gray-800">{t('treeSelection.yourTrees')}</h3>
             <div className="flex gap-3 flex-wrap items-center">
-              <SearchBar
-                value={searchQuery}
-                onChange={setSearchQuery}
-                placeholder="Search trees..."
-                className="tsp-search"
-              />
               <button
                 onClick={() => setSortAscending(prev => !prev)}
                 className="p-2.5 border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-100 transition-colors"
@@ -545,19 +584,9 @@ export default function TreeSelectionPage({ user, isAdmin }) {
             </div>
           </div>
 
-          {myTrees.length > 0 ? (
+          {filteredMyTrees.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {sortTrees(myTrees.filter(tree => {
-                if (!searchQuery) return true;
-                const s = searchQuery.toLowerCase();
-                return (
-                  (tree.title || '').toLowerCase().includes(s) ||
-                  (tree.id || '').toLowerCase().includes(s) ||
-                  (tree.primaryMemberName || '').toLowerCase().includes(s) ||
-                  (tree.contact || '').toLowerCase().includes(s) ||
-                  (tree.location || '').toLowerCase().includes(s)
-                );
-              }), sortAscending).map(tree => (
+              {sortTrees(filteredMyTrees, sortAscending).map(tree => (
                 <div key={tree.id} className="relative bg-gradient-to-br from-white to-gray-50 p-6 rounded-xl shadow-md border border-gray-200 hover:shadow-lg transition-shadow">
                   <div className="cursor-pointer" onClick={() => handleOpenTree(tree.id)}>
                     <div className="flex items-start justify-between mb-3">
@@ -616,7 +645,7 @@ export default function TreeSelectionPage({ user, isAdmin }) {
         </div>
 
         {/* Shared With Me Trees Grid (Regular Users Only) */}
-        {!isAdmin && sharedTrees.length > 0 && (
+        {!isAdmin && filteredSharedTrees.length > 0 && (
           <div className="bg-white rounded-2xl shadow-md p-6 mb-6 border border-gray-200">
             <div className="flex items-center justify-between mb-6">
               <h3 className="text-xl font-bold text-gray-800">
@@ -627,19 +656,10 @@ export default function TreeSelectionPage({ user, isAdmin }) {
                   Shared With Me
                 </span>
               </h3>
-              <span className="text-sm text-gray-500">{sharedTrees.length} tree{sharedTrees.length !== 1 ? 's' : ''}</span>
+              <span className="text-sm text-gray-500">{filteredSharedTrees.length} tree{filteredSharedTrees.length !== 1 ? 's' : ''}</span>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {sortTrees(sharedTrees.filter(tree => {
-                if (!searchQuery) return true;
-                const s = searchQuery.toLowerCase();
-                return (
-                  (tree.title || '').toLowerCase().includes(s) ||
-                  (tree.id || '').toLowerCase().includes(s) ||
-                  (tree.contact || '').toLowerCase().includes(s) ||
-                  (tree.location || '').toLowerCase().includes(s)
-                );
-              }), sortAscending).map(tree => (
+              {sortTrees(filteredSharedTrees, sortAscending).map(tree => (
                 <div key={tree.id} className="relative bg-gradient-to-br from-blue-50 to-white p-6 rounded-xl shadow-md border border-blue-200 hover:shadow-lg transition-shadow">
                   <div className="cursor-pointer" onClick={() => handleOpenTree(tree.id)}>
                     <div className="flex items-start justify-between mb-3">
@@ -686,13 +706,13 @@ export default function TreeSelectionPage({ user, isAdmin }) {
         )}
 
         {/* Other Users' Trees Grid (Admin Only) */}
-        {isAdmin && otherTrees.length > 0 && (
+        {isAdmin && filteredOtherTrees.length > 0 && (
           <div className="bg-white rounded-2xl shadow-md p-6 mb-6 border border-gray-200">
             <div className="flex items-center justify-between mb-6">
               <h3 className="text-xl font-bold text-gray-800">{t('treeSelection.otherUsersTrees')}</h3>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {sortTrees(otherTrees, sortAscending).map(tree => (
+              {sortTrees(filteredOtherTrees, sortAscending).map(tree => (
                 <div key={tree.id} className="relative bg-gradient-to-br from-white to-gray-50 p-6 rounded-xl shadow-md border border-gray-200 hover:shadow-lg transition-shadow">
                   <div className="cursor-pointer" onClick={() => handleOpenTree(tree.id)}>
                     <div className="flex items-start justify-between mb-3">

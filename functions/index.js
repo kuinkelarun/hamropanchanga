@@ -677,13 +677,35 @@ exports.shareTreeWithEmail = functions.https.onCall(async (data, context) => {
     throw new functions.https.HttpsError('not-found', 'Tree not found.');
   }
   const treeData = treeSnap.data();
-  if (treeData.ownerUid !== context.auth.uid) {
+
+  // Admins can share any tree on behalf of the owner
+  let callerIsAdmin = context.auth.token.admin === true;
+  if (!callerIsAdmin) {
+    const adminSnap = await db.collection('adminList').doc(context.auth.uid).get();
+    callerIsAdmin = adminSnap.exists;
+  }
+  if (!callerIsAdmin) {
+    const userSnap = await db.collection('users').doc(context.auth.uid).get();
+    callerIsAdmin = userSnap.exists && userSnap.data().role === 'admin';
+  }
+
+  if (!callerIsAdmin && treeData.ownerUid !== context.auth.uid) {
     throw new functions.https.HttpsError('permission-denied', 'Only the tree owner can share it.');
   }
 
   const treeName = treeData.title || treeData.name || 'a family tree';
   const fromEmail = (context.auth.token.email || '').toLowerCase();
-  const ownerDisplay = treeData.ownerName || fromEmail;
+
+  // Show the tree owner's identity in notification emails (not the admin's)
+  let ownerDisplay = treeData.ownerName;
+  if (!ownerDisplay && callerIsAdmin && treeData.ownerUid !== context.auth.uid) {
+    const ownerSnap = await db.collection('users').doc(treeData.ownerUid).get();
+    if (ownerSnap.exists) {
+      ownerDisplay = ownerSnap.data().displayName || ownerSnap.data().email || null;
+    }
+  }
+  ownerDisplay = ownerDisplay || fromEmail;
+
   const recipientLower = recipientEmail.toLowerCase();
 
   // ── Branch A: recipient already has an account ────────────────────────
@@ -832,20 +854,41 @@ exports.shareTreeWithWhatsApp = functions.https.onCall(async (data, context) => 
 
   const db = admin.firestore();
 
-  // Load the tree to verify caller is the owner
+  // Load the tree to verify caller is the owner (or an admin)
   const treeRef = db.collection('trees').doc(treeId);
   const treeSnap = await treeRef.get();
   if (!treeSnap.exists) {
     throw new functions.https.HttpsError('not-found', 'Tree not found.');
   }
   const treeData = treeSnap.data();
-  if (treeData.ownerUid !== context.auth.uid) {
+
+  // Admins can share any tree on behalf of the owner
+  let callerIsAdmin = context.auth.token.admin === true;
+  if (!callerIsAdmin) {
+    const adminSnap = await db.collection('adminList').doc(context.auth.uid).get();
+    callerIsAdmin = adminSnap.exists;
+  }
+  if (!callerIsAdmin) {
+    const userSnap = await db.collection('users').doc(context.auth.uid).get();
+    callerIsAdmin = userSnap.exists && userSnap.data().role === 'admin';
+  }
+
+  if (!callerIsAdmin && treeData.ownerUid !== context.auth.uid) {
     throw new functions.https.HttpsError('permission-denied', 'Only the tree owner can share it.');
   }
 
   const treeName = treeData.title || treeData.name || 'a family tree';
   const fromEmail = context.auth.token.email || hintEmail;
-  const ownerDisplay = treeData.ownerName || fromEmail;
+
+  // Show the tree owner's identity in notification emails (not the admin's)
+  let ownerDisplay = treeData.ownerName;
+  if (!ownerDisplay && callerIsAdmin && treeData.ownerUid !== context.auth.uid) {
+    const ownerSnap = await db.collection('users').doc(treeData.ownerUid).get();
+    if (ownerSnap.exists) {
+      ownerDisplay = ownerSnap.data().displayName || ownerSnap.data().email || null;
+    }
+  }
+  ownerDisplay = ownerDisplay || fromEmail;
 
   // ── Branch A: look up user by phone number ─────────────────────────────
   const byPhoneSnap = await db.collection('users')

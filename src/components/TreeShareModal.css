@@ -337,6 +337,143 @@
   padding-bottom: 8px;
 }
 
+.tsm-group-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.tsm-group-picker {
+  position: relative;
+}
+
+.tsm-group-picker-btn {
+  width: 100%;
+  min-height: 42px;
+  padding: 10px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  background: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  cursor: pointer;
+  color: #111827;
+  font-size: 14px;
+}
+
+.tsm-group-picker-btn:disabled {
+  background: #f3f4f6;
+  color: #9ca3af;
+  cursor: not-allowed;
+}
+
+.tsm-group-picker-value {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  min-width: 0;
+}
+
+.tsm-group-picker-placeholder {
+  color: #6b7280;
+}
+
+.tsm-group-picker-meta {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.tsm-group-picker-chevron {
+  flex-shrink: 0;
+  color: #6b7280;
+  transition: transform 0.15s ease;
+}
+
+.tsm-group-picker-btn[aria-expanded="true"] .tsm-group-picker-chevron {
+  transform: rotate(180deg);
+}
+
+.tsm-group-dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  background: #ffffff;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.12);
+  z-index: 70;
+  overflow: hidden;
+}
+
+.tsm-group-dropdown-search {
+  padding: 10px;
+  border-bottom: 1px solid #f3f4f6;
+  background: #f9fafb;
+}
+
+.tsm-group-dropdown-list {
+  max-height: 240px;
+  overflow-y: auto;
+}
+
+.tsm-group-option {
+  width: 100%;
+  padding: 10px 12px;
+  border: none;
+  border-bottom: 1px solid #f9fafb;
+  background: #ffffff;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  cursor: pointer;
+}
+
+.tsm-group-option:last-child {
+  border-bottom: none;
+}
+
+.tsm-group-option:hover {
+  background: #f9fafb;
+}
+
+.tsm-group-option-external {
+  background: #fff8eb;
+}
+
+.tsm-group-option-external:hover {
+  background: #ffefc7;
+}
+
+.tsm-group-option-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.tsm-group-option-meta {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.tsm-group-meta {
+  font-size: 12px;
+  color: #6b7280;
+  margin-top: 6px;
+}
+
+.tsm-group-empty {
+  padding: 14px;
+  border: 1px dashed #d1d5db;
+  border-radius: 8px;
+  color: #6b7280;
+  font-size: 13px;
+  background: #f9fafb;
+}
+
 /* Phone autocomplete suggestions */
 .tsm-phone-suggestions {
   position: absolute;
@@ -387,6 +524,21 @@
   background: #f9fafb;
 }
 
+.tsm-phone-suggestion-item-external {
+  background: #fff8eb;
+}
+
+.tsm-phone-suggestion-item-external:hover {
+  background: #ffefc7;
+}
+
+.tsm-suggestion-details {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  gap: 2px;
+}
+
 .tsm-suggestion-name {
   font-size: 13px;
   font-weight: 500;
@@ -397,6 +549,57 @@
   font-size: 12px;
   color: #6b7280;
   font-family: monospace;
+}
+
+.tsm-suggestion-owner {
+  flex-shrink: 0;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: #f59e0b;
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 700;
+  max-width: 150px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tsm-suggestion-email {
+  font-size: 12px;
+  color: #4b5563;
+}
+
+.tsm-progress-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  margin-bottom: 16px;
+  border: 1px solid #bfdbfe;
+  border-radius: 10px;
+  background: #eff6ff;
+}
+
+.tsm-progress-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  color: #1e3a8a;
+  font-size: 13px;
+}
+
+.tsm-progress-track {
+  height: 8px;
+  border-radius: 999px;
+  background: #dbeafe;
+  overflow: hidden;
+}
+
+.tsm-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #2563eb, #0ea5e9);
+  transition: width 0.2s ease;
 }
 
 /* Divider */
