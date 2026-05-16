@@ -85,30 +85,34 @@ service cloud.firestore {
     }
 
     // Tree read access check (used for calendarEvents and shared tree access)
-    // Returns true if user owns the tree OR if tree is shared with user (any permission level)
+    // Returns true if user owns the tree OR if tree is shared with user (any permission level).
+    // get() returns null for non-existent docs — no separate exists() needed, saving 1 read per call.
+    // This reduces the per-document read budget from 2 to 1, which is critical for subscriptions:
+    // Firestore limits LIST queries to 20 reads total; isAdmin()+isSuperUser()+isTreeOwner was
+    // consuming 7 reads per doc → PERMISSION_DENIED after just 2 members.
     function isTreeOwner(treeId) {
-      let email = userEmailLower();
+      let email = userEmailLowerFromToken();
+      let treeDoc = treeId != null ? get(/databases/$(database)/documents/trees/$(treeId)) : null;
+      let tree = treeDoc != null ? treeDoc.data : null;
       return isAuthenticated() &&
-        treeId != null &&
-        exists(/databases/$(database)/documents/trees/$(treeId)) &&
-        (get(/databases/$(database)/documents/trees/$(treeId)).data.ownerUid == request.auth.uid ||
-         (get(/databases/$(database)/documents/trees/$(treeId)).data.sharedWith != null &&
-          email != null &&
-          email in get(/databases/$(database)/documents/trees/$(treeId)).data.sharedWith)
+        tree != null &&
+        (tree.ownerUid == request.auth.uid ||
+         (email != null && tree.sharedWith != null && email in tree.sharedWith)
         );
     }
     
     // Tree edit access check - only owner or users with 'edit' permission can modify
     function hasTreeEditPermission(treeId) {
-      let email = userEmailLower();
+      let email = userEmailLowerFromToken();
+      let treeDoc = treeId != null ? get(/databases/$(database)/documents/trees/$(treeId)) : null;
+      let tree = treeDoc != null ? treeDoc.data : null;
       return isAuthenticated() &&
-        treeId != null &&
-        exists(/databases/$(database)/documents/trees/$(treeId)) &&
-        (get(/databases/$(database)/documents/trees/$(treeId)).data.ownerUid == request.auth.uid ||
-         (get(/databases/$(database)/documents/trees/$(treeId)).data.sharedWith != null &&
-          email != null &&
-          email in get(/databases/$(database)/documents/trees/$(treeId)).data.sharedWith &&
-          get(/databases/$(database)/documents/trees/$(treeId)).data.sharedWith[email].permission == 'edit'));
+        tree != null &&
+        (tree.ownerUid == request.auth.uid ||
+         (email != null &&
+          tree.sharedWith != null &&
+          email in tree.sharedWith &&
+          tree.sharedWith[email].permission == 'edit'));
     }
 
     match /customers/{customerId} {
@@ -287,41 +291,34 @@ service cloud.firestore {
 
       // Members subcollection for a given tree
       match /members/{memberId} {
-        // Read access: owner, admin, super user, or shared user
-        allow read: if isAdmin() || 
-          isSuperUser() ||
-          (isAuthenticated() && isTreeOwner(treeId));
+        // isTreeOwner first: for the tree owner (most common case) this costs only 1 get() and
+        // short-circuits before isAdmin/isSuperUser run (which together cost 5 more reads).
+        // This keeps the per-document read count at 1 for owners/shared users, well within
+        // Firestore's 20-read limit for LIST queries on large member collections.
+        allow read: if (isAuthenticated() && isTreeOwner(treeId)) ||
+          isAdmin() || isSuperUser();
         
         // Write access: owner, admin, super user, or shared user with edit permission
-        allow write: if isAdmin() || 
-          isSuperUser() ||
-          (isAuthenticated() && hasTreeEditPermission(treeId));
+        allow write: if (isAuthenticated() && hasTreeEditPermission(treeId)) ||
+          isAdmin() || isSuperUser();
       }
 
       // Relationships subcollection for a given tree
       match /relationships/{relationshipId} {
-        // Read access: owner, admin, super user, or shared user
-        allow read: if isAdmin() || 
-          isSuperUser() ||
-          (isAuthenticated() && isTreeOwner(treeId));
+        allow read: if (isAuthenticated() && isTreeOwner(treeId)) ||
+          isAdmin() || isSuperUser();
         
-        // Write access: owner, admin, super user, or shared user with edit permission
-        allow write: if isAdmin() || 
-          isSuperUser() ||
-          (isAuthenticated() && hasTreeEditPermission(treeId));
+        allow write: if (isAuthenticated() && hasTreeEditPermission(treeId)) ||
+          isAdmin() || isSuperUser();
       }
 
       // Marriage points subcollection for a given tree
       match /marriagePoints/{marriagePointId} {
-        // Read access: owner, admin, super user, or shared user
-        allow read: if isAdmin() || 
-          isSuperUser() ||
-          (isAuthenticated() && isTreeOwner(treeId));
+        allow read: if (isAuthenticated() && isTreeOwner(treeId)) ||
+          isAdmin() || isSuperUser();
         
-        // Write access: owner, admin, super user, or shared user with edit permission
-        allow write: if isAdmin() || 
-          isSuperUser() ||
-          (isAuthenticated() && hasTreeEditPermission(treeId));
+        allow write: if (isAuthenticated() && hasTreeEditPermission(treeId)) ||
+          isAdmin() || isSuperUser();
       }
     }
 

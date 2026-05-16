@@ -1,0 +1,58 @@
+/* Full-page split-pane overlay for desktop day view */
+.cdv-container {
+  position: fixed;
+  inset: 0;
+  z-index: 500;
+  background: #fff;
+  display: flex;
+  flex-direction: row;
+  overflow: hidden;
+}
+
+/* Left panel — side widget */
+.cdv-left {
+  width: 300px;
+  min-width: 260px;
+  max-width: 340px;
+  border-right: 1px solid #e5e7eb;
+  overflow-y: auto;
+  padding: 20px 16px 16px;
+  background: #fafafa;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+
+/* Divider */
+.cdv-divider {
+  width: 1px;
+  background: #e5e7eb;
+  flex-shrink: 0;
+}
+
+/* Right panel — animated content */
+.cdv-right {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  transition: opacity 150ms ease, transform 150ms ease;
+}
+
+.cdv-animating {
+  opacity: 0;
+  transform: translateX(8px);
+}
+
+/* Responsive — hide mini-calendar on small screens */
+@media (max-width: 767px) {
+  .cdv-left,
+  .cdv-divider {
+    display: none;
+  }
+  .cdv-right {
+    width: 100%;
+  }
+}

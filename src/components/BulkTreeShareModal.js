@@ -3,7 +3,7 @@
  * Allows users to share multiple trees at once with multi-select functionality
  */
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import PhoneInput, { isValidPhoneNumber } from 'react-phone-number-input';
 import 'react-phone-number-input/style.css';
 import { httpsCallable } from 'firebase/functions';
@@ -20,16 +20,23 @@ import {
   getEmailSuggestions,
   getPhoneSuggestions,
 } from '../utils/shareDirectory';
+import { getDoc, doc } from 'firebase/firestore';
+import { db } from '../firebase';
+import { useClickOutside } from '../hooks/useClickOutside';
 import './TreeShareModal.css';
 
-function resolveMembers(members, contacts) {
-  return members.map((member) => {
-    if (member.contactId) {
-      const contact = contacts.find((entry) => entry.id === member.contactId);
-      return { ...member, email: contact?.email || member.email || '', phone: contact?.phone || member.phone || '' };
+async function resolveMembers(members, contacts) {
+  return Promise.all(members.map(async (member) => {
+    if (!member.contactId) return member;
+    let found = contacts.find((entry) => entry.id === member.contactId);
+    if (!found) {
+      try {
+        const snap = await getDoc(doc(db, 'userContacts', member.contactId));
+        if (snap.exists()) found = { id: snap.id, ...snap.data() };
+      } catch { /* permission denied — member will be skipped */ }
     }
-    return member;
-  });
+    return { ...member, email: found?.email || member.email || '', phone: found?.phone || member.phone || '' };
+  }));
 }
 
 const BulkTreeShareModal = ({ isOpen, onClose, onComplete, userEmail, userId, isAdmin }) => {
@@ -52,6 +59,8 @@ const BulkTreeShareModal = ({ isOpen, onClose, onComplete, userEmail, userId, is
   const [phoneQuery, setPhoneQuery] = useState('');
   const [groupSearchQuery, setGroupSearchQuery] = useState('');
   const [isGroupPickerOpen, setIsGroupPickerOpen] = useState(false);
+  const groupPickerRef = useRef(null);
+  useClickOutside(groupPickerRef, useCallback(() => setIsGroupPickerOpen(false), []));
   const [showEmailSuggestions, setShowEmailSuggestions] = useState(false);
   const [showPhoneSuggestions, setShowPhoneSuggestions] = useState(false);
   const [shareProgress, setShareProgress] = useState(null);
@@ -77,6 +86,24 @@ const BulkTreeShareModal = ({ isOpen, onClose, onComplete, userEmail, userId, is
     setShowPhoneSuggestions(false);
     setShareProgress(null);
   };
+
+  // Lock body scroll while modal is open
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+      document.body.style.position = 'fixed';
+      document.body.style.width = '100%';
+    } else {
+      document.body.style.overflow = '';
+      document.body.style.position = '';
+      document.body.style.width = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+      document.body.style.position = '';
+      document.body.style.width = '';
+    };
+  }, [isOpen]);
 
   useEffect(() => {
     const loadModalData = async () => {
@@ -307,8 +334,15 @@ const BulkTreeShareModal = ({ isOpen, onClose, onComplete, userEmail, userId, is
     }
 
     const treeById = new Map(trees.map((tree) => [tree.id, tree]));
-    const resolvedMembers = resolveMembers(group.members, contacts);
+    const resolvedMembers = await resolveMembers(group.members, contacts);
     const jobs = [];
+
+    // Diagnostic log
+    console.group('[BulkShareGroup] "' + group.name + '" — ' + resolvedMembers.length + ' member(s), contacts: ' + contacts.length);
+    resolvedMembers.forEach((m, i) => {
+      console.log(`  [${i}] ${m.displayName || '(no name)'} — email: ${m.email ? m.email.replace(/(.{2}).*(@.*)/, '$1***$2') : 'none'} — contactId: ${m.contactId || 'n/a'}`);
+    });
+    console.groupEnd();
 
     selectedTrees.forEach((treeId) => {
       const tree = treeById.get(treeId);
@@ -318,13 +352,17 @@ const BulkTreeShareModal = ({ isOpen, onClose, onComplete, userEmail, userId, is
           jobs.push({ skip: true, label: `Skipped member without email · ${treeId}` });
           return;
         }
+        if (email === userEmail?.toLowerCase()) {
+          jobs.push({ skip: true, label: `Skipped self-share · ${treeId}` });
+          return;
+        }
 
         const alreadyShared = Boolean(tree?.sharedWith?.[email]);
         jobs.push({
           skip: alreadyShared,
           treeId,
           recipientEmail: email,
-          phone: member.phone || '',
+          phone: '', // always use email path for group share (shareTreeWithEmail handles WhatsApp notify for opted-in users)
           sharePermission: groupPermission,
           label: `${getContactDisplayName(member)} · ${treeId}`,
         });
@@ -560,7 +598,7 @@ const BulkTreeShareModal = ({ isOpen, onClose, onComplete, userEmail, userId, is
                 <div className="tsm-group-layout">
                   <div className="tsm-form-group">
                     <label className="tsm-label">Select a group</label>
-                    <div className="tsm-group-picker">
+                    <div className="tsm-group-picker" ref={groupPickerRef}>
                       <button
                         type="button"
                         className="tsm-group-picker-btn"
@@ -580,6 +618,16 @@ const BulkTreeShareModal = ({ isOpen, onClose, onComplete, userEmail, userId, is
                             <span className="tsm-group-picker-placeholder">Select a group</span>
                           )}
                         </span>
+                        {selectedGroup && (
+                          <span
+                            role="button"
+                            tabIndex={0}
+                            className="tsm-group-clear-btn"
+                            onClick={(e) => { e.stopPropagation(); setSelectedGroupId(''); setGroupResult(null); setError(null); }}
+                            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.stopPropagation(); setSelectedGroupId(''); setGroupResult(null); setError(null); } }}
+                            aria-label="Clear selected group"
+                          >×</span>
+                        )}
                         <span className="tsm-group-picker-chevron">▾</span>
                       </button>
 

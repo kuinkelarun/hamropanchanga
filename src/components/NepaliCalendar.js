@@ -49,6 +49,8 @@ import { useCalendarEvents } from '../hooks/useCalendarEvents';
 import AddEventModal from './calendar/AddEventModal';
 import AddTithiModal from './calendar/AddTithiModal';
 import DayDetailsModal from './calendar/DayDetailsModal';
+import { useWindowSize } from '../hooks/useWindowSize';
+import CalendarDayView from './calendar/CalendarDayView';
 
 // getCalendarData: delegates to getActiveCalendarData (Firestore once loaded, bsCalendarData as fallback)
 const getCalendarData = (year) => getActiveCalendarData()[year];
@@ -102,6 +104,9 @@ export default function NepaliCalendar({ user: propUser, isAdmin, trees = [], tr
 
   // Permissions
   const { hasPermission, loading: permsLoading, isSuperUser } = useUserPermissions(user);
+  const { isMobile } = useWindowSize();
+  const [calendarDayViewOpen, setCalendarDayViewOpen] = useState(false);
+  const [calendarDayViewInitialPanel, setCalendarDayViewInitialPanel] = useState('details');
   const canManageTithis = isAdmin || (!permsLoading && hasPermission(PERMISSIONS.MANAGE_TITHIS));
 
   // Calendar-only transition state and direction
@@ -355,10 +360,10 @@ export default function NepaliCalendar({ user: propUser, isAdmin, trees = [], tr
 
   // open details modal when clicking on tile
   function openDetailsModalForDate(adYear, adMonthZeroBased, adDay){
-    // Use a consistently padded YYYY-MM-DD key
     const key = `${adYear}-${String(adMonthZeroBased + 1).padStart(2, '0')}-${String(adDay).padStart(2, '0')}`;
     setActiveDate(key);
-    setDetailsModalOpen(true);
+    setCalendarDayViewInitialPanel('details');
+    setCalendarDayViewOpen(true);
   }
 
   // open add tithi modal from + button or details modal
@@ -367,8 +372,8 @@ export default function NepaliCalendar({ user: propUser, isAdmin, trees = [], tr
     const key = `${adYear}-${String(adMonthZeroBased + 1).padStart(2, '0')}-${String(adDay).padStart(2, '0')}`;
     setActiveDate(key);
     setModalFocusHint(focusHint);
-    setDetailsModalOpen(false);
-    setAddTithiModalOpen(true);
+    setCalendarDayViewInitialPanel('addTithi');
+    setCalendarDayViewOpen(true);
   }
 
   // open add event modal from + button or details modal
@@ -376,8 +381,8 @@ export default function NepaliCalendar({ user: propUser, isAdmin, trees = [], tr
     if (isDev) console.log('openAddEventModalForDate called with:', { adYear, adMonthZeroBased, adDay });
     const key = `${adYear}-${String(adMonthZeroBased + 1).padStart(2, '0')}-${String(adDay).padStart(2, '0')}`;
     setActiveDate(key);
-    setDetailsModalOpen(false);
-    setAddEventModalOpen(true);
+    setCalendarDayViewInitialPanel('addEvent');
+    setCalendarDayViewOpen(true);
   }
 
   async function addTithi(dateKey, name, startDate, startTime='', endDate, endTime=''){
@@ -1216,6 +1221,28 @@ export default function NepaliCalendar({ user: propUser, isAdmin, trees = [], tr
     );
   }, [activeDate, calendarEvents, user, sharedTreeIds, getEventsForDate]);
 
+  // Build eventsData map for CalendarSideWidget event dots
+  const eventsData = useMemo(() => {
+    const map = {};
+    Object.entries(tithisByDate).forEach(([key, arr]) => {
+      if (arr.length > 0) {
+        const parts = key.split('-').map(Number);
+        const normalKey = `${parts[0]}-${String(parts[1]).padStart(2, '0')}-${String(parts[2]).padStart(2, '0')}`;
+        if (!map[normalKey]) map[normalKey] = {};
+        map[normalKey].hasTithi = true;
+      }
+    });
+    calendarEvents.forEach(event => {
+      if (!event.dateKey) return;
+      const parts = event.dateKey.split('-').map(Number);
+      const normalKey = `${parts[0]}-${String(parts[1]).padStart(2, '0')}-${String(parts[2]).padStart(2, '0')}`;
+      if (!map[normalKey]) map[normalKey] = {};
+      if (event.isPublic) map[normalKey].hasPublic = true;
+      else map[normalKey].hasPrivate = true;
+    });
+    return map;
+  }, [tithisByDate, calendarEvents]);
+
   // Debug helpers previously exposed on window have been removed.
   
   
@@ -1349,34 +1376,10 @@ export default function NepaliCalendar({ user: propUser, isAdmin, trees = [], tr
       </div>
 
       <div className="nc-grid" role="grid" aria-label="Nepali calendar">
-        {renderDayTiles()}
+        {!calendarDayViewOpen && renderDayTiles()}
       </div>
 
       {/* Tithi Calculator removed from inline calendar; now available as separate block component */}
-
-      {/* Details Modal */}
-      <DayDetailsModal
-        isOpen={detailsModalOpen}
-        onClose={() => setDetailsModalOpen(false)}
-        activeDate={activeDate}
-        tithis={modalTithis}
-        publicEvents={modalEvents}
-        personalEvents={modalPersonalEvents}
-        user={user}
-        isAdmin={isAdmin}
-        isSuperUser={isSuperUser}
-        permsLoading={permsLoading}
-        hasPermission={hasPermission}
-        onOpenAddEvent={openAddEventModalForDate}
-        onOpenAddTithi={openAddTithiModalForDate}
-        onDeleteEvent={handleDeleteEvent}
-        onTreeEventClick={onTreeEventClick}
-          trees={trees}
-        getTithiDisplayName={getTithiDisplayName}
-        formatTithiDateTime={formatTithiDateTime}
-        getTreeMemberName={getTreeMemberName}
-        getResolvedTithiEventDate={getResolvedTithiEventDate}
-      />
 
       {/* App confirm modal for unsaved edits before jumping to today */}
       <ConfirmModal
@@ -1388,28 +1391,32 @@ export default function NepaliCalendar({ user: propUser, isAdmin, trees = [], tr
         onCancel={() => setConfirmOpen(false)}
       />
 
-      {/* Add Tithi Modal */}
-      <AddTithiModal
-        isOpen={addTithiModalOpen}
-        onClose={() => setAddTithiModalOpen(false)}
-        activeDate={activeDate}
-        focusHint={modalFocusHint}
-        user={user}
-        authLoading={authLoading}
-        onAddTithi={addTithi}
-      />
-
-      {/* Add Event Modal */}
-      <AddEventModal
-        isOpen={addEventModalOpen}
-        onClose={() => setAddEventModalOpen(false)}
-        activeDate={activeDate}
-        user={user}
-        authLoading={authLoading}
-        isAdmin={isAdmin}
-        isSuperUser={isSuperUser}
-        findTithisForAdDate={findTithisForAdDate}
-      />
+      {/* Day view — full-page split pane (all screen sizes) */}
+      <CalendarDayView
+          isOpen={calendarDayViewOpen}
+          onClose={() => { setCalendarDayViewOpen(false); setActiveDate(null); }}
+          initialPanel={calendarDayViewInitialPanel}
+          activeDate={activeDate}
+          onDateChange={(newDate) => setActiveDate(newDate)}
+          tithis={modalTithis}
+          publicEvents={modalEvents}
+          personalEvents={modalPersonalEvents}
+          user={user}
+          isAdmin={isAdmin}
+          isSuperUser={isSuperUser}
+          permsLoading={permsLoading}
+          hasPermission={hasPermission}
+          trees={trees}
+          onDeleteEvent={handleDeleteEvent}
+          onTreeEventClick={onTreeEventClick}
+          getTithiDisplayName={getTithiDisplayName}
+          formatTithiDateTime={formatTithiDateTime}
+          getTreeMemberName={getTreeMemberName}
+          onAddTithi={addTithi}
+          authLoading={authLoading}
+          findTithisForAdDate={findTithisForAdDate}
+          eventsData={eventsData}
+        />
     </div>
   );
 };
