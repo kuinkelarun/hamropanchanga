@@ -1,83 +1,73 @@
-# Getting Started with Create React App
+# HamroPanchanga
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+[Live application](https://hamropanchanga.com)
 
-## Available Scripts
+HamroPanchanga is a bilingual (English/Nepali) web application for the Bikram Sambat calendar. It combines calendar and tithi data, public events, and lunar-day calculations with tools for creating and sharing family trees. The application also exposes a public REST API for calendar, tithi, and public-event integrations.
 
-In the project directory, you can run:
+## Technology
 
-### `npm start`
+- **Languages:** JavaScript (React client and Node.js functions), CSS
+- **Client:** React 18, Create React App (`react-scripts`), React Router, Tailwind CSS
+- **Firebase:** Authentication, Cloud Firestore, Cloud Storage, Cloud Functions, and Hosting
+- **Backend/API:** Node.js 20 Cloud Functions, Express, Firebase Admin SDK
+- **Domain libraries:** React Flow for family-tree graphs, `astronomy-engine` for astronomical calculations, `xlsx` for spreadsheet import/export, and `html-to-image` for tree exports
+- **Localization:** Context-based English/Nepali language support and Bikram Sambat date utilities
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+## Architecture
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+The browser application is a React single-page app. React Router composes the calendar, tithi calculator, events, family-tree builder, and administration views; shared contexts provide authentication, language selection, and chat state. Hooks and services encapsulate data subscriptions and feature operations.
 
-### `npm test`
+The client uses the Firebase SDK for authentication and direct Firestore/Storage access. Firestore and Storage rules enforce access at the data boundary. Firebase Hosting serves the production bundle and rewrites application routes to `index.html`. Node.js Cloud Functions provide server-side operations and the Express-based public API; the functions use the Firebase Admin SDK to access backend data. Calendar and astronomy utilities provide Bikram Sambat conversions and tithi calculations.
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+```text
+Browser / React SPA
+  ├── Firebase Auth
+  ├── Firestore + Storage (client SDK; security rules)
+  └── HTTPS Cloud Functions
+        ├── Express REST API
+        └── Admin SDK / astronomy calculations
+```
 
-### `npm run build`
+## Public API
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+Base URL: `https://us-central1-hamropanchanga.cloudfunctions.net/api`
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+| Method | Endpoint | Access |
+|---|---|---|
+| `GET` | `/v1/health` | Public; no key required |
+| `GET` | `/v1/tithi/today` | API key required |
+| `GET` | `/v1/calendar/:bsYear/:bsMonth` | API key required |
+| `GET` | `/v1/tithis?startDate=YYYY-MM-DD&endDate=YYYY-MM-DD` | API key required |
+| `GET` | `/v1/events?startDate=YYYY-MM-DD&endDate=YYYY-MM-DD` | API key required |
+| `GET` | `/v1/convert/ad-to-bs?date=YYYY-MM-DD` | API key required |
+| `GET` | `/v1/convert/bs-to-ad?year=…&month=…&day=…` | API key required |
+| `POST` | `/v1/convert/batch` | API key required |
+| `GET` | `/v1/today` | API key required |
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+Authenticated requests pass the issued key in the `X-API-Key` header. Request access from the app's **Developer API** page. See the [API developer guide](docs/API_DEVELOPER_GUIDE.md) for request/response formats, parameters, and examples.
 
-### `npm run eject`
+The conversion and `/v1/today` routes are implemented in the API but are not yet covered by the developer guide.
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+## Screenshots
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+The repository currently contains landing-page artwork, but no application screenshots. Add captured screenshots under `docs/screenshots/` (for example, `home.png`, `calendar.png`, and `family-tree.png`) and link them here using relative paths.
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+## Development
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+Requirements: Node.js and npm. The frontend reads Firebase configuration from environment variables; copy `.env.example` to `.env` and provide values from the Firebase project before starting the app.
 
-## Learn More
+```bash
+npm install
+cp .env.example .env
+# Set the REACT_APP_FIREBASE_* values and REACT_APP_FIRESTORE_DATABASE_ID in .env
+npm start
+```
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+The app runs at `http://localhost:3000`. Available project scripts:
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+```bash
+npm test -- --watchAll=false
+npm run build
+```
 
-### Code Splitting
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
-
-### Analyzing the Bundle Size
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
-
-### Making a Progressive Web App
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
-
-### Advanced Configuration
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
-
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
-
-### firebase deploy
-
-Force overwrite development with login branch example:
-
-    # Switch to development
-    git checkout development
-
-    # Force development to match login
-    git reset --hard login
-
-    # Push changes (overwrite remote too)
-    git push origin development --force
+Cloud Functions are in `functions/` and require Node.js 20. Install their dependencies with `npm --prefix functions install`. Firebase Hosting serves the generated `build/` directory; deployment configuration is in `firebase.json`.
